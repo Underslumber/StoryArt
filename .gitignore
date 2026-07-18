@@ -49,6 +49,11 @@
 *.7z
 *.rar
 
+# The only visual files allowed in Git are lightweight README previews.
+!/docs/assets/
+!/docs/assets/previews/
+!/docs/assets/previews/*.jpg
+
 # Python and local environment state.
 __pycache__/
 *.py[cod]
