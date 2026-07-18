@@ -1,0 +1,66 @@
+# This repository is an allowlisted deployment skeleton.
+# Root-level user data stays local unless explicitly added here.
+/*
+!/.gitignore
+!/README.md
+!/requirements.txt
+!/AGENTS.example.md
+!/scripts/
+!/tools/
+!/config/
+!/docs/
+!/templates/
+!/tests/
+
+# Only the reusable managers belong in Git.
+/tools/*
+!/tools/style_pack_manager.py
+!/tools/body_reference_manager.py
+!/tools/generation_risk_assessor.py
+
+# Local agent policy is copied from AGENTS.example.md during bootstrap.
+/AGENTS.md
+/.agents/
+
+# User-owned packs, sources, references, generations, and scratch state.
+/*_PROJECT_PACK/
+/*_GENERATIONS/
+/BODY_REFERENCE_LIBRARY/
+/GENERATION_RESULTS/
+/tmp/
+/*_SOURCE_COLLECTION/
+/*_SELECTIONS*/
+/New*/
+/Body_ref/
+
+# Never commit visual assets or common source archives by accident.
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.bmp
+*.tif
+*.tiff
+*.psd
+*.clip
+*.kra
+*.zip
+*.7z
+*.rar
+
+# Python and local environment state.
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editors and operating-system metadata.
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

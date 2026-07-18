@@ -1,0 +1,35 @@
+schema_version: 2
+style_name: "{{STYLE_NAME}}"
+character_id: "{{CHARACTER_ID}}"
+name: "{{CHARACTER_NAME}}"
+status: "APPROVED"
+created_at: "{{CREATED_AT}}"
+approved_base: "{{APPROVED_BASE}}"
+last_approved_frame: "{{APPROVED_BASE}}"
+character_face_references: []
+character_body_references: []
+wardrobe_references: []
+accessory_references: []
+canonical_views:
+  face: "{{CHARACTER_FACE}}"
+  physique_front: "{{CHARACTER_BODY_FRONT}}"
+  physique_side: "{{CHARACTER_BODY_SIDE}}"
+  physique_back: "{{CHARACTER_BODY_BACK}}"
+  assembly: "{{APPROVED_BASE}}"
+anatomy_reference_policy:
+  adult_only: true
+  coverage: "Minimal opaque matte tape over nipples, genitals, and anus where visible only."
+  silhouette_change_forbidden: true
+  designed_background_in_identity_kit: false
+locked_invariants:
+  face_geometry: "Describe approved eyes, nose, lips, cheeks, jaw, and face proportions before the next generation."
+  body_proportions: "Describe approved height, build, torso, chest, waist, hips, limbs, and other permanent proportions before the next generation."
+  skin_tone: "Record the approved permanent skin tone."
+  permanent_features: "Record permanent hair, marks, or other identity features."
+allowed_variation:
+  - "Clothing, accessories, expression, pose, scene, and lighting only when requested."
+forbidden_drift:
+  - "Do not replace face identity with FACE_CORE or FACE_EXPRESSION."
+  - "Do not replace body identity with BODY_CORE or POSE_CORE."
+known_failure_modes: []
+notes: "Complete all identity descriptions from the approved sources before further generation."

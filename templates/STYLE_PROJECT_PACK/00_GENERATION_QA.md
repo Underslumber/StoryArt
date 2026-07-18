@@ -1,0 +1,51 @@
+# GENERATION QA — {{STYLE_NAME}}
+
+- [ ] Exact references and active roles are recorded.
+- [ ] Every planned hard reference was physically attached in one of the five declared slots; none was silently omitted.
+- [ ] Canvas is 9:16 portrait or 16:9 landscape unless a different ratio was directly approved.
+- [ ] Full body occupies roughly 72-88% of canvas height with visible headroom and foot/floor margin.
+- [ ] Torso and legs were not vertically stretched to fill the frame.
+- [ ] The complete local role library was inventoried; selection was not limited to `03_UPLOAD_TO_WEB`.
+- [ ] Complete local pools for style, face, body, pose, clothes, lighting, background, and composition were reviewed or explicitly released by the user.
+- [ ] A missing `ANCHOR_STYLE` was handled with a local `MASTER_STYLE` plus role-specific references, without weakening fidelity.
+- [ ] Requested fidelity profile is followed.
+- [ ] The first chat-level startup interaction used the native input-area chooser when available and showed exactly three AI presets plus its free-form `Указать свой вариант`/Other entry before requesting any numeric values.
+- [ ] No numbered text startup menu was printed; when native UI was unavailable, the recommended `90% + BODY_REFERENCE_LIBRARY` profile was applied silently.
+- [ ] An already selected same-chat style/profile was reused without presenting or asking for the chooser again; a new chooser was shown only after an explicit user reselection request.
+- [ ] Preset 1 was the recommended `90% + BODY_REFERENCE_LIBRARY` option; presets 2 and 3 were derived from the task context.
+- [ ] The selected preset resolved its parameters automatically, or CUSTOM used the user's complete one-message description without optional follow-up questions.
+- [ ] Any CUSTOM follow-up identified a genuinely missing or contradictory required field that could not be resolved from context.
+- [ ] The exact prompt and every physical attachment have a current D1-D10 assessment; every displayed reference label ends in `[D#]`.
+- [ ] The risk report lists causes, contextual modifiers, safer allowed wording, and the recalculated score after any revision.
+- [ ] D1-D10 is presented as a forecast, not a guarantee or an evasion target.
+- [ ] Face geometry, nose, lips, eyes, jaw, and expression match their assigned sources.
+- [ ] Every visible new character has a primary large face reference and a compatible supporting face reference.
+- [ ] A full-body or medium-shot image with a small face was not used as the only face reference.
+- [ ] Existing-character face identity is unchanged unless explicitly released.
+- [ ] Body build and permanent proportions match their assigned source.
+- [ ] Exactly one dominant body source controls permanent proportions.
+- [ ] A full standing result uses a full-body standing dominant source, not a seated/lying/cropped substitute.
+- [ ] Side-by-side silhouette review matches shoulders, ribcage, torso length, waist, hips, glutes, thighs, total height in heads, and leg-to-torso ratio.
+- [ ] Character-base physique has separate front, side, and back full-body views of the same adult body.
+- [ ] For a NEW character, taped front/side/back projections were generated before face assembly, clothing, accessories, or any scene/background.
+- [ ] Front/side/back views match in height, torso and limb proportions, chest, pelvis, glute, and thigh volume.
+- [ ] Opaque matte tape covers only required intimate areas and does not compress, reshape, wrap around, or obscure the silhouette needed for anatomy review.
+- [ ] Character base uses only a plain neutral backdrop; no designed background was generated as an identity asset.
+- [ ] Neutral 3/4 assembly uses the verified face plus all three physique views.
+- [ ] Clothing and accessories remain separate mutable assets and do not redefine face or body identity.
+- [ ] All mandatory base views remain stored even when a later scene uses a smaller attachment subset.
+- [ ] Later scene starts from the approved character assembly and adds only the body projection nearest to the target camera when necessary.
+- [ ] A separate close face is attached for close-up, complex angle/expression, or drift recovery; all three body views are not attached without a base rebuild/audit reason.
+- [ ] The body source was selected after comparing the complete local body pool.
+- [ ] Existing-character body identity is unchanged unless explicitly released.
+- [ ] Pose is anatomically plausible and does not replace the body build.
+- [ ] Pose, clothes, lighting, background, and composition each have recorded selection evidence from their complete local pools.
+- [ ] Clothing fits the body without unintentionally reshaping it.
+- [ ] Linework, palette, light, character, and background share one visual language.
+- [ ] Background style and detail hierarchy match the pack unless explicitly released.
+- [ ] No unexplained text, watermark, UI, obstruction, or accidental object is present.
+- [ ] Side-by-side face review shows no generic Disney, anime, editorial, or unrelated facial drift.
+- [ ] Every multi-stage intermediate passed its own layer QA before use and remained inside the same request.
+- [ ] Any failed attachment, canvas, face, silhouette, or proportion check automatically records the result as REJECTED.
+- [ ] Result status is recorded as STAGING, TEST, APPROVED, or REJECTED.
+- [ ] Generated or AI-edited image is archived in `GENERATION_RESULTS`.
