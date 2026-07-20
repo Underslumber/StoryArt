@@ -17,6 +17,7 @@
 !/tools/style_pack_manager.py
 !/tools/body_reference_manager.py
 !/tools/generation_risk_assessor.py
+!/tools/task_execution_guard.py
 
 # Local agent policy is copied from AGENTS.example.md during bootstrap.
 /AGENTS.md
@@ -28,6 +29,7 @@
 /BODY_REFERENCE_LIBRARY/
 /GENERATION_RESULTS/
 /tmp/
+/.task_guard/
 /*_SOURCE_COLLECTION/
 /*_SELECTIONS*/
 /New*/
