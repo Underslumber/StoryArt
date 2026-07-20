@@ -794,22 +794,51 @@ def parse_startup_interaction(args: argparse.Namespace) -> dict[str, object]:
         return reused
 
     if selection_mode == "AUTO_DEFAULT":
-        if args.fidelity != 90 or args.aux_body_decision.upper() != "SELECTED":
-            raise StylePackError("AUTO_DEFAULT must use fidelity=90 and aux-body-decision=SELECTED.")
+        raise StylePackError(
+            "AUTO_DEFAULT is forbidden for new plans. Stop and ask the user how to proceed when the native choice control is unavailable."
+        )
+
+    if selection_mode == "USER_CONFIRMATION":
+        if args.startup_menu_surface != "USER_REPLY_AFTER_NATIVE_UNAVAILABLE":
+            raise StylePackError(
+                "USER_CONFIRMATION requires --startup-menu-surface USER_REPLY_AFTER_NATIVE_UNAVAILABLE."
+            )
+        choice = args.startup_choice.upper()
+        if choice not in {"OPTION_1", "CUSTOM"}:
+            raise StylePackError(
+                "USER_CONFIRMATION accepts OPTION_1 or CUSTOM only; unavailable presets must not be fabricated as a text menu."
+            )
+        user_quote = args.startup_choice_user_quote.strip()
+        if not user_quote:
+            raise StylePackError("USER_CONFIRMATION requires the user's explicit reply in --startup-choice-user-quote.")
+        if choice == "OPTION_1" and (args.fidelity != 90 or args.aux_body_decision.upper() != "SELECTED"):
+            raise StylePackError("Confirmed OPTION_1 must resolve to fidelity=90 and aux-body-decision=SELECTED.")
+        custom_quote = args.custom_parameters_user_quote.strip()
+        if choice == "CUSTOM":
+            if not custom_quote:
+                raise StylePackError(
+                    "Confirmed CUSTOM requires the user's complete reply in --custom-parameters-user-quote."
+                )
+            if not re.search(rf"(?<!\d){args.fidelity}\s*%?(?!\d)", custom_quote):
+                raise StylePackError(
+                    f"The confirmed custom answer must contain the selected fidelity value {args.fidelity}."
+                )
+        elif custom_quote:
+            raise StylePackError("--custom-parameters-user-quote is valid only when CUSTOM was selected.")
         return {
-            "menu_contract": "NATIVE_MENU_UNAVAILABLE_AUTO_DEFAULT",
+            "menu_contract": "NATIVE_MENU_UNAVAILABLE_USER_CONFIRMATION",
             "options": [],
-            "selected": "OPTION_1",
-            "selection_state": "AUTO_DEFAULT_NO_UI",
+            "selected": choice,
+            "selection_state": "USER_CONFIRMED_AFTER_NATIVE_UNAVAILABLE",
             "menu_presented_this_turn": False,
-            "menu_surface_this_turn": "NATIVE_UNAVAILABLE_NO_TEXT_FALLBACK",
-            "user_requested_reselection": False,
-            "user_choice_quote": "",
-            "parameter_source": "DEFAULT_POLICY_NATIVE_UI_UNAVAILABLE",
-            "custom_parameters_user_quote": "",
-            "custom_description_treated_as_complete": False,
+            "menu_surface_this_turn": "USER_REPLY_AFTER_NATIVE_UNAVAILABLE",
+            "user_requested_reselection": args.user_requested_reselection,
+            "user_choice_quote": user_quote,
+            "parameter_source": "USER_CONFIRMATION_AFTER_NATIVE_UNAVAILABLE",
+            "custom_parameters_user_quote": custom_quote,
+            "custom_description_treated_as_complete": choice == "CUSTOM",
             "follow_up_allowed_only_for_genuinely_missing_required_information": True,
-            "optional_follow_up_questions_forbidden": True,
+            "optional_follow_up_questions_forbidden": choice == "CUSTOM",
             "numeric_values_were_not_requested_before_menu_choice": True,
         }
 
@@ -1907,12 +1936,12 @@ def validate_reference_plan_for_recording(
         startup = plan.get("startup_parameter_selection")
         if not isinstance(startup, dict) or startup.get("selected") not in STARTUP_CHOICES:
             raise StylePackError("Reference plan has no valid three-presets-plus-custom startup selection.")
-        if startup.get("selection_state") == "NEW_SELECTION" and not str(startup.get("user_choice_quote", "")).strip():
-            raise StylePackError("Reference plan has no recorded user startup-menu choice.")
-        if startup.get("selection_state") not in {"NEW_SELECTION", "REUSED_IN_SAME_CHAT", "AUTO_DEFAULT_NO_UI"}:
+        if startup.get("selection_state") in {"NEW_SELECTION", "USER_CONFIRMED_AFTER_NATIVE_UNAVAILABLE"} and not str(startup.get("user_choice_quote", "")).strip():
+            raise StylePackError("Reference plan has no recorded user startup choice or confirmation.")
+        if startup.get("selection_state") not in {"NEW_SELECTION", "USER_CONFIRMED_AFTER_NATIVE_UNAVAILABLE", "REUSED_IN_SAME_CHAT", "AUTO_DEFAULT_NO_UI"}:
             raise StylePackError("Reference plan has no valid new-or-reused same-chat startup state.")
-        if startup.get("selection_state") in {"REUSED_IN_SAME_CHAT", "AUTO_DEFAULT_NO_UI"} and startup.get("menu_presented_this_turn") is not False:
-            raise StylePackError("A reused or automatic-default selection must not present the startup menu.")
+        if startup.get("selection_state") in {"USER_CONFIRMED_AFTER_NATIVE_UNAVAILABLE", "REUSED_IN_SAME_CHAT", "AUTO_DEFAULT_NO_UI"} and startup.get("menu_presented_this_turn") is not False:
+            raise StylePackError("A user-confirmed, reused, or legacy automatic-default selection must not present the startup menu.")
         options = startup.get("options")
         if startup.get("menu_contract") == "THREE_AI_PRESETS_PLUS_CUSTOM" and (
             not isinstance(options, list) or [item.get("id") for item in options] != [*STARTUP_CHOICES]
@@ -1920,6 +1949,8 @@ def validate_reference_plan_for_recording(
             raise StylePackError("Reference plan does not contain the required three AI presets plus CUSTOM.")
         if startup.get("menu_contract") == "NATIVE_MENU_UNAVAILABLE_AUTO_DEFAULT" and options != []:
             raise StylePackError("Automatic default must not fabricate or display startup menu options.")
+        if startup.get("menu_contract") == "NATIVE_MENU_UNAVAILABLE_USER_CONFIRMATION" and options != []:
+            raise StylePackError("User confirmation after unavailable UI must not fabricate startup menu options.")
         risk = plan.get("risk_assessment")
         if not isinstance(risk, dict) or not RISK_LABEL_RE.fullmatch(str(risk.get("generation_risk", ""))):
             raise StylePackError("Reference plan has no valid D1-D10 generation-risk assessment.")
@@ -3254,9 +3285,9 @@ def build_parser() -> argparse.ArgumentParser:
     prepare_parser.add_argument("--request-id", required=True)
     prepare_parser.add_argument(
         "--startup-selection-mode",
-        choices=("NEW", "REUSE", "AUTO_DEFAULT"),
+        choices=("NEW", "REUSE", "USER_CONFIRMATION"),
         default="NEW",
-        help="NEW uses the native menu; REUSE keeps the same-chat choice; AUTO_DEFAULT silently uses 90%% plus the body library when native UI is unavailable.",
+        help="NEW uses the native menu; REUSE keeps the same-chat choice; USER_CONFIRMATION records an explicit reply after the native UI was unavailable.",
     )
     prepare_parser.add_argument(
         "--reuse-startup-from",
@@ -3265,9 +3296,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     prepare_parser.add_argument(
         "--startup-menu-surface",
-        choices=("NATIVE_CONTEXT_MENU",),
+        choices=("NATIVE_CONTEXT_MENU", "USER_REPLY_AFTER_NATIVE_UNAVAILABLE"),
         default="NATIVE_CONTEXT_MENU",
-        help="Native input-area choice control. Text startup menus are forbidden.",
+        help="Native input-area choice control, or the explicit user reply collected after that control was unavailable. Text startup menus are forbidden.",
     )
     prepare_parser.add_argument(
         "--user-requested-reselection",
