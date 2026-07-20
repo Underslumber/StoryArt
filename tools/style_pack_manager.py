@@ -1272,6 +1272,17 @@ def build_multistage_attachment_plan(
             "generated_stage_output": True,
         }
 
+    def targeted_stage_pack(stage_ids: Sequence[str], role: str) -> dict[str, object]:
+        pack_id = "+".join(stage_ids)
+        return {
+            "path": f"<TARGETED_STAGE_PACK:{pack_id}>",
+            "sha256": f"TARGETED_STAGE_PACK:{pack_id}",
+            "stage_role": role,
+            "generated_stage_output": True,
+            "planned_targeted_pack": True,
+            "targeted_pack_sources": list(stage_ids),
+        }
+
     def add_stage(stage_id: str, purpose: str, records: list[dict[str, object]], qa: Sequence[str]) -> None:
         grouped: dict[str, dict[str, object]] = {}
         for record in records:
@@ -1286,6 +1297,9 @@ def build_multistage_attachment_plan(
                     "generated_stage_output": bool(record.get("generated_stage_output")),
                 },
             )
+            if record.get("planned_targeted_pack"):
+                item["planned_targeted_pack"] = True
+                item["targeted_pack_sources"] = list(record.get("targeted_pack_sources", []))
             role = str(record["stage_role"])
             if role not in item["active_roles"]:
                 item["active_roles"].append(role)
@@ -1350,23 +1364,31 @@ def build_multistage_attachment_plan(
         front_records = [*body_records, face_output, *coverage_records(["coverage_front"])]
         add_stage(
             "02_PHYSIQUE_FRONT",
-            "Create the canonical adult full-body front view on a plain neutral backdrop. Preserve the complete silhouette and visible cleavage construction. Prefer minimal opaque matte tape only when accepted; after any tape, adhesive-only, or pasties moderation rejection, use the verified opaque G3X extreme-micro seed instead of retrying synonyms. For the tested minimum upper topology, use the approved working F40 technical reference as hard CLOTHES evidence scoped only to CLOTHING_TOPOLOGY; keep the compact G3X lower front panel unchanged.",
+            "Create the canonical adult full-body front view on a plain neutral backdrop. Preserve the complete silhouette and reproduce the user-approved safety garment from the selected hard CLOTHING_TOPOLOGY reference without changing body proportions.",
             front_records,
             ("FACE_GEOMETRY", "BODY_SILHOUETTE", "BODY_PROPORTIONS", "FRONT_VIEW", "SAFE_COVERAGE", "STYLE"),
         )
         front_output = placeholder("02_PHYSIQUE_FRONT", "PHYSIQUE_FRONT_STAGE")
-        side_records = [*body_records, face_output, front_output, *coverage_records(["coverage_front", "coverage_side"])]
+        face_front_pack = targeted_stage_pack(
+            ("01_FACE_IDENTITY", "02_PHYSIQUE_FRONT"),
+            "FACE_FRONT_TARGETED_PACK",
+        )
+        side_records = [*body_records, face_front_pack, *coverage_records(["coverage_front", "coverage_side"])]
         add_stage(
             "03_PHYSIQUE_SIDE",
-            "Create the canonical adult full-body side view of the same physique on a plain neutral backdrop. Match height, torso depth, chest projection and lower curve, abdomen, pelvis, glutes, thighs, spinal curve, and limb proportions; use accepted minimal tape or the verified opaque open-swim set. When using the minimum F40 topology, attach the approved FRONT topology as hard CLOTHES evidence plus the approved SIDE fit reference. Keep the opaque panel primarily on the anterior surface: from strict side view only a narrow leading section may remain visible, the panel may not wrap around the lateral contour, and the edit may not alter chest projection or silhouette.",
+            "Create the canonical adult full-body side view of the same physique on a plain neutral backdrop. Deterministically pack the passed FACE and FRONT outputs without cropping and attach that generator-safe targeted pack as their single physical slot. Match height, torso depth, abdomen, pelvis, glutes, thighs, spinal curve, and limb proportions; reproduce the same user-approved safety garment from the selected hard CLOTHING_TOPOLOGY reference without altering the external silhouette.",
             side_records,
             ("FACE_GEOMETRY", "BODY_SILHOUETTE", "BODY_PROPORTIONS", "SIDE_VIEW", "SAFE_COVERAGE", "MULTIVIEW_CONSISTENCY", "STYLE"),
         )
         side_output = placeholder("03_PHYSIQUE_SIDE", "PHYSIQUE_SIDE_STAGE")
-        back_records = [*body_records, face_output, front_output, side_output, *coverage_records(["coverage_back"])]
+        face_front_side_pack = targeted_stage_pack(
+            ("01_FACE_IDENTITY", "02_PHYSIQUE_FRONT", "03_PHYSIQUE_SIDE"),
+            "FACE_FRONT_SIDE_TARGETED_PACK",
+        )
+        back_records = [*body_records, face_front_side_pack, *coverage_records(["coverage_back"])]
         add_stage(
             "04_PHYSIQUE_BACK",
-            "Create the canonical adult full-body back view of the same physique on a plain neutral backdrop. Match the front view's height, shoulders, torso, waist, pelvis, glutes, thighs, and limbs. When tape is unavailable, a conventional flat extreme-micro T-back may seed the view when the natural center contour only needs to remain readable alongside and below its slim vertical strap. When the contour must be physically uncovered while retaining a T-shaped junction, use the approved short-stem BACK technical reference, or a separate request-local hard CLOTHES reference, scoped only to CLOTHING_TOPOLOGY. Reproduce two thin side straps, a small triangular junction, and only a very short upper stem; say do not lengthen the stem. Use a compact low-rise opaque V-back for the verified one-call alternative; fall back to a flat tanga panel, then seamless full-seat shorts, only if required.",
+            "Create the canonical adult full-body back view of the same physique on a plain neutral backdrop. Deterministically pack the passed FACE, FRONT, and SIDE outputs without cropping and attach that generator-safe targeted pack as their single physical slot. Match the front and side views' height, shoulders, torso, waist, pelvis, glutes, thighs, and limbs; reproduce the same user-approved safety garment from the selected hard BACK CLOTHING_TOPOLOGY reference without altering the external silhouette.",
             back_records,
             ("FACE_GEOMETRY", "BODY_SILHOUETTE", "BODY_PROPORTIONS", "BACK_VIEW", "SAFE_COVERAGE", "MULTIVIEW_CONSISTENCY", "STYLE"),
         )
