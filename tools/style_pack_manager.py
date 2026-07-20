@@ -23,6 +23,21 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Sequence
 
+try:
+    from tools.task_execution_guard import (
+        GuardError as ExecutionGuardError,
+        checkpoint as execution_checkpoint,
+        require_active_guard,
+        require_execution_started,
+    )
+except ModuleNotFoundError:  # Direct execution as python tools\style_pack_manager.py
+    from task_execution_guard import (
+        GuardError as ExecutionGuardError,
+        checkpoint as execution_checkpoint,
+        require_active_guard,
+        require_execution_started,
+    )
+
 
 SCRIPT_PATH = Path(__file__).resolve()
 DEFAULT_WORKSPACE = SCRIPT_PATH.parents[1]
@@ -1520,6 +1535,17 @@ def build_generation_workflow(
 def command_prepare_generation(args: argparse.Namespace) -> None:
     paths = make_paths(args.workspace, args.style_name)
     ensure_generation_library(paths)
+    request_id = safe_component(args.request_id, "request")
+    request_folder = paths.generations / "00_PENDING" / request_id
+    execution_guard_path = request_folder / "EXECUTION_GUARD.json"
+    try:
+        execution_guard = require_active_guard(execution_guard_path, request_id)
+    except ExecutionGuardError as error:
+        raise StylePackError(
+            f"Execution guard blocked preparation: {error}. Start the request guard before substantive work with "
+            f"tools\\task_execution_guard.py start --state \"{execution_guard_path}\" --request-id \"{request_id}\" "
+            "--goal \"<user goal>\" --deliverable \"<visible deliverable>\"."
+        ) from error
     if args.fidelity not in {30, 50, 70, 90, 100}:
         raise StylePackError("Fidelity must be one of 30, 50, 70, 90, or 100.")
     startup_interaction = parse_startup_interaction(args)
@@ -1702,9 +1728,6 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         auxiliary_body_references,
     )
 
-    request_id = safe_component(args.request_id, "request")
-    request_folder = paths.generations / "00_PENDING" / request_id
-    request_folder.mkdir(parents=True, exist_ok=True)
     plan_path = request_folder / "REFERENCE_PLAN.json"
     if plan_path.exists():
         raise StylePackError(f"Reference plan already exists and will not be overwritten: {plan_path}")
@@ -1792,6 +1815,12 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         },
         "user_overrides": sorted(overrides),
         "notes": args.notes,
+        "execution_guard": {
+            "path": str(execution_guard_path.resolve()),
+            "request_id": execution_guard["request_id"],
+            "goal_lock": execution_guard["goal_lock"],
+            "primary_deliverable": execution_guard["primary_deliverable"],
+        },
     }
     if purpose == "CHARACTER_BASE":
         kit_name = safe_component(args.character_name or request_id, "character")
@@ -1875,6 +1904,17 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
             "permanent_character_folder_only_after_direct_approval": True,
         }
     plan_path.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    try:
+        execution_checkpoint(
+            execution_guard_path,
+            event="READY_FOR_EXECUTION",
+            summary=(
+                f"REFERENCE_PLAN ready for {purpose}; only one exact-call risk validation may remain before the real "
+                "generator call, otherwise report a blocker."
+            ),
+        )
+    except ExecutionGuardError as error:
+        raise StylePackError(f"Execution guard could not record readiness: {error}") from error
     print(f"REFERENCE_PLAN={plan_path}")
     print(f"LOCAL_FILES_RECOGNIZED={context['local_files_total']}")
     print(f"REVIEW_POOL_COUNTS={json.dumps(review_pool_counts, ensure_ascii=False)}")
@@ -1887,6 +1927,7 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
     print(f"DOMINANT_BODY_SOURCE={body_proportion_contract['dominant_source']}")
     print(f"REFERENCE_WORKFLOW={generation_workflow['mode']}")
     print(f"GENERATION_RISK={risk_assessment['generation_risk']}")
+    print(f"EXECUTION_GUARD={execution_guard_path}")
     print(f"STARTUP_CHOICE={startup_interaction['selected']}")
     print(f"GENERATION_PURPOSE={purpose}")
     print(f"CHARACTER_REFERENCE_MODE={character_reference_mode}")
@@ -2717,6 +2758,13 @@ def command_record_generation(args: argparse.Namespace) -> None:
     # Archive first: even a QA failure or an invalid record attempt is still a produced generation.
     archive_file = archive_generation(paths, image, args.description)
     request_id = safe_component(args.request_id, "request")
+    execution_guard_path = paths.generations / "00_PENDING" / request_id / "EXECUTION_GUARD.json"
+    try:
+        require_execution_started(execution_guard_path, request_id)
+    except ExecutionGuardError as error:
+        raise StylePackError(
+            f"Generated image was archived at {archive_file}, but recording is blocked by the execution guard: {error}"
+        ) from error
     plan: dict[str, object] | None = None
     risk_level = args.risk_level.upper() if args.risk_level else ""
     stage_id = ""
@@ -2788,6 +2836,15 @@ def command_record_generation(args: argparse.Namespace) -> None:
         reference_plan=reference_plan,
         notes=combined_notes,
     )
+    try:
+        execution_checkpoint(
+            execution_guard_path,
+            event="VISIBLE_RESULT",
+            summary=f"Generated image {new_id} was archived and recorded with status {status}.",
+            evidence=[str(archive_file)],
+        )
+    except ExecutionGuardError as error:
+        raise StylePackError(f"Generation was recorded, but visible-result checkpoint failed: {error}") from error
     print(f"GENERATION_ID={new_id}")
     print(f"ARCHIVE_FILE={archive_file}")
     print(f"STYLE_FILE={style_file}")
