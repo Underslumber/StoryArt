@@ -810,22 +810,49 @@ def parse_startup_interaction(args: argparse.Namespace) -> dict[str, object]:
 
     if selection_mode == "AUTO_DEFAULT":
         raise StylePackError(
-            "AUTO_DEFAULT is forbidden for new plans. Stop and ask the user how to proceed when the native choice control is unavailable."
+            "AUTO_DEFAULT is forbidden for new plans. Print the three-presets-plus-CUSTOM text menu when the native choice control is unavailable."
         )
 
     if selection_mode == "USER_CONFIRMATION":
-        if args.startup_menu_surface != "USER_REPLY_AFTER_NATIVE_UNAVAILABLE":
+        if args.startup_menu_surface != "TEXT_NUMBERED_MENU":
             raise StylePackError(
-                "USER_CONFIRMATION requires --startup-menu-surface USER_REPLY_AFTER_NATIVE_UNAVAILABLE."
+                "USER_CONFIRMATION requires --startup-menu-surface TEXT_NUMBERED_MENU."
             )
         choice = args.startup_choice.upper()
-        if choice not in {"OPTION_1", "CUSTOM"}:
-            raise StylePackError(
-                "USER_CONFIRMATION accepts OPTION_1 or CUSTOM only; unavailable presets must not be fabricated as a text menu."
-            )
+        if choice not in STARTUP_CHOICES:
+            raise StylePackError("USER_CONFIRMATION requires OPTION_1, OPTION_2, OPTION_3, or CUSTOM.")
         user_quote = args.startup_choice_user_quote.strip()
         if not user_quote:
             raise StylePackError("USER_CONFIRMATION requires the user's explicit reply in --startup-choice-user-quote.")
+        options: dict[str, str] = {}
+        for value in args.startup_option:
+            if "=" not in value:
+                raise StylePackError("--startup-option must use OPTION_N=description.")
+            option_id, description = value.split("=", 1)
+            option_id = option_id.strip().upper()
+            description = description.strip()
+            if option_id not in STARTUP_CHOICES[:3] or not description:
+                raise StylePackError("Startup presets must be non-empty OPTION_1, OPTION_2, and OPTION_3 entries.")
+            if option_id in options:
+                raise StylePackError(f"Duplicate startup option: {option_id}")
+            options[option_id] = description
+        if set(options) != set(STARTUP_CHOICES[:3]):
+            raise StylePackError("The Default-mode text menu must contain exactly three AI presets before CUSTOM.")
+        recommended_text = options["OPTION_1"]
+        library_named = re.search(r"BODY_REFERENCE_LIBRARY|библиотек", recommended_text, flags=re.IGNORECASE)
+        library_enabled = re.search(r"подключ|включ|использ|\bYES\b|\bда\b", recommended_text, flags=re.IGNORECASE)
+        library_disabled = re.search(
+            r"не\s+(?:подключ|включ|использ)|без\s+(?:BODY_REFERENCE_LIBRARY|библиотек)",
+            recommended_text,
+            flags=re.IGNORECASE,
+        )
+        if (
+            not re.search(r"(?<!\d)90\s*%?(?!\d)", recommended_text)
+            or not library_named
+            or not library_enabled
+            or library_disabled
+        ):
+            raise StylePackError("OPTION_1 must be the recommended 90% preset with BODY_REFERENCE_LIBRARY enabled.")
         if choice == "OPTION_1" and (args.fidelity != 90 or args.aux_body_decision.upper() != "SELECTED"):
             raise StylePackError("Confirmed OPTION_1 must resolve to fidelity=90 and aux-body-decision=SELECTED.")
         custom_quote = args.custom_parameters_user_quote.strip()
@@ -841,15 +868,19 @@ def parse_startup_interaction(args: argparse.Namespace) -> dict[str, object]:
         elif custom_quote:
             raise StylePackError("--custom-parameters-user-quote is valid only when CUSTOM was selected.")
         return {
-            "menu_contract": "NATIVE_MENU_UNAVAILABLE_USER_CONFIRMATION",
-            "options": [],
+            "menu_contract": "THREE_AI_PRESETS_PLUS_CUSTOM",
+            "options": [
+                {"id": key, "description": options[key], "recommended": key == "OPTION_1"}
+                for key in STARTUP_CHOICES[:3]
+            ]
+            + [{"id": "CUSTOM", "description": "Указать свой вариант"}],
             "selected": choice,
-            "selection_state": "USER_CONFIRMED_AFTER_NATIVE_UNAVAILABLE",
-            "menu_presented_this_turn": False,
-            "menu_surface_this_turn": "USER_REPLY_AFTER_NATIVE_UNAVAILABLE",
+            "selection_state": "USER_CONFIRMED_FROM_TEXT_MENU",
+            "menu_presented_this_turn": True,
+            "menu_surface_this_turn": "TEXT_NUMBERED_MENU",
             "user_requested_reselection": args.user_requested_reselection,
             "user_choice_quote": user_quote,
-            "parameter_source": "USER_CONFIRMATION_AFTER_NATIVE_UNAVAILABLE",
+            "parameter_source": "USER_CONFIRMATION_FROM_TEXT_MENU",
             "custom_parameters_user_quote": custom_quote,
             "custom_description_treated_as_complete": choice == "CUSTOM",
             "follow_up_allowed_only_for_genuinely_missing_required_information": True,
@@ -860,7 +891,9 @@ def parse_startup_interaction(args: argparse.Namespace) -> dict[str, object]:
     if selection_mode != "NEW":
         raise StylePackError(f"Unknown startup selection mode: {selection_mode}")
     if args.startup_menu_surface != "NATIVE_CONTEXT_MENU":
-        raise StylePackError("NEW selection requires the native context menu. Text startup menus are forbidden.")
+        raise StylePackError(
+            "NEW is reserved for the native Plan-mode menu; use USER_CONFIRMATION with TEXT_NUMBERED_MENU in Default mode."
+        )
     choice = args.startup_choice.upper()
     if choice not in STARTUP_CHOICES:
         raise StylePackError("NEW selection requires --startup-choice OPTION_1, OPTION_2, OPTION_3, or CUSTOM.")
@@ -1977,12 +2010,17 @@ def validate_reference_plan_for_recording(
         startup = plan.get("startup_parameter_selection")
         if not isinstance(startup, dict) or startup.get("selected") not in STARTUP_CHOICES:
             raise StylePackError("Reference plan has no valid three-presets-plus-custom startup selection.")
-        if startup.get("selection_state") in {"NEW_SELECTION", "USER_CONFIRMED_AFTER_NATIVE_UNAVAILABLE"} and not str(startup.get("user_choice_quote", "")).strip():
+        if startup.get("selection_state") in {"NEW_SELECTION", "USER_CONFIRMED_FROM_TEXT_MENU", "USER_CONFIRMED_AFTER_NATIVE_UNAVAILABLE"} and not str(startup.get("user_choice_quote", "")).strip():
             raise StylePackError("Reference plan has no recorded user startup choice or confirmation.")
-        if startup.get("selection_state") not in {"NEW_SELECTION", "USER_CONFIRMED_AFTER_NATIVE_UNAVAILABLE", "REUSED_IN_SAME_CHAT", "AUTO_DEFAULT_NO_UI"}:
+        if startup.get("selection_state") not in {"NEW_SELECTION", "USER_CONFIRMED_FROM_TEXT_MENU", "USER_CONFIRMED_AFTER_NATIVE_UNAVAILABLE", "REUSED_IN_SAME_CHAT", "AUTO_DEFAULT_NO_UI"}:
             raise StylePackError("Reference plan has no valid new-or-reused same-chat startup state.")
         if startup.get("selection_state") in {"USER_CONFIRMED_AFTER_NATIVE_UNAVAILABLE", "REUSED_IN_SAME_CHAT", "AUTO_DEFAULT_NO_UI"} and startup.get("menu_presented_this_turn") is not False:
             raise StylePackError("A user-confirmed, reused, or legacy automatic-default selection must not present the startup menu.")
+        if startup.get("selection_state") == "USER_CONFIRMED_FROM_TEXT_MENU" and (
+            startup.get("menu_presented_this_turn") is not True
+            or startup.get("menu_surface_this_turn") != "TEXT_NUMBERED_MENU"
+        ):
+            raise StylePackError("A Default-mode confirmation must record the displayed TEXT_NUMBERED_MENU.")
         options = startup.get("options")
         if startup.get("menu_contract") == "THREE_AI_PRESETS_PLUS_CUSTOM" and (
             not isinstance(options, list) or [item.get("id") for item in options] != [*STARTUP_CHOICES]
@@ -3344,7 +3382,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--startup-selection-mode",
         choices=("NEW", "REUSE", "USER_CONFIRMATION"),
         default="NEW",
-        help="NEW uses the native menu; REUSE keeps the same-chat choice; USER_CONFIRMATION records an explicit reply after the native UI was unavailable.",
+        help="NEW uses the native Plan-mode menu; REUSE keeps the same-chat choice; USER_CONFIRMATION records a reply to the Default-mode text menu.",
     )
     prepare_parser.add_argument(
         "--reuse-startup-from",
@@ -3353,9 +3391,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     prepare_parser.add_argument(
         "--startup-menu-surface",
-        choices=("NATIVE_CONTEXT_MENU", "USER_REPLY_AFTER_NATIVE_UNAVAILABLE"),
+        choices=("NATIVE_CONTEXT_MENU", "TEXT_NUMBERED_MENU"),
         default="NATIVE_CONTEXT_MENU",
-        help="Native input-area choice control, or the explicit user reply collected after that control was unavailable. Text startup menus are forbidden.",
+        help="Native input-area choice control in Plan mode, or the required numbered text menu in Default mode.",
     )
     prepare_parser.add_argument(
         "--user-requested-reselection",

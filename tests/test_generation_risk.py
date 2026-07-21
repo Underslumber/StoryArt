@@ -165,17 +165,36 @@ class StartupMenuTests(unittest.TestCase):
                     fidelity=70,
                 ))
 
-    def test_native_unavailable_requires_explicit_user_confirmation(self):
+    def test_default_mode_text_menu_records_all_options(self):
         result = manager.parse_startup_interaction(self.make_args(
             startup_selection_mode="USER_CONFIRMATION",
-            startup_menu_surface="USER_REPLY_AFTER_NATIVE_UNAVAILABLE",
-            startup_choice_user_quote="Делай рекомендуемый вариант",
-            startup_option=[],
+            startup_menu_surface="TEXT_NUMBERED_MENU",
+            startup_choice_user_quote="1",
         ))
-        self.assertEqual(result["selection_state"], "USER_CONFIRMED_AFTER_NATIVE_UNAVAILABLE")
+        self.assertEqual(result["selection_state"], "USER_CONFIRMED_FROM_TEXT_MENU")
         self.assertEqual(result["selected"], "OPTION_1")
-        self.assertFalse(result["menu_presented_this_turn"])
-        self.assertEqual(result["options"], [])
+        self.assertTrue(result["menu_presented_this_turn"])
+        self.assertEqual([item["id"] for item in result["options"]], [*manager.STARTUP_CHOICES])
+
+    def test_default_mode_text_menu_accepts_contextual_option(self):
+        result = manager.parse_startup_interaction(self.make_args(
+            startup_selection_mode="USER_CONFIRMATION",
+            startup_menu_surface="TEXT_NUMBERED_MENU",
+            startup_choice="OPTION_2",
+            startup_choice_user_quote="2",
+            fidelity=70,
+            aux_body_decision="DECLINED",
+        ))
+        self.assertEqual(result["selected"], "OPTION_2")
+        self.assertEqual(result["menu_surface_this_turn"], "TEXT_NUMBERED_MENU")
+
+    def test_default_mode_rejects_old_hidden_confirmation_surface(self):
+        with self.assertRaises(manager.StylePackError):
+            manager.parse_startup_interaction(self.make_args(
+                startup_selection_mode="USER_CONFIRMATION",
+                startup_menu_surface="USER_REPLY_AFTER_NATIVE_UNAVAILABLE",
+                startup_choice_user_quote="1",
+            ))
 
     def test_auto_default_is_forbidden(self):
         with self.assertRaises(manager.StylePackError):
@@ -187,9 +206,8 @@ class StartupMenuTests(unittest.TestCase):
         with self.assertRaises(manager.StylePackError):
             manager.parse_startup_interaction(self.make_args(
                 startup_selection_mode="USER_CONFIRMATION",
-                startup_menu_surface="USER_REPLY_AFTER_NATIVE_UNAVAILABLE",
+                startup_menu_surface="TEXT_NUMBERED_MENU",
                 startup_choice_user_quote="",
-                startup_option=[],
             ))
 
     def test_risk_gate_requires_every_selected_reference(self):
