@@ -1,10 +1,12 @@
 # StoryArt agent instructions
 
 - Prefer minimal, non-breaking changes and avoid unnecessary abstractions.
-- Treat every `*_PROJECT_PACK`, `*_GENERATIONS`, `BODY_REFERENCE_LIBRARY`, `GENERATION_RESULTS`, source collection, and image as local user data that must not be committed. The only exception is a user-approved lightweight README preview under `docs/assets/previews`.
+- Treat every `*_PROJECT_PACK`, `*_GENERATIONS`, `BODY_REFERENCE_LIBRARY`, `POSE_LINE_REFERENCE_LIBRARY`, `GENERATION_RESULTS`, source collection, and image as local user data that must not be committed. The only exception is a user-approved lightweight README preview under `docs/assets/previews`.
 - Preserve source images unchanged. Create derivatives as new files and record their provenance in the relevant manifest.
 - Use `tools/style_pack_manager.py` for style-pack creation, ingestion, discovery, generation records, approvals, and validation.
 - Use `tools/body_reference_manager.py` to append to an existing body-reference library; never rebuild or renumber the library.
+- After initial bootstrap, inspect `POSE_LINE_LIBRARY_STATUS`. If it is `NOT_BUILT`, explicitly offer to run `.\scripts\bootstrap.ps1 -CollectPoseLineLibrary`; never start the network collection without the user's approval. If it is `REVIEW_REQUIRED`, offer to continue the contact-sheet review instead of treating unreviewed downloads as usable references.
+- `POSE_LINE_REFERENCE_LIBRARY` is independent of the user's `BODY_REFERENCE_LIBRARY` choice. A reviewed line image may be selected as one soft `POSE` reference for joint placement, gesture, balance, foreshortening, and contacts only. It must never act as `BODY`, `BODY_BUILD_TARGET`, face, style, clothes, or physiology authority; attach at most one and preserve canonical character proportions through separate authoritative references and QA.
 - Run `tools/generation_risk_assessor.py` before an image-generator call and store the resulting assessment with the local request.
 - Before substantive work, create `EXECUTION_GUARD.json` with `tools/task_execution_guard.py` to lock the user's goal, visible deliverable, scope, and budgets. The default ceiling is 20 active minutes or 12 preflight checkpoints before real execution. Waiting for the user pauses the clock.
 - Image requests keep the guard in `<STYLE>_GENERATIONS/00_PENDING/<request-id>/`. `prepare-generation` requires it and marks the request ready. After readiness, allow at most one exact-call risk validation, then start the real generator or report a blocker. Do not edit managers, tests, or workflow rules inside an image request unless the user explicitly requested that scope change.
