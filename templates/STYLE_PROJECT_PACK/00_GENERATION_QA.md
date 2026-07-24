@@ -19,6 +19,13 @@
 - [ ] The risk report lists causes, contextual modifiers, safer allowed wording, and the recalculated score after any revision.
 - [ ] D1-D10 is presented as a forecast, not a guarantee or an evasion target.
 - [ ] Face geometry, nose, lips, eyes, jaw, and expression match their assigned sources.
+- [ ] Style match was evaluated independently from identity match; a correct person with the wrong drawing language is `REJECTED`.
+- [ ] When calibration was triggered, production remained paused until all four candidates in each quartet were scored and the AI adaptation was recorded.
+- [ ] Calibration used four quartets by default; a two- or three-quartet run has direct user approval.
+- [ ] Every calibration quartet kept one face and controlled presentation fixed; every later quartet used a new face.
+- [ ] A finalized calibration was linked into production with `--require-style-calibration --style-calibration-state`, and its AI conclusion is present in `REFERENCE_PLAN.json`.
+- [ ] `STYLE`, face geometry, body silhouette/proportions, view, safe coverage, and clothing topology were recorded independently; no successful layer masked a failed or unchecked layer.
+- [ ] User feedback covers all four candidates through percentages or minimum-to-maximum order.
 - [ ] Every visible new character has a primary large face reference and a compatible supporting face reference.
 - [ ] A full-body or medium-shot image with a small face was not used as the only face reference.
 - [ ] Existing-character face identity is unchanged unless explicitly released.

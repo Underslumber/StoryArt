@@ -1,0 +1,4 @@
+interface:
+  display_name: "StoryArt Orchestrator"
+  short_description: "Project-local StoryArt role orchestration"
+  default_prompt: "Use $storyart-orchestrator to route this StoryArt request through isolated project roles."

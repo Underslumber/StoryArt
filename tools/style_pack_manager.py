@@ -554,6 +554,30 @@ def manifest_role_files(pack: Path, role: str) -> list[str]:
     return sorted(found, key=str.casefold)
 
 
+def active_style_calibration_summary(pack: Path) -> dict[str, object]:
+    path = pack / "02_LOCAL_ONLY_DO_NOT_UPLOAD" / "CALIBRATIONS" / "ACTIVE_STYLE_CALIBRATION.json"
+    if not path.is_file():
+        return {"status": "NOT_APPLIED", "path": ""}
+    try:
+        state = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"status": "INVALID", "path": str(path)}
+    if not isinstance(state, dict):
+        return {"status": "INVALID", "path": str(path)}
+    application = state.get("style_application", {})
+    return {
+        "status": "ACTIVE" if state.get("status") == "FINALIZED" else "INVALID",
+        "path": str(path),
+        "calibration_id": state.get("calibration_id", ""),
+        "protocol_version": int(state.get("protocol_version", 1) or 1),
+        "applied_at": application.get("applied_at", "") if isinstance(application, dict) else "",
+        "maximum_explicit_user_percentage": (
+            application.get("maximum_explicit_user_percentage") if isinstance(application, dict) else None
+        ),
+        "user_confirmed_100": bool(application.get("user_confirmed_100")) if isinstance(application, dict) else False,
+    }
+
+
 def build_style_context(paths: StylePaths, requested_role: str, positive_only: bool, include_files: bool) -> dict[str, object]:
     discovered = matching_discovered_style(paths)
     if discovered is None:
@@ -652,6 +676,7 @@ def build_style_context(paths: StylePaths, requested_role: str, positive_only: b
         "matching_files": len(records),
         "positive_face_candidates_in_scope": positive_face_count,
         "warnings": warnings,
+        "active_style_calibration": active_style_calibration_summary(pack),
     }
     if include_files:
         context["files"] = records
@@ -794,18 +819,31 @@ def parse_startup_interaction(args: argparse.Namespace) -> dict[str, object]:
         resolved = source_startup.get("resolved_parameters")
         if not isinstance(resolved, dict):
             raise StylePackError("The source plan has no reusable resolved startup parameters.")
-        if int(resolved.get("fidelity", -1)) != args.fidelity:
-            raise StylePackError("REUSE must preserve the previously selected fidelity unless the user requests reselection.")
-        if str(resolved.get("aux_body_decision", "")).upper() != args.aux_body_decision.upper():
-            raise StylePackError("REUSE must preserve the previous BODY_REFERENCE_LIBRARY decision unless the user requests reselection.")
+        profile_changed = (
+            int(resolved.get("fidelity", -1)) != args.fidelity
+            or str(resolved.get("aux_body_decision", "")).upper() != args.aux_body_decision.upper()
+        )
+        if profile_changed and not args.user_requested_reselection:
+            raise StylePackError("REUSE must preserve the previous profile unless the user explicitly requests reselection.")
+        if profile_changed and not args.startup_choice_user_quote.strip():
+            raise StylePackError("A reused profile change requires the user's exact correction in --startup-choice-user-quote.")
         reused = json.loads(json.dumps(source_startup, ensure_ascii=False))
+        if profile_changed:
+            reused["resolved_parameters"] = {
+                **resolved,
+                "fidelity": args.fidelity,
+                "aux_body_decision": args.aux_body_decision.upper(),
+            }
         reused.update({
-            "selection_state": "REUSED_IN_SAME_CHAT",
+            "selection_state": "REUSED_WITH_USER_RESELECTION" if profile_changed else "REUSED_IN_SAME_CHAT",
             "reused_from_plan": str(source_path),
             "menu_presented_this_turn": False,
             "menu_surface_this_turn": "NOT_PRESENTED_REUSED_SELECTION",
-            "user_requested_reselection": False,
+            "user_requested_reselection": bool(profile_changed),
         })
+        if profile_changed:
+            reused["user_choice_quote"] = args.startup_choice_user_quote.strip()
+            reused["parameter_source"] = "DIRECT_USER_CORRECTION_IN_SAME_CHAT"
         return reused
 
     if selection_mode == "AUTO_DEFAULT":
@@ -1007,6 +1045,149 @@ def load_and_validate_risk_assessment(
     return path, report
 
 
+def load_style_calibration_evidence(
+    value: str,
+    *,
+    required: bool,
+    style_name: str,
+    pack_path: str = "",
+) -> dict[str, object]:
+    """Validate a finalized multi-face calibration before production generation."""
+
+    resolved_from_active_profile = False
+    if not value and pack_path:
+        active_path = (
+            Path(pack_path).resolve()
+            / "02_LOCAL_ONLY_DO_NOT_UPLOAD"
+            / "CALIBRATIONS"
+            / "ACTIVE_STYLE_CALIBRATION.json"
+        )
+        if active_path.is_file():
+            value = str(active_path)
+            resolved_from_active_profile = True
+    if not value:
+        if required:
+            raise StylePackError(
+                "Style calibration is required for this request. Finish at least 2x4 (preferred 4x4) and pass "
+                "--style-calibration-state pointing to its finalized state."
+            )
+        return {
+            "required": False,
+            "status": "NOT_REQUIRED",
+            "path": "",
+        }
+    path = Path(value).resolve()
+    if not path.is_file():
+        raise StylePackError(f"Style calibration state does not exist: {path}")
+    try:
+        state = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise StylePackError(f"Cannot read style calibration state: {error}") from error
+    if not isinstance(state, dict) or state.get("schema_version") != 1:
+        raise StylePackError("Style calibration state must use schema_version 1.")
+    if str(state.get("style_name", "")).strip().casefold() != style_name.strip().casefold():
+        raise StylePackError("Style calibration belongs to a different style pack.")
+    if state.get("status") != "FINALIZED" or state.get("next_required_action") != "NONE":
+        raise StylePackError("Style calibration is incomplete; production remains paused until FINALIZED.")
+    rounds = state.get("rounds")
+    conclusion = state.get("final_conclusion")
+    if not isinstance(rounds, list) or len(rounds) < 2 or not isinstance(conclusion, dict):
+        raise StylePackError("Finalized style calibration must contain at least two scored quartets and an AI conclusion.")
+    completed_rounds = int(conclusion.get("completed_rounds", 0) or 0)
+    if completed_rounds < 2 or int(state.get("batch_size", 0) or 0) != 4:
+        raise StylePackError("Style calibration evidence must contain at least 2x4 scored candidates.")
+    target_rounds = int(state.get("target_rounds", 4) or 4)
+    if target_rounds < 4 and not state.get("reduced_rounds_user_approved"):
+        raise StylePackError("A two- or three-round calibration has no recorded direct user approval.")
+    if completed_rounds < target_rounds and not (
+        conclusion.get("early_stop") and conclusion.get("early_stop_user_approved")
+    ):
+        raise StylePackError("Early calibration finalization has no recorded direct user approval.")
+    if completed_rounds != len(rounds):
+        raise StylePackError("Finalized calibration round count does not match its conclusion.")
+    protocol = int(state.get("protocol_version", 1) or 1)
+    if protocol >= 3 and int(state.get("arts_per_round", 0) or 0) != 1:
+        raise StylePackError("Protocol-v3 calibration must contain exactly one composite art per round.")
+    seen_faces: set[str] = set()
+    for index, item in enumerate(rounds, 1):
+        if not isinstance(item, dict):
+            raise StylePackError("Style calibration contains an invalid round record.")
+        face_id = str(item.get("face_id", "")).strip().upper()
+        if not face_id or face_id in seen_faces:
+            raise StylePackError("Every calibration quartet must use one new temporary subject.")
+        seen_faces.add(face_id)
+        candidates = item.get("candidates")
+        feedback = item.get("feedback")
+        if (
+            not isinstance(candidates, list)
+            or len(candidates) != 4
+            or not all(isinstance(candidate, dict) for candidate in candidates)
+            or not isinstance(feedback, dict)
+        ):
+            raise StylePackError("Every finalized calibration round must contain four scored candidates.")
+        if any(candidate.get("user_score") is None for candidate in candidates):
+            raise StylePackError("Every finalized quartet needs all four panels scored by the user.")
+        hashes = {str(candidate.get("image_sha256", "")) for candidate in candidates if isinstance(candidate, dict)}
+        if len(hashes) != 4 or "" in hashes:
+            raise StylePackError("Every finalized quartet needs four distinct panel identities.")
+        if protocol >= 3:
+            quartet_path = str(item.get("quartet_art_path", "")).strip()
+            quartet_hash = str(item.get("quartet_art_sha256", "")).strip()
+            panel_labels = [str(candidate.get("panel_label", "")).strip().upper() for candidate in candidates]
+            source_paths = {str(candidate.get("image_path", "")).strip() for candidate in candidates}
+            source_hashes = {str(candidate.get("source_art_sha256", "")).strip() for candidate in candidates}
+            if (
+                not quartet_path
+                or not quartet_hash
+                or panel_labels != ["A", "B", "C", "D"]
+                or source_paths != {quartet_path}
+                or source_hashes != {quartet_hash}
+            ):
+                raise StylePackError(
+                    "Protocol-v3 quartet must source panels A/B/C/D from one generated composite art, not four outputs."
+                )
+        if feedback.get("mode") not in {"PERCENT", "MIN_TO_MAX"}:
+            raise StylePackError("Calibration feedback must use PERCENT or MIN_TO_MAX.")
+        if protocol >= 2:
+            distinction = item.get("distinction_qa")
+            if not isinstance(distinction, dict) or distinction.get("review_status") != "PASS":
+                raise StylePackError("Protocol-v2 calibration requires passed distinction QA for every quartet.")
+            if float(distinction.get("minimum_visible_delta_percent", 0) or 0) < 10:
+                raise StylePackError("Protocol-v2 quartet has less than 10% verified visual distance.")
+            if distinction.get("decision") != "SHOW_TO_USER" or distinction.get("collapsed_pairs"):
+                raise StylePackError("Collapsed or hidden protocol-v2 quartet cannot be production evidence.")
+        if index < len(rounds) and not isinstance(item.get("ai_adaptation"), dict):
+            raise StylePackError("Every completed quartet before the last needs an AI adaptation record.")
+    if protocol >= 2:
+        final_style_prompt = " ".join(str(conclusion.get("final_style_prompt", "")).split())
+        excluded_noise = conclusion.get("excluded_style_noise")
+        prompt_vocabulary = conclusion.get("prompt_vocabulary")
+        prompt_evidence = conclusion.get("prompt_evidence_by_round")
+        if not final_style_prompt or len(final_style_prompt) > 1200:
+            raise StylePackError("Protocol-v2 calibration needs a concise final_style_prompt of at most 1200 characters.")
+        if not isinstance(excluded_noise, list) or not excluded_noise:
+            raise StylePackError("Protocol-v2 calibration needs a non-empty excluded_style_noise list.")
+        if not isinstance(prompt_vocabulary, dict):
+            raise StylePackError("Protocol-v2 calibration needs prompt_vocabulary evidence from the four prompt variants.")
+        if not isinstance(prompt_evidence, list) or len(prompt_evidence) != completed_rounds:
+            raise StylePackError("Protocol-v2 calibration needs prompt evidence for every completed quartet.")
+    return {
+        "required": required,
+        "status": "FINALIZED",
+        "path": str(path),
+        "resolved_from_active_profile": resolved_from_active_profile,
+        "calibration_id": state.get("calibration_id", ""),
+        "completed_rounds": completed_rounds,
+        "batch_size": 4,
+        "feedback_modes": sorted({
+            str(item.get("feedback", {}).get("mode", ""))
+            for item in rounds
+            if isinstance(item, dict) and isinstance(item.get("feedback"), dict)
+        }),
+        "final_conclusion": conclusion,
+    }
+
+
 def parse_reviewed_counts(values: Sequence[str], legacy_face_count: int = 0) -> dict[str, int]:
     counts: dict[str, int] = {}
     for value in values:
@@ -1026,6 +1207,27 @@ def parse_reviewed_counts(values: Sequence[str], legacy_face_count: int = 0) -> 
     if legacy_face_count:
         counts["FACE"] = max(counts.get("FACE", 0), legacy_face_count)
     return counts
+
+
+def validate_prompt_only_body_library_review(args: argparse.Namespace) -> None:
+    """Require complete relevant BODY library review before dropping a selected visual source."""
+    if not getattr(args, "prompt_only_physique", False):
+        return
+    if str(getattr(args, "aux_body_decision", "")).upper() != "SELECTED":
+        return
+    reviewed = int(getattr(args, "body_library_candidates_reviewed", 0))
+    total = int(getattr(args, "body_library_relevant_candidates_total", 0))
+    if total <= 0:
+        raise StylePackError(
+            "Prompt-only physique with BODY_REFERENCE_LIBRARY selected requires a positive "
+            "--body-library-relevant-candidates-total after querying and visually inspecting the relevant real-photo pool."
+        )
+    if reviewed != total:
+        raise StylePackError(
+            "Prompt-only physique is premature: visually review every relevant BODY_REFERENCE_LIBRARY candidate first "
+            f"(reviewed {reviewed} of {total}). A real photo may be unsuitable for this role because of framing, "
+            "occlusion, pose, view, or build; do not label the photographed body anatomically wrong."
+        )
 
 
 def validate_plan_reference(paths: StylePaths, value: str, label: str) -> dict[str, object]:
@@ -1227,15 +1429,26 @@ def build_body_proportion_contract(
     elif dominant == "CHARACTER_BODY":
         if body_targets and not args.allow_body_identity_change:
             raise StylePackError("CHARACTER_BODY cannot compete with BODY_BUILD_TARGET without an explicit anatomy change.")
+    elif dominant == "PROMPT_BODY_SPEC":
+        if not is_new_character or technical_test:
+            raise StylePackError("PROMPT_BODY_SPEC is reserved for a new prompt-led CHARACTER_BASE.")
+        if not getattr(args, "prompt_only_physique", False):
+            raise StylePackError("PROMPT_BODY_SPEC requires --prompt-only-physique.")
+        if body_targets or "body" in selected or "pose" in selected:
+            raise StylePackError("PROMPT_BODY_SPEC cannot compete with visual BODY, POSE, or BODY_BUILD_TARGET inputs.")
+        if args.aux_body_decision.upper() == "SELECTED" and not args.aux_body_selection_note.strip():
+            raise StylePackError(
+                "PROMPT_BODY_SPEC with BODY_REFERENCE_LIBRARY selected requires an explicit note explaining why no safe candidate is attached."
+            )
     else:
-        raise StylePackError("--dominant-body-source must be STYLE_BODY, CHARACTER_BODY, or a connected BR_NNNN.")
+        raise StylePackError("--dominant-body-source must be PROMPT_BODY_SPEC, STYLE_BODY, CHARACTER_BODY, or a connected BR_NNNN.")
 
     if full_body_target:
         if coverage != "FULL_BODY":
             raise StylePackError(
                 f"Full-body output requires a FULL_BODY dominant source; {coverage} cannot define leg-to-torso length."
             )
-        if source_family != target_family and dominant != "CHARACTER_BODY":
+        if source_family != target_family and dominant not in {"CHARACTER_BODY", "PROMPT_BODY_SPEC"}:
             raise StylePackError(
                 f"Full-body {target_family} output cannot take permanent proportions from a {source_family} source. "
                 "Use a same-family full-body source; seated or lying references may only support staging/torso details."
@@ -1255,10 +1468,14 @@ def build_body_proportion_contract(
     return {
         "dominant_source": dominant,
         "single_dominant_source": True,
+        "specification_type": "TEXT" if dominant == "PROMPT_BODY_SPEC" else "VISUAL_REFERENCE",
         "source_coverage": coverage,
         "source_pose_family": source_family,
         "target_pose_family": target_family,
         "height_in_heads": head_contract,
+        "user_approved_nonstandard_proportions": bool(
+            getattr(args, "user_approved_nonstandard_proportions", False)
+        ),
         "silhouette_notes": args.body_silhouette_notes,
         "locked_measurements": [
             "shoulder_width", "bust_volume", "ribcage_width", "waist_width", "hip_width",
@@ -1441,9 +1658,9 @@ def build_multistage_attachment_plan(
         front_records = [*body_records, face_output, *coverage_records(["coverage_front"])]
         add_stage(
             "02_PHYSIQUE_FRONT",
-            "Create the canonical adult full-body front view on a plain neutral backdrop. Preserve the complete silhouette and reproduce the user-approved safety garment from the selected hard CLOTHING_TOPOLOGY reference without changing body proportions.",
+            "Create the canonical adult full-body front view on a plain neutral backdrop. Preserve the complete silhouette and render the prompt-defined safety garment; use optional CLOTHING_TOPOLOGY evidence only when the user directly requested it.",
             front_records,
-            ("FACE_GEOMETRY", "BODY_SILHOUETTE", "BODY_PROPORTIONS", "FRONT_VIEW", "SAFE_COVERAGE", "STYLE"),
+            ("FACE_GEOMETRY", "BODY_SILHOUETTE", "BODY_PROPORTIONS", "LIMB_PROPORTIONS", "FRONT_VIEW", "SAFE_COVERAGE", "CLOTHING_TOPOLOGY", "STYLE", "BODY_RENDERING_STYLE"),
         )
         front_output = placeholder("02_PHYSIQUE_FRONT", "PHYSIQUE_FRONT_STAGE")
         face_front_pack = targeted_stage_pack(
@@ -1453,9 +1670,9 @@ def build_multistage_attachment_plan(
         side_records = [*body_records, face_front_pack, *coverage_records(["coverage_front", "coverage_side"])]
         add_stage(
             "03_PHYSIQUE_SIDE",
-            "Create the canonical adult full-body side view of the same physique on a plain neutral backdrop. Deterministically pack the passed FACE and FRONT outputs without cropping and attach that generator-safe targeted pack as their single physical slot. Match height, torso depth, abdomen, pelvis, glutes, thighs, spinal curve, and limb proportions; reproduce the same user-approved safety garment from the selected hard CLOTHING_TOPOLOGY reference without altering the external silhouette.",
+            "Create the canonical adult full-body side view of the same physique on a plain neutral backdrop. Deterministically pack the passed FACE and FRONT outputs without cropping and attach that generator-safe targeted pack as their single physical slot. Match height, torso depth, abdomen, pelvis, glutes, thighs, spinal curve, and limb proportions; keep the prompt-defined safety garment consistent without altering the external silhouette.",
             side_records,
-            ("FACE_GEOMETRY", "BODY_SILHOUETTE", "BODY_PROPORTIONS", "SIDE_VIEW", "SAFE_COVERAGE", "MULTIVIEW_CONSISTENCY", "STYLE"),
+            ("FACE_GEOMETRY", "BODY_SILHOUETTE", "BODY_PROPORTIONS", "LIMB_PROPORTIONS", "SIDE_VIEW", "SAFE_COVERAGE", "CLOTHING_TOPOLOGY", "MULTIVIEW_CONSISTENCY", "STYLE", "BODY_RENDERING_STYLE"),
         )
         side_output = placeholder("03_PHYSIQUE_SIDE", "PHYSIQUE_SIDE_STAGE")
         face_front_side_pack = targeted_stage_pack(
@@ -1465,9 +1682,9 @@ def build_multistage_attachment_plan(
         back_records = [*body_records, face_front_side_pack, *coverage_records(["coverage_back"])]
         add_stage(
             "04_PHYSIQUE_BACK",
-            "Create the canonical adult full-body back view of the same physique on a plain neutral backdrop. Deterministically pack the passed FACE, FRONT, and SIDE outputs without cropping and attach that generator-safe targeted pack as their single physical slot. Match the front and side views' height, shoulders, torso, waist, pelvis, glutes, thighs, and limbs; reproduce the same user-approved safety garment from the selected hard BACK CLOTHING_TOPOLOGY reference without altering the external silhouette.",
+            "Create the canonical adult full-body back view of the same physique on a plain neutral backdrop. Deterministically pack the passed FACE, FRONT, and SIDE outputs without cropping and attach that generator-safe targeted pack as their single physical slot. Match the front and side views' height, shoulders, torso, waist, pelvis, glutes, thighs, and limbs; keep the prompt-defined safety garment consistent without altering the external silhouette.",
             back_records,
-            ("FACE_GEOMETRY", "BODY_SILHOUETTE", "BODY_PROPORTIONS", "BACK_VIEW", "SAFE_COVERAGE", "MULTIVIEW_CONSISTENCY", "STYLE"),
+            ("FACE_GEOMETRY", "BODY_SILHOUETTE", "BODY_PROPORTIONS", "LIMB_PROPORTIONS", "BACK_VIEW", "SAFE_COVERAGE", "CLOTHING_TOPOLOGY", "MULTIVIEW_CONSISTENCY", "STYLE", "BODY_RENDERING_STYLE"),
         )
         assembly_inputs = [
             style_stage_record | {"stage_role": "STYLE"},
@@ -1480,7 +1697,7 @@ def build_multistage_attachment_plan(
             "05_CHARACTER_ASSEMBLY",
             "Create a neutral canonical 3/4 character assembly from the verified face and front/side/back physique. Do not add a designed background, outfit, or accessories and do not reopen identity or proportions.",
             assembly_inputs,
-            ("FACE_GEOMETRY", "BODY_SILHOUETTE", "BODY_PROPORTIONS", "MULTIVIEW_CONSISTENCY", "NEUTRAL_BACKDROP", "STYLE"),
+            ("FACE_GEOMETRY", "BODY_SILHOUETTE", "BODY_PROPORTIONS", "LIMB_PROPORTIONS", "MULTIVIEW_CONSISTENCY", "NEUTRAL_BACKDROP", "STYLE", "BODY_RENDERING_STYLE"),
         )
         return stages
 
@@ -1586,6 +1803,7 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
     overrides = {item.upper() for item in args.override}
     context = build_style_context(paths, "ALL", positive_only=False, include_files=False)
     reviewed_counts = parse_reviewed_counts(args.reviewed, args.face_candidates_reviewed)
+    validate_prompt_only_body_library_review(args)
     character_id = args.character_id.upper()
     is_new_character = character_id == "NEW"
     if is_new_character and purpose != "CHARACTER_BASE":
@@ -1609,18 +1827,30 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
                 "CHARACTER_BASE does not accept clothes, lighting, background, or composition references. "
                 "Create wardrobe/accessory assets later and generate scenes only after identity approval."
             )
+        prompt_only_physique = bool(args.prompt_only_physique)
         coverage_values = {
             "coverage_front": args.coverage_front_reference,
             "coverage_side": args.coverage_side_reference,
             "coverage_back": args.coverage_back_reference,
         }
         missing_coverage = [key for key, value in coverage_values.items() if not value]
-        if missing_coverage:
+        if any(coverage_values.values()) and not args.user_requested_coverage_reference:
             raise StylePackError(
-                "CHARACTER_BASE requires view-specific safety-coverage topology references: "
+                "Visual safety-coverage references are opt-in. Use prompt-described swimwear by default; "
+                "pass --user-requested-coverage-reference only after direct user instruction."
+            )
+        if prompt_only_physique and any(coverage_values.values()):
+            raise StylePackError("--prompt-only-physique forbids visual safety-coverage references.")
+        if prompt_only_physique and (args.body_reference or args.pose_reference or args.clothes_reference or args.aux_body):
+            raise StylePackError("--prompt-only-physique forbids BODY, POSE, CLOTHES, and auxiliary body images.")
+        if args.user_requested_coverage_reference and missing_coverage:
+            raise StylePackError(
+                "User-requested visual coverage requires all view-specific topology references: "
                 + ", ".join(missing_coverage)
             )
         overrides.update({"CLOTHES", "LIGHTING", "BACKGROUND", "COMPOSITION"})
+        if prompt_only_physique:
+            overrides.update({"BODY", "POSE"})
     elif args.coverage_front_reference or args.coverage_side_reference or args.coverage_back_reference:
         raise StylePackError("View-specific coverage references are valid only for CHARACTER_BASE.")
     auxiliary_body_references = parse_aux_body_references(
@@ -1638,9 +1868,14 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         "style": [validate_plan_reference(paths, value, "STYLE") for value in args.style_reference]
     }
     if purpose == "CHARACTER_BASE":
-        selected["coverage_front"] = validate_plan_reference(paths, args.coverage_front_reference, "FRONT_CLOTHING_TOPOLOGY")
-        selected["coverage_side"] = validate_plan_reference(paths, args.coverage_side_reference, "SIDE_CLOTHING_TOPOLOGY")
-        selected["coverage_back"] = validate_plan_reference(paths, args.coverage_back_reference, "BACK_CLOTHING_TOPOLOGY")
+        coverage_inputs = (
+            ("coverage_front", args.coverage_front_reference, "FRONT_CLOTHING_TOPOLOGY"),
+            ("coverage_side", args.coverage_side_reference, "SIDE_CLOTHING_TOPOLOGY"),
+            ("coverage_back", args.coverage_back_reference, "BACK_CLOTHING_TOPOLOGY"),
+        )
+        for key, value, role in coverage_inputs:
+            if value:
+                selected[key] = validate_plan_reference(paths, value, role)
 
     face_visible = "FACE" not in overrides
     character_reference_mode = "NOT_APPLICABLE"
@@ -1760,12 +1995,19 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         selected,
         auxiliary_body_references,
     )
+    style_calibration = load_style_calibration_evidence(
+        args.style_calibration_state,
+        required=args.require_style_calibration,
+        style_name=context["style_name"],
+        pack_path=context["pack_path"],
+    )
 
     plan_path = request_folder / "REFERENCE_PLAN.json"
     if plan_path.exists():
         raise StylePackError(f"Reference plan already exists and will not be overwritten: {plan_path}")
     plan = {
         "schema_version": 5,
+        "semantic_qa_schema": 4,
         "gate_status": "READY_FOR_GENERATION",
         "created_at": iso_now(),
         "style_name": context["style_name"],
@@ -1821,6 +2063,7 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         "canvas_contract": canvas_contract,
         "body_proportion_contract": body_proportion_contract,
         "generation_workflow": generation_workflow,
+        "style_transfer_calibration": style_calibration,
         "risk_assessment": {
             "path": str(risk_path),
             "notice_ru": risk_assessment.get("notice_ru", ""),
@@ -1834,11 +2077,18 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         "prompt_hard_constraints": [
             f"Use canvas {canvas_contract['aspect_ratio']} ({canvas_contract['orientation']}).",
             "Do not vertically stretch the character or lengthen legs/torso to fill the frame.",
-            "Match the dominant body source silhouette and leg-to-torso ratio before adding clothing or scenery.",
+            "Match the dominant body specification silhouette and leg-to-torso ratio before adding clothing or scenery.",
             "Preserve verified face and body layers through every later stage.",
         ],
         "selected_references": selected,
         "auxiliary_body_reference_decision": args.aux_body_decision.upper(),
+        "prompt_only_physique": bool(args.prompt_only_physique),
+        "body_library_review": {
+            "relevant_candidates_total": int(args.body_library_relevant_candidates_total),
+            "candidates_visually_reviewed": int(args.body_library_candidates_reviewed),
+            "complete": int(args.body_library_relevant_candidates_total) > 0
+            and int(args.body_library_candidates_reviewed) == int(args.body_library_relevant_candidates_total),
+        },
         "auxiliary_body_reference_selection_note": args.aux_body_selection_note.strip(),
         "auxiliary_body_references": auxiliary_body_references,
         "auxiliary_reference_contract": {
@@ -2094,6 +2344,146 @@ def validate_reference_plan_for_recording(
     return plan_path.resolve(), plan
 
 
+ANTHROPOMETRIC_QA_LIMITS = {
+    # Conservative StoryArt production limits for an adult canonical standing view.
+    # Ratios are measured on the rendered figure, not inferred from the prompt.
+    "head_units": (7.0, 8.25),
+    "pubic_height_fraction": (0.47, 0.53),
+    "lower_to_upper_leg_ratio": (0.75, 1.20),
+    "ankle_width_head_ratio": (0.12, 0.30),
+    "foot_length_head_ratio": (0.75, 1.20),
+    "neck_head_ratio": (0.20, 0.48),
+    "neck_jaw_ratio": (0.50, 0.90),
+}
+
+
+def parse_limb_qa_evidence(evidence: str) -> dict[str, str]:
+    parsed: dict[str, str] = {}
+    for part in evidence.split(";"):
+        key, separator, value = part.strip().partition("=")
+        if separator and key.strip() and value.strip():
+            parsed[key.strip().lower()] = value.strip()
+    return parsed
+
+
+def anthropometric_qa_violations(
+    evidence: str,
+    plan: dict[str, object] | None = None,
+) -> list[str]:
+    values = parse_limb_qa_evidence(evidence)
+    landmark_requirements = {
+        "hip_landmark": "FEMORAL_HEAD_CENTER",
+        "knee_landmark": "KNEE_JOINT_CENTER",
+        "ankle_landmark": "TALOCRURAL_JOINT_CENTER",
+    }
+    for name, expected in landmark_requirements.items():
+        actual = values.get(name, "").upper()
+        if actual != expected:
+            raise StylePackError(
+                f"Schema-4 anthropometric QA requires {name}={expected}; "
+                "pubic/crotch points and heel/toe endpoints cannot substitute for joint centers."
+            )
+    crown_landmark = values.get("crown_landmark", "").upper()
+    if crown_landmark not in {"CRANIAL_VERTEX", "CRANIAL_VERTEX_ESTIMATED"}:
+        raise StylePackError(
+            "Schema-4 anthropometric QA requires crown_landmark=CRANIAL_VERTEX|CRANIAL_VERTEX_ESTIMATED; "
+            "the highest hair, hood, hat, or ornament pixel cannot substitute for the anatomical crown."
+        )
+    foot_pose = values.get("foot_pose", "").upper()
+    if foot_pose not in {"FLAT", "TIPTOE", "PLANTAR_FLEXED", "DORSIFLEXED"}:
+        raise StylePackError(
+            "Schema-4 anthropometric QA requires foot_pose=FLAT|TIPTOE|PLANTAR_FLEXED|DORSIFLEXED."
+        )
+    projection_view = values.get("view", "").upper()
+    if projection_view not in {"FRONT", "SIDE", "BACK", "ASSEMBLY"}:
+        raise StylePackError("Schema-4 anthropometric QA requires view=FRONT|SIDE|BACK|ASSEMBLY.")
+    foot_length_mode = values.get("foot_length_mode", "").upper()
+    if foot_length_mode not in {"MEASURED", "FORESHORTENED_DEFERRED"}:
+        raise StylePackError(
+            "Schema-4 anthropometric QA requires foot_length_mode=MEASURED|FORESHORTENED_DEFERRED."
+        )
+    if foot_length_mode == "FORESHORTENED_DEFERRED" and projection_view not in {"FRONT", "BACK"}:
+        raise StylePackError(
+            "FORESHORTENED_DEFERRED foot length is allowed only for FRONT or BACK; SIDE must measure heel-to-toe length."
+        )
+    if values.get("heel_endpoint", "").upper() != "VISIBLE" or values.get("toe_endpoint", "").upper() != "VISIBLE":
+        raise StylePackError(
+            "Schema-4 anthropometric QA requires heel_endpoint=VISIBLE and toe_endpoint=VISIBLE."
+        )
+    numeric_names = (
+        "head_units",
+        "pubic_height_fraction",
+        "hip_knee",
+        "knee_ankle",
+        "ankle_width",
+        "neck_head_ratio",
+        "neck_jaw_ratio",
+        "landmark_confidence",
+        "crown_confidence",
+    )
+    numeric: dict[str, float] = {}
+    for name in numeric_names:
+        try:
+            numeric[name] = float(values[name])
+        except (KeyError, TypeError, ValueError):
+            raise StylePackError(
+                f"Schema-4 anthropometric QA requires a numeric {name}= value; words such as matched are invalid."
+            )
+        if numeric[name] <= 0:
+            raise StylePackError(f"Schema-4 anthropometric QA requires {name}= to be greater than zero.")
+    if foot_length_mode == "MEASURED":
+        try:
+            numeric["foot_length"] = float(values["foot_length"])
+        except (KeyError, TypeError, ValueError):
+            raise StylePackError("Schema-4 measured foot length requires a numeric foot_length= value.")
+        if numeric["foot_length"] <= 0:
+            raise StylePackError("Schema-4 anthropometric QA requires foot_length= to be greater than zero.")
+    if not 0.80 <= numeric["landmark_confidence"] <= 1.0:
+        raise StylePackError(
+            "Schema-4 anthropometric QA requires landmark_confidence=0.80-1.00. "
+            "An uncertain joint estimate cannot produce PASS or an automatic proportion FAIL."
+        )
+    if not 0.80 <= numeric["crown_confidence"] <= 1.0:
+        raise StylePackError(
+            "Schema-4 anthropometric QA requires crown_confidence=0.80-1.00. "
+            "Hair-volume uncertainty cannot produce a head-count PASS or automatic FAIL."
+        )
+
+    measured = {
+        "head_units": numeric["head_units"],
+        "pubic_height_fraction": numeric["pubic_height_fraction"],
+        "lower_to_upper_leg_ratio": numeric["knee_ankle"] / numeric["hip_knee"],
+        "ankle_width_head_ratio": numeric["ankle_width"],
+        "neck_head_ratio": numeric["neck_head_ratio"],
+        "neck_jaw_ratio": numeric["neck_jaw_ratio"],
+    }
+    if foot_length_mode == "MEASURED":
+        measured["foot_length_head_ratio"] = numeric["foot_length"]
+    limits = dict(ANTHROPOMETRIC_QA_LIMITS)
+    body_contract = plan.get("body_proportion_contract", {}) if isinstance(plan, dict) else {}
+    height_contract = body_contract.get("height_in_heads", {}) if isinstance(body_contract, dict) else {}
+    if isinstance(height_contract, dict) and height_contract.get("mode") == "EXPLICIT_RANGE":
+        try:
+            contracted_minimum = float(height_contract["minimum"])
+            contracted_maximum = float(height_contract["maximum"])
+        except (KeyError, TypeError, ValueError):
+            raise StylePackError("Schema-4 body height contract requires numeric minimum and maximum values.")
+        if contracted_minimum <= 0 or contracted_maximum < contracted_minimum:
+            raise StylePackError("Schema-4 body height contract has an invalid explicit range.")
+        global_minimum, global_maximum = ANTHROPOMETRIC_QA_LIMITS["head_units"]
+        limits["head_units"] = (
+            max(global_minimum, contracted_minimum),
+            min(global_maximum, contracted_maximum),
+        )
+
+    violations = []
+    for name, value in measured.items():
+        minimum, maximum = limits[name]
+        if not minimum <= value <= maximum:
+            violations.append(f"{name}={value:.4g} outside {minimum:g}-{maximum:g}")
+    return violations
+
+
 def evaluate_generation_qa(
     plan: dict[str, object],
     args: argparse.Namespace,
@@ -2119,6 +2509,23 @@ def evaluate_generation_qa(
         if plan.get("canvas_contract", {}).get("full_figure"):
             required.extend(("BODY_SILHOUETTE", "BODY_PROPORTIONS"))
 
+    semantic_qa_schema = int(plan.get("semantic_qa_schema", 0) or 0)
+    semantic_qa = semantic_qa_schema >= 1
+    if semantic_qa and "STYLE" not in required:
+        required.append("STYLE")
+    if (
+        semantic_qa_schema >= 2
+        and stage_id in {"02_PHYSIQUE_FRONT", "03_PHYSIQUE_SIDE", "04_PHYSIQUE_BACK", "05_CHARACTER_ASSEMBLY"}
+        and "BODY_RENDERING_STYLE" not in required
+    ):
+        required.append("BODY_RENDERING_STYLE")
+    if (
+        semantic_qa_schema >= 3
+        and stage_id in {"02_PHYSIQUE_FRONT", "03_PHYSIQUE_SIDE", "04_PHYSIQUE_BACK", "05_CHARACTER_ASSEMBLY"}
+        and "LIMB_PROPORTIONS" not in required
+    ):
+        required.append("LIMB_PROPORTIONS")
+
     qa_values = {
         "ATTACHMENTS": args.qa_attachments,
         "CANVAS": args.qa_canvas,
@@ -2126,11 +2533,58 @@ def evaluate_generation_qa(
         "FACE_GEOMETRY": args.qa_face,
         "BODY_SILHOUETTE": args.qa_body_silhouette,
         "BODY_PROPORTIONS": args.qa_body_proportions,
+        "LIMB_PROPORTIONS": getattr(args, "qa_limb_proportions", "NOT_CHECKED"),
     }
+    if semantic_qa:
+        view_value = getattr(args, "qa_view", "NOT_CHECKED")
+        qa_values.update({
+            "STYLE": getattr(args, "qa_style", "NOT_CHECKED"),
+            "BODY_RENDERING_STYLE": getattr(args, "qa_body_style", "NOT_CHECKED"),
+            "EXPRESSION": getattr(args, "qa_expression", "NOT_CHECKED"),
+            "NEUTRAL_BACKDROP": getattr(args, "qa_neutral_backdrop", "NOT_CHECKED"),
+            "FRONT_VIEW": view_value,
+            "SIDE_VIEW": view_value,
+            "BACK_VIEW": view_value,
+            "SAFE_COVERAGE": getattr(args, "qa_safe_coverage", "NOT_CHECKED"),
+            "CLOTHING_TOPOLOGY": getattr(args, "qa_clothing_topology", "NOT_CHECKED"),
+            "MULTIVIEW_CONSISTENCY": getattr(args, "qa_multiview_consistency", "NOT_CHECKED"),
+            "CLOTHING": getattr(args, "qa_clothing", "NOT_CHECKED"),
+            "POSE_CONTACTS": getattr(args, "qa_pose_contacts", "NOT_CHECKED"),
+            "CAMERA": getattr(args, "qa_camera", "NOT_CHECKED"),
+            "LIGHTING": getattr(args, "qa_lighting", "NOT_CHECKED"),
+            "BACKGROUND": getattr(args, "qa_background", "NOT_CHECKED"),
+            "COMPOSITION": getattr(args, "qa_composition", "NOT_CHECKED"),
+        })
     required_names = sorted(set(required))
     missing = [name for name in required_names if name in qa_values and qa_values[name] == "NOT_CHECKED"]
     if missing:
         raise StylePackError("Required post-generation QA was not performed: " + ", ".join(missing))
+    if "LIMB_PROPORTIONS" in required_names and qa_values["LIMB_PROPORTIONS"] == "PASS":
+        evidence = str(getattr(args, "limb_qa_evidence", "") or "").strip()
+        required_tokens = ("source=", "head_units=", "hip_knee=", "knee_ankle=", "ankle_width=", "foot_length=")
+        if semantic_qa_schema >= 4:
+            required_tokens += (
+                "pubic_height_fraction=", "neck_head_ratio=", "neck_jaw_ratio=", "foot_pose=",
+                "hip_landmark=", "knee_landmark=", "ankle_landmark=", "landmark_confidence=",
+                "crown_landmark=", "crown_confidence=",
+                "view=", "foot_length_mode=", "heel_endpoint=", "toe_endpoint=",
+            )
+        missing_tokens = [token for token in required_tokens if token not in evidence]
+        if missing_tokens:
+            raise StylePackError(
+                "LIMB_PROPORTIONS=PASS requires --limb-qa-evidence with: "
+                + ", ".join(required_tokens)
+            )
+        if semantic_qa_schema >= 4:
+            body_contract = plan.get("body_proportion_contract", {})
+            user_override = bool(
+                isinstance(body_contract, dict)
+                and body_contract.get("user_approved_nonstandard_proportions")
+            )
+            violations = anthropometric_qa_violations(evidence, plan)
+            if violations and not user_override:
+                qa_values["LIMB_PROPORTIONS"] = "FAIL"
+                qa_values["BODY_PROPORTIONS"] = "FAIL"
     failed = [name for name in required_names if qa_values.get(name) == "FAIL"]
     return failed, stage_id, required_names
 
@@ -2858,6 +3312,13 @@ def command_record_generation(args: argparse.Namespace) -> None:
         qa_note = f"[STAGE_ID={stage_id}] [QA_REQUIRED={','.join(qa_required)}]"
         if qa_failed:
             qa_note += f" [AUTO_REJECT_QA={','.join(qa_failed)}]"
+        limb_qa_evidence = str(getattr(args, "limb_qa_evidence", "") or "").strip()
+        if limb_qa_evidence:
+            qa_note += f" [LIMB_QA={limb_qa_evidence}]"
+            if int(plan.get("semantic_qa_schema", 0) or 0) >= 4:
+                violations = anthropometric_qa_violations(limb_qa_evidence, plan)
+                if violations:
+                    qa_note += f" [ANTHROPOMETRIC_VIOLATIONS={' | '.join(violations)}]"
     combined_notes = " ".join(part for part in (args.notes.strip(), qa_note) if part)
     new_id = append_generation(
         paths,
@@ -3428,6 +3889,16 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="JSON report from generation_risk_assessor.py covering the prompt and every selected reference.",
     )
+    prepare_parser.add_argument(
+        "--require-style-calibration",
+        action="store_true",
+        help="Block production until a triggered multi-face style calibration is finalized.",
+    )
+    prepare_parser.add_argument(
+        "--style-calibration-state",
+        default="",
+        help="Finalized CALIBRATION_STATE.json from style_calibration_manager.py; required when calibration was triggered.",
+    )
     prepare_parser.add_argument("--character-id", default="NEW", help="NEW or an existing CHAR_NNN identifier.")
     prepare_parser.add_argument(
         "--generation-purpose",
@@ -3475,12 +3946,39 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Required when direct user instruction overrides the 9:16/16:9 defaults.",
     )
+    prepare_parser.add_argument(
+        "--user-approved-nonstandard-proportions",
+        action="store_true",
+        help="Records a direct user instruction to use stylized proportions outside the default adult anthropometric limits.",
+    )
     prepare_parser.add_argument("--framing", required=True, choices=TARGET_FRAMINGS)
     prepare_parser.add_argument("--target-pose-family", required=True, choices=BODY_POSE_FAMILIES)
     prepare_parser.add_argument(
         "--dominant-body-source",
         required=True,
-        help="Exactly one of STYLE_BODY, CHARACTER_BODY, or a connected BR_NNNN BODY_BUILD_TARGET.",
+        help="Exactly one of PROMPT_BODY_SPEC, STYLE_BODY, CHARACTER_BODY, or a connected BR_NNNN BODY_BUILD_TARGET.",
+    )
+    prepare_parser.add_argument(
+        "--prompt-only-physique",
+        action="store_true",
+        help="For a new adult CHARACTER_BASE, describe body and swimwear in the prompt and attach no BODY, POSE, CLOTHES, coverage, or auxiliary body images.",
+    )
+    prepare_parser.add_argument(
+        "--body-library-relevant-candidates-total",
+        type=int,
+        default=0,
+        help="Number of relevant real-photo BODY_REFERENCE_LIBRARY candidates found for this projection/build; required before prompt-only fallback when the library is selected.",
+    )
+    prepare_parser.add_argument(
+        "--body-library-candidates-reviewed",
+        type=int,
+        default=0,
+        help="Number of those relevant BODY_REFERENCE_LIBRARY candidates visually inspected at full usable resolution.",
+    )
+    prepare_parser.add_argument(
+        "--user-requested-coverage-reference",
+        action="store_true",
+        help="Allow view-specific clothing-topology images only after the user directly requested visual coverage references.",
     )
     prepare_parser.add_argument("--body-source-coverage", required=True, choices=BODY_SOURCE_COVERAGES)
     prepare_parser.add_argument("--body-source-pose-family", required=True, choices=BODY_POSE_FAMILIES)
@@ -3583,6 +4081,36 @@ def build_parser() -> argparse.ArgumentParser:
     record_parser.add_argument("--qa-face", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
     record_parser.add_argument("--qa-body-silhouette", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
     record_parser.add_argument("--qa-body-proportions", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument(
+        "--qa-limb-proportions",
+        choices=("PASS", "FAIL", "NOT_CHECKED"),
+        default="NOT_CHECKED",
+        help="Independent limb-landmark check for total height, hip-to-knee and knee-to-ankle lengths, ankle width, and foot size.",
+    )
+    record_parser.add_argument(
+        "--limb-qa-evidence",
+        default="",
+        help="Required with LIMB_PROPORTIONS=PASS. Schema 4 requires numeric proportions, foot_pose, landmark_confidence>=0.80, and explicit FEMORAL_HEAD_CENTER, KNEE_JOINT_CENTER, and TALOCRURAL_JOINT_CENTER landmarks. Pubic/crotch and heel/toe points cannot substitute for joints.",
+    )
+    record_parser.add_argument("--qa-style", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument(
+        "--qa-body-style",
+        choices=("PASS", "FAIL", "NOT_CHECKED"),
+        default="NOT_CHECKED",
+        help="Independent body-rendering check: contour hierarchy, skin-value planes, highlight density, interior anatomy lines, and source-medium match across torso and limbs.",
+    )
+    record_parser.add_argument("--qa-expression", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-neutral-backdrop", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-view", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-safe-coverage", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-clothing-topology", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-multiview-consistency", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-clothing", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-pose-contacts", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-camera", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-lighting", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-background", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-composition", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
     record_parser.add_argument("--notes", default="")
     record_parser.set_defaults(handler=command_record_generation)
 

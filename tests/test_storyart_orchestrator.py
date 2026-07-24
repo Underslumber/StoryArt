@@ -1,0 +1,229 @@
+import importlib.util
+import json
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+
+ROOT = Path(__file__).resolve().parents[1]
+MODULE_PATH = ROOT / "tools" / "storyart_orchestrator.py"
+SPEC = importlib.util.spec_from_file_location("storyart_orchestrator", MODULE_PATH)
+orchestrator = importlib.util.module_from_spec(SPEC)
+assert SPEC.loader is not None
+SPEC.loader.exec_module(orchestrator)
+
+
+class StoryArtOrchestratorTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(dir=ROOT)
+        self.request_root = Path(self.temp.name)
+        self.guard_path = self.request_root / "EXECUTION_GUARD.json"
+        self.state_path = self.request_root / "ORCHESTRATION_STATE.json"
+        self.guard_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "request_id": "test-request",
+                    "goal_lock": "Create one requested StoryArt frame",
+                    "primary_deliverable": "Visible frame",
+                    "status": "ACTIVE",
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def initialize(self):
+        return orchestrator.initialize_state(self.state_path, self.guard_path)
+
+    def test_state_must_live_beside_guard(self):
+        other = self.request_root / "nested" / "ORCHESTRATION_STATE.json"
+        with self.assertRaisesRegex(orchestrator.OrchestratorError, "beside"):
+            orchestrator.initialize_state(other, self.guard_path)
+
+    def test_init_derives_locked_goal_from_guard(self):
+        state = self.initialize()
+        self.assertEqual(state["request_id"], "test-request")
+        self.assertEqual(state["goal_lock"], "Create one requested StoryArt frame")
+        self.assertEqual(state["handoffs"], [])
+
+    def test_read_only_role_rejects_write_path(self):
+        self.initialize()
+        with self.assertRaisesRegex(orchestrator.OrchestratorError, "read-only"):
+            orchestrator.dispatch_handoff(
+                self.state_path,
+                "STYLE_LIBRARIAN",
+                "Inspect the style",
+                [str(self.guard_path)],
+                [str(self.request_root)],
+                [],
+                "",
+                "",
+            )
+
+    def test_generator_requires_stage_and_requested_contract(self):
+        self.initialize()
+        with self.assertRaisesRegex(orchestrator.OrchestratorError, "requires --stage"):
+            orchestrator.dispatch_handoff(
+                self.state_path,
+                "GENERATOR_OPERATOR",
+                "Generate the declared frame",
+                [str(self.guard_path)],
+                [str(self.request_root)],
+                [],
+                "",
+                "REQUESTED_DELIVERABLE",
+            )
+
+    def test_dependency_must_be_done(self):
+        self.initialize()
+        first = orchestrator.dispatch_handoff(
+            self.state_path,
+            "STYLE_LIBRARIAN",
+            "Inspect the style",
+            [str(self.guard_path)],
+            [],
+            [],
+            "",
+            "",
+        )
+        with self.assertRaisesRegex(orchestrator.OrchestratorError, "DONE is required"):
+            orchestrator.dispatch_handoff(
+                self.state_path,
+                "CALL_PLANNER",
+                "Prepare one call",
+                [str(self.guard_path)],
+                [],
+                [first["handoff_id"]],
+                "",
+                "",
+            )
+
+    def test_complete_handoff_unlocks_dependency(self):
+        self.initialize()
+        first = orchestrator.dispatch_handoff(
+            self.state_path,
+            "STYLE_LIBRARIAN",
+            "Inspect the style",
+            [str(self.guard_path)],
+            [],
+            [],
+            "",
+            "",
+        )
+        orchestrator.complete_handoff(
+            self.state_path,
+            first["handoff_id"],
+            "DONE",
+            "Selected one compatible style reference.",
+            [str(self.guard_path)],
+        )
+        second = orchestrator.dispatch_handoff(
+            self.state_path,
+            "CALL_PLANNER",
+            "Prepare one call",
+            [str(self.guard_path)],
+            [],
+            [first["handoff_id"]],
+            "",
+            "",
+        )
+        self.assertEqual(second["status"], "PENDING")
+
+    def test_generator_cannot_write_to_infrastructure(self):
+        self.initialize()
+        with self.assertRaisesRegex(orchestrator.OrchestratorError, "infrastructure"):
+            orchestrator.dispatch_handoff(
+                self.state_path,
+                "GENERATOR_OPERATOR",
+                "Generate the declared frame",
+                [str(self.guard_path)],
+                [str(ROOT / "tools")],
+                [],
+                "FRAME_01",
+                "REQUESTED_DELIVERABLE",
+            )
+
+    def test_registrar_cannot_write_outside_generation_data(self):
+        self.initialize()
+        with self.assertRaisesRegex(orchestrator.OrchestratorError, "REGISTRAR may write"):
+            orchestrator.dispatch_handoff(
+                self.state_path,
+                "REGISTRAR",
+                "Record the accepted frame",
+                [str(self.guard_path)],
+                [str(ROOT / "README.md")],
+                [],
+                "FRAME_01",
+                "",
+            )
+
+    def test_agent_prompt_contains_explicit_paths(self):
+        self.initialize()
+        handoff = orchestrator.dispatch_handoff(
+            self.state_path,
+            "STYLE_LIBRARIAN",
+            "Inspect the style",
+            [str(self.guard_path)],
+            [],
+            [],
+            "",
+            "",
+        )
+        self.assertIn("EXECUTION_GUARD.json", handoff["agent_prompt"])
+        self.assertIn("Allowed writes: NONE (read-only)", handoff["agent_prompt"])
+
+    def test_build_style_skills_creates_local_adapters(self):
+        output = self.request_root / "style-skills"
+        fake_styles = [
+            {
+                "style_name": "Test Style",
+                "slug": "TEST_STYLE",
+                "pack_path": str(self.request_root),
+                "generations_path": str(self.request_root),
+                "management": "MANAGED",
+                "local_readiness": "READY",
+                "can_generate": True,
+                "source_images": 3,
+                "work_images": 2,
+                "characters": 1,
+            }
+        ]
+        with patch.object(orchestrator, "query_ready_styles", return_value=fake_styles):
+            index = orchestrator.build_style_skills(output)
+        self.assertEqual(len(index["styles"]), 1)
+        skill_root = output / "storyart-style-test-style"
+        self.assertTrue((skill_root / "SKILL.md").is_file())
+        self.assertTrue((skill_root / "agents" / "openai.yaml").is_file())
+        self.assertTrue((skill_root / "references" / "style.json").is_file())
+        self.assertEqual(index["styles"][0]["local_readiness"], "READY")
+        self.assertTrue(index["styles"][0]["can_generate"])
+
+    def test_style_skill_validation_rejects_images(self):
+        output = self.request_root / "style-skills"
+        fake_styles = [
+            {
+                "style_name": "Test Style",
+                "slug": "TEST_STYLE",
+                "pack_path": str(self.request_root),
+                "generations_path": str(self.request_root),
+                "management": "MANAGED",
+                "local_readiness": "READY",
+                "can_generate": True,
+                "source_images": 3,
+                "work_images": 2,
+                "characters": 1,
+            }
+        ]
+        with patch.object(orchestrator, "query_ready_styles", return_value=fake_styles):
+            orchestrator.build_style_skills(output)
+        (output / "storyart-style-test-style" / "copied-reference.png").write_bytes(b"x")
+        with self.assertRaisesRegex(orchestrator.OrchestratorError, "must not contain images"):
+            orchestrator.validate_style_skills(output)
+
+
+if __name__ == "__main__":
+    unittest.main()

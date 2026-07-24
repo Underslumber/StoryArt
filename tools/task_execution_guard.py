@@ -22,6 +22,25 @@ DEFAULT_MAX_MINUTES_WITHOUT_EXECUTION = 20
 DEFAULT_MAX_PREFLIGHT_ACTIONS = 12
 DEFAULT_MAX_EXECUTION_MINUTES = 20
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff"}
+SWIMWEAR_RUNGS = ("EXTREME_MICRO", "BIKINI", "TWO_PIECE")
+SWIMWEAR_TOPOLOGIES = (*SWIMWEAR_RUNGS, "SPORT_TOP", "ONE_PIECE", "SHORTS", "OTHER", "CUSTOM")
+AUXILIARY_GENERATION_MARKERS = (
+    "staging_only",
+    "mannequin",
+    "манекен",
+    "blank base mesh",
+    "gray dummy",
+    "grey dummy",
+    "technical dummy",
+    "silhouette mask",
+    "маска силуэта",
+    "proportion plate",
+    "таблица пропорций",
+    "topology test frame",
+    "тестовый кадр топологии",
+    "service image",
+    "служебное изображение",
+)
 
 
 class GuardError(RuntimeError):
@@ -74,6 +93,7 @@ def create_guard(
     deliverable: str,
     task_kind: str = "IMAGE_GENERATION",
     allowed_scope: Sequence[str] = (),
+    required_stages: Sequence[str] = (),
     max_minutes_without_execution: int = DEFAULT_MAX_MINUTES_WITHOUT_EXECUTION,
     max_preflight_actions: int = DEFAULT_MAX_PREFLIGHT_ACTIONS,
     max_execution_minutes: int = DEFAULT_MAX_EXECUTION_MINUTES,
@@ -85,6 +105,17 @@ def create_guard(
         raise GuardError("request_id, goal, and deliverable are required.")
     if min(max_minutes_without_execution, max_preflight_actions, max_execution_minutes) <= 0:
         raise GuardError("All execution budgets must be positive.")
+    normalized_stages: list[str] = []
+    seen_stages: set[str] = set()
+    for raw_stage in required_stages:
+        stage = raw_stage.strip()
+        if not stage:
+            raise GuardError("Required stage names cannot be empty.")
+        stage_key = stage.casefold()
+        if stage_key in seen_stages:
+            raise GuardError(f"Duplicate required stage: {stage}")
+        seen_stages.add(stage_key)
+        normalized_stages.append(stage)
     moment = now or utc_now()
     state: dict[str, object] = {
         "schema_version": SCHEMA_VERSION,
@@ -93,6 +124,15 @@ def create_guard(
         "goal_lock": goal.strip(),
         "primary_deliverable": deliverable.strip(),
         "allowed_scope": [item for item in allowed_scope if item.strip()],
+        "required_stages": [
+            {
+                "id": stage,
+                "status": "PENDING",
+                "completed_at": None,
+                "evidence": [],
+            }
+            for stage in normalized_stages
+        ],
         "started_at": iso_time(moment),
         "updated_at": iso_time(moment),
         "cycle_started_at": iso_time(moment),
@@ -119,6 +159,144 @@ def create_guard(
     }
     atomic_write_json(path, state)
     return state
+
+
+def required_stage_entries(state: dict[str, object]) -> list[dict[str, object]]:
+    entries = state.get("required_stages", [])
+    if not isinstance(entries, list):
+        raise GuardError("Execution guard required_stages must be a list.")
+    return entries
+
+
+def pending_required_stages(state: dict[str, object]) -> list[str]:
+    return [
+        str(entry.get("id"))
+        for entry in required_stage_entries(state)
+        if entry.get("status") != "COMPLETED"
+    ]
+
+
+def find_required_stage(state: dict[str, object], stage: str | None) -> dict[str, object]:
+    if not stage or not stage.strip():
+        raise GuardError("This checkpoint requires --stage.")
+    stage_key = stage.strip().casefold()
+    for entry in required_stage_entries(state):
+        if str(entry.get("id", "")).casefold() == stage_key:
+            return entry
+    known = ", ".join(str(entry.get("id")) for entry in required_stage_entries(state)) or "none"
+    raise GuardError(f"Unknown required stage {stage!r}. Configured stages: {known}")
+
+
+def is_physique_stage(stage: str | None) -> bool:
+    return bool(stage and stage.strip().upper().startswith("PHYSIQUE_"))
+
+
+def validate_image_execution_scope(
+    state: dict[str, object],
+    *,
+    summary: str,
+    output_contract: str | None,
+    user_approved_extra_generation: bool,
+    extra_generation_evidence: str,
+) -> None:
+    if state.get("task_kind") != "IMAGE_GENERATION":
+        return
+    contract = str(output_contract or "").upper()
+    if contract not in {"REQUESTED_DELIVERABLE", "USER_REQUESTED_EXTRA"}:
+        raise GuardError(
+            "Image EXECUTION_STARTED requires --output-contract "
+            "REQUESTED_DELIVERABLE|USER_REQUESTED_EXTRA. Every generator call must be bound to the user's task."
+        )
+    lowered = summary.casefold()
+    marker = next((item for item in AUXILIARY_GENERATION_MARKERS if item in lowered), None)
+    if contract == "USER_REQUESTED_EXTRA" and not user_approved_extra_generation:
+        raise GuardError(
+            "USER_REQUESTED_EXTRA requires --user-approved-extra-generation and the user's exact request."
+        )
+    if user_approved_extra_generation and contract != "USER_REQUESTED_EXTRA":
+        raise GuardError("--user-approved-extra-generation requires --output-contract USER_REQUESTED_EXTRA.")
+    if contract == "USER_REQUESTED_EXTRA" and not extra_generation_evidence.strip():
+        raise GuardError(
+            "An extra image generation requires --extra-generation-evidence with the user's direct request."
+        )
+    if marker and contract != "USER_REQUESTED_EXTRA":
+        raise GuardError(
+            "Unrequested auxiliary image generation is forbidden. The execution summary declares "
+            f"{marker!r}, which is not a requested deliverable. Use deterministic non-generated QA, "
+            "accept small natural variation, or obtain the user's direct request for that specific extra image."
+        )
+
+
+def swimwear_failures(state: dict[str, object], stage: str) -> set[str]:
+    stage_key = stage.strip().casefold()
+    return {
+        str(event.get("swimwear_rung", "")).upper()
+        for event in state.get("events", [])
+        if event.get("event") == "ATTEMPT_REJECTED"
+        and str(event.get("stage", "")).casefold() == stage_key
+        and bool(event.get("rung_routes_exhausted"))
+        and str(event.get("swimwear_rung", "")).upper() in SWIMWEAR_RUNGS
+    }
+
+
+def validate_swimwear_execution_start(
+    state: dict[str, object],
+    *,
+    stage: str | None,
+    swimwear_rung: str | None,
+    user_swimwear_override: bool,
+    user_override_evidence: str,
+) -> dict[str, object] | None:
+    if not is_physique_stage(stage):
+        return None
+    entry = find_required_stage(state, stage)
+    if entry.get("status") == "COMPLETED":
+        raise GuardError(f"Cannot start another physique attempt for completed stage {entry.get('id')}.")
+    rung = str(swimwear_rung or "").upper()
+    if user_swimwear_override:
+        if not user_override_evidence.strip():
+            raise GuardError("A swimwear override requires --user-override-evidence with the user's direct instruction.")
+        if rung not in (*SWIMWEAR_RUNGS, "CUSTOM"):
+            raise GuardError("A user swimwear override still requires a declared rung or CUSTOM.")
+    else:
+        if rung not in SWIMWEAR_RUNGS:
+            raise GuardError(
+                "Adult physique execution requires --swimwear-rung EXTREME_MICRO|BIKINI|TWO_PIECE. "
+                "Project defaults are authoritative unless the user directly overrides them."
+            )
+        failed = swimwear_failures(state, str(entry.get("id")))
+        highest_allowed = 0
+        if "EXTREME_MICRO" in failed:
+            highest_allowed = 1
+        if "BIKINI" in failed:
+            if "EXTREME_MICRO" not in failed:
+                raise GuardError("Recorded BIKINI failure is invalid without a prior EXTREME_MICRO failure.")
+            highest_allowed = 2
+        if SWIMWEAR_RUNGS.index(rung) > highest_allowed:
+            required = SWIMWEAR_RUNGS[highest_allowed]
+            raise GuardError(
+                f"Swimwear ladder jump is forbidden for {entry.get('id')}: start or remain at {required}. "
+                "Change prompts, real BODY candidates, reference combinations, and staging while keeping the same target. "
+                "Advance only after ATTEMPT_REJECTED records --rung-routes-exhausted for the preceding rung."
+            )
+    return {
+        "stage": str(entry.get("id")),
+        "swimwear_rung": rung,
+        "user_swimwear_override": bool(user_swimwear_override),
+        "user_override_evidence": user_override_evidence.strip(),
+    }
+
+
+def validate_stage_evidence(state: dict[str, object], evidence: Sequence[str]) -> list[str]:
+    evidence_paths = [str(Path(item).resolve()) for item in evidence]
+    if state.get("task_kind") == "IMAGE_GENERATION":
+        if not evidence_paths:
+            raise GuardError("Image-generation stages require a real output path as evidence.")
+        for item in evidence_paths:
+            file = Path(item)
+            if not file.is_file() or file.suffix.lower() not in IMAGE_EXTENSIONS:
+                raise GuardError(f"Required-stage image evidence is missing or unsupported: {file}")
+    return evidence_paths
 
 
 def cycle_elapsed_seconds(state: dict[str, object], now: datetime) -> float:
@@ -165,13 +343,20 @@ def evaluate_limits(state: dict[str, object], now: datetime) -> str | None:
     return None
 
 
-def persist_limit_state(path: Path, state: dict[str, object], reason: str, now: datetime) -> None:
-    if state.get("status") != "ACTION_REQUIRED" or state.get("action_required_reason") != reason:
-        append_event(state, "BUDGET_EXHAUSTED", reason, now)
-    state["status"] = "ACTION_REQUIRED"
-    state["phase"] = "GUARD_STOP"
-    state["next_required_action"] = "EXECUTION_STARTED_OR_BLOCKER"
-    state["action_required_reason"] = reason
+def persist_watchdog_state(path: Path, state: dict[str, object], reason: str, now: datetime) -> None:
+    """Record a stalled cycle without turning the watchdog into a task cutoff."""
+    if state.get("watchdog_reason") != reason:
+        append_event(state, "WATCHDOG_TRIGGERED", reason, now)
+    state["status"] = "ACTIVE"
+    state["phase"] = "WATCHDOG"
+    state["next_required_action"] = (
+        "CHECK_EXECUTION_OR_VISIBLE_RESULT_OR_BLOCKER"
+        if state.get("execution_started_at")
+        else "READY_FOR_EXECUTION_OR_EXECUTION_STARTED_OR_BLOCKER"
+    )
+    state["watchdog_reason"] = reason
+    state["watchdog_triggered_at"] = iso_time(now)
+    state.pop("action_required_reason", None)
     atomic_write_json(path, state)
 
 
@@ -179,8 +364,11 @@ def assert_can_continue(path: Path, state: dict[str, object], now: datetime | No
     moment = now or utc_now()
     reason = evaluate_limits(state, moment)
     if reason:
-        persist_limit_state(path, state, reason, moment)
-        raise GuardActionRequired(reason)
+        persist_watchdog_state(path, state, reason, moment)
+        raise GuardActionRequired(
+            f"{reason} The task remains ACTIVE; stop additional preparation and continue through "
+            "READY_FOR_EXECUTION, EXECUTION_STARTED, an execution-state check, or a concrete external blocker."
+        )
 
 
 def checkpoint(
@@ -189,7 +377,19 @@ def checkpoint(
     event: str,
     summary: str,
     evidence: Sequence[str] = (),
+    stage: str | None = None,
     user_approved_scope_change: bool = False,
+    hard_blocker: bool = False,
+    safe_routes_exhausted: bool = False,
+    user_decision_essential: bool = False,
+    swimwear_rung: str | None = None,
+    observed_topology: str | None = None,
+    user_swimwear_override: bool = False,
+    user_override_evidence: str = "",
+    rung_routes_exhausted: bool = False,
+    output_contract: str | None = "REQUESTED_DELIVERABLE",
+    user_approved_extra_generation: bool = False,
+    extra_generation_evidence: str = "",
     now: datetime | None = None,
 ) -> dict[str, object]:
     state = load_guard(path)
@@ -201,6 +401,17 @@ def checkpoint(
     if event == "WAITING_FOR_USER":
         if state.get("waiting_since"):
             raise GuardError("The guard is already waiting for the user.")
+        if (
+            state.get("task_kind") == "IMAGE_GENERATION"
+            and pending_required_stages(state)
+            and (state.get("first_visible_result_at") or state.get("execution_started_at"))
+            and not (user_decision_essential and safe_routes_exhausted)
+        ):
+            raise GuardActionRequired(
+                "Waiting for the user cannot replace continued execution while required image stages remain. "
+                "Continue an approved safe route, or declare both --user-decision-essential and "
+                "--safe-routes-exhausted for a genuinely unavoidable decision."
+            )
         state["waiting_since"] = iso_time(moment)
         state["status"] = "WAITING_FOR_USER"
         state["phase"] = "WAITING_FOR_USER"
@@ -228,8 +439,13 @@ def checkpoint(
         if state.get("next_required_action") in {
             "CALL_VALIDATION_OR_EXECUTION_OR_BLOCKER",
             "EXECUTION_STARTED_OR_BLOCKER",
+            "READY_FOR_EXECUTION_OR_EXECUTION_STARTED_OR_BLOCKER",
+            "CHECK_EXECUTION_OR_VISIBLE_RESULT_OR_BLOCKER",
         }:
-            raise GuardActionRequired("The task is ready or over budget; more preparation is forbidden.")
+            raise GuardActionRequired(
+                "The task is ready or its watchdog fired; more preparation is forbidden, but the task remains active. "
+                "Continue through the next execution transition or report a concrete external blocker."
+            )
         assert_can_continue(path, state, moment)
         state["preflight_actions_in_cycle"] = int(state.get("preflight_actions_in_cycle", 0)) + 1
         state["phase"] = "PREFLIGHT"
@@ -237,7 +453,8 @@ def checkpoint(
         state["status"] = "ACTIVE"
         state["phase"] = "READY_FOR_EXECUTION"
         state["next_required_action"] = "CALL_VALIDATION_OR_EXECUTION_OR_BLOCKER"
-        state.pop("action_required_reason", None)
+        state.pop("watchdog_reason", None)
+        state.pop("watchdog_triggered_at", None)
     elif event == "CALL_VALIDATED":
         if state.get("next_required_action") != "CALL_VALIDATION_OR_EXECUTION_OR_BLOCKER":
             raise GuardError("CALL_VALIDATED is allowed exactly once after READY_FOR_EXECUTION.")
@@ -247,11 +464,28 @@ def checkpoint(
     elif event == "EXECUTION_STARTED":
         if state.get("status") in {"BLOCKED", "COMPLETE"}:
             raise GuardError(f"Cannot start execution from status {state.get('status')}.")
+        validate_image_execution_scope(
+            state,
+            summary=summary,
+            output_contract=output_contract,
+            user_approved_extra_generation=user_approved_extra_generation,
+            extra_generation_evidence=extra_generation_evidence,
+        )
+        active_swimwear_attempt = validate_swimwear_execution_start(
+            state,
+            stage=stage,
+            swimwear_rung=swimwear_rung,
+            user_swimwear_override=user_swimwear_override,
+            user_override_evidence=user_override_evidence,
+        )
+        if active_swimwear_attempt:
+            state["active_swimwear_attempt"] = active_swimwear_attempt
         state["status"] = "ACTIVE"
         state["phase"] = "EXECUTION"
         state["execution_started_at"] = iso_time(moment)
         state["next_required_action"] = "VISIBLE_RESULT_OR_BLOCKER"
-        state.pop("action_required_reason", None)
+        state.pop("watchdog_reason", None)
+        state.pop("watchdog_triggered_at", None)
     elif event == "VISIBLE_RESULT":
         if not state.get("execution_started_at"):
             raise GuardError("VISIBLE_RESULT requires a prior EXECUTION_STARTED checkpoint.")
@@ -275,7 +509,113 @@ def checkpoint(
         state["status"] = "ACTIVE"
         state["phase"] = "RESULT_AVAILABLE"
         state["next_required_action"] = "NEXT_EXECUTION_OR_COMPLETE_OR_BLOCKER"
+        state.pop("watchdog_reason", None)
+        state.pop("watchdog_triggered_at", None)
+    elif event == "ATTEMPT_REJECTED":
+        if state.get("status") in {"BLOCKED", "COMPLETE"}:
+            raise GuardError(f"Cannot reject an attempt from status {state.get('status')}.")
+        active_swimwear_attempt = state.get("active_swimwear_attempt")
+        result_available = bool(active_swimwear_attempt and state.get("phase") == "RESULT_AVAILABLE")
+        if not state.get("execution_started_at") and not result_available:
+            raise GuardError("ATTEMPT_REJECTED requires a prior EXECUTION_STARTED checkpoint.")
+        if stage:
+            find_required_stage(state, stage)
+        if active_swimwear_attempt:
+            expected_stage = str(active_swimwear_attempt.get("stage", ""))
+            expected_rung = str(active_swimwear_attempt.get("swimwear_rung", ""))
+            if not stage or stage.casefold() != expected_stage.casefold():
+                raise GuardError(f"Rejected physique attempt must name --stage {expected_stage}.")
+            if str(swimwear_rung or "").upper() != expected_rung:
+                raise GuardError(f"Rejected physique attempt must name --swimwear-rung {expected_rung}.")
+            if observed_topology and str(observed_topology).upper() not in SWIMWEAR_TOPOLOGIES:
+                raise GuardError(f"Unsupported observed topology: {observed_topology}")
+            state.pop("active_swimwear_attempt", None)
+        state["execution_started_at"] = None
+        state["cycle_started_at"] = iso_time(moment)
+        state["cycle_paused_seconds"] = 0
+        state["preflight_actions_in_cycle"] = 0
+        state["status"] = "ACTIVE"
+        state["phase"] = "ATTEMPT_REJECTED"
+        state["next_required_action"] = "NEXT_SAFE_EXECUTION"
+        state.pop("watchdog_reason", None)
+        state.pop("watchdog_triggered_at", None)
+    elif event == "USER_CORRECTION":
+        waiting_since = state.get("waiting_since")
+        if waiting_since:
+            paused = max(0.0, (moment - parse_time(str(waiting_since))).total_seconds())
+            state["cycle_paused_seconds"] = int(state.get("cycle_paused_seconds", 0) + paused)
+        state["waiting_since"] = None
+        state["execution_started_at"] = None
+        state.pop("blocker", None)
+        state.pop("action_required_reason", None)
+        state.pop("watchdog_reason", None)
+        state.pop("watchdog_triggered_at", None)
+        state["status"] = "ACTIVE"
+        state["phase"] = "CORRECTION"
+        state["next_required_action"] = "NEXT_SAFE_EXECUTION_OR_COMPLETE"
+    elif event == "STAGE_COMPLETED":
+        if state.get("status") in {"BLOCKED", "COMPLETE"}:
+            raise GuardError(f"Cannot complete a required stage from status {state.get('status')}.")
+        entry = find_required_stage(state, stage)
+        if entry.get("status") == "COMPLETED":
+            raise GuardError(f"Required stage is already completed: {entry.get('id')}")
+        evidence_paths = validate_stage_evidence(state, evidence)
+        if is_physique_stage(str(entry.get("id"))):
+            active_swimwear_attempt = state.get("active_swimwear_attempt")
+            if not isinstance(active_swimwear_attempt, dict):
+                raise GuardError("Physique stage completion requires a tracked swimwear execution attempt.")
+            expected_rung = str(active_swimwear_attempt.get("swimwear_rung", ""))
+            rung = str(swimwear_rung or "").upper()
+            observed = str(observed_topology or "").upper()
+            if rung != expected_rung:
+                raise GuardError(f"Physique completion must use the active swimwear rung {expected_rung}.")
+            if observed not in SWIMWEAR_TOPOLOGIES:
+                raise GuardError("Physique completion requires --observed-topology from the controlled topology list.")
+            if observed != rung:
+                raise GuardError(
+                    f"Clothing topology hard gate failed: requested {rung}, observed {observed}. "
+                    "Record ATTEMPT_REJECTED instead; the image cannot complete the physique stage."
+                )
+            state.pop("active_swimwear_attempt", None)
+        entry["status"] = "COMPLETED"
+        entry["completed_at"] = iso_time(moment)
+        entry["evidence"] = evidence_paths
+        state["status"] = "ACTIVE"
+        state["phase"] = "STAGE_COMPLETED"
+        state["next_required_action"] = (
+            "NEXT_EXECUTION_OR_BLOCKER" if pending_required_stages(state) else "COMPLETE_OR_BLOCKER"
+        )
+    elif event == "STAGE_REOPENED":
+        entry = find_required_stage(state, stage)
+        if entry.get("status") != "COMPLETED":
+            raise GuardError(f"Required stage is not completed and cannot be reopened: {entry.get('id')}")
+        entry["status"] = "PENDING"
+        entry["completed_at"] = None
+        entry["evidence"] = []
+        if is_physique_stage(str(entry.get("id"))):
+            state.pop("active_swimwear_attempt", None)
+            events = [
+                row for row in state.get("events", [])
+                if not (
+                    row.get("event") == "ATTEMPT_REJECTED"
+                    and str(row.get("stage", "")).casefold() == str(entry.get("id", "")).casefold()
+                    and row.get("swimwear_rung")
+                )
+            ]
+            state["events"] = events
+        state["status"] = "ACTIVE"
+        state["phase"] = "CORRECTION"
+        state["next_required_action"] = "NEXT_EXECUTION_OR_BLOCKER"
     elif event == "BLOCKER":
+        pending = pending_required_stages(state)
+        if state.get("task_kind") == "IMAGE_GENERATION" and pending:
+            if not (hard_blocker and safe_routes_exhausted):
+                raise GuardActionRequired(
+                    "A multi-stage image task cannot become BLOCKED after an ordinary rejected attempt while "
+                    "required stages remain pending. Record ATTEMPT_REJECTED and continue an approved safe route. "
+                    "A terminal blocker requires both --hard-blocker and --safe-routes-exhausted. Pending: "
+                    + ", ".join(pending)
+                )
         state["status"] = "BLOCKED"
         state["phase"] = "BLOCKED"
         state["next_required_action"] = "USER_DECISION"
@@ -283,19 +623,52 @@ def checkpoint(
     elif event == "COMPLETE":
         if state.get("task_kind") == "IMAGE_GENERATION" and not state.get("first_visible_result_at"):
             raise GuardError("An image-generation task cannot complete without a recorded visible image result.")
+        pending = pending_required_stages(state)
+        if pending:
+            raise GuardActionRequired(
+                "Task completion is forbidden while required stages remain pending: " + ", ".join(pending)
+            )
         state["status"] = "COMPLETE"
         state["phase"] = "COMPLETE"
         state["next_required_action"] = "NONE"
     else:
         raise GuardError(f"Unknown checkpoint event: {event}")
 
-    append_event(state, event, summary, moment, evidence=list(evidence))
+    event_details: dict[str, object] = {"evidence": list(evidence)}
+    if stage:
+        event_details["stage"] = stage
+    if swimwear_rung:
+        event_details["swimwear_rung"] = str(swimwear_rung).upper()
+    if observed_topology:
+        event_details["observed_topology"] = str(observed_topology).upper()
+    if user_swimwear_override:
+        event_details["user_swimwear_override"] = True
+        event_details["user_override_evidence"] = user_override_evidence.strip()
+    if event == "EXECUTION_STARTED" and user_approved_extra_generation:
+        event_details["user_approved_extra_generation"] = True
+        event_details["extra_generation_evidence"] = extra_generation_evidence.strip()
+    if event == "EXECUTION_STARTED" and state.get("task_kind") == "IMAGE_GENERATION":
+        event_details["output_contract"] = str(output_contract).upper()
+    if event == "ATTEMPT_REJECTED" and rung_routes_exhausted:
+        if not is_physique_stage(stage) or not swimwear_rung:
+            raise GuardError("--rung-routes-exhausted requires a physique --stage and --swimwear-rung.")
+        event_details["rung_routes_exhausted"] = True
+    if event == "BLOCKER":
+        event_details["hard_blocker"] = hard_blocker
+        event_details["safe_routes_exhausted"] = safe_routes_exhausted
+    if event == "WAITING_FOR_USER":
+        event_details["user_decision_essential"] = user_decision_essential
+        event_details["safe_routes_exhausted"] = safe_routes_exhausted
+    append_event(state, event, summary, moment, **event_details)
     atomic_write_json(path, state)
     if event == "PREFLIGHT":
         reason = evaluate_limits(state, moment)
         if reason:
-            persist_limit_state(path, state, reason, moment)
-            raise GuardActionRequired(reason)
+            persist_watchdog_state(path, state, reason, moment)
+            raise GuardActionRequired(
+                f"{reason} The task remains ACTIVE; stop additional preparation and continue through "
+                "READY_FOR_EXECUTION, EXECUTION_STARTED, an execution-state check, or a concrete external blocker."
+            )
     return state
 
 
@@ -304,7 +677,7 @@ def guard_status(path: Path, now: datetime | None = None) -> dict[str, object]:
     moment = now or utc_now()
     reason = evaluate_limits(state, moment)
     if reason:
-        persist_limit_state(path, state, reason, moment)
+        persist_watchdog_state(path, state, reason, moment)
     return state
 
 
@@ -312,9 +685,14 @@ def require_active_guard(path: Path, request_id: str, now: datetime | None = Non
     state = load_guard(path)
     if state.get("request_id") != request_id:
         raise GuardError("Execution guard belongs to another request.")
-    assert_can_continue(path, state, now)
     if state.get("status") in {"BLOCKED", "COMPLETE"}:
         raise GuardError(f"Execution guard status is {state.get('status')}.")
+    moment = now or utc_now()
+    reason = evaluate_limits(state, moment)
+    if reason:
+        # prepare-generation is the gateway out of preflight and must remain
+        # available after the watchdog fires.  Only further PREFLIGHT is denied.
+        persist_watchdog_state(path, state, reason, moment)
     return state
 
 
@@ -340,6 +718,12 @@ def make_parser() -> argparse.ArgumentParser:
     start.add_argument("--deliverable", required=True)
     start.add_argument("--task-kind", choices=("IMAGE_GENERATION", "GENERAL"), default="IMAGE_GENERATION")
     start.add_argument("--allowed-scope", action="append", default=[])
+    start.add_argument(
+        "--required-stage",
+        action="append",
+        default=[],
+        help="Mandatory deliverable stage. Repeat for every stage that must exist before COMPLETE.",
+    )
     start.add_argument("--max-minutes-without-execution", type=int, default=DEFAULT_MAX_MINUTES_WITHOUT_EXECUTION)
     start.add_argument("--max-preflight-actions", type=int, default=DEFAULT_MAX_PREFLIGHT_ACTIONS)
     start.add_argument("--max-execution-minutes", type=int, default=DEFAULT_MAX_EXECUTION_MINUTES)
@@ -351,12 +735,46 @@ def make_parser() -> argparse.ArgumentParser:
         required=True,
         choices=(
             "PREFLIGHT", "WAITING_FOR_USER", "USER_RESUMED", "SCOPE_CHANGE",
-            "READY_FOR_EXECUTION", "CALL_VALIDATED", "EXECUTION_STARTED", "VISIBLE_RESULT", "BLOCKER", "COMPLETE",
+            "READY_FOR_EXECUTION", "CALL_VALIDATED", "EXECUTION_STARTED", "VISIBLE_RESULT",
+            "ATTEMPT_REJECTED", "USER_CORRECTION", "STAGE_COMPLETED", "STAGE_REOPENED",
+            "BLOCKER", "COMPLETE",
         ),
     )
     check.add_argument("--summary", required=True)
     check.add_argument("--evidence", action="append", default=[])
+    check.add_argument("--stage", help="Required-stage id for STAGE_COMPLETED or STAGE_REOPENED.")
     check.add_argument("--user-approved-scope-change", action="store_true")
+    check.add_argument("--hard-blocker", action="store_true")
+    check.add_argument("--safe-routes-exhausted", action="store_true")
+    check.add_argument("--user-decision-essential", action="store_true")
+    check.add_argument("--swimwear-rung", choices=(*SWIMWEAR_RUNGS, "CUSTOM"))
+    check.add_argument("--observed-topology", choices=SWIMWEAR_TOPOLOGIES)
+    check.add_argument("--user-swimwear-override", action="store_true")
+    check.add_argument(
+        "--output-contract",
+        choices=("REQUESTED_DELIVERABLE", "USER_REQUESTED_EXTRA"),
+        help="Bind an image-generator call to an original deliverable or a directly requested extra image.",
+    )
+    check.add_argument(
+        "--user-approved-extra-generation",
+        action="store_true",
+        help="Allow a specifically user-requested auxiliary image that is not one of the original deliverables.",
+    )
+    check.add_argument(
+        "--extra-generation-evidence",
+        default="",
+        help="Exact user request required for an auxiliary image generation.",
+    )
+    check.add_argument(
+        "--rung-routes-exhausted",
+        action="store_true",
+        help="Unlock the next default rung only after every approved prompt, BODY, attachment, and staging route for the current target is exhausted.",
+    )
+    check.add_argument(
+        "--user-override-evidence",
+        default="",
+        help="Exact user instruction required when overriding the project-default swimwear ladder.",
+    )
 
     status = subparsers.add_parser("status", help="Show the current guard state and enforce elapsed-time limits.")
     status.add_argument("--state", required=True)
@@ -378,6 +796,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 deliverable=args.deliverable,
                 task_kind=args.task_kind,
                 allowed_scope=args.allowed_scope,
+                required_stages=args.required_stage,
                 max_minutes_without_execution=args.max_minutes_without_execution,
                 max_preflight_actions=args.max_preflight_actions,
                 max_execution_minutes=args.max_execution_minutes,
@@ -388,7 +807,19 @@ def main(argv: Sequence[str] | None = None) -> int:
                 event=args.event,
                 summary=args.summary,
                 evidence=args.evidence,
+                stage=args.stage,
                 user_approved_scope_change=args.user_approved_scope_change,
+                hard_blocker=args.hard_blocker,
+                safe_routes_exhausted=args.safe_routes_exhausted,
+                user_decision_essential=args.user_decision_essential,
+                swimwear_rung=args.swimwear_rung,
+                observed_topology=args.observed_topology,
+                user_swimwear_override=args.user_swimwear_override,
+                user_override_evidence=args.user_override_evidence,
+                rung_routes_exhausted=args.rung_routes_exhausted,
+                output_contract=args.output_contract,
+                user_approved_extra_generation=args.user_approved_extra_generation,
+                extra_generation_evidence=args.extra_generation_evidence,
             )
         else:
             state = guard_status(Path(args.state))

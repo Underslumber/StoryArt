@@ -1,0 +1,16 @@
+{
+  "review_status": "PASS",
+  "minimum_visible_delta_percent": 10,
+  "same_identity_constants": "PASS",
+  "chaos_probe_visible": "PASS",
+  "pairwise_checks": [
+    {"left": "R01_C01", "right": "R01_C02", "visible_style_difference_percent": 10, "observable_differences": ["видимое отличие стилевой конструкции"]},
+    {"left": "R01_C01", "right": "R01_C03", "visible_style_difference_percent": 20, "observable_differences": ["видимый диагностический чужой элемент"]},
+    {"left": "R01_C01", "right": "R01_C04", "visible_style_difference_percent": 10, "observable_differences": ["видимое отличие контрольной гипотезы"]},
+    {"left": "R01_C02", "right": "R01_C03", "visible_style_difference_percent": 10, "observable_differences": ["различимая форма или обработка края"]},
+    {"left": "R01_C02", "right": "R01_C04", "visible_style_difference_percent": 10, "observable_differences": ["различимая конструкция ключевого признака"]},
+    {"left": "R01_C03", "right": "R01_C04", "visible_style_difference_percent": 10, "observable_differences": ["диагностическая помеха отсутствует в контроле"]}
+  ],
+  "collapsed_pairs": [],
+  "decision": "SHOW_TO_USER"
+}
