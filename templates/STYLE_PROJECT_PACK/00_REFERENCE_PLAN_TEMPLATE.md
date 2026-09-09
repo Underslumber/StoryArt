@@ -16,8 +16,14 @@ PROMPT RISK ELEMENTS:
 PROMPT RISK MODIFIERS: <-2D through +2D>
 SAFER FORMULATION AND RECALCULATED RISK:
 REFERENCE RISK LABELS: <every physical attachment ends in [D#]>
-CHARACTER: NEW or CHAR_NNN
+CHARACTER: NONE, NEW, or CHAR_NNN
 GENERATION PURPOSE: <CHARACTER_BASE or SCENE>
+SCENE KIND: <LOCATION / PHENOMENON / ARTIFACT / MIXED; SCENE only>
+SCENE OUTPUT USE: <GENERAL_ART / WALLPAPER / PROMO_POSTER; SCENE only>
+SCENE SUBJECT SOURCE: <local SUBJECT reference or PROMPT_ONLY>
+CHARACTER POLICY: <FORBIDDEN_BY_DEFAULT for NONE / EXPLICIT_APPROVED_CHARACTER for CHAR_NNN>
+TEXT SAFE ZONE: <NONE / TOP / BOTTOM / LEFT / RIGHT>
+TYPOGRAPHY POLICY: <NO_TEXT_OR_WATERMARK / reserve space and add exact copy deterministically>
 ORIENTATION: <PORTRAIT or LANDSCAPE>
 ASPECT RATIO: <9:16 portrait or 16:9 landscape by default>
 NONSTANDARD ASPECT DIRECTLY APPROVED: <NO by default>
@@ -26,17 +32,18 @@ TARGET POSE FAMILY:
 FULL-BODY CANVAS OCCUPANCY: <72-88%; visible headroom and foot/floor margin>
 VERTICAL STRETCH: FORBIDDEN
 LOCAL STYLE CONTEXT REVIEWED: YES, <total files / relevant role counts>
-LOCAL REVIEW COUNTS: <STYLE n/n; FACE n/n; BODY n/n; POSE n/n; CLOTHES n/n; LIGHTING n/n; BACKGROUND n/n; COMPOSITION n/n>
+LOCAL REVIEW COUNTS: <STYLE n/n; SUBJECT n/n; FACE n/n; BODY n/n; POSE n/n; CLOTHES n/n; LIGHTING n/n; BACKGROUND n/n; COMPOSITION n/n>
 ANCHOR STATUS: <approved filenames or NONE; local fallback listed below>
 STYLE / LINEWORK:
 PALETTE:
+SCENE SUBJECT:
 FACE IDENTITY:
 PRIMARY FACE GEOMETRY:
 SUPPORTING FACE STYLE:
 FACE SELECTION EVIDENCE:
 EXPRESSION:
 BODY IDENTITY:
-DOMINANT BODY SOURCE: <exactly one STYLE_BODY / CHARACTER_BODY / BR_NNNN>
+DOMINANT BODY SOURCE: <exactly one STYLE_BODY / CHARACTER_BODY / BR_NNNN; NOT_APPLICABLE for SCENE + NONE>
 BODY SOURCE COVERAGE: <FULL_BODY / THREE_QUARTER / TORSO_ONLY / LOWER_BODY_ONLY>
 BODY SOURCE POSE FAMILY:
 HEIGHT IN HEADS: <SOURCE_LOCK or explicit range such as 6.5-7.0>
@@ -60,7 +67,7 @@ CONTINUITY / APPROVED FRAME:
 REFERENCE WORKFLOW: <AUTO resolved to SINGLE_PASS or MULTI_STAGE>
 PHYSICAL ATTACHMENT LIMIT: 5
 PHYSICAL ATTACHMENT SLOTS: <slot -> exact file -> active roles>
-MULTI-STAGE ORDER: <optional style synthesis -> face identity -> body/pose -> clothing -> character composite -> final scene>
+MULTI-STAGE ORDER: <optional style synthesis -> face identity -> body/pose -> clothing -> character composite -> final scene; forbidden for SCENE + NONE>
 STAGING OUTPUT RULE: <same request only; QA pass required; never an identity/style anchor>
 CHARACTER BASE OUTPUT ORDER: <taped physique front; taped physique side; taped physique back; face; neutral 3/4 assembly>
 CHARACTER BASE BACKGROUND: <NONE; plain neutral rendering backdrop only>

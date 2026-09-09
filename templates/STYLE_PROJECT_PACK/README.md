@@ -6,7 +6,9 @@ Created: {{CREATED_AT}}
 - Generated work: `{{STYLE_SLUG}}_GENERATIONS`
 - Global immutable generation archive: `GENERATION_RESULTS`
 
-The reference pack contains source images, reviewed derivatives, manifests, and upload-ready files. Generated characters never belong in the reference pack.
+The reference pack contains source images, reviewed derivatives, manifests, and upload-ready files. Generated characters and scene assets never belong in the reference pack.
+
+Character-free scenes use `SCENE + character-id NONE` with an explicit scene kind and output use. They reuse style, lighting, background, composition, and optional subject references, but never character identity references.
 
 Local work uses the complete pack. `03_UPLOAD_TO_WEB` is only a reduced export for a web project and never replaces the local originals, working libraries, or detailed manifests.
 

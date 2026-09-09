@@ -195,6 +195,28 @@ class TaskExecutionGuardTests(unittest.TestCase):
             )
             self.assertEqual(len(state["scope_changes"]), 1)
 
+    def test_user_approved_scope_change_resumes_blocked_task(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, _ = self.make_guard(folder, required_stages=["FRAME_01"])
+            guard.checkpoint(
+                path,
+                event="BLOCKER",
+                summary="The manager policy blocks the requested reference role.",
+                hard_blocker=True,
+                safe_routes_exhausted=True,
+                now=BASE_TIME,
+            )
+            state = guard.checkpoint(
+                path,
+                event="SCOPE_CHANGE",
+                summary="User authorized the narrow manager-policy change.",
+                user_approved_scope_change=True,
+                now=BASE_TIME + timedelta(minutes=1),
+            )
+            self.assertEqual(state["status"], "ACTIVE")
+            self.assertEqual(state["phase"], "PREFLIGHT")
+            self.assertNotIn("blocker", state)
+
     def test_image_result_requires_real_file_after_execution(self):
         with tempfile.TemporaryDirectory() as folder:
             path, _ = self.make_guard(folder)
@@ -340,6 +362,80 @@ class TaskExecutionGuardTests(unittest.TestCase):
             self.assertEqual(state["status"], "ACTIVE")
             self.assertEqual(guard.pending_required_stages(state), ["BACK"])
             self.assertEqual(state["events"][-1]["event"], "USER_CORRECTION")
+
+    def test_ambiguous_correction_cannot_change_locked_invariant(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, _ = self.make_guard(folder, invariants=["camera_view=REAR"])
+            with self.assertRaisesRegex(guard.GuardActionRequired, "ask the user"):
+                guard.checkpoint(
+                    path,
+                    event="USER_CORRECTION",
+                    correction_impact="AMBIGUOUS",
+                    summary="The wording may or may not request a new camera view.",
+                    now=BASE_TIME,
+                )
+            self.assertEqual(guard.load_guard(path)["locked_invariants"]["camera_view"], "REAR")
+
+    def test_preserving_correction_keeps_invariants_and_execution_must_assert_them(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, _ = self.make_guard(
+                folder,
+                invariants=["camera_view=REAR", "orientation=LANDSCAPE"],
+            )
+            state = guard.checkpoint(
+                path,
+                event="USER_CORRECTION",
+                correction_impact="PRESERVE",
+                summary="Fix anatomy and fingers without changing the camera.",
+                now=BASE_TIME,
+            )
+            self.assertEqual(state["events"][-1]["correction_impact"], "PRESERVE")
+            with self.assertRaisesRegex(guard.GuardError, "locked task invariants"):
+                guard.checkpoint(
+                    path,
+                    event="EXECUTION_STARTED",
+                    invariant_assertions=["camera_view=FRONT", "orientation=LANDSCAPE"],
+                    summary="Incorrectly switch the camera.",
+                    now=BASE_TIME,
+                )
+            started = guard.checkpoint(
+                path,
+                event="EXECUTION_STARTED",
+                invariant_assertions=["camera_view=REAR", "orientation=LANDSCAPE"],
+                summary="Generate with the locked rear landscape composition.",
+                now=BASE_TIME,
+            )
+            self.assertEqual(started["phase"], "EXECUTION")
+            self.assertEqual(started["events"][-1]["invariant_assertions"]["camera_view"], "REAR")
+
+    def test_invariant_change_requires_exact_user_evidence(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, _ = self.make_guard(folder, invariants=["camera_view=REAR"])
+            with self.assertRaisesRegex(guard.GuardError, "exact"):
+                guard.checkpoint(
+                    path,
+                    event="USER_CORRECTION",
+                    correction_impact="CHANGE",
+                    invariant_changes=["camera_view=FRONT"],
+                    user_approved_invariant_change=True,
+                    summary="Switch the camera.",
+                    now=BASE_TIME,
+                )
+            changed = guard.checkpoint(
+                path,
+                event="USER_CORRECTION",
+                correction_impact="CHANGE",
+                invariant_changes=["camera_view=FRONT"],
+                user_approved_invariant_change=True,
+                invariant_change_evidence="Сделай следующий кадр спереди.",
+                summary="User explicitly changed the camera.",
+                now=BASE_TIME,
+            )
+            self.assertEqual(changed["locked_invariants"]["camera_view"], "FRONT")
+            self.assertEqual(
+                changed["events"][-1]["invariant_change_evidence"],
+                "Сделай следующий кадр спереди.",
+            )
 
     def test_user_correction_can_reopen_completed_task_stage(self):
         with tempfile.TemporaryDirectory() as folder:

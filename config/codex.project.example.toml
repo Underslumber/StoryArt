@@ -1,0 +1,10 @@
+# Copy this file to .codex/config.toml only for a clean project setup.
+# Existing local configurations require a deliberate manual review and merge.
+model = "gpt-5.6-terra"
+model_reasoning_effort = "medium"
+
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 2
+default_subagent_model = "gpt-5.6-luna"
+default_subagent_reasoning_effort = "low"

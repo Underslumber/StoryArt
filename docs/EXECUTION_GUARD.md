@@ -14,6 +14,7 @@
 - исходную цель пользователя (`goal_lock`);
 - главный видимый результат (`primary_deliverable`);
 - допустимую область файлов (`allowed_scope`);
+- неизменяемые параметры ТЗ (`locked_invariants`): ракурс, ориентацию, место действия, число персонажей и главный композиционный приём;
 - тип задачи;
 - лимиты подготовки и ожидания выполнения.
 
@@ -48,6 +49,9 @@ python tools\task_execution_guard.py start `
   --request-id "<request-id>" `
   --goal "<точная цель пользователя>" `
   --deliverable "<первый видимый результат>" `
+  --invariant "camera_view=REAR" `
+  --invariant "orientation=LANDSCAPE" `
+  --invariant "setting=BALCONY" `
   --required-stage "FACE_IDENTITY" `
   --required-stage "PHYSIQUE_FRONT" `
   --required-stage "PHYSIQUE_SIDE" `
@@ -139,7 +143,36 @@ python tools\task_execution_guard.py checkpoint `
 python tools\task_execution_guard.py checkpoint `
   --state "<path>\EXECUTION_GUARD.json" `
   --event USER_CORRECTION `
+  --correction-impact PRESERVE `
   --summary "Сохранить выбранный SIDE и продолжить BACK и ASSEMBLY."
+```
+
+`PRESERVE` означает, что меняются только явно названные дефекты, а все закреплённые параметры ТЗ остаются прежними. Если фразу можно разумно прочитать и как сохранение, и как отмену ракурса/композиции, используйте `--correction-impact AMBIGUOUS`: guard остановит изменение и потребует уточнить смысл у пользователя.
+
+Изменить закреплённый параметр можно только по прямой цитате пользователя:
+
+```powershell
+python tools\task_execution_guard.py checkpoint `
+  --state "<path>\EXECUTION_GUARD.json" `
+  --event USER_CORRECTION `
+  --correction-impact CHANGE `
+  --invariant-change "camera_view=FRONT" `
+  --user-approved-invariant-change `
+  --invariant-change-evidence "Сделай следующий кадр спереди." `
+  --summary "Пользователь прямо изменил ракурс."
+```
+
+Перед реальным вызовом генератора необходимо перечислить все текущие значения. Отсутствующее или противоположное значение блокирует `EXECUTION_STARTED`:
+
+```powershell
+python tools\task_execution_guard.py checkpoint `
+  --state "<path>\EXECUTION_GUARD.json" `
+  --event EXECUTION_STARTED `
+  --invariant-assert "camera_view=REAR" `
+  --invariant-assert "orientation=LANDSCAPE" `
+  --invariant-assert "setting=BALCONY" `
+  --output-contract REQUESTED_DELIVERABLE `
+  --summary "Запускается кадр с закреплённым задним ракурсом."
 ```
 
 Если исправление сделало уже закрытый этап непригодным, откройте только его:

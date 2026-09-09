@@ -85,6 +85,52 @@ def load_guard(path: Path) -> dict[str, object]:
     return state
 
 
+def parse_invariant_assignments(items: Sequence[str], *, label: str) -> dict[str, str]:
+    assignments: dict[str, str] = {}
+    for raw_item in items:
+        raw = str(raw_item).strip()
+        if "=" not in raw:
+            raise GuardError(f"{label} must use NAME=VALUE: {raw_item}")
+        raw_name, raw_value = raw.split("=", 1)
+        name = raw_name.strip().casefold()
+        value = raw_value.strip()
+        if not name or not value:
+            raise GuardError(f"{label} requires non-empty NAME and VALUE: {raw_item}")
+        if name in assignments:
+            raise GuardError(f"Duplicate {label}: {name}")
+        assignments[name] = value
+    return assignments
+
+
+def validate_invariant_assertions(state: dict[str, object], assertions: Sequence[str]) -> dict[str, str]:
+    locked = state.get("locked_invariants", {})
+    if not isinstance(locked, dict):
+        raise GuardError("Execution guard locked_invariants must be an object.")
+    if not locked:
+        return {}
+    declared = parse_invariant_assignments(assertions, label="invariant assertion")
+    missing = [name for name in locked if name not in declared]
+    mismatched = [name for name, value in locked.items() if declared.get(name) != value]
+    unexpected = [name for name in declared if name not in locked]
+    if missing or mismatched or unexpected:
+        details: list[str] = []
+        if missing:
+            details.append(f"missing: {', '.join(missing)}")
+        if mismatched:
+            details.append(
+                "mismatched: " + ", ".join(
+                    f"{name}={declared.get(name)!r}, expected {locked[name]!r}" for name in mismatched
+                )
+            )
+        if unexpected:
+            details.append(f"unexpected: {', '.join(unexpected)}")
+        raise GuardError(
+            "Execution cannot silently change locked task invariants (" + "; ".join(details) + "). "
+            "Preserve every invariant or record an explicit user-approved invariant change first."
+        )
+    return declared
+
+
 def create_guard(
     path: Path,
     *,
@@ -94,6 +140,7 @@ def create_guard(
     task_kind: str = "IMAGE_GENERATION",
     allowed_scope: Sequence[str] = (),
     required_stages: Sequence[str] = (),
+    invariants: Sequence[str] = (),
     max_minutes_without_execution: int = DEFAULT_MAX_MINUTES_WITHOUT_EXECUTION,
     max_preflight_actions: int = DEFAULT_MAX_PREFLIGHT_ACTIONS,
     max_execution_minutes: int = DEFAULT_MAX_EXECUTION_MINUTES,
@@ -116,6 +163,7 @@ def create_guard(
             raise GuardError(f"Duplicate required stage: {stage}")
         seen_stages.add(stage_key)
         normalized_stages.append(stage)
+    locked_invariants = parse_invariant_assignments(invariants, label="invariant")
     moment = now or utc_now()
     state: dict[str, object] = {
         "schema_version": SCHEMA_VERSION,
@@ -123,6 +171,7 @@ def create_guard(
         "task_kind": task_kind.upper(),
         "goal_lock": goal.strip(),
         "primary_deliverable": deliverable.strip(),
+        "locked_invariants": locked_invariants,
         "allowed_scope": [item for item in allowed_scope if item.strip()],
         "required_stages": [
             {
@@ -379,6 +428,11 @@ def checkpoint(
     evidence: Sequence[str] = (),
     stage: str | None = None,
     user_approved_scope_change: bool = False,
+    correction_impact: str | None = None,
+    invariant_assertions: Sequence[str] = (),
+    invariant_changes: Sequence[str] = (),
+    user_approved_invariant_change: bool = False,
+    invariant_change_evidence: str = "",
     hard_blocker: bool = False,
     safe_routes_exhausted: bool = False,
     user_decision_essential: bool = False,
@@ -397,6 +451,8 @@ def checkpoint(
     event = event.upper()
     if not summary.strip():
         raise GuardError("Every checkpoint requires a short factual summary.")
+    asserted_invariants: dict[str, str] = {}
+    applied_invariant_changes: dict[str, dict[str, str | None]] = {}
 
     if event == "WAITING_FOR_USER":
         if state.get("waiting_since"):
@@ -434,7 +490,35 @@ def checkpoint(
             )
         changes = list(state.get("scope_changes", []))
         changes.append({"at": iso_time(moment), "summary": summary.strip()})
+        requested_invariant_changes = parse_invariant_assignments(
+            invariant_changes,
+            label="invariant change",
+        )
+        if requested_invariant_changes:
+            if not user_approved_invariant_change or not invariant_change_evidence.strip():
+                raise GuardError(
+                    "Changing or establishing task invariants requires --user-approved-invariant-change "
+                    "and an exact --invariant-change-evidence quote."
+                )
+            locked = dict(state.get("locked_invariants", {}))
+            previous_values = {name: locked.get(name) for name in requested_invariant_changes}
+            locked.update(requested_invariant_changes)
+            state["locked_invariants"] = locked
+            changes[-1]["invariant_changes"] = {
+                name: {"from": previous_values[name], "to": value}
+                for name, value in requested_invariant_changes.items()
+            }
+            changes[-1]["invariant_change_evidence"] = invariant_change_evidence.strip()
         state["scope_changes"] = changes
+        if state.get("status") == "BLOCKED":
+            state["status"] = "ACTIVE"
+            state["phase"] = "PREFLIGHT"
+            state["next_required_action"] = "PREFLIGHT_OR_EXECUTION"
+            state["cycle_started_at"] = iso_time(moment)
+            state["cycle_paused_seconds"] = 0
+            state["execution_started_at"] = None
+            state["preflight_actions_in_cycle"] = 0
+            state.pop("blocker", None)
     elif event == "PREFLIGHT":
         if state.get("next_required_action") in {
             "CALL_VALIDATION_OR_EXECUTION_OR_BLOCKER",
@@ -471,6 +555,7 @@ def checkpoint(
             user_approved_extra_generation=user_approved_extra_generation,
             extra_generation_evidence=extra_generation_evidence,
         )
+        asserted_invariants = validate_invariant_assertions(state, invariant_assertions)
         active_swimwear_attempt = validate_swimwear_execution_start(
             state,
             stage=stage,
@@ -540,6 +625,38 @@ def checkpoint(
         state.pop("watchdog_reason", None)
         state.pop("watchdog_triggered_at", None)
     elif event == "USER_CORRECTION":
+        locked = state.get("locked_invariants", {})
+        impact = str(correction_impact or "").upper()
+        if locked:
+            if impact not in {"PRESERVE", "CHANGE", "AMBIGUOUS"}:
+                raise GuardError(
+                    "USER_CORRECTION must declare --correction-impact PRESERVE, CHANGE, or AMBIGUOUS "
+                    "when task invariants are locked."
+                )
+            if impact == "AMBIGUOUS":
+                raise GuardActionRequired(
+                    "The correction has more than one plausible reading and may change a locked invariant. "
+                    "Keep the previous invariant and ask the user before changing the task."
+                )
+            requested_invariant_changes = parse_invariant_assignments(
+                invariant_changes,
+                label="invariant change",
+            )
+            if impact == "PRESERVE" and requested_invariant_changes:
+                raise GuardError("PRESERVE correction cannot include invariant changes.")
+            if impact == "CHANGE":
+                if not requested_invariant_changes:
+                    raise GuardError("CHANGE correction requires at least one --invariant-change NAME=VALUE.")
+                if not user_approved_invariant_change or not invariant_change_evidence.strip():
+                    raise GuardError(
+                        "Changing a locked invariant requires --user-approved-invariant-change and an exact "
+                        "--invariant-change-evidence quote."
+                    )
+                current = dict(locked)
+                for name, value in requested_invariant_changes.items():
+                    applied_invariant_changes[name] = {"from": current.get(name), "to": value}
+                current.update(requested_invariant_changes)
+                state["locked_invariants"] = current
         waiting_since = state.get("waiting_since")
         if waiting_since:
             paused = max(0.0, (moment - parse_time(str(waiting_since))).total_seconds())
@@ -649,6 +766,14 @@ def checkpoint(
         event_details["extra_generation_evidence"] = extra_generation_evidence.strip()
     if event == "EXECUTION_STARTED" and state.get("task_kind") == "IMAGE_GENERATION":
         event_details["output_contract"] = str(output_contract).upper()
+    if event == "EXECUTION_STARTED" and asserted_invariants:
+        event_details["invariant_assertions"] = asserted_invariants
+    if event == "USER_CORRECTION" and state.get("locked_invariants"):
+        event_details["correction_impact"] = str(correction_impact).upper()
+        event_details["locked_invariants_after"] = dict(state["locked_invariants"])
+        if applied_invariant_changes:
+            event_details["invariant_changes"] = applied_invariant_changes
+            event_details["invariant_change_evidence"] = invariant_change_evidence.strip()
     if event == "ATTEMPT_REJECTED" and rung_routes_exhausted:
         if not is_physique_stage(stage) or not swimwear_rung:
             raise GuardError("--rung-routes-exhausted requires a physique --stage and --swimwear-rung.")
@@ -719,6 +844,12 @@ def make_parser() -> argparse.ArgumentParser:
     start.add_argument("--task-kind", choices=("IMAGE_GENERATION", "GENERAL"), default="IMAGE_GENERATION")
     start.add_argument("--allowed-scope", action="append", default=[])
     start.add_argument(
+        "--invariant",
+        action="append",
+        default=[],
+        help="Locked task invariant as NAME=VALUE. Repeat for camera, composition, setting, or other fixed facts.",
+    )
+    start.add_argument(
         "--required-stage",
         action="append",
         default=[],
@@ -744,6 +875,25 @@ def make_parser() -> argparse.ArgumentParser:
     check.add_argument("--evidence", action="append", default=[])
     check.add_argument("--stage", help="Required-stage id for STAGE_COMPLETED or STAGE_REOPENED.")
     check.add_argument("--user-approved-scope-change", action="store_true")
+    check.add_argument("--correction-impact", choices=("PRESERVE", "CHANGE", "AMBIGUOUS"))
+    check.add_argument(
+        "--invariant-assert",
+        action="append",
+        default=[],
+        help="Assert every locked NAME=VALUE immediately before execution.",
+    )
+    check.add_argument(
+        "--invariant-change",
+        action="append",
+        default=[],
+        help="Explicitly change or establish a locked invariant as NAME=VALUE.",
+    )
+    check.add_argument("--user-approved-invariant-change", action="store_true")
+    check.add_argument(
+        "--invariant-change-evidence",
+        default="",
+        help="Exact user quote that explicitly authorizes the invariant change.",
+    )
     check.add_argument("--hard-blocker", action="store_true")
     check.add_argument("--safe-routes-exhausted", action="store_true")
     check.add_argument("--user-decision-essential", action="store_true")
@@ -797,6 +947,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 task_kind=args.task_kind,
                 allowed_scope=args.allowed_scope,
                 required_stages=args.required_stage,
+                invariants=args.invariant,
                 max_minutes_without_execution=args.max_minutes_without_execution,
                 max_preflight_actions=args.max_preflight_actions,
                 max_execution_minutes=args.max_execution_minutes,
@@ -809,6 +960,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 evidence=args.evidence,
                 stage=args.stage,
                 user_approved_scope_change=args.user_approved_scope_change,
+                correction_impact=args.correction_impact,
+                invariant_assertions=args.invariant_assert,
+                invariant_changes=args.invariant_change,
+                user_approved_invariant_change=args.user_approved_invariant_change,
+                invariant_change_evidence=args.invariant_change_evidence,
                 hard_blocker=args.hard_blocker,
                 safe_routes_exhausted=args.safe_routes_exhausted,
                 user_decision_essential=args.user_decision_essential,

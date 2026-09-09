@@ -1,12 +1,21 @@
 # Role contracts
 
-Use the smallest set of roles needed for the request. The primary agent remains the
-orchestrator and never delegates user communication, scope changes, or guard completion.
+Use the smallest set of roles needed. The primary agent remains the coordinator
+and never delegates user communication, scope changes, guard completion,
+generation, or registration. This is a role policy, not a scheduler: the root
+requests explicit model/effort when spawning, and tools cannot change models.
+
+The configured normal hard cap is two active workers. Use more only after an
+explicit bounded configuration change and confirmed runtime capacity. No
+nesting. Every worker gets a bounded packet with objective, inputs, baseline,
+dependencies, acceptance criteria, forbidden scope, and the matching
+call/time/word budget from `docs/EFFICIENT_WORKFLOW.md`.
 
 ## STYLE_LIBRARIAN
 
-- Read the complete selected style pack and current `style-context`.
-- Inspect actual candidates for every applicable visual role.
+- Read the complete applicable candidate pools and current `style-context`.
+- Inspect actual candidates for every applicable visual role; reuse only
+  equivalently recorded review evidence.
 - Return a minimal compatible reference proposal with rejected alternatives and reasons.
 - Remain read-only. Do not create prompts, call the generator, or modify manifests.
 
@@ -26,13 +35,11 @@ orchestrator and never delegates user communication, scope changes, or guard com
 
 ## GENERATOR_OPERATOR
 
-- Receive one already validated prompt and exact attachment list.
-- Confirm the matching `EXECUTION_STARTED` transition immediately before the real call.
-- Call the image generator exactly once for the declared deliverable.
-- Write only inside the request directory and mandatory `GENERATION_RESULTS` archive through
-  existing StoryArt recording tools.
-- Do not research, change the prompt, select new references, edit infrastructure, or retry
-  independently.
+This is a sequential root responsibility, not a normally dispatched subagent
+role. Receive one already validated prompt and exact attachment list. Confirm
+the matching `EXECUTION_STARTED` transition immediately before one real call.
+Do not research, change the prompt, select references, edit infrastructure, or
+retry independently.
 
 ## VISUAL_QA
 
@@ -40,11 +47,23 @@ orchestrator and never delegates user communication, scope changes, or guard com
 - Score every required semantic QA layer independently.
 - Return `PASS` or `FAIL` per layer with short visual evidence.
 - Remain read-only. Do not repair, regenerate, archive, approve, or reinterpret a failed layer.
+- Use at most one bounded independent reviewer and only when it materially
+  improves judgement. A single reviewer still reports every required layer.
 
 ## REGISTRAR
 
-- Receive the generator output plus finalized QA verdict.
-- Use existing StoryArt managers to record, archive, reject, approve, or store the result.
-- Write only to the active request, `GENERATION_RESULTS`, and the explicitly selected permanent
-  character or storyline destination.
-- Do not choose references, change QA, call the generator, or modify project infrastructure.
+This is a sequential root responsibility, not a normally dispatched subagent
+role. Receive the generator output plus finalized QA verdict and use existing
+managers to record, archive, reject, approve, or store it. Do not choose
+references, change QA, call the generator, or modify infrastructure.
+
+## Routing precedence
+
+Use `docs/EFFICIENT_WORKFLOW.md` image-specific routing: Terra Medium for the
+main artistic work and ordinary visual QA; Luna Low only bounded metadata;
+Luna Medium repeatable mode remains evaluation-gated; fresh Sol Medium only at
+objective critical QA gates. Zero workers normally, one if helpful, two only
+for independent preparation. No agents for generator/archive/CLI operations.
+Complete hash/role/view/applicability-backed review evidence can span tasks;
+selected originals and changed or uncovered sources still require inspection.
+This overrides older same-task-only reuse wording, not the art/QA requirements.

@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "default_when_unmentioned": "UNRESOLVED",
+  "types": {
+    "NATURAL": {
+      "display_name_ru": "НАТУРА",
+      "aliases": [
+        "натура",
+        "натуру",
+        "натуры",
+        "натуре",
+        "натурный референс",
+        "натурные референсы",
+        "фото тела",
+        "фотореф",
+        "фотореференс",
+        "body_reference_library",
+        "natural"
+      ],
+      "root": "BODY_REFERENCE_LIBRARY",
+      "manifest": "BODY_REFERENCE_LIBRARY/BODY_REFERENCE_MANIFEST.csv",
+      "body_focus": "REAL_ANATOMY_AND_PROPORTIONS",
+      "authority": "PRIMARY_BODY_GEOMETRY",
+      "allowed_roles": [
+        "BODY_BUILD_TARGET",
+        "STAGING_ONLY",
+        "CLOTHING_BEHAVIOR",
+        "OBJECT_INTERACTION",
+        "CAMERA_ONLY"
+      ],
+      "forbidden_roles": [
+        "FACE",
+        "IDENTITY",
+        "STYLE",
+        "PALETTE",
+        "LIGHTING",
+        "BACKGROUND_STYLE"
+      ]
+    },
+    "SKETCH": {
+      "display_name_ru": "НАБРОСОК",
+      "aliases": [
+        "набросок",
+        "наброски",
+        "наброска",
+        "наброску",
+        "наброске",
+        "контур",
+        "контурный референс",
+        "лайн",
+        "лайнарт",
+        "pose_line",
+        "sketch"
+      ],
+      "root": "BODY_REFERENCE_LIBRARY/02_LOCAL_ONLY/ANATOMY_CONTOUR_REFERENCE_LIBRARY",
+      "manifest": "BODY_REFERENCE_LIBRARY/02_LOCAL_ONLY/ANATOMY_CONTOUR_REFERENCE_LIBRARY/FINAL_CONTOUR_MANIFEST.csv",
+      "body_focus": "POSE_GESTURE_BALANCE_AND_FORESHORTENING",
+      "authority": "SOFT_POSE_ONLY",
+      "allowed_roles": [
+        "POSE_SOFT"
+      ],
+      "forbidden_roles": [
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS",
+        "PHYSIOLOGY",
+        "FACE",
+        "IDENTITY",
+        "STYLE",
+        "CLOTHES"
+      ]
+    },
+    "OLCHAS": {
+      "display_name_ru": "OLCHAS",
+      "aliases": [
+        "olchas",
+        "olcha s",
+        "олчас",
+        "ольчас"
+      ],
+      "root": "BODY_REFERENCE_LIBRARY/02_LOCAL_ONLY/ARTIST_COLLECTIONS/OLCHAS/05_FINAL_LIBRARY",
+      "manifest": "BODY_REFERENCE_LIBRARY/02_LOCAL_ONLY/ARTIST_COLLECTIONS/OLCHAS/05_FINAL_LIBRARY/FINAL_LIBRARY_MANIFEST.csv",
+      "body_focus": "ILLUSTRATED_VOLUME_DISTRIBUTION_SILHOUETTE_AND_LARGE_FORM_EMPHASIS",
+      "authority": "SOFT_ART_BODY_SHAPE",
+      "allowed_roles": [
+        "ART_BODY_SHAPE_SOFT",
+        "ART_POSE_SOFT",
+        "ART_CAMERA_SOFT"
+      ],
+      "forbidden_roles": [
+        "BODY_BUILD_TARGET",
+        "REAL_ANATOMY_AUTHORITY",
+        "CHARACTER_FACE",
+        "CHARACTER_BODY",
+        "IDENTITY",
+        "ANCHOR_STYLE"
+      ]
+    }
+  },
+  "combination_policy": {
+    "permanent_body_geometry": "NATURAL when explicitly selected; otherwise approved CHARACTER_BODY or a complete PROMPT_BODY_SPEC remains authoritative",
+    "illustrated_form_emphasis": "OLCHAS may supplement geometry as ART_BODY_SHAPE_SOFT",
+    "pose_and_gesture": "SKETCH may supplement geometry as POSE_SOFT",
+    "conflict_rule": "NATURAL or approved CHARACTER_BODY wins every anatomy and permanent-proportion conflict; OLCHAS never transfers style unless separately selected as style evidence"
+  }
+}

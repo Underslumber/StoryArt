@@ -10,7 +10,7 @@
 - [ ] A missing `ANCHOR_STYLE` was handled with a local `MASTER_STYLE` plus role-specific references, without weakening fidelity.
 - [ ] Requested fidelity profile is followed.
 - [ ] The first chat-level startup interaction used the native input-area chooser when available and showed exactly three AI presets plus its free-form `Указать свой вариант`/Other entry before requesting any numeric values.
-- [ ] No numbered text startup menu was printed; when native UI was unavailable, the recommended `90% + BODY_REFERENCE_LIBRARY` profile was applied silently.
+- [ ] When native UI was unavailable, the required numbered text menu was shown and generation waited for the user's explicit reply; no profile was applied silently.
 - [ ] An already selected same-chat style/profile was reused without presenting or asking for the chooser again; a new chooser was shown only after an explicit user reselection request.
 - [ ] Preset 1 was the recommended `90% + BODY_REFERENCE_LIBRARY` option; presets 2 and 3 were derived from the task context.
 - [ ] The selected preset resolved its parameters automatically, or CUSTOM used the user's complete one-message description without optional follow-up questions.
@@ -51,6 +51,11 @@
 - [ ] Linework, palette, light, character, and background share one visual language.
 - [ ] Background style and detail hierarchy match the pack unless explicitly released.
 - [ ] No unexplained text, watermark, UI, obstruction, or accidental object is present.
+- [ ] A `SCENE + NONE` used no character assembly, face, body, pose, clothes, or auxiliary body reference and contains no recognizable unrequested character.
+- [ ] Scene subject accuracy, focal hierarchy, lighting, background, composition, and style were checked independently.
+- [ ] `LOCATION` has readable depth and scale; `PHENOMENON` has causal/environmental coherence; `ARTIFACT` has a stable silhouette, materials, scale, and hero-object hierarchy.
+- [ ] `WALLPAPER` keeps its focal subject in a crop-safe region and remains calm/readable behind desktop icons and windows.
+- [ ] `PROMO_POSTER` preserves the declared copy-safe zone; exact typography is added deterministically unless the user explicitly requested generated text.
 - [ ] Side-by-side face review shows no generic Disney, anime, editorial, or unrelated facial drift.
 - [ ] Every multi-stage intermediate passed its own layer QA before use and remained inside the same request.
 - [ ] Any failed attachment, canvas, face, silhouette, or proportion check automatically records the result as REJECTED.

@@ -59,6 +59,9 @@ TARGET_FRAMINGS = ("FULL_BODY", "THREE_QUARTER", "HALF_BODY", "PORTRAIT")
 BODY_POSE_FAMILIES = ("STANDING", "SEATED", "LYING", "KNEELING", "CROUCHING", "HANGING", "OTHER")
 BODY_SOURCE_COVERAGES = ("FULL_BODY", "THREE_QUARTER", "TORSO_ONLY", "LOWER_BODY_ONLY")
 GENERATION_PURPOSES = ("CHARACTER_BASE", "SCENE", "TECHNICAL_TEST")
+SCENE_KINDS = ("LOCATION", "PHENOMENON", "ARTIFACT", "MIXED")
+SCENE_OUTPUT_USES = ("GENERAL_ART", "WALLPAPER", "PROMO_POSTER")
+TEXT_SAFE_ZONES = ("NONE", "TOP", "BOTTOM", "LEFT", "RIGHT")
 CHARACTER_REFERENCE_MODES = ("AUTO", "ASSEMBLY_ONLY", "ASSEMBLY_PLUS_VIEW", "IDENTITY_STRICT")
 SHOT_COMPLEXITIES = ("SIMPLE", "NORMAL", "COMPLEX")
 BODY_VIEW_CHOICES = ("ASSEMBLY", "FRONT", "SIDE", "BACK")
@@ -85,6 +88,7 @@ PACK_DIRECTORIES = (
     "01_WORK/LIGHTING_CROPS",
     "01_WORK/BACKGROUND_CROPS",
     "01_WORK/COMPOSITION_CROPS",
+    "01_WORK/SUBJECT_CROPS",
     "01_WORK/CENSORED_REPAIRED",
     "01_WORK/UPLOAD_CANDIDATES_DRAFT",
     "02_LOCAL_ONLY_DO_NOT_UPLOAD/BACKUPS",
@@ -113,6 +117,7 @@ ROLES = (
     "LIGHTING_CORE",
     "BACKGROUND_CORE",
     "COMPOSITION_CORE",
+    "SUBJECT_CORE",
     "CHARACTER_FACE",
     "CHARACTER_BODY",
     "CHARACTER",
@@ -131,6 +136,7 @@ ROLE_DIRECTORIES = {
     "LIGHTING_CORE": "01_WORK/LIGHTING_CROPS",
     "BACKGROUND_CORE": "01_WORK/BACKGROUND_CROPS",
     "COMPOSITION_CORE": "01_WORK/COMPOSITION_CROPS",
+    "SUBJECT_CORE": "01_WORK/SUBJECT_CROPS",
     "CHARACTER_FACE": "01_WORK/FACE_CROPS",
     "CHARACTER_BODY": "01_WORK/BODY_CROPS",
     "CHARACTER": "01_WORK/UPLOAD_CANDIDATES_DRAFT",
@@ -191,6 +197,10 @@ GENERATION_FIELDS = (
     "style_file",
     "parent_generation",
     "reference_plan",
+    "scene_kind",
+    "output_use",
+    "aspect_ratio",
+    "typography_mode",
     "notes",
 )
 
@@ -483,6 +493,7 @@ LOCAL_CONTEXT_ROLES = (
     "LIGHTING",
     "BACKGROUND",
     "COMPOSITION",
+    "SUBJECT",
     "SOURCE",
     "WEB_EXPORT",
 )
@@ -505,6 +516,8 @@ def inferred_asset_roles(relative: Path) -> list[str]:
         roles.add("BACKGROUND")
     if any(token in text for token in ("COMPOSITION", "FRAMING", "CAMERA")):
         roles.add("COMPOSITION")
+    if "SUBJECT" in text:
+        roles.add("SUBJECT")
     if "STYLE" in text or "ANCHOR" in text or "MASTER" in text:
         roles.add("STYLE")
     if relative.parts and relative.parts[0] == "00_SOURCE_ORIGINALS":
@@ -643,6 +656,7 @@ def build_style_context(paths: StylePaths, requested_role: str, positive_only: b
         "LIGHTING": work_collection_counts.get("LIGHTING_CROPS", 0) or positive_local_role_counts.get("LIGHTING", 0) or style_pool_count,
         "BACKGROUND": work_collection_counts.get("BACKGROUND_CROPS", 0) or positive_local_role_counts.get("BACKGROUND", 0) or style_pool_count,
         "COMPOSITION": work_collection_counts.get("COMPOSITION_CROPS", 0) or positive_local_role_counts.get("COMPOSITION", 0) or style_pool_count,
+        "SUBJECT": work_collection_counts.get("SUBJECT_CROPS", 0) or positive_local_role_counts.get("SUBJECT", 0),
     }
     warnings: list[str] = []
     if not anchor_files:
@@ -794,7 +808,7 @@ def command_body_ref_context(args: argparse.Namespace) -> None:
 
 
 PLAN_CATEGORIES = ("FACE", "BODY", "POSE", "CLOTHES", "LIGHTING", "BACKGROUND", "COMPOSITION")
-REVIEW_CATEGORIES = ("STYLE", *PLAN_CATEGORIES)
+REVIEW_CATEGORIES = ("STYLE", "SUBJECT", *PLAN_CATEGORIES)
 STARTUP_CHOICES = ("OPTION_1", "OPTION_2", "OPTION_3", "CUSTOM")
 RISK_LABEL_RE = re.compile(r"^D(?:[1-9]|10)$", re.IGNORECASE)
 
@@ -1230,13 +1244,38 @@ def validate_prompt_only_body_library_review(args: argparse.Namespace) -> None:
         )
 
 
-def validate_plan_reference(paths: StylePaths, value: str, label: str) -> dict[str, object]:
+def validate_plan_reference(
+    paths: StylePaths,
+    value: str,
+    label: str,
+    *,
+    allow_curated_body_contour: bool = False,
+) -> dict[str, object]:
     file = resolve_existing_file(value, paths)
-    if not (is_relative_to(file, paths.pack) or is_relative_to(file, paths.generations)):
+    contour_root = (
+        paths.workspace
+        / "BODY_REFERENCE_LIBRARY"
+        / "02_LOCAL_ONLY"
+        / "ANATOMY_CONTOUR_REFERENCE_LIBRARY"
+        / "07_FINAL_CURATED"
+    ).resolve()
+    is_curated_body_contour = (
+        allow_curated_body_contour
+        and label == "POSE"
+        and is_relative_to(file, contour_root)
+    )
+    if not (
+        is_relative_to(file, paths.pack)
+        or is_relative_to(file, paths.generations)
+        or is_curated_body_contour
+    ):
         raise StylePackError(f"{label} must come from the local style pack or its approved character library: {file}")
     status = "APPROVED_CHARACTER_ASSET"
     roles: list[str] = []
-    if is_relative_to(file, paths.pack):
+    if is_curated_body_contour:
+        status = "FINAL_CURATED_BODY_CONTOUR"
+        roles = ["POSE", "BODY_CONTOUR"]
+    elif is_relative_to(file, paths.pack):
         relative = file.relative_to(paths.pack)
         status, _ = local_asset_status(relative, file.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS)
         roles = inferred_asset_roles(relative)
@@ -1326,6 +1365,102 @@ def normalize_aspect_ratio(value: str) -> str:
     return value.strip().lower().replace("x", ":").replace("к", ":")
 
 
+def build_scene_contract(
+    args: argparse.Namespace,
+    purpose: str,
+    character_id: str,
+) -> dict[str, object]:
+    """Resolve scene subject/use while keeping character identity opt-in."""
+
+    if purpose != "SCENE":
+        return {"applicable": False}
+    if not re.fullmatch(r"CHAR_\d+|NONE", character_id):
+        raise StylePackError("SCENE requires --character-id NONE or an approved CHAR_NNN identifier.")
+
+    scene_kind = args.scene_kind.upper()
+    output_use = args.scene_output_use.upper()
+    text_safe_zone = args.text_safe_zone.upper()
+    if scene_kind not in SCENE_KINDS:
+        raise StylePackError("SCENE requires --scene-kind LOCATION, PHENOMENON, ARTIFACT, or MIXED.")
+    if output_use not in SCENE_OUTPUT_USES:
+        raise StylePackError("SCENE requires --scene-output-use GENERAL_ART, WALLPAPER, or PROMO_POSTER.")
+    if output_use == "PROMO_POSTER" and text_safe_zone == "NONE":
+        raise StylePackError("PROMO_POSTER requires a non-NONE --text-safe-zone for later deterministic typography.")
+    if output_use != "PROMO_POSTER" and text_safe_zone != "NONE":
+        raise StylePackError("--text-safe-zone is reserved for PROMO_POSTER scenes.")
+
+    has_character = character_id != "NONE"
+    if has_character:
+        return {
+            "applicable": True,
+            "scene_kind": scene_kind,
+            "output_use": output_use,
+            "has_character": True,
+            "character_policy": "EXPLICIT_APPROVED_CHARACTER",
+            "subject_source": "REFERENCE_PLUS_PROMPT" if getattr(args, "subject_reference", "") else "PROMPT_ONLY",
+            "text_safe_zone": text_safe_zone,
+            "typography_policy": (
+                "RESERVE_COPY_SAFE_AREA; ADD_EXACT_COPY_DETERMINISTICALLY_AFTER_ART_GENERATION"
+                if output_use == "PROMO_POSTER"
+                else "NO_TEXT_OR_WATERMARK"
+            ),
+            "crop_policy": (
+                "KEEP_FOCAL_SUBJECT_AND_HORIZON_INSIDE_CENTER_CROP_SAFE_AREA_FOR_FILL_FIT_SPAN"
+                if output_use == "WALLPAPER"
+                else "KEEP_PRIMARY_SUBJECT_AND_COPY_SAFE_AREA_CLEAR_OF_TRIM_EDGES"
+                if output_use == "PROMO_POSTER"
+                else "PRESERVE_CLEAR_FOCAL_HIERARCHY"
+            ),
+        }
+
+    forbidden = {
+        "character assembly": getattr(args, "character_assembly", ""),
+        "primary face": getattr(args, "primary_face", ""),
+        "supporting face": getattr(args, "supporting_face", ""),
+        "expression reference": getattr(args, "expression_reference", ""),
+        "body": getattr(args, "body_reference", ""),
+        "pose": getattr(args, "pose_reference", ""),
+        "clothes": getattr(args, "clothes_reference", ""),
+        "auxiliary body": getattr(args, "aux_body", []),
+        "coverage front": getattr(args, "coverage_front_reference", ""),
+        "coverage side": getattr(args, "coverage_side_reference", ""),
+        "coverage back": getattr(args, "coverage_back_reference", ""),
+    }
+    present = [name for name, value in forbidden.items() if value]
+    if present:
+        raise StylePackError(
+            "SCENE with --character-id NONE forbids character reference families and CHARACTER_BASE-only coverage assets. "
+            "Use an approved CHAR_NNN when character identity, body, pose, or clothes must be attached. "
+            "Remove: " + ", ".join(present)
+        )
+    if not getattr(args, "subject_reference", "") and not getattr(args, "scene_subject_from_prompt", False):
+        raise StylePackError(
+            "Character-free SCENE requires --subject-reference or explicit --scene-subject-from-prompt."
+        )
+
+    return {
+        "applicable": True,
+        "scene_kind": scene_kind,
+        "output_use": output_use,
+        "has_character": False,
+        "character_policy": "ANONYMOUS_SUBJECT; NO_CHARACTER_REFERENCE_FAMILIES; NO_APPROVED_IDENTITY_LOCK",
+        "subject_source": "REFERENCE_PLUS_PROMPT" if getattr(args, "subject_reference", "") else "PROMPT_ONLY",
+        "text_safe_zone": text_safe_zone,
+        "typography_policy": (
+            "RESERVE_COPY_SAFE_AREA; ADD_EXACT_COPY_DETERMINISTICALLY_AFTER_ART_GENERATION"
+            if output_use == "PROMO_POSTER"
+            else "NO_TEXT_OR_WATERMARK"
+        ),
+        "crop_policy": (
+            "KEEP_FOCAL_SUBJECT_AND_HORIZON_INSIDE_CENTER_CROP_SAFE_AREA_FOR_FILL_FIT_SPAN"
+            if output_use == "WALLPAPER"
+            else "KEEP_PRIMARY_SUBJECT_AND_COPY_SAFE_AREA_CLEAR_OF_TRIM_EDGES"
+            if output_use == "PROMO_POSTER"
+            else "PRESERVE_CLEAR_FOCAL_HIERARCHY"
+        ),
+    }
+
+
 def build_canvas_contract(args: argparse.Namespace) -> dict[str, object]:
     orientation = args.orientation.upper()
     default_ratio = DEFAULT_ASPECT_BY_ORIENTATION[orientation]
@@ -1342,6 +1477,23 @@ def build_canvas_contract(args: argparse.Namespace) -> dict[str, object]:
             f"Nonstandard or orientation-mismatched aspect ratio {ratio} requires direct user approval via "
             "--user-approved-nonstandard-aspect. Defaults are 9:16 portrait and 16:9 landscape."
         )
+    character_free_scene = (
+        str(getattr(args, "generation_purpose", "")).upper() == "SCENE"
+        and str(getattr(args, "character_id", "")).upper() == "NONE"
+    )
+    if character_free_scene:
+        return {
+            "orientation": orientation,
+            "aspect_ratio": ratio,
+            "used_default_ratio": not bool(args.aspect_ratio),
+            "nonstandard_user_approved": bool(args.user_approved_nonstandard_aspect),
+            "framing": "SCENE_COMPOSITION",
+            "target_pose_family": "NOT_APPLICABLE",
+            "full_figure": False,
+            "subject_height_percent": None,
+            "required_margins": "Preserve the crop/copy safe areas declared by scene_contract.",
+            "vertical_stretch_forbidden": False,
+        }
     full_figure = args.framing in {"FULL_BODY", "THREE_QUARTER"}
     return {
         "orientation": orientation,
@@ -1753,6 +1905,23 @@ def build_generation_workflow(
 ) -> dict[str, object]:
     mode = args.reference_workflow.upper()
     purpose = getattr(args, "generation_purpose", "SCENE").upper()
+    character_free_scene = purpose == "SCENE" and str(getattr(args, "character_id", "NONE")).upper() == "NONE"
+    if character_free_scene:
+        if mode == "MULTI_STAGE":
+            raise StylePackError(
+                "A character-free SCENE is one requested key-art deliverable. MULTI_STAGE would create unrequested service images; "
+                "reduce the reference set to the physical attachment limit."
+            )
+        slots = build_attachment_plan(selected, auxiliary, args.attachment_limit)
+        return {
+            "mode": "SINGLE_PASS",
+            "purpose": purpose,
+            "attachment_limit": args.attachment_limit,
+            "attachments_used": len(slots),
+            "slots": slots,
+            "all_selected_references_physically_attached": True,
+            "unrequested_staging_forbidden": True,
+        }
     if purpose == "CHARACTER_BASE" and mode == "SINGLE_PASS":
         raise StylePackError("CHARACTER_BASE requires MULTI_STAGE so face, front/side/back physique, and assembly are verified separately.")
     if purpose == "CHARACTER_BASE":
@@ -1806,6 +1975,32 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
     validate_prompt_only_body_library_review(args)
     character_id = args.character_id.upper()
     is_new_character = character_id == "NEW"
+    scene_contract = build_scene_contract(args, purpose, character_id)
+    character_free_scene = bool(scene_contract.get("applicable") and not scene_contract.get("has_character"))
+    if character_free_scene:
+        optional_scene_roles = {
+            "FACE": args.primary_face or args.supporting_face or args.expression_reference,
+            "BODY": args.body_reference,
+            "POSE": args.pose_reference,
+            "CLOTHES": args.clothes_reference,
+        }
+        overrides.update(role for role, value in optional_scene_roles.items() if not value)
+    else:
+        missing_body_fields = [
+            option
+            for option, value in (
+                ("--framing", args.framing),
+                ("--target-pose-family", args.target_pose_family),
+                ("--dominant-body-source", args.dominant_body_source),
+                ("--body-source-coverage", args.body_source_coverage),
+                ("--body-source-pose-family", args.body_source_pose_family),
+            )
+            if not value
+        ]
+        if missing_body_fields:
+            raise StylePackError(
+                "Character-bearing generation requires: " + ", ".join(missing_body_fields)
+            )
     if is_new_character and purpose != "CHARACTER_BASE":
         raise StylePackError(
             "Every NEW character must complete CHARACTER_BASE first. Generate safety-covered front/side/back physique, face, "
@@ -1867,6 +2062,10 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
     selected: dict[str, object] = {
         "style": [validate_plan_reference(paths, value, "STYLE") for value in args.style_reference]
     }
+    if scene_contract.get("applicable") and args.subject_reference:
+        selected["subject"] = [
+            validate_plan_reference(paths, value, "SUBJECT") for value in args.subject_reference
+        ]
     if purpose == "CHARACTER_BASE":
         coverage_inputs = (
             ("coverage_front", args.coverage_front_reference, "FRONT_CLOTHING_TOPOLOGY"),
@@ -1880,7 +2079,7 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
     face_visible = "FACE" not in overrides
     character_reference_mode = "NOT_APPLICABLE"
     selected_body_view = "NOT_APPLICABLE"
-    existing_scene = purpose == "SCENE" and not is_new_character
+    existing_scene = purpose == "SCENE" and bool(re.fullmatch(r"CHAR_\d+", character_id))
     if existing_scene:
         identity_folder = character_folder(paths, character_id)
         if not args.character_reference_evidence.strip():
@@ -1967,14 +2166,31 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
             continue
         if not value:
             raise StylePackError(f"{category} requires its local reference or an explicit --override {category}.")
-        selected[category.lower()] = validate_plan_reference(paths, value, category)
+        selected[category.lower()] = validate_plan_reference(
+            paths,
+            value,
+            category,
+            allow_curated_body_contour=character_free_scene and category == "POSE",
+        )
 
     required_review_roles = {"STYLE", *(category for category in PLAN_CATEGORIES if category not in overrides)}
+    if "subject" in selected:
+        required_review_roles.add("SUBJECT")
     review_pool_counts = {role: int(count) for role, count in context.get("review_pool_counts", {}).items()}
     if args.fidelity >= 70:
         shortfalls: list[str] = []
         for role in sorted(required_review_roles):
             required = review_pool_counts.get(role, 0)
+            selected_role = selected.get(role.lower())
+            if (
+                role == "POSE"
+                and isinstance(selected_role, dict)
+                and selected_role.get("status") == "FINAL_CURATED_BODY_CONTOUR"
+            ):
+                # A final-curated anatomy contour is a distinct one-item external
+                # pose pool; unrelated style-pack pose candidates are not competing
+                # inputs for this anonymous scene.
+                required = 1
             reviewed = reviewed_counts.get(role, 0)
             if required > 0 and reviewed < required:
                 shortfalls.append(f"{role}: reviewed {reviewed} of {required}")
@@ -1982,13 +2198,20 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
             raise StylePackError("Full local role review required before 70-100% generation: " + "; ".join(shortfalls))
 
     canvas_contract = build_canvas_contract(args)
-    body_proportion_contract = build_body_proportion_contract(
-        args,
-        selected,
-        auxiliary_body_references,
-        is_new_character,
-        technical_test=purpose == "TECHNICAL_TEST",
-    )
+    if character_free_scene:
+        body_proportion_contract = {
+            "applicable": False,
+            "single_dominant_source": False,
+            "dominant_source": "NOT_APPLICABLE",
+        }
+    else:
+        body_proportion_contract = build_body_proportion_contract(
+            args,
+            selected,
+            auxiliary_body_references,
+            is_new_character,
+            technical_test=purpose == "TECHNICAL_TEST",
+        )
     generation_workflow = build_generation_workflow(args, selected, auxiliary_body_references)
     risk_path, risk_assessment = load_and_validate_risk_assessment(
         args.risk_assessment,
@@ -2028,13 +2251,14 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
                 "aux_body_decision": args.aux_body_decision.upper(),
                 "orientation": args.orientation.upper(),
                 "aspect_ratio": canvas_contract["aspect_ratio"],
-                "framing": args.framing,
-                "target_pose_family": args.target_pose_family,
+                "framing": canvas_contract["framing"],
+                "target_pose_family": canvas_contract["target_pose_family"],
                 "reference_workflow": generation_workflow["mode"],
             },
         },
         "character_id": character_id,
         "generation_purpose": purpose,
+        "scene_contract": scene_contract,
         "local_context": {
             "local_files_total": context["local_files_total"],
             "work_collection_counts": context["work_collection_counts"],
@@ -2074,12 +2298,22 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
             "original_combined_risk": risk_assessment.get("original_combined_risk"),
             "revised_combined_risk": risk_assessment.get("revised_combined_risk"),
         },
-        "prompt_hard_constraints": [
-            f"Use canvas {canvas_contract['aspect_ratio']} ({canvas_contract['orientation']}).",
-            "Do not vertically stretch the character or lengthen legs/torso to fill the frame.",
-            "Match the dominant body specification silhouette and leg-to-torso ratio before adding clothing or scenery.",
-            "Preserve verified face and body layers through every later stage.",
-        ],
+        "prompt_hard_constraints": (
+            [
+                f"Use canvas {canvas_contract['aspect_ratio']} ({canvas_contract['orientation']}).",
+                "Use only the optional explicit roles and auxiliary transfer modes declared by this plan.",
+                "Keep the subject anonymous unless an explicit FACE reference is selected; auxiliary references never transfer identity.",
+                str(scene_contract["crop_policy"]),
+                str(scene_contract["typography_policy"]),
+            ]
+            if character_free_scene
+            else [
+                f"Use canvas {canvas_contract['aspect_ratio']} ({canvas_contract['orientation']}).",
+                "Do not vertically stretch the character or lengthen legs/torso to fill the frame.",
+                "Match the dominant body specification silhouette and leg-to-torso ratio before adding clothing or scenery.",
+                "Preserve verified face and body layers through every later stage.",
+            ]
+        ),
         "selected_references": selected,
         "auxiliary_body_reference_decision": args.aux_body_decision.upper(),
         "prompt_only_physique": bool(args.prompt_only_physique),
@@ -2297,7 +2531,17 @@ def validate_reference_plan_for_recording(
     workflow = plan.get("generation_workflow")
     if not isinstance(canvas, dict) or canvas.get("aspect_ratio") not in STANDARD_ASPECT_RATIOS and not canvas.get("nonstandard_user_approved"):
         raise StylePackError("Reference plan has no valid approved canvas contract.")
-    if not isinstance(body, dict) or not body.get("single_dominant_source"):
+    scene_contract = plan.get("scene_contract")
+    character_free_scene = bool(
+        plan.get("generation_purpose") == "SCENE"
+        and isinstance(scene_contract, dict)
+        and scene_contract.get("applicable")
+        and not scene_contract.get("has_character")
+    )
+    if character_free_scene:
+        if not isinstance(body, dict) or body.get("applicable") is not False:
+            raise StylePackError("Character-free SCENE must record body_proportion_contract.applicable=false.")
+    elif not isinstance(body, dict) or not body.get("single_dominant_source"):
         raise StylePackError("Reference plan has no single dominant body source contract.")
     if not isinstance(workflow, dict) or workflow.get("mode") not in {"SINGLE_PASS", "MULTI_STAGE"}:
         raise StylePackError("Reference plan has no valid physical attachment workflow.")
@@ -2332,7 +2576,9 @@ def validate_reference_plan_for_recording(
         actual_stages = {stage.get("stage_id") for stage in workflow.get("stages", [])}
         if not required_stages.issubset(actual_stages):
             raise StylePackError("CHARACTER_BASE plan is missing a required face, multiview physique, or assembly stage.")
-    elif plan.get("generation_purpose") == "SCENE" and str(plan.get("character_id", "")).upper() not in {"", "NEW"}:
+    elif plan.get("generation_purpose") == "SCENE" and re.fullmatch(
+        r"CHAR_\d+", str(plan.get("character_id", "")).upper()
+    ):
         selection = plan.get("character_reference_selection")
         selected = plan.get("selected_references", {})
         if not isinstance(selection, dict) or selection.get("mode") not in CHARACTER_REFERENCE_MODES[1:]:
@@ -2525,6 +2771,34 @@ def evaluate_generation_qa(
         and "LIMB_PROPORTIONS" not in required
     ):
         required.append("LIMB_PROPORTIONS")
+    scene_contract = plan.get("scene_contract")
+    if (
+        semantic_qa
+        and plan.get("generation_purpose") == "SCENE"
+        and isinstance(scene_contract, dict)
+        and scene_contract.get("applicable")
+        and not scene_contract.get("has_character")
+    ):
+        required.extend(
+            (
+                "SUBJECT_ACCURACY",
+                "NO_UNREQUESTED_CHARACTERS",
+                "FOCAL_HIERARCHY",
+                "LIGHTING",
+                "BACKGROUND",
+                "COMPOSITION",
+            )
+        )
+        if scene_contract.get("output_use") == "WALLPAPER":
+            required.extend(("DISTANCE_READABILITY", "DESKTOP_USABILITY"))
+        elif scene_contract.get("output_use") == "PROMO_POSTER":
+            required.extend(("POSTER_READABILITY", "COPY_SAFE_AREA"))
+        if scene_contract.get("scene_kind") == "LOCATION":
+            required.append("DEPTH_AND_SCALE")
+        elif scene_contract.get("scene_kind") == "PHENOMENON":
+            required.append("PHENOMENON_CAUSALITY")
+        elif scene_contract.get("scene_kind") == "ARTIFACT":
+            required.append("ARTIFACT_INTEGRITY")
 
     qa_values = {
         "ATTACHMENTS": args.qa_attachments,
@@ -2554,6 +2828,16 @@ def evaluate_generation_qa(
             "LIGHTING": getattr(args, "qa_lighting", "NOT_CHECKED"),
             "BACKGROUND": getattr(args, "qa_background", "NOT_CHECKED"),
             "COMPOSITION": getattr(args, "qa_composition", "NOT_CHECKED"),
+            "SUBJECT_ACCURACY": getattr(args, "qa_subject_accuracy", "NOT_CHECKED"),
+            "NO_UNREQUESTED_CHARACTERS": getattr(args, "qa_no_unrequested_characters", "NOT_CHECKED"),
+            "FOCAL_HIERARCHY": getattr(args, "qa_focal_hierarchy", "NOT_CHECKED"),
+            "DISTANCE_READABILITY": getattr(args, "qa_distance_readability", "NOT_CHECKED"),
+            "DESKTOP_USABILITY": getattr(args, "qa_desktop_usability", "NOT_CHECKED"),
+            "POSTER_READABILITY": getattr(args, "qa_poster_readability", "NOT_CHECKED"),
+            "COPY_SAFE_AREA": getattr(args, "qa_copy_safe_area", "NOT_CHECKED"),
+            "DEPTH_AND_SCALE": getattr(args, "qa_depth_and_scale", "NOT_CHECKED"),
+            "PHENOMENON_CAUSALITY": getattr(args, "qa_phenomenon_causality", "NOT_CHECKED"),
+            "ARTIFACT_INTEGRITY": getattr(args, "qa_artifact_integrity", "NOT_CHECKED"),
         })
     required_names = sorted(set(required))
     missing = [name for name in required_names if name in qa_values and qa_values[name] == "NOT_CHECKED"]
@@ -3204,6 +3488,10 @@ def append_generation(
     style_file: Path,
     parent_generation: str = "",
     reference_plan: str = "",
+    scene_kind: str = "",
+    output_use: str = "",
+    aspect_ratio: str = "",
+    typography_mode: str = "",
     notes: str = "",
 ) -> str:
     risk_level = risk_level.upper()
@@ -3231,6 +3519,10 @@ def append_generation(
             "style_file": str(style_file),
             "parent_generation": parent_generation,
             "reference_plan": reference_plan,
+            "scene_kind": scene_kind,
+            "output_use": output_use,
+            "aspect_ratio": aspect_ratio,
+            "typography_mode": typography_mode,
             "notes": notes,
         }
     )
@@ -3320,6 +3612,8 @@ def command_record_generation(args: argparse.Namespace) -> None:
                 if violations:
                     qa_note += f" [ANTHROPOMETRIC_VIOLATIONS={' | '.join(violations)}]"
     combined_notes = " ".join(part for part in (args.notes.strip(), qa_note) if part)
+    scene_contract = plan.get("scene_contract", {}) if plan else {}
+    canvas_contract = plan.get("canvas_contract", {}) if plan else {}
     new_id = append_generation(
         paths,
         request_id=request_id,
@@ -3333,6 +3627,10 @@ def command_record_generation(args: argparse.Namespace) -> None:
         style_file=style_file,
         parent_generation=args.parent_generation,
         reference_plan=reference_plan,
+        scene_kind=str(scene_contract.get("scene_kind", "")),
+        output_use=str(scene_contract.get("output_use", "")),
+        aspect_ratio=str(canvas_contract.get("aspect_ratio", "")),
+        typography_mode=str(scene_contract.get("typography_policy", "")),
         notes=combined_notes,
     )
     try:
@@ -3574,8 +3872,54 @@ def command_approve_standalone(args: argparse.Namespace) -> None:
     if args.fidelity not in {30, 50, 70, 90, 100}:
         raise StylePackError("Fidelity must be one of 30, 50, 70, 90, or 100.")
     image = resolve_existing_file(args.image, paths)
+    plan: dict[str, object] | None = None
+    reference_plan_path: Path | None = None
+    if args.reference_plan:
+        reference_plan_path, plan = validate_reference_plan_for_recording(paths, args.reference_plan, args.fidelity)
     archive_file = ensure_generation_archived(paths, image, f"standalone_{args.description}")
-    approved = copy_unique(image, paths.generations / "02_APPROVED_STANDALONE" / image.name)
+    scene_contract = plan.get("scene_contract", {}) if plan else {}
+    canvas_contract = plan.get("canvas_contract", {}) if plan else {}
+    character_free_scene = bool(
+        isinstance(scene_contract, dict)
+        and scene_contract.get("applicable")
+        and not scene_contract.get("has_character")
+    )
+    destination = paths.generations / "02_APPROVED_STANDALONE"
+    manifest_path: Path | None = None
+    if character_free_scene:
+        if not args.approval_quote.strip():
+            raise StylePackError("Character-free scene approval requires the direct user wording in --approval-quote.")
+        kind = safe_component(str(scene_contract["scene_kind"]), "MIXED").upper()
+        base_name = safe_component(args.description, "scene_asset").lower()
+        asset_folder = destination / kind / base_name
+        suffix = 2
+        while asset_folder.exists():
+            asset_folder = destination / kind / f"{base_name}_{suffix:02d}"
+            suffix += 1
+        asset_folder.mkdir(parents=True)
+        approved = copy_unique(image, asset_folder / image.name)
+        manifest_path = asset_folder / "SCENE_ASSET.yaml"
+        manifest_path.write_text(
+            "\n".join(
+                (
+                    "schema_version: 1",
+                    f"scene_kind: {yaml_quote(str(scene_contract['scene_kind']))}",
+                    f"output_use: {yaml_quote(str(scene_contract['output_use']))}",
+                    f"aspect_ratio: {yaml_quote(str(canvas_contract.get('aspect_ratio', '')))}",
+                    f"typography_mode: {yaml_quote(str(scene_contract.get('typography_policy', '')))}",
+                    f"approval_date: {yaml_quote(local_now().date().isoformat())}",
+                    f"approval_quote: {yaml_quote(args.approval_quote.strip())}",
+                    "files:",
+                    f"  - file: {yaml_quote(approved.name)}",
+                    f"    source_pending_path: {yaml_quote(str(image))}",
+                    f"reference_plan: {yaml_quote(str(reference_plan_path or ''))}",
+                    "",
+                )
+            ),
+            encoding="utf-8",
+        )
+    else:
+        approved = copy_unique(image, destination / image.name)
     new_id = append_generation(
         paths,
         request_id=safe_component(args.request_id, "standalone"),
@@ -3587,10 +3931,17 @@ def command_approve_standalone(args: argparse.Namespace) -> None:
         source_image=image,
         archive_file=archive_file,
         style_file=approved,
+        reference_plan=str(reference_plan_path or ""),
+        scene_kind=str(scene_contract.get("scene_kind", "")),
+        output_use=str(scene_contract.get("output_use", "")),
+        aspect_ratio=str(canvas_contract.get("aspect_ratio", "")),
+        typography_mode=str(scene_contract.get("typography_policy", "")),
         notes=args.notes,
     )
     print(f"GENERATION_ID={new_id}")
     print(f"APPROVED_FILE={approved}")
+    if manifest_path:
+        print(f"SCENE_MANIFEST={manifest_path}")
     print("STATUS=APPROVED_STANDALONE")
 
 
@@ -3899,14 +4250,37 @@ def build_parser() -> argparse.ArgumentParser:
         default="",
         help="Finalized CALIBRATION_STATE.json from style_calibration_manager.py; required when calibration was triggered.",
     )
-    prepare_parser.add_argument("--character-id", default="NEW", help="NEW or an existing CHAR_NNN identifier.")
+    prepare_parser.add_argument(
+        "--character-id",
+        default="NONE",
+        help="NONE for character-free SCENE, NEW for CHARACTER_BASE, or an approved CHAR_NNN for a character scene.",
+    )
     prepare_parser.add_argument(
         "--generation-purpose",
         choices=GENERATION_PURPOSES,
         default="SCENE",
-        help="CHARACTER_BASE creates face, safety-covered front/side/back physique, and a neutral assembly without a scene background.",
+        help="SCENE supports character-id NONE or an explicit approved CHAR_NNN; CHARACTER_BASE creates a new identity kit.",
     )
     prepare_parser.add_argument("--character-name", default="", help="Temporary kit folder label for CHARACTER_BASE.")
+    prepare_parser.add_argument("--scene-kind", choices=SCENE_KINDS, default="")
+    prepare_parser.add_argument("--scene-output-use", choices=SCENE_OUTPUT_USES, default="")
+    prepare_parser.add_argument(
+        "--subject-reference",
+        action="append",
+        default=[],
+        help="Optional local SUBJECT reference; repeat for a minimal compatible set.",
+    )
+    prepare_parser.add_argument(
+        "--scene-subject-from-prompt",
+        action="store_true",
+        help="Explicitly define the scene subject in the validated prompt instead of a visual SUBJECT reference.",
+    )
+    prepare_parser.add_argument(
+        "--text-safe-zone",
+        choices=TEXT_SAFE_ZONES,
+        default="NONE",
+        help="Reserved copy area for PROMO_POSTER; exact typography is added deterministically after key-art generation.",
+    )
     prepare_parser.add_argument(
         "--adult-character",
         action="store_true",
@@ -3951,11 +4325,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Records a direct user instruction to use stylized proportions outside the default adult anthropometric limits.",
     )
-    prepare_parser.add_argument("--framing", required=True, choices=TARGET_FRAMINGS)
-    prepare_parser.add_argument("--target-pose-family", required=True, choices=BODY_POSE_FAMILIES)
+    prepare_parser.add_argument("--framing", default="", choices=TARGET_FRAMINGS)
+    prepare_parser.add_argument("--target-pose-family", default="", choices=BODY_POSE_FAMILIES)
     prepare_parser.add_argument(
         "--dominant-body-source",
-        required=True,
+        default="",
         help="Exactly one of PROMPT_BODY_SPEC, STYLE_BODY, CHARACTER_BODY, or a connected BR_NNNN BODY_BUILD_TARGET.",
     )
     prepare_parser.add_argument(
@@ -3980,8 +4354,8 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Allow view-specific clothing-topology images only after the user directly requested visual coverage references.",
     )
-    prepare_parser.add_argument("--body-source-coverage", required=True, choices=BODY_SOURCE_COVERAGES)
-    prepare_parser.add_argument("--body-source-pose-family", required=True, choices=BODY_POSE_FAMILIES)
+    prepare_parser.add_argument("--body-source-coverage", default="", choices=BODY_SOURCE_COVERAGES)
+    prepare_parser.add_argument("--body-source-pose-family", default="", choices=BODY_POSE_FAMILIES)
     prepare_parser.add_argument(
         "--body-height-heads",
         default="SOURCE_LOCK",
@@ -3997,7 +4371,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--reference-workflow",
         choices=("AUTO", "SINGLE_PASS", "MULTI_STAGE"),
         default="AUTO",
-        help="AUTO uses one pass when possible and otherwise creates verified face/body/clothing/composite stages.",
+        help="AUTO uses one pass when possible; character-free SCENE always remains one pass and never invents service images.",
     )
     prepare_parser.add_argument("--style-reference", action="append", default=[], help="Local overall rendering reference; repeat if needed.")
     prepare_parser.add_argument("--primary-face", default="")
@@ -4007,7 +4381,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--reviewed",
         action="append",
         default=[],
-        help="Complete local review evidence as ROLE=COUNT; repeat for STYLE, FACE, BODY, POSE, CLOTHES, LIGHTING, BACKGROUND, and COMPOSITION.",
+        help="Complete local review evidence as ROLE=COUNT; repeat for applicable STYLE, SUBJECT, FACE, BODY, POSE, CLOTHES, LIGHTING, BACKGROUND, and COMPOSITION pools.",
     )
     prepare_parser.add_argument("--face-candidates-reviewed", type=int, default=0, help="Deprecated alias for --reviewed FACE=COUNT.")
     prepare_parser.add_argument("--face-selection-evidence", default="")
@@ -4111,6 +4485,16 @@ def build_parser() -> argparse.ArgumentParser:
     record_parser.add_argument("--qa-lighting", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
     record_parser.add_argument("--qa-background", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
     record_parser.add_argument("--qa-composition", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-subject-accuracy", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-no-unrequested-characters", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-focal-hierarchy", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-distance-readability", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-desktop-usability", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-poster-readability", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-copy-safe-area", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-depth-and-scale", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-phenomenon-causality", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
+    record_parser.add_argument("--qa-artifact-integrity", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
     record_parser.add_argument("--notes", default="")
     record_parser.set_defaults(handler=command_record_generation)
 
@@ -4150,6 +4534,12 @@ def build_parser() -> argparse.ArgumentParser:
     standalone_parser.add_argument("--description", required=True)
     standalone_parser.add_argument("--fidelity", type=int, default=90)
     standalone_parser.add_argument("--risk-level", required=True, choices=tuple(f"D{index}" for index in range(1, 11)))
+    standalone_parser.add_argument("--reference-plan", default="")
+    standalone_parser.add_argument(
+        "--approval-quote",
+        default="",
+        help="Direct user approval wording; required when a character-free SCENE plan is supplied.",
+    )
     standalone_parser.add_argument("--notes", default="")
     standalone_parser.add_argument("--user-approved", action="store_true")
     standalone_parser.set_defaults(handler=command_approve_standalone)

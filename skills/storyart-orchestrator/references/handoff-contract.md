@@ -10,14 +10,18 @@ Every handoff is created by `tools/storyart_orchestrator.py` and stored under
 - explicit input paths;
 - dependencies on earlier handoffs when applicable;
 - a stage for generation-related work;
-- explicit allowed write paths for writer roles.
+- explicit allowed write paths for any dispatched writer role; in ordinary
+  production, `GENERATOR_OPERATOR` and `REGISTRAR` are root-only and never
+  receive a handoff.
+- acceptance criteria, baseline, forbidden scope, and a finite call/time/word
+  budget from `docs/EFFICIENT_WORKFLOW.md`.
 
 ## Isolation rules
 
 - Read-only roles receive no write path.
-- `GENERATOR_OPERATOR` may write only inside the active request and `GENERATION_RESULTS`.
-- `REGISTRAR` may write only inside the active request, `GENERATION_RESULTS`, or the explicit
-  approved destination.
+- `GENERATOR_OPERATOR` and `REGISTRAR` are root-held logical responsibilities,
+  not dispatchable subagent roles in ordinary production. The root applies their
+  active-request, `GENERATION_RESULTS`, and approved-destination write limits.
 - No role may edit `tools`, `tests`, `docs`, `skills`, `scripts`, `.agents`, or project policy
   during an image request.
 - A handoff cannot start until every listed dependency is `DONE`.
@@ -25,8 +29,12 @@ Every handoff is created by `tools/storyart_orchestrator.py` and stored under
 
 ## Native subagent use
 
-Pass the generated handoff object or its `agent_prompt` to one native subagent. Give it only the
-task-local context and files listed in the handoff. Do not pass intended conclusions.
+Pass the generated handoff object or its `agent_prompt` to one native subagent.
+Request an explicit model, effort, and `fork_turns="none"`; this document does
+not switch a model itself. Give only task-local context and listed files, never
+the user conversation or an intended conclusion. No nesting. The configured
+normal cap is two active workers; more requires an explicit bounded config
+change and confirmed runtime capacity.
 
 When it returns, record the result:
 
@@ -39,5 +47,19 @@ python tools\storyart_orchestrator.py complete-handoff `
   --evidence "<path>"
 ```
 
-Use `REJECTED` for a completed assessment that rejects a candidate or output. Use `BLOCKED`
-only for a concrete condition the assigned role cannot resolve within its contract.
+Use `REJECTED` for a completed assessment that rejects a candidate or output.
+Use `BLOCKED` only for a concrete condition the assigned role cannot resolve.
+On budget exhaustion, return the collected evidence to root and do not claim the
+whole task is complete. The root retains the two-repair-loop limit and decides
+whether a recovery is justified.
+
+## Routing precedence
+
+Use `docs/EFFICIENT_WORKFLOW.md` image-specific routing: Terra Medium for the
+main artistic work and ordinary visual QA; Luna Low only bounded metadata;
+Luna Medium repeatable mode remains evaluation-gated; fresh Sol Medium only at
+objective critical QA gates. Zero workers normally, one if helpful, two only
+for independent preparation. No agents for generator/archive/CLI operations.
+Complete hash/role/view/applicability-backed review evidence can span tasks;
+selected originals and changed or uncovered sources still require inspection.
+This overrides older same-task-only reuse wording, not the art/QA requirements.

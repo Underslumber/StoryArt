@@ -17,6 +17,7 @@
 /tools/*
 !/tools/style_pack_manager.py
 !/tools/body_reference_manager.py
+!/tools/body_reference_type_router.py
 !/tools/generation_risk_assessor.py
 !/tools/task_execution_guard.py
 !/tools/style_calibration_manager.py
@@ -25,6 +26,11 @@
 # Local agent policy is copied from AGENTS.example.md during bootstrap.
 /AGENTS.md
 /.agents/
+/.codex/
+
+# Local provenance and performance notes are never release artifacts.
+/docs/GENERATION_RULES.md
+/docs/PERFORMANCE_AUDIT_2026-09-09.md
 
 # User-owned packs, sources, references, generations, and scratch state.
 /*_PROJECT_PACK/
