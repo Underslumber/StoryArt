@@ -288,6 +288,45 @@ def swimwear_failures(state: dict[str, object], stage: str) -> set[str]:
     }
 
 
+def escalation_incident_key(
+    state: dict[str, object], stage: str, qa_layer: str, *, include_current_rejection: bool = False
+) -> str | None:
+    """Identify a repeated failure separated by the latest explicit correction."""
+    events = list(state.get("events", []))
+    if not stage.strip() or not qa_layer.strip():
+        return None
+    def matches(row: dict[str, object]) -> bool:
+        return (
+            row.get("event") == "ATTEMPT_REJECTED"
+            and str(row.get("stage", "")).casefold() == stage.casefold()
+            and str(row.get("qa_layer", "")).casefold() == qa_layer.casefold()
+        )
+    correction_index = next(
+        (
+            index
+            for index in range(len(events) - 1, -1, -1)
+            if events[index].get("event") == "USER_CORRECTION"
+            and str(events[index].get("corrects_stage", "")).casefold() == stage.casefold()
+            and str(events[index].get("corrects_qa_layer", "")).casefold() == qa_layer.casefold()
+            and events[index].get("corrects_attempt_at")
+        ),
+        -1,
+    )
+    if correction_index < 0:
+        return None
+    before_correction = [row for row in events[:correction_index] if matches(row)]
+    if not any(str(row.get("at", "")) == str(events[correction_index]["corrects_attempt_at"]) for row in before_correction):
+        return None
+    after_correction = [
+        row for row in events[correction_index + 1 :]
+        if matches(row)
+    ]
+    if not before_correction or len(after_correction) + int(include_current_rejection) < 1:
+        return None
+    correction_at = str(events[correction_index].get("at", ""))
+    return f"{correction_at}|{stage.casefold()}|{qa_layer.casefold()}"
+
+
 def validate_swimwear_execution_start(
     state: dict[str, object],
     *,
@@ -444,6 +483,7 @@ def checkpoint(
     output_contract: str | None = "REQUESTED_DELIVERABLE",
     user_approved_extra_generation: bool = False,
     extra_generation_evidence: str = "",
+    qa_layer: str = "",
     now: datetime | None = None,
 ) -> dict[str, object]:
     state = load_guard(path)
@@ -453,6 +493,7 @@ def checkpoint(
         raise GuardError("Every checkpoint requires a short factual summary.")
     asserted_invariants: dict[str, str] = {}
     applied_invariant_changes: dict[str, dict[str, str | None]] = {}
+    correction_binding: dict[str, str] = {}
 
     if event == "WAITING_FOR_USER":
         if state.get("waiting_since"):
@@ -548,6 +589,10 @@ def checkpoint(
     elif event == "EXECUTION_STARTED":
         if state.get("status") in {"BLOCKED", "COMPLETE"}:
             raise GuardError(f"Cannot start execution from status {state.get('status')}.")
+        if state.get("next_required_action") == "ESCALATION_ORCHESTRATOR_REQUIRED":
+            raise GuardActionRequired(
+                "Two same-layer failures after an explicit correction require one read-only ESCALATION_ORCHESTRATOR result before another attempt."
+            )
         validate_image_execution_scope(
             state,
             summary=summary,
@@ -620,10 +665,38 @@ def checkpoint(
         state["cycle_paused_seconds"] = 0
         state["preflight_actions_in_cycle"] = 0
         state["status"] = "ACTIVE"
-        state["phase"] = "ATTEMPT_REJECTED"
-        state["next_required_action"] = "NEXT_SAFE_EXECUTION"
+        # The current rejection is appended after this transition. It is the
+        # second failure only when an earlier same-layer failure was addressed
+        # through the latest explicit correction.
+        incident = escalation_incident_key(
+            state, str(stage or ""), qa_layer, include_current_rejection=True
+        )
+        incidents = list(state.get("escalation_incidents", []))
+        prior = next((item for item in incidents if item.get("key") == incident), None) if incident else None
+        if incident and prior is None:
+            incidents.append({"key": incident, "stage": stage, "qa_layer": qa_layer, "status": "REQUIRED"})
+            state["escalation_incidents"] = incidents
+            state["phase"] = "ESCALATION_REQUIRED"
+            state["next_required_action"] = "ESCALATION_ORCHESTRATOR_REQUIRED"
+        else:
+            state["phase"] = "ATTEMPT_REJECTED"
+            state["next_required_action"] = "NEXT_SAFE_EXECUTION"
         state.pop("watchdog_reason", None)
         state.pop("watchdog_triggered_at", None)
+    elif event == "ESCALATION_ORCHESTRATOR_RECORDED":
+        incident = escalation_incident_key(state, str(stage or ""), qa_layer)
+        if not incident or state.get("next_required_action") != "ESCALATION_ORCHESTRATOR_REQUIRED":
+            raise GuardError("ESCALATION_ORCHESTRATOR_RECORDED requires the currently due corrected repeated-failure incident.")
+        incidents = list(state.get("escalation_incidents", []))
+        current = next((item for item in incidents if item.get("key") == incident), None)
+        if current is None or current.get("status") not in {"REQUIRED", "CONSUMED"}:
+            raise GuardError("This escalation incident is not pending.")
+        if not evidence:
+            raise GuardError("ESCALATION_ORCHESTRATOR_RECORDED requires evidence of the bounded work order.")
+        current["status"] = "RECORDED"
+        state["escalation_incidents"] = incidents
+        state["phase"] = "ESCALATION_RECORDED"
+        state["next_required_action"] = "NEXT_SAFE_EXECUTION"
     elif event == "USER_CORRECTION":
         locked = state.get("locked_invariants", {})
         impact = str(correction_impact or "").upper()
@@ -657,6 +730,27 @@ def checkpoint(
                     applied_invariant_changes[name] = {"from": current.get(name), "to": value}
                 current.update(requested_invariant_changes)
                 state["locked_invariants"] = current
+        # Only an explicit stage/layer correction tied to a preceding matching
+        # rejection may satisfy the repeated-failure escalation gate. Generic,
+        # unrelated, ambiguous, or pre-failure corrections remain valid task
+        # history but cannot unlock the Astra route.
+        if stage and qa_layer.strip():
+            prior_rejection = next(
+                (
+                    row
+                    for row in reversed(state.get("events", []))
+                    if row.get("event") == "ATTEMPT_REJECTED"
+                    and str(row.get("stage", "")).casefold() == stage.casefold()
+                    and str(row.get("qa_layer", "")).casefold() == qa_layer.casefold()
+                ),
+                None,
+            )
+            if prior_rejection:
+                correction_binding = {
+                    "corrects_attempt_at": str(prior_rejection.get("at", "")),
+                    "corrects_stage": str(stage),
+                    "corrects_qa_layer": qa_layer.strip().upper(),
+                }
         waiting_since = state.get("waiting_since")
         if waiting_since:
             paused = max(0.0, (moment - parse_time(str(waiting_since))).total_seconds())
@@ -774,10 +868,14 @@ def checkpoint(
         if applied_invariant_changes:
             event_details["invariant_changes"] = applied_invariant_changes
             event_details["invariant_change_evidence"] = invariant_change_evidence.strip()
+    if event == "USER_CORRECTION" and correction_binding:
+        event_details.update(correction_binding)
     if event == "ATTEMPT_REJECTED" and rung_routes_exhausted:
         if not is_physique_stage(stage) or not swimwear_rung:
             raise GuardError("--rung-routes-exhausted requires a physique --stage and --swimwear-rung.")
         event_details["rung_routes_exhausted"] = True
+    if event in {"ATTEMPT_REJECTED", "ESCALATION_ORCHESTRATOR_RECORDED"} and qa_layer.strip():
+        event_details["qa_layer"] = qa_layer.strip().upper()
     if event == "BLOCKER":
         event_details["hard_blocker"] = hard_blocker
         event_details["safe_routes_exhausted"] = safe_routes_exhausted
@@ -867,13 +965,14 @@ def make_parser() -> argparse.ArgumentParser:
         choices=(
             "PREFLIGHT", "WAITING_FOR_USER", "USER_RESUMED", "SCOPE_CHANGE",
             "READY_FOR_EXECUTION", "CALL_VALIDATED", "EXECUTION_STARTED", "VISIBLE_RESULT",
-            "ATTEMPT_REJECTED", "USER_CORRECTION", "STAGE_COMPLETED", "STAGE_REOPENED",
+            "ATTEMPT_REJECTED", "ESCALATION_ORCHESTRATOR_RECORDED", "USER_CORRECTION", "STAGE_COMPLETED", "STAGE_REOPENED",
             "BLOCKER", "COMPLETE",
         ),
     )
     check.add_argument("--summary", required=True)
     check.add_argument("--evidence", action="append", default=[])
     check.add_argument("--stage", help="Required-stage id for STAGE_COMPLETED or STAGE_REOPENED.")
+    check.add_argument("--qa-layer", default="", help="Failed QA layer; required to trigger corrected repeated-failure escalation.")
     check.add_argument("--user-approved-scope-change", action="store_true")
     check.add_argument("--correction-impact", choices=("PRESERVE", "CHANGE", "AMBIGUOUS"))
     check.add_argument(
@@ -976,6 +1075,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 output_contract=args.output_contract,
                 user_approved_extra_generation=args.user_approved_extra_generation,
                 extra_generation_evidence=args.extra_generation_evidence,
+                qa_layer=args.qa_layer,
             )
         else:
             state = guard_status(Path(args.state))

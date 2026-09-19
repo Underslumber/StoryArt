@@ -108,6 +108,19 @@ or turn rejected output into a source. Continue through remaining mandatory
 stages when the guard permits; record a blocker only for a concrete external
 condition.
 
+When a second failure of the same QA layer at the same stage occurs after an
+explicit correction addressed the first, the guard requires one `ESCALATION_ORCHESTRATOR` incident before a
+further attempt. It is an exceptional, read-only `gpt-6-astra` Low error handler,
+not a per-frame worker: it receives recorded evidence and returns one bounded
+Terra/Luna work order. It must not use tools, generate, test, edit, perform QA,
+approve, or spawn agents; the root dispatches any recommended executor. It runs
+once per corrected incident. Calibration remains a user-requested or
+user-consented proposal only.
+
+When a style is `UNKNOWN`/unformed and uncalibrated but has at least five unique
+QA-passed outputs, `style-readiness` may propose formalization and calibration.
+This is read-only and never creates calibration state or test art.
+
 ## Claims
 
 This policy is a process design. Do not claim quantified quota savings, elapsed

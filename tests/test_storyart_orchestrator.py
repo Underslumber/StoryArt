@@ -176,6 +176,70 @@ class StoryArtOrchestratorTests(unittest.TestCase):
         self.assertIn("EXECUTION_GUARD.json", handoff["agent_prompt"])
         self.assertIn("Allowed writes: NONE (read-only)", handoff["agent_prompt"])
 
+    def test_escalation_orchestrator_is_due_read_only_astra_profile(self):
+        self.initialize()
+        guard_data = json.loads(self.guard_path.read_text(encoding="utf-8"))
+        guard_data.update({
+            "next_required_action": "ESCALATION_ORCHESTRATOR_REQUIRED",
+            "escalation_incidents": [{"key": "x", "stage": "FRAME", "qa_layer": "STYLE", "status": "REQUIRED"}],
+        })
+        self.guard_path.write_text(json.dumps(guard_data), encoding="utf-8")
+        handoff = orchestrator.dispatch_handoff(
+            self.state_path, "ESCALATION_ORCHESTRATOR", "Return a recovery work order.",
+            [str(self.guard_path)], [], [], "FRAME", "", "STYLE",
+        )
+        self.assertEqual(handoff["execution_profile"]["model"], "gpt-6-astra")
+        self.assertEqual(handoff["execution_profile"]["reasoning_effort"], "low")
+        self.assertIn("do not use tools", handoff["agent_prompt"])
+        guard_data = json.loads(self.guard_path.read_text(encoding="utf-8"))
+        self.assertEqual(guard_data["escalation_incidents"][0]["status"], "CONSUMED")
+        with self.assertRaisesRegex(orchestrator.OrchestratorError, "due corrected"):
+            orchestrator.dispatch_handoff(
+                self.state_path, "ESCALATION_ORCHESTRATOR", "Duplicate work order.",
+                [str(self.guard_path)], [], [], "FRAME", "", "STYLE",
+            )
+
+    def test_consumed_escalation_never_reopens_after_interruption(self):
+        self.initialize()
+        guard_data = json.loads(self.guard_path.read_text(encoding="utf-8"))
+        guard_data.update({
+            "next_required_action": "ESCALATION_ORCHESTRATOR_REQUIRED",
+            "escalation_incidents": [{"key": "x", "stage": "FRAME", "qa_layer": "STYLE", "status": "CONSUMED"}],
+        })
+        self.guard_path.write_text(json.dumps(guard_data), encoding="utf-8")
+        with self.assertRaisesRegex(orchestrator.OrchestratorError, "due corrected"):
+            orchestrator.dispatch_handoff(
+                self.state_path, "ESCALATION_ORCHESTRATOR", "Restart interrupted work order.",
+                [str(self.guard_path)], [], [], "FRAME", "", "STYLE",
+            )
+
+    def test_concurrent_escalation_dispatch_is_denied_by_consumption_lock(self):
+        self.initialize()
+        guard_data = json.loads(self.guard_path.read_text(encoding="utf-8"))
+        guard_data.update({
+            "next_required_action": "ESCALATION_ORCHESTRATOR_REQUIRED",
+            "escalation_incidents": [{"key": "x", "stage": "FRAME", "qa_layer": "STYLE", "status": "REQUIRED"}],
+        })
+        self.guard_path.write_text(json.dumps(guard_data), encoding="utf-8")
+        lock_path = self.guard_path.with_suffix(self.guard_path.suffix + ".escalation.lock")
+        lock_path.write_text("locked", encoding="utf-8")
+        try:
+            with self.assertRaisesRegex(orchestrator.OrchestratorError, "already being consumed"):
+                orchestrator.dispatch_handoff(
+                    self.state_path, "ESCALATION_ORCHESTRATOR", "Concurrent work order.",
+                    [str(self.guard_path)], [], [], "FRAME", "", "STYLE",
+                )
+        finally:
+            lock_path.unlink(missing_ok=True)
+
+    def test_escalation_orchestrator_rejects_non_due_or_write_handoff(self):
+        self.initialize()
+        with self.assertRaisesRegex(orchestrator.OrchestratorError, "read-only"):
+            orchestrator.dispatch_handoff(
+                self.state_path, "ESCALATION_ORCHESTRATOR", "Return a work order.",
+                [str(self.guard_path)], [str(self.request_root)], [], "FRAME", "", "STYLE",
+            )
+
     def test_build_style_skills_creates_local_adapters(self):
         output = self.request_root / "style-skills"
         fake_styles = [

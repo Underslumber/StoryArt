@@ -57,6 +57,17 @@ role. Receive the generator output plus finalized QA verdict and use existing
 managers to record, archive, reject, approve, or store it. Do not choose
 references, change QA, call the generator, or modify infrastructure.
 
+## ESCALATION_ORCHESTRATOR
+
+- Available once only when the guard marks a same-stage, same-layer failure
+  that persists after an explicit correction addressed the first.
+- Requested profile is `gpt-6-astra` at Low effort, strictly as exceptional
+  top-level error handling, not routine review or a per-frame worker.
+- Consume only listed evidence and return one bounded, evidence-based Terra or
+  Luna work order. The root alone dispatches that executor; no nesting.
+- Remain read-only and do not use tools, generate, test, edit, perform QA,
+  approve, or spawn agents.
+
 ## Routing precedence
 
 Use `docs/EFFICIENT_WORKFLOW.md` image-specific routing: Terra Medium for the

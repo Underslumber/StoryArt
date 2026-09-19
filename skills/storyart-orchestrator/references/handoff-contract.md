@@ -19,6 +19,10 @@ Every handoff is created by `tools/storyart_orchestrator.py` and stored under
 ## Isolation rules
 
 - Read-only roles receive no write path.
+- `ESCALATION_ORCHESTRATOR` is a one-shot `gpt-6-astra` Low exceptional error
+  handler. It has no write path and may not use tools, generate, test, edit,
+  QA, approve, or spawn. Its only output is one bounded Terra/Luna work order;
+  the root dispatches it under the existing no-nesting invariant.
 - `GENERATOR_OPERATOR` and `REGISTRAR` are root-held logical responsibilities,
   not dispatchable subagent roles in ordinary production. The root applies their
   active-request, `GENERATION_RESULTS`, and approved-destination write limits.

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -25,6 +26,7 @@ READ_ONLY_ROLES = {
     "IDENTITY_CURATOR",
     "CALL_PLANNER",
     "VISUAL_QA",
+    "ESCALATION_ORCHESTRATOR",
 }
 ROLE_DESCRIPTIONS = {
     "STYLE_LIBRARIAN": "Inspect the complete style pack and propose minimal references.",
@@ -33,6 +35,7 @@ ROLE_DESCRIPTIONS = {
     "GENERATOR_OPERATOR": "Execute one declared generator call without research or prompt drift.",
     "VISUAL_QA": "Independently score every required semantic QA layer.",
     "REGISTRAR": "Record and store a finalized result through existing StoryArt managers.",
+    "ESCALATION_ORCHESTRATOR": "Exceptional read-only escalation: return one bounded Terra/Luna work order from corrected repeated-failure evidence.",
 }
 FORBIDDEN_INFRASTRUCTURE_ROOTS = {
     "tools",
@@ -226,6 +229,7 @@ def dispatch_handoff(
     dependency_ids: list[str],
     stage: str,
     output_contract: str,
+    qa_layer: str = "",
 ) -> dict[str, Any]:
     state = load_state(state_path)
     if role not in ROLE_DESCRIPTIONS:
@@ -242,6 +246,38 @@ def dispatch_handoff(
     request_root = normalize_project_path(str(state["request_root"]))
     validate_writer_paths(role, request_root, normalized_writes)
 
+    sequence = len(state.get("handoffs", [])) + 1
+    handoff_id = f"H{sequence:03d}"
+    execution_profile: dict[str, str] = {}
+    if role == "ESCALATION_ORCHESTRATOR":
+        if not stage.strip() or not qa_layer.strip():
+            raise OrchestratorError("ESCALATION_ORCHESTRATOR requires --stage and --qa-layer.")
+        guard_path = normalize_project_path(str(state["guard_path"]))
+        lock_path = guard_path.with_suffix(guard_path.suffix + ".escalation.lock")
+        try:
+            lock_fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError as exc:
+            raise OrchestratorError("ESCALATION_ORCHESTRATOR incident is already being consumed.") from exc
+        try:
+            guard = load_json(guard_path)
+            incident = next(
+                (
+                    item for item in guard.get("escalation_incidents", [])
+                    if item.get("status") == "REQUIRED"
+                    and str(item.get("stage", "")).casefold() == stage.casefold()
+                    and str(item.get("qa_layer", "")).casefold() == qa_layer.casefold()
+                ),
+                None,
+            )
+            if guard.get("next_required_action") != "ESCALATION_ORCHESTRATOR_REQUIRED" or incident is None:
+                raise OrchestratorError("ESCALATION_ORCHESTRATOR is available only for the guard's due corrected repeated-failure incident.")
+            incident.update({"status": "CONSUMED", "consumed_at": utc_now(), "handoff_id": handoff_id})
+            save_json(guard_path, guard)
+        finally:
+            os.close(lock_fd)
+            lock_path.unlink(missing_ok=True)
+        execution_profile = {"model": "gpt-6-astra", "reasoning_effort": "low", "mode": "EXCEPTIONAL_ERROR_HANDLING"}
+
     if role == "GENERATOR_OPERATOR":
         if not stage.strip():
             raise OrchestratorError("GENERATOR_OPERATOR requires --stage.")
@@ -252,8 +288,6 @@ def dispatch_handoff(
     elif output_contract:
         raise OrchestratorError("--output-contract is valid only for GENERATOR_OPERATOR.")
 
-    sequence = len(state.get("handoffs", [])) + 1
-    handoff_id = f"H{sequence:03d}"
     relative_inputs = [relative_project_path(path) for path in normalized_inputs]
     relative_writes = [relative_project_path(path) for path in normalized_writes]
     input_summary = ", ".join(relative_inputs) if relative_inputs else "NONE"
@@ -269,6 +303,8 @@ def dispatch_handoff(
         "allowed_write_paths": relative_writes,
         "depends_on": dependency_ids,
         "output_contract": output_contract,
+        "qa_layer": qa_layer.strip().upper(),
+        "execution_profile": execution_profile,
         "status": "PENDING",
         "created_at": utc_now(),
         "agent_prompt": (
@@ -278,6 +314,10 @@ def dispatch_handoff(
             "Do not use unlisted inputs, expand scope, change project infrastructure, "
             "communicate with the user, or edit orchestration state. Return a concise result "
             "with evidence."
+            + (
+                " This is a one-shot exceptional escalation only: do not use tools, generate, test, edit, QA, approve, or spawn agents. Return one evidence-based bounded work order for a Terra or Luna executor; the root dispatches it."
+                if role == "ESCALATION_ORCHESTRATOR" else ""
+            )
         ),
     }
     handoff_dir = state_path.parent / "ORCHESTRATION_HANDOFFS"
@@ -534,6 +574,7 @@ def build_parser() -> argparse.ArgumentParser:
     dispatch_parser.add_argument("--allowed-write", action="append", default=[])
     dispatch_parser.add_argument("--depends-on", action="append", default=[])
     dispatch_parser.add_argument("--stage", default="")
+    dispatch_parser.add_argument("--qa-layer", default="")
     dispatch_parser.add_argument(
         "--output-contract",
         choices=["REQUESTED_DELIVERABLE"],
@@ -585,6 +626,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.depends_on,
                 args.stage,
                 args.output_contract,
+                args.qa_layer,
             )
         elif args.command == "complete-handoff":
             result = complete_handoff(

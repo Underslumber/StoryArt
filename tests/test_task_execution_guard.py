@@ -504,6 +504,37 @@ class TaskExecutionGuardTests(unittest.TestCase):
             self.assertEqual(state["next_required_action"], "NEXT_SAFE_EXECUTION")
             self.assertEqual(guard.pending_required_stages(state), ["FRONT", "SIDE", "BACK"])
 
+    def test_corrected_same_layer_second_failure_requires_one_escalation(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, _ = self.make_guard(folder, required_stages=["FRONT"])
+            guard.checkpoint(path, event="EXECUTION_STARTED", stage="FRONT", summary="Generate FRONT.", now=BASE_TIME)
+            guard.checkpoint(path, event="ATTEMPT_REJECTED", stage="FRONT", qa_layer="FACE_GEOMETRY", summary="First attempt failed face geometry.", now=BASE_TIME)
+            guard.checkpoint(path, event="USER_CORRECTION", stage="FRONT", qa_layer="FACE_GEOMETRY", summary="Correct face geometry only.", now=BASE_TIME)
+            guard.checkpoint(path, event="EXECUTION_STARTED", stage="FRONT", summary="Generate corrected FRONT.", now=BASE_TIME)
+            guard.checkpoint(path, event="ATTEMPT_REJECTED", stage="FRONT", qa_layer="FACE_GEOMETRY", summary="Corrected attempt still failed face geometry.", now=BASE_TIME)
+            state = guard.load_guard(path)
+            self.assertEqual(state["next_required_action"], "ESCALATION_ORCHESTRATOR_REQUIRED")
+            with self.assertRaises(guard.GuardActionRequired):
+                guard.checkpoint(path, event="EXECUTION_STARTED", stage="FRONT", summary="Incorrect extra retry.", now=BASE_TIME)
+            evidence = Path(folder) / "work-order.md"
+            evidence.write_text("Terra work order", encoding="utf-8")
+            state = guard.checkpoint(
+                path, event="ESCALATION_ORCHESTRATOR_RECORDED", stage="FRONT", qa_layer="FACE_GEOMETRY",
+                evidence=[str(evidence)], summary="Astra returned one bounded Terra work order.", now=BASE_TIME,
+            )
+            self.assertEqual(state["next_required_action"], "NEXT_SAFE_EXECUTION")
+
+    def test_unbound_or_unrelated_correction_does_not_trigger_escalation(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, _ = self.make_guard(folder, required_stages=["FRONT"])
+            guard.checkpoint(path, event="USER_CORRECTION", stage="FRONT", qa_layer="FACE_GEOMETRY", summary="Correction before any failure.", now=BASE_TIME)
+            guard.checkpoint(path, event="EXECUTION_STARTED", stage="FRONT", summary="Generate FRONT.", now=BASE_TIME)
+            guard.checkpoint(path, event="ATTEMPT_REJECTED", stage="FRONT", qa_layer="FACE_GEOMETRY", summary="First face failure.", now=BASE_TIME)
+            guard.checkpoint(path, event="USER_CORRECTION", stage="FRONT", qa_layer="BODY_PROPORTIONS", summary="Unrelated correction.", now=BASE_TIME)
+            guard.checkpoint(path, event="EXECUTION_STARTED", stage="FRONT", summary="Retry FRONT.", now=BASE_TIME)
+            state = guard.checkpoint(path, event="ATTEMPT_REJECTED", stage="FRONT", qa_layer="FACE_GEOMETRY", summary="Second face failure.", now=BASE_TIME)
+            self.assertEqual(state["next_required_action"], "NEXT_SAFE_EXECUTION")
+
     def test_physique_swimwear_ladder_starts_at_extreme_micro(self):
         with tempfile.TemporaryDirectory() as folder:
             path, _ = self.make_guard(folder, required_stages=["PHYSIQUE_FRONT"])

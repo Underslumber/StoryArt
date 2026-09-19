@@ -65,6 +65,16 @@ TEXT_SAFE_ZONES = ("NONE", "TOP", "BOTTOM", "LEFT", "RIGHT")
 CHARACTER_REFERENCE_MODES = ("AUTO", "ASSEMBLY_ONLY", "ASSEMBLY_PLUS_VIEW", "IDENTITY_STRICT")
 SHOT_COMPLEXITIES = ("SIMPLE", "NORMAL", "COMPLEX")
 BODY_VIEW_CHOICES = ("ASSEMBLY", "FRONT", "SIDE", "BACK")
+QA_LAYER_NAMES = {
+    "ATTACHMENTS", "CANVAS", "STAGE_LAYER", "FACE_GEOMETRY", "BODY_SILHOUETTE",
+    "BODY_PROPORTIONS", "LIMB_PROPORTIONS", "STYLE", "BODY_RENDERING_STYLE",
+    "EXPRESSION", "NEUTRAL_BACKDROP", "FRONT_VIEW", "SIDE_VIEW", "BACK_VIEW",
+    "SAFE_COVERAGE", "CLOTHING_TOPOLOGY", "MULTIVIEW_CONSISTENCY", "CLOTHING",
+    "POSE_CONTACTS", "CAMERA", "LIGHTING", "BACKGROUND", "COMPOSITION",
+    "SUBJECT_ACCURACY", "NO_UNREQUESTED_CHARACTERS", "FOCAL_HIERARCHY",
+    "DISTANCE_READABILITY", "DESKTOP_USABILITY", "POSTER_READABILITY", "COPY_SAFE_AREA",
+    "DEPTH_AND_SCALE", "PHENOMENON_CAUSALITY", "ARTIFACT_INTEGRITY",
+}
 
 SUPPORTED_IMAGE_EXTENSIONS = {
     ".png",
@@ -197,6 +207,11 @@ GENERATION_FIELDS = (
     "style_file",
     "parent_generation",
     "reference_plan",
+    "qa_evidence",
+    "qa_output_sha256",
+    "qa_receipt_sha256",
+    "qa_contract_sha256",
+    "qa_plan_sha256",
     "scene_kind",
     "output_use",
     "aspect_ratio",
@@ -481,6 +496,15 @@ def command_list_styles(args: argparse.Namespace) -> None:
     print(f"LOCAL_READY_STYLES={sum(1 for style in styles if style.can_generate)}")
     print(f"WEB_READY_STYLES={sum(1 for style in styles if style.can_create_web_project)}")
     print("STATUS=DISCOVERY_COMPLETE")
+
+
+def command_style_readiness(args: argparse.Namespace) -> None:
+    proposal = style_readiness_proposal(make_paths(args.workspace, args.style_name))
+    if args.json:
+        print(json.dumps(proposal, ensure_ascii=False, indent=2))
+        return
+    for key, value in proposal.items():
+        print(f"{str(key).upper()}={value}")
 
 
 LOCAL_CONTEXT_ROLES = (
@@ -1281,12 +1305,215 @@ def validate_plan_reference(
         roles = inferred_asset_roles(relative)
         if status in {"REJECTED", "REVIEW_ONLY", "DERIVED_GENERATION"}:
             raise StylePackError(f"{label} cannot use {status} as a positive reference: {file}")
+        if style_formation_status(paths) != "FORMED":
+            raise StylePackError(
+                f"{label} cannot use an unformed style-pack source as an explicit planning reference; use a registered successful QA-passed generation."
+            )
+    else:
+        generation = registered_approved_generation(paths, file)
+        if generation is None:
+            raise StylePackError(
+                f"{label} cannot use an unregistered, rejected, staging, or non-approved generation as a positive reference: {file}"
+            )
+        status = str(generation["status"])
     return {
         "path": str(file),
         "sha256": sha256(file),
         "status": status,
         "inferred_roles": roles,
     }
+
+
+def generation_row_matches_image(row: dict[str, str], image: Path) -> bool:
+    """Match a manifest row to an image by content hash across existing copies."""
+    image_hash = sha256(image)
+    for field in ("source_image", "archive_file", "style_file"):
+        candidate_text = row.get(field, "")
+        if not candidate_text:
+            continue
+        candidate = Path(candidate_text)
+        if candidate.is_file() and sha256(candidate) == image_hash:
+            return True
+    return False
+
+
+def generation_row_hashes(row: dict[str, str]) -> set[str]:
+    hashes: set[str] = set()
+    for field in ("source_image", "archive_file", "style_file"):
+        candidate = Path(row.get(field, ""))
+        if candidate.is_file():
+            hashes.add(sha256(candidate))
+    return hashes
+
+
+def newest_matching_generation(paths: StylePaths, image: Path) -> dict[str, str] | None:
+    """Resolve the one authoritative (latest) manifest status for an image."""
+    for row in reversed(read_csv(paths.generation_manifest)):
+        if generation_row_matches_image(row, image):
+            return row
+    return None
+
+
+def generation_qa_evidence(row: dict[str, str]) -> dict[str, object] | None:
+    """Validate the durable record-generation receipt and its QA contract snapshot."""
+    evidence_path = Path(row.get("qa_evidence", ""))
+    style_file = Path(row.get("style_file", ""))
+    expected_evidence = style_file.with_suffix(style_file.suffix + ".qa-evidence.json")
+    if not style_file.is_file() or evidence_path != expected_evidence or not evidence_path.is_file():
+        return None
+    try:
+        evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(evidence, dict) or evidence.get("schema_version") != 2:
+        return None
+    output_hash = evidence.get("output_sha256")
+    contract_path = Path(str(evidence.get("qa_contract", "")))
+    expected_contract = style_file.with_suffix(style_file.suffix + ".qa-contract.json")
+    if (
+        not isinstance(output_hash, str)
+        or not re.fullmatch(r"[0-9a-f]{64}", output_hash, flags=re.IGNORECASE)
+        or output_hash.casefold() != sha256(style_file)
+        or row.get("qa_output_sha256", "").casefold() != output_hash.casefold()
+        or row.get("qa_receipt_sha256", "").casefold() != sha256(evidence_path)
+        or contract_path != expected_contract
+        or not contract_path.is_file()
+        or evidence.get("qa_contract_sha256") != sha256(contract_path)
+        or row.get("qa_contract_sha256", "").casefold() != sha256(contract_path)
+    ):
+        return None
+    try:
+        contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    plan_snapshot = style_file.with_suffix(style_file.suffix + ".qa-plan.json")
+    expected_layers = contract.get("expected_qa_layers") if isinstance(contract, dict) else None
+    qa_results = contract.get("qa_results") if isinstance(contract, dict) else None
+    if (
+        not isinstance(contract, dict)
+        or contract.get("schema_version") != 1
+        or contract.get("contract_version") != 1
+        or Path(str(contract.get("plan_snapshot", ""))) != plan_snapshot
+        or not plan_snapshot.is_file()
+        or contract.get("plan_content_sha256") != sha256(plan_snapshot)
+        or row.get("qa_plan_sha256", "").casefold() != sha256(plan_snapshot)
+        or not isinstance(expected_layers, list)
+        or not expected_layers
+        or len(expected_layers) != len(set(expected_layers))
+        or not all(isinstance(layer, str) and layer in QA_LAYER_NAMES for layer in expected_layers)
+        or not isinstance(qa_results, dict)
+        or set(qa_results) != set(expected_layers)
+        or any(result != "PASS" for result in qa_results.values())
+    ):
+        return None
+    return evidence
+
+
+def generation_has_passed_qa(row: dict[str, str]) -> bool:
+    """Only a high-fidelity record-generation QA receipt can establish passed QA."""
+    evidence = generation_qa_evidence(row)
+    return bool(
+        evidence
+        and evidence.get("record_status") in {"TEST", "STAGING"}
+        and not evidence.get("qa_failed")
+    )
+
+
+def style_formation_status(paths: StylePaths) -> str:
+    if not paths.metadata.is_file():
+        return "UNKNOWN"
+    try:
+        metadata = load_metadata(paths)
+    except (StylePackError, json.JSONDecodeError):
+        return "UNKNOWN"
+    return "FORMED" if metadata.get("status") == "FINALIZED_APPROVED" else "UNFORMED"
+
+
+def registered_approved_generation(paths: StylePaths, image: Path) -> dict[str, str] | None:
+    """Return only a hash-verified permanent generation suitable as a positive reference."""
+    row = newest_matching_generation(paths, image)
+    if row and row.get("status", "").upper().startswith("APPROVED_") and generation_has_passed_qa(row):
+        return row
+    return None
+
+
+def require_qa_passed_generation_for_approval(
+    paths: StylePaths, image: Path, *, allowed_statuses: set[str] | None = None
+) -> dict[str, str]:
+    """Promotion may only consume a registered, QA-passed final test result."""
+    allowed = allowed_statuses or {"TEST"}
+    row = newest_matching_generation(paths, image)
+    if row and row.get("status", "").upper() in allowed and generation_has_passed_qa(row):
+        return row
+    raise StylePackError(
+        "Approval requires a hash-verified registered TEST generation with a validated reference plan and passed required QA; REJECTED, STAGING, unregistered, and QA-incomplete images cannot be promoted."
+    )
+
+
+def require_generated_character_reference(paths: StylePaths, image: Path) -> None:
+    """Preserve original pack references, but never promote an unverified generated derivative."""
+    if is_relative_to(image, paths.generations):
+        require_qa_passed_generation_for_approval(paths, image, allowed_statuses={"TEST", "STAGING"})
+
+
+def copy_qa_snapshot_for_approval(source: dict[str, str], approved_file: Path) -> str:
+    """Bind an approved copy to independent receipt, contract, and plan snapshots."""
+    source_evidence = Path(source["qa_evidence"])
+    receipt = json.loads(source_evidence.read_text(encoding="utf-8"))
+    source_contract = Path(str(receipt["qa_contract"]))
+    contract = json.loads(source_contract.read_text(encoding="utf-8"))
+    source_plan = Path(str(contract["plan_snapshot"]))
+    approved_plan = approved_file.with_suffix(approved_file.suffix + ".qa-plan.json")
+    approved_contract = approved_file.with_suffix(approved_file.suffix + ".qa-contract.json")
+    approved_evidence = approved_file.with_suffix(approved_file.suffix + ".qa-evidence.json")
+    shutil.copy2(source_plan, approved_plan)
+    contract["plan_snapshot"] = str(approved_plan)
+    contract["plan_content_sha256"] = sha256(approved_plan)
+    approved_contract.write_text(json.dumps(contract, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    receipt["qa_contract"] = str(approved_contract)
+    receipt["qa_contract_sha256"] = sha256(approved_contract)
+    receipt["output_sha256"] = sha256(approved_file)
+    approved_evidence.write_text(json.dumps(receipt, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    return str(approved_evidence)
+
+
+def approval_provenance(
+    source: dict[str, str], notes: str, approved_file: Path
+) -> tuple[str, str, str, dict[str, str], str]:
+    """Carry a fresh bound QA snapshot, never a mutable pending-file pointer."""
+    parent = source.get("generation_id", "")
+    plan = source.get("reference_plan", "")
+    combined_notes = " ".join(
+        part for part in (notes.strip(), f"[APPROVED_FROM={parent}]" if parent else "", source.get("notes", "")) if part
+    )
+    evidence = copy_qa_snapshot_for_approval(source, approved_file)
+    return parent, plan, evidence, qa_manifest_digests(approved_file, Path(evidence)), combined_notes
+
+
+def style_readiness_proposal(paths: StylePaths) -> dict[str, object]:
+    """Read-only consent proposal; it never starts calibration or writes state."""
+    formation = style_formation_status(paths)
+    calibration = active_style_calibration_summary(paths.pack)
+    calibration_status = "FINALIZED" if calibration.get("status") == "ACTIVE" else str(calibration.get("status", "UNKNOWN"))
+    latest_by_hash: dict[str, dict[str, str]] = {}
+    if paths.generation_manifest.is_file():
+        for row in read_csv(paths.generation_manifest):
+            for image_hash in generation_row_hashes(row):
+                latest_by_hash[image_hash] = row
+    # One recorded output has one evidence-bound output hash.  Manifest copies
+    # and re-registrations cannot inflate readiness by adding source/archive/style paths.
+    unique_hashes: set[str] = set()
+    for row in latest_by_hash.values():
+        evidence = generation_qa_evidence(row)
+        if (
+            evidence
+            and row.get("status", "").upper()
+            in {"TEST", "APPROVED_STANDALONE", "APPROVED_VARIATION", "APPROVED_SCENE"}
+            and generation_has_passed_qa(row)
+        ):
+            unique_hashes.add(str(evidence["output_sha256"]).casefold())
+    propose = len(unique_hashes) >= 5 and formation in {"UNFORMED", "UNKNOWN"} and calibration_status != "FINALIZED"
+    return {"style_name": paths.style_name, "style_formation": formation, "calibration_status": calibration_status, "qa_passed_unique_generations": len(unique_hashes), "minimum_unique_generations": 5, "proposal": "CONSENT_REQUIRED_STYLE_CALIBRATION" if propose else "NO_AUTOMATIC_ACTION", "calibration_started": False, "message": "Ask the user whether to formalize and calibrate this style." if propose else "Read-only readiness check only; do not create calibration or test art."}
 
 
 def parse_aux_body_references(
@@ -2733,7 +2960,9 @@ def anthropometric_qa_violations(
 def evaluate_generation_qa(
     plan: dict[str, object],
     args: argparse.Namespace,
-) -> tuple[list[str], str, list[str]]:
+    *,
+    include_results: bool = False,
+) -> tuple[list[str], str, list[str]] | tuple[list[str], str, list[str], dict[str, str]]:
     """Return failed checks, resolved stage id, and all QA checks required for the record."""
 
     workflow = plan["generation_workflow"]
@@ -2870,6 +3099,9 @@ def evaluate_generation_qa(
                 qa_values["LIMB_PROPORTIONS"] = "FAIL"
                 qa_values["BODY_PROPORTIONS"] = "FAIL"
     failed = [name for name in required_names if qa_values.get(name) == "FAIL"]
+    results = {name: str(qa_values.get(name, "NOT_CHECKED")) for name in required_names}
+    if include_results:
+        return failed, stage_id, required_names, results
     return failed, stage_id, required_names
 
 
@@ -2879,14 +3111,36 @@ def validate_prior_stages(paths: StylePaths, plan: dict[str, object], request_id
         return
     stages = workflow["stages"]
     index = next(index for index, stage in enumerate(stages) if stage["stage_id"] == stage_id)
-    passed = {
-        match.group(1)
-        for row in read_csv(paths.generation_manifest)
-        if row.get("request_id") == request_id and row.get("status") == "STAGING"
-        for match in [re.search(r"\[STAGE_ID=([^\]]+)\]", row.get("notes", ""))]
-        if match
-    }
-    missing = [stage["stage_id"] for stage in stages[:index] if stage["stage_id"] not in passed]
+    rows = read_csv(paths.generation_manifest)
+
+    def recorded_stage(row: dict[str, str]) -> str:
+        # Notes are used only to find the newest claimed stage. They never
+        # establish passage: a corrupt/QA-less row therefore still blocks an
+        # older successful result for the same prerequisite.
+        match = re.search(r"\[STAGE_ID=([^\]]+)\]", row.get("notes", ""))
+        return match.group(1) if match else ""
+
+    missing: list[str] = []
+    for prior in (stage["stage_id"] for stage in stages[:index]):
+        candidates = [
+            row for row in rows
+            if row.get("request_id") == request_id and recorded_stage(row) == prior
+        ]
+        newest = candidates[-1] if candidates else None
+        if not newest:
+            missing.append(prior)
+            continue
+        receipt = generation_qa_evidence(newest)
+        if not (
+            newest.get("status") == "STAGING"
+            and receipt
+            and receipt.get("record_status") == "STAGING"
+        ):
+            missing.append(prior)
+            continue
+        contract = json.loads(Path(str(receipt["qa_contract"])).read_text(encoding="utf-8"))
+        if contract.get("stage_id") != prior:
+            missing.append(prior)
     if missing:
         raise StylePackError("Later stage is blocked until earlier staging QA passes: " + ", ".join(missing))
 
@@ -3488,6 +3742,11 @@ def append_generation(
     style_file: Path,
     parent_generation: str = "",
     reference_plan: str = "",
+    qa_evidence: str = "",
+    qa_output_sha256: str = "",
+    qa_receipt_sha256: str = "",
+    qa_contract_sha256: str = "",
+    qa_plan_sha256: str = "",
     scene_kind: str = "",
     output_use: str = "",
     aspect_ratio: str = "",
@@ -3519,6 +3778,11 @@ def append_generation(
             "style_file": str(style_file),
             "parent_generation": parent_generation,
             "reference_plan": reference_plan,
+            "qa_evidence": qa_evidence,
+            "qa_output_sha256": qa_output_sha256,
+            "qa_receipt_sha256": qa_receipt_sha256,
+            "qa_contract_sha256": qa_contract_sha256,
+            "qa_plan_sha256": qa_plan_sha256,
             "scene_kind": scene_kind,
             "output_use": output_use,
             "aspect_ratio": aspect_ratio,
@@ -3528,6 +3792,55 @@ def append_generation(
     )
     write_csv(paths.generation_manifest, GENERATION_FIELDS, rows)
     return new_id
+
+
+def write_generation_qa_evidence(
+    style_file: Path,
+    reference_plan: Path,
+    *,
+    stage_id: str,
+    qa_required: Sequence[str],
+    qa_results: dict[str, str],
+    status: str,
+) -> Path:
+    """Emit immutable plan/contract snapshots only after evaluated high-fidelity QA."""
+    evidence_path = style_file.with_suffix(style_file.suffix + ".qa-evidence.json")
+    plan_snapshot = style_file.with_suffix(style_file.suffix + ".qa-plan.json")
+    contract_path = style_file.with_suffix(style_file.suffix + ".qa-contract.json")
+    shutil.copy2(reference_plan, plan_snapshot)
+    contract = {
+        "schema_version": 1,
+        "contract_version": 1,
+        "plan_snapshot": str(plan_snapshot),
+        "plan_content_sha256": sha256(plan_snapshot),
+        "stage_id": stage_id,
+        "expected_qa_layers": sorted(qa_required),
+        "qa_results": {name: qa_results[name] for name in sorted(qa_required)},
+    }
+    contract_path.write_text(json.dumps(contract, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    receipt = {
+        "schema_version": 2,
+        "record_status": status,
+        "output_sha256": sha256(style_file),
+        "qa_contract": str(contract_path),
+        "qa_contract_sha256": sha256(contract_path),
+    }
+    evidence_path.write_text(json.dumps(receipt, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    return evidence_path
+
+
+def qa_manifest_digests(style_file: Path, evidence_path: Path) -> dict[str, str]:
+    """Manifest-issued binding for the exact output and its three durable snapshots."""
+    receipt = json.loads(evidence_path.read_text(encoding="utf-8"))
+    contract_path = Path(str(receipt["qa_contract"]))
+    contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    plan_snapshot = Path(str(contract["plan_snapshot"]))
+    return {
+        "qa_output_sha256": sha256(style_file),
+        "qa_receipt_sha256": sha256(evidence_path),
+        "qa_contract_sha256": sha256(contract_path),
+        "qa_plan_sha256": sha256(plan_snapshot),
+    }
 
 
 def command_record_generation(args: argparse.Namespace) -> None:
@@ -3554,13 +3867,14 @@ def command_record_generation(args: argparse.Namespace) -> None:
     stage_id = ""
     qa_required: list[str] = []
     qa_failed: list[str] = []
+    qa_results: dict[str, str] = {}
     if args.fidelity >= 70:
         reference_plan_path, plan = validate_reference_plan_for_recording(paths, args.reference_plan, args.fidelity)
         planned_risk = str(plan.get("risk_assessment", {}).get("generation_risk", "")).upper()
         if risk_level and risk_level != planned_risk:
             raise StylePackError(f"Recorded risk {risk_level} does not match prepared plan risk {planned_risk}.")
         risk_level = planned_risk
-        qa_failed, stage_id, qa_required = evaluate_generation_qa(plan, args)
+        qa_failed, stage_id, qa_required, qa_results = evaluate_generation_qa(plan, args, include_results=True)
         validate_prior_stages(paths, plan, request_id, stage_id)
         workflow = plan["generation_workflow"]
         if qa_failed:
@@ -3599,11 +3913,15 @@ def command_record_generation(args: argparse.Namespace) -> None:
         pending_root = pending_root / "REJECTED"
     style_file = copy_unique(image, pending_root / image.name)
     reference_plan = str(reference_plan_path) if reference_plan_path else ""
+    qa_evidence = ""
+    qa_binding: dict[str, str] = {}
     qa_note = ""
     if plan:
         qa_note = f"[STAGE_ID={stage_id}] [QA_REQUIRED={','.join(qa_required)}]"
         if qa_failed:
             qa_note += f" [AUTO_REJECT_QA={','.join(qa_failed)}]"
+        elif status in {"TEST", "STAGING"}:
+            qa_note += f" [QA_OUTPUT_SHA256={sha256(image)}]"
         limb_qa_evidence = str(getattr(args, "limb_qa_evidence", "") or "").strip()
         if limb_qa_evidence:
             qa_note += f" [LIMB_QA={limb_qa_evidence}]"
@@ -3612,6 +3930,19 @@ def command_record_generation(args: argparse.Namespace) -> None:
                 if violations:
                     qa_note += f" [ANTHROPOMETRIC_VIOLATIONS={' | '.join(violations)}]"
     combined_notes = " ".join(part for part in (args.notes.strip(), qa_note) if part)
+    if plan and not qa_failed and all(result == "PASS" for result in qa_results.values()) and status in {"TEST", "STAGING"}:
+        # This receipt is deliberately not accepted as a CLI input: notes and
+        # low-fidelity --reference-plan values never establish QA completion.
+        qa_evidence_path = write_generation_qa_evidence(
+                style_file,
+                reference_plan_path,
+                stage_id=stage_id,
+                qa_required=qa_required,
+                qa_results=qa_results,
+                status=status,
+            )
+        qa_evidence = str(qa_evidence_path)
+        qa_binding = qa_manifest_digests(style_file, qa_evidence_path)
     scene_contract = plan.get("scene_contract", {}) if plan else {}
     canvas_contract = plan.get("canvas_contract", {}) if plan else {}
     new_id = append_generation(
@@ -3627,6 +3958,8 @@ def command_record_generation(args: argparse.Namespace) -> None:
         style_file=style_file,
         parent_generation=args.parent_generation,
         reference_plan=reference_plan,
+        qa_evidence=qa_evidence,
+        **qa_binding,
         scene_kind=str(scene_contract.get("scene_kind", "")),
         output_use=str(scene_contract.get("output_use", "")),
         aspect_ratio=str(canvas_contract.get("aspect_ratio", "")),
@@ -3689,6 +4022,14 @@ def command_approve_character(args: argparse.Namespace) -> None:
     if not pending.is_dir():
         raise StylePackError(f"Pending request does not exist: {pending}")
     image = resolve_existing_file(args.image, paths)
+    source_generation = require_qa_passed_generation_for_approval(paths, image)
+    for value in (
+        *args.face_reference,
+        *args.body_reference,
+        *args.wardrobe_reference,
+        *args.accessory_reference,
+    ):
+        require_generated_character_reference(paths, resolve_existing_file(value, paths))
     kit_stage_files: dict[str, Path] = {}
     plan_path = pending / "REFERENCE_PLAN.json"
     if plan_path.is_file():
@@ -3703,7 +4044,12 @@ def command_approve_character(args: argparse.Namespace) -> None:
                     continue
                 match = re.search(r"\[STAGE_ID=([^\]]+)\]", row.get("notes", ""))
                 file = Path(row.get("style_file", ""))
-                if match and file.is_file():
+                if (
+                    match
+                    and file.is_file()
+                    and newest_matching_generation(paths, file) == row
+                    and generation_has_passed_qa(row)
+                ):
                     stage_files[match.group(1)] = file.resolve()
             required = {
                 "01_FACE_IDENTITY",
@@ -3807,6 +4153,7 @@ def command_approve_character(args: argparse.Namespace) -> None:
         }
     )
     write_csv(paths.character_registry, CHARACTER_FIELDS, registry)
+    parent_generation, reference_plan, qa_evidence, qa_binding, approval_notes = approval_provenance(source_generation, args.notes, approved_base)
     new_id = append_generation(
         paths,
         request_id=request_id,
@@ -3818,7 +4165,11 @@ def command_approve_character(args: argparse.Namespace) -> None:
         source_image=image,
         archive_file=archive_file,
         style_file=approved_base,
-        notes=args.notes,
+        parent_generation=parent_generation,
+        reference_plan=reference_plan,
+        qa_evidence=qa_evidence,
+        **qa_binding,
+        notes=approval_notes,
     )
     print(f"CHARACTER_ID={character_id}")
     print(f"CHARACTER_FOLDER={folder}")
@@ -3835,6 +4186,7 @@ def command_approve_variation(args: argparse.Namespace) -> None:
     if args.fidelity not in {30, 50, 70, 90, 100}:
         raise StylePackError("Fidelity must be one of 30, 50, 70, 90, or 100.")
     image = resolve_existing_file(args.image, paths)
+    source_generation = require_qa_passed_generation_for_approval(paths, image)
     folder = character_folder(paths, args.character_id)
     destinations = {
         "variation": ("01_VARIATIONS", "APPROVED_VARIATION"),
@@ -3845,6 +4197,7 @@ def command_approve_variation(args: argparse.Namespace) -> None:
     subfolder, approved_status = destinations[args.kind]
     archive_file = ensure_generation_archived(paths, image, f"{args.character_id}_{args.kind}_{args.description}")
     approved = copy_unique(image, folder / subfolder / image.name)
+    source_parent, source_plan, qa_evidence, qa_binding, approval_notes = approval_provenance(source_generation, args.notes, approved)
     new_id = append_generation(
         paths,
         request_id=safe_component(args.request_id, "approved"),
@@ -3856,8 +4209,11 @@ def command_approve_variation(args: argparse.Namespace) -> None:
         source_image=image,
         archive_file=archive_file,
         style_file=approved,
-        parent_generation=args.parent_generation,
-        notes=args.notes,
+        parent_generation=args.parent_generation or source_parent,
+        reference_plan=source_plan,
+        qa_evidence=qa_evidence,
+        **qa_binding,
+        notes=approval_notes,
     )
     print(f"GENERATION_ID={new_id}")
     print(f"APPROVED_FILE={approved}")
@@ -3872,6 +4228,7 @@ def command_approve_standalone(args: argparse.Namespace) -> None:
     if args.fidelity not in {30, 50, 70, 90, 100}:
         raise StylePackError("Fidelity must be one of 30, 50, 70, 90, or 100.")
     image = resolve_existing_file(args.image, paths)
+    source_generation = require_qa_passed_generation_for_approval(paths, image)
     plan: dict[str, object] | None = None
     reference_plan_path: Path | None = None
     if args.reference_plan:
@@ -3920,6 +4277,7 @@ def command_approve_standalone(args: argparse.Namespace) -> None:
         )
     else:
         approved = copy_unique(image, destination / image.name)
+    source_parent, source_plan, qa_evidence, qa_binding, approval_notes = approval_provenance(source_generation, args.notes, approved)
     new_id = append_generation(
         paths,
         request_id=safe_component(args.request_id, "standalone"),
@@ -3931,12 +4289,17 @@ def command_approve_standalone(args: argparse.Namespace) -> None:
         source_image=image,
         archive_file=archive_file,
         style_file=approved,
-        reference_plan=str(reference_plan_path or ""),
+        parent_generation=source_parent,
+        # The approved copy inherits the source QA receipt; its manifest must
+        # retain that receipt's plan rather than substitute an approval plan.
+        reference_plan=source_plan,
+        qa_evidence=qa_evidence,
+        **qa_binding,
         scene_kind=str(scene_contract.get("scene_kind", "")),
         output_use=str(scene_contract.get("output_use", "")),
         aspect_ratio=str(canvas_contract.get("aspect_ratio", "")),
         typography_mode=str(scene_contract.get("typography_policy", "")),
-        notes=args.notes,
+        notes=approval_notes,
     )
     print(f"GENERATION_ID={new_id}")
     print(f"APPROVED_FILE={approved}")
@@ -4061,6 +4424,18 @@ def command_validate(args: argparse.Namespace) -> None:
         if not row.get("body_references"):
             warnings.append(f"{row.get('character_id')} has no separate CHARACTER_BODY reference; approved base must be used.")
 
+    for row in read_csv(paths.generation_manifest):
+        status = row.get("status", "").upper()
+        qa_bearing_staging = status == "STAGING" and bool(row.get("qa_evidence"))
+        if status == "TEST" or status.startswith("APPROVED_") or qa_bearing_staging:
+            if not generation_qa_evidence(row):
+                errors.append(
+                    "Corrupt QA evidence on successful generation "
+                    f"{row.get('generation_id') or row.get('style_file')}"
+                )
+        # Pending/rejected rows without a receipt are deliberately not positive
+        # evidence and remain valid stored artifacts.
+
     if int(metadata.get("schema_version", 0)) != SCHEMA_VERSION:
         errors.append(f"Unsupported metadata schema version: {metadata.get('schema_version')}")
     if not inventory:
@@ -4127,6 +4502,14 @@ def build_parser() -> argparse.ArgumentParser:
     context_parser.add_argument("--positive-only", action="store_true", help="List only images currently eligible as positive candidates.")
     context_parser.add_argument("--json", action="store_true", help="Return machine-readable JSON for agent reference selection.")
     context_parser.set_defaults(handler=command_style_context)
+
+    readiness_parser = subparsers.add_parser(
+        "style-readiness",
+        help="Read-only check that may propose, but never start, consent-based style calibration.",
+    )
+    add_common_style_arguments(readiness_parser)
+    readiness_parser.add_argument("--json", action="store_true")
+    readiness_parser.set_defaults(handler=command_style_readiness)
 
     body_context_parser = subparsers.add_parser(
         "body-ref-context",

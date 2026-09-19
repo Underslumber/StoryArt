@@ -85,6 +85,15 @@ orchestration state directly.
 - Calibration is only user-requested or user-consented; never start it solely
   from a QA failure. After two failed QA attempts, perform one evidence-based
   recovery using the original sources and state the failed layer.
+- When the guard records a same-stage, same-layer failure that persists after
+  an explicit correction addressed the first, dispatch the one-shot `ESCALATION_ORCHESTRATOR` profile
+  only while that incident is due. It is `gpt-6-astra` Low exceptional error
+  handling, read-only, and returns one bounded Terra/Luna work order. It must
+  not use tools, generate, test, edit, QA, approve, or spawn; root dispatches
+  the recommended executor. It is never an ordinary diagnostic or per-frame role.
+- Use `style-readiness` only to surface a consent request when five unique
+  QA-passed outputs exist for an unformed/unfinalized style. It never starts
+  calibration or generates test art.
 - If native subagents are unavailable, execute the same contracts sequentially in the primary
   agent and keep the same write ownership.
 
