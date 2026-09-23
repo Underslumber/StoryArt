@@ -53,6 +53,10 @@ python tools\storyart_orchestrator.py complete-handoff `
   --evidence "<path>"
 ```
 
+`DONE` requires at least one existing evidence file relevant to the handoff;
+the manager records its project-relative path and SHA-256. An empty list, folder,
+missing path, or unsupported verbal-only claim cannot satisfy completion.
+
 Use `REJECTED` for a completed assessment that rejects a candidate or output.
 Use `BLOCKED` only for a concrete condition the assigned role cannot resolve.
 On budget exhaustion, return the collected evidence to root and do not claim the

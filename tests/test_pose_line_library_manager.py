@@ -38,6 +38,16 @@ class PoseLineLibraryManagerTests(unittest.TestCase):
             self.assertIn("CollectPoseLineLibrary", payload["collect_command"])
             self.assertFalse(items["root"].exists())
 
+    def test_query_sets_are_selectable_and_existing_female_corpus_is_preserved(self):
+        self.assertEqual(manager.load_queries(""), list(manager.FEMALE_QUERIES))
+        self.assertEqual(manager.load_queries("", "female"), list(manager.FEMALE_QUERIES))
+        self.assertTrue(all("male" in query.lower() or "man " in query.lower() for query in manager.load_queries("", "male")))
+        self.assertTrue(all("adult" in query.lower() for query in manager.load_queries("", "neutral")))
+
+    def test_unknown_query_presentation_is_rejected(self):
+        with self.assertRaisesRegex(manager.PoseLineError, "Unknown query presentation"):
+            manager.load_queries("", "unknown")
+
     def test_status_recognizes_existing_curated_anatomy_line_library(self):
         with tempfile.TemporaryDirectory() as folder:
             items = manager.paths(Path(folder))

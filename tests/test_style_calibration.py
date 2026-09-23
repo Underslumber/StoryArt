@@ -4,11 +4,23 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from tools import style_calibration_manager as calibration
 
 
 class StyleCalibrationTests(unittest.TestCase):
+    def setUp(self):
+        self.archive_temp = tempfile.TemporaryDirectory()
+        self.archive_patch = patch.object(
+            calibration, "GENERATION_RESULTS_ROOT", Path(self.archive_temp.name) / "GENERATION_RESULTS"
+        )
+        self.archive_patch.start()
+
+    def tearDown(self):
+        self.archive_patch.stop()
+        self.archive_temp.cleanup()
+
     def make_style_analysis(self, folder: Path) -> Path:
         path = folder / "style_analysis.json"
         path.write_text(json.dumps({
@@ -181,11 +193,45 @@ class StyleCalibrationTests(unittest.TestCase):
                 calibration_id="aroma-v1",
                 style_name="AROMA",
                 style_analysis_path=self.make_style_analysis(folder),
+                authorization_quote="Please calibrate this style.",
             )
             self.assertEqual(state["target_rounds"], 4)
             self.assertEqual(state["minimum_rounds"], 2)
             self.assertEqual(state["batch_size"], 4)
             self.assertEqual(state["arts_per_round"], 1)
+            self.assertEqual(state["user_authorization"]["quote"], "Please calibrate this style.")
+
+    def test_start_requires_explicit_authorization_quote(self):
+        with tempfile.TemporaryDirectory() as folder_name:
+            folder = Path(folder_name)
+            with self.assertRaisesRegex(calibration.StyleCalibrationError, "explicit user request or consent"):
+                calibration.create_state(
+                    folder / "state.json", calibration_id="no-consent", style_name="AROMA",
+                    style_analysis_path=self.make_style_analysis(folder),
+                )
+
+    def test_composite_art_is_archived_byte_identically_without_losing_working_path(self):
+        with tempfile.TemporaryDirectory() as folder_name:
+            folder = Path(folder_name)
+            state_path = folder / "state.json"
+            calibration.create_state(
+                state_path, calibration_id="archive-check", style_name="AROMA",
+                style_analysis_path=self.make_style_analysis(folder),
+                authorization_quote="Please calibrate this style.",
+            )
+            calibration.open_round(
+                state_path, face_id="temporary-face", face_description="A temporary test subject.",
+                strategy_path=self.make_strategy(folder),
+            )
+            original = self.make_quartet_art(folder, 1)
+            first = calibration.record_quartet_art(state_path, round_number=1, image_path=original)
+            archive_path = Path(first["rounds"][0]["quartet_art_archive_path"])
+            original_path = first["rounds"][0]["quartet_art_path"]
+            self.assertEqual(original_path, str(original))
+            self.assertTrue(original.is_file())
+            self.assertTrue(archive_path.is_file())
+            self.assertEqual(archive_path.read_bytes(), original.read_bytes())
+            self.assertEqual(first["rounds"][0]["quartet_art_archive_sha256"], calibration.sha256(original))
 
     def test_reduced_round_target_requires_user_approval(self):
         with tempfile.TemporaryDirectory() as folder_name:
@@ -196,6 +242,7 @@ class StyleCalibrationTests(unittest.TestCase):
                     calibration_id="short",
                     style_name="AROMA",
                     style_analysis_path=self.make_style_analysis(folder),
+                    authorization_quote="Please calibrate this style.",
                     target_rounds=2,
                 )
             state = calibration.create_state(
@@ -203,6 +250,7 @@ class StyleCalibrationTests(unittest.TestCase):
                 calibration_id="short",
                 style_name="AROMA",
                 style_analysis_path=self.make_style_analysis(folder),
+                authorization_quote="Please calibrate this style.",
                 target_rounds=2,
                 user_approved_reduced_rounds=True,
             )
@@ -217,6 +265,7 @@ class StyleCalibrationTests(unittest.TestCase):
                 calibration_id="legacy-active",
                 style_name="AROMA",
                 style_analysis_path=self.make_style_analysis(folder),
+                authorization_quote="Please calibrate this style.",
             )
             state = json.loads(state_path.read_text(encoding="utf-8"))
             state["protocol_version"] = 2
@@ -241,6 +290,7 @@ class StyleCalibrationTests(unittest.TestCase):
                     calibration_id="test",
                     style_name="AROMA",
                     style_analysis_path=invalid,
+                    authorization_quote="Please calibrate this style.",
                 )
 
     def test_round_requires_one_composite_art_and_rejects_four_files(self):
@@ -250,6 +300,7 @@ class StyleCalibrationTests(unittest.TestCase):
             calibration.create_state(
                 state_path, calibration_id="test", style_name="AROMA",
                 style_analysis_path=self.make_style_analysis(folder),
+                authorization_quote="Please calibrate this style.",
             )
             calibration.open_round(
                 state_path,
@@ -283,6 +334,7 @@ class StyleCalibrationTests(unittest.TestCase):
             calibration.create_state(
                 state_path, calibration_id="test", style_name="AROMA",
                 style_analysis_path=self.make_style_analysis(folder),
+                authorization_quote="Please calibrate this style.",
             )
             strategy = json.loads(self.make_strategy(folder).read_text(encoding="utf-8"))
             strategy["comparison_contract"]["minimum_expected_delta_percent"] = 5
@@ -327,6 +379,7 @@ class StyleCalibrationTests(unittest.TestCase):
             calibration.create_state(
                 state_path, calibration_id="test", style_name="AROMA",
                 style_analysis_path=self.make_style_analysis(folder),
+                authorization_quote="Please calibrate this style.",
             )
             calibration.open_round(
                 state_path,
@@ -361,6 +414,7 @@ class StyleCalibrationTests(unittest.TestCase):
             calibration.create_state(
                 state_path, calibration_id="test", style_name="AROMA",
                 style_analysis_path=self.make_style_analysis(folder),
+                authorization_quote="Please calibrate this style.",
             )
             calibration.open_round(
                 state_path,
@@ -432,6 +486,7 @@ class StyleCalibrationTests(unittest.TestCase):
             calibration.create_state(
                 state_path, calibration_id="test", style_name="AROMA",
                 style_analysis_path=self.make_style_analysis(folder),
+                authorization_quote="Please calibrate this style.",
             )
             for round_number, face in ((1, "face-a"), (2, "face-b")):
                 calibration.open_round(
@@ -482,6 +537,7 @@ class StyleCalibrationTests(unittest.TestCase):
             calibration.create_state(
                 state_path, calibration_id="test", style_name="AROMA",
                 style_analysis_path=self.make_style_analysis(folder),
+                authorization_quote="Please calibrate this style.",
             )
             for round_number in range(1, 5):
                 calibration.open_round(
@@ -524,6 +580,7 @@ class StyleCalibrationTests(unittest.TestCase):
                 calibration_id="test-apply",
                 style_name="AROMA",
                 style_analysis_path=self.make_style_analysis(folder),
+                authorization_quote="Please calibrate this style.",
                 target_rounds=2,
                 user_approved_reduced_rounds=True,
             )

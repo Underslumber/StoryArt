@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import csv
 import sys
 import tempfile
 import unittest
@@ -78,12 +79,17 @@ class StartupMenuTests(unittest.TestCase):
             "startup_menu_surface": "NATIVE_CONTEXT_MENU",
             "user_requested_reselection": False,
             "startup_choice": "OPTION_1",
-            "startup_choice_user_quote": "Первый вариант",
+            "startup_choice_user_quote": "OPTION_1",
             "startup_option": [
-                "OPTION_1=Рекомендуемый: 90% и подключить BODY_REFERENCE_LIBRARY",
-                "OPTION_2=Контекстный мягкий вариант",
-                "OPTION_3=Контекстный строгий вариант",
+                "OPTION_1=Recommended 90% fidelity; select BODY_REFERENCE_LIBRARY",
+                "OPTION_2=Contextual 90% fidelity; decline BODY_REFERENCE_LIBRARY",
+                "OPTION_3=Contextual 70% fidelity; decline BODY_REFERENCE_LIBRARY",
             ],
+            "confirmed_chat_id": "chat-1",
+            "confirmed_message_id": "msg-1",
+            "confirmed_body_library_user_quote": "",
+            "confirmed_body_library_chat_id": "",
+            "confirmed_body_library_message_id": "",
             "custom_parameters_user_quote": "",
             "fidelity": 90,
             "aux_body_decision": "SELECTED",
@@ -91,31 +97,88 @@ class StartupMenuTests(unittest.TestCase):
         values.update(updates)
         return Namespace(**values)
 
-    def test_default_is_90_and_library_selected(self):
-        result = manager.parse_startup_interaction(self.make_args())
+    def test_option_one_records_its_confirmed_profile(self):
+        result = manager.parse_startup_interaction(self.make_args(
+            startup_selection_mode="USER_CONFIRMATION",
+            startup_menu_surface="TEXT_NUMBERED_MENU",
+            startup_choice_user_quote="1",
+        ))
         self.assertEqual(result["selected"], "OPTION_1")
         self.assertTrue(result["options"][0]["recommended"])
+        self.assertEqual(result["resolved_parameters"], {"fidelity": 90, "aux_body_decision": "SELECTED"})
+        self.assertEqual(manager.validate_startup_profile_evidence(result), (90, "SELECTED"))
+        self.assertTrue(result["profile_confirmation_complete"])
+        self.assertTrue(result["same_profile_reconfirmation_forbidden"])
+        self.assertTrue(result["style_confirmation_complete"])
+        self.assertEqual(result["confirmed_style_name"], "SAMPLE")
 
-    def test_default_rejects_wrong_fidelity(self):
-        with self.assertRaises(manager.StylePackError):
+    def test_unformed_master_candidate_is_request_local_only_and_requires_profile_gate(self):
+        with tempfile.TemporaryDirectory() as folder:
+            paths = manager.make_paths(Path(folder), "SAMPLE")
+            paths.pack.mkdir(parents=True)
+            metadata_path = paths.pack / ".style-pack.json"
+            metadata_path.write_text(json.dumps({"status": "REVIEW_REQUIRED"}), encoding="utf-8")
+            candidate = paths.pack / "01_WORK" / "STYLE_CROPS" / "MASTER_STYLE_fixture.png"
+            candidate.parent.mkdir(parents=True)
+            candidate.write_bytes(b"fixture-image")
+            paths.references.parent.mkdir(parents=True, exist_ok=True)
+            with paths.references.open("w", encoding="utf-8", newline="") as stream:
+                writer = csv.DictWriter(stream, fieldnames=("stored_relative_path", "primary_role", "status", "generator_safe"))
+                writer.writeheader()
+                writer.writerow({"stored_relative_path": "01_WORK/STYLE_CROPS/MASTER_STYLE_fixture.png", "primary_role": "MASTER_STYLE", "status": "TEST", "generator_safe": "YES"})
+
+            with self.assertRaisesRegex(manager.StylePackError, "unformed style-pack source"):
+                manager.validate_plan_reference(paths, str(candidate), "STYLE")
+            with self.assertRaisesRegex(manager.StylePackError, "unformed style-pack source"):
+                manager.validate_plan_reference(
+                    paths, str(candidate), "FACE", allow_request_local_style_candidate=True
+                )
+
+            off_role = paths.pack / "01_WORK" / "FACE_CROPS" / "MASTER_STYLE_fixture.png"
+            off_role.parent.mkdir(parents=True)
+            off_role.write_bytes(b"fixture-image")
+            with self.assertRaisesRegex(manager.StylePackError, "unformed style-pack source"):
+                manager.validate_plan_reference(
+                    paths, str(off_role), "STYLE", allow_request_local_style_candidate=True
+                )
+
+            selected = manager.validate_plan_reference(
+                paths, str(candidate), "STYLE", allow_request_local_style_candidate=True
+            )
+            self.assertEqual(selected["status"], "REQUEST_LOCAL_STYLE_CANDIDATE")
+            self.assertEqual(selected["reference_scope"], "CURRENT_REQUEST_ONLY")
+            self.assertFalse(selected["permanent_anchor"])
+            with paths.references.open("w", encoding="utf-8", newline="") as stream:
+                writer = csv.DictWriter(stream, fieldnames=("stored_relative_path", "primary_role", "status", "generator_safe"))
+                writer.writeheader()
+                writer.writerow({"stored_relative_path": "01_WORK/STYLE_CROPS/MASTER_STYLE_fixture.png", "primary_role": "MASTER_STYLE", "status": "REJECTED", "generator_safe": "YES"})
+            with self.assertRaisesRegex(manager.StylePackError, "unformed style-pack source"):
+                manager.validate_plan_reference(paths, str(candidate), "STYLE", allow_request_local_style_candidate=True)
+            with paths.references.open("w", encoding="utf-8", newline="") as stream:
+                writer = csv.DictWriter(stream, fieldnames=("stored_relative_path", "primary_role", "status", "generator_safe"))
+                writer.writeheader()
+                positive_row = {"stored_relative_path": "01_WORK/STYLE_CROPS/MASTER_STYLE_fixture.png", "primary_role": "MASTER_STYLE", "status": "TEST", "generator_safe": "YES"}
+                writer.writerow(positive_row)
+                writer.writerow(positive_row)
+            self.assertFalse(manager.has_positive_master_style_manifest_entry(paths, candidate.relative_to(paths.pack)))
+            self.assertEqual(json.loads(metadata_path.read_text(encoding="utf-8"))["status"], "REVIEW_REQUIRED")
+
+    def test_option_one_cannot_silently_override_numeric_or_library_profile(self):
+        with self.assertRaisesRegex(manager.StylePackError, "must match it"):
             manager.parse_startup_interaction(self.make_args(fidelity=70))
 
-    def test_default_rejects_disabled_library_wording(self):
-        with self.assertRaises(manager.StylePackError):
-            manager.parse_startup_interaction(self.make_args(startup_option=[
-                "OPTION_1=90% без BODY_REFERENCE_LIBRARY",
-                "OPTION_2=Контекстный мягкий вариант",
-                "OPTION_3=Контекстный строгий вариант",
-            ]))
+    def test_option_one_requires_its_explicit_library_profile(self):
+        with self.assertRaisesRegex(manager.StylePackError, "must match it"):
+            manager.parse_startup_interaction(self.make_args(aux_body_decision="NOT_SELECTED"))
 
     def test_custom_requires_missing_values_quote(self):
         with self.assertRaises(manager.StylePackError):
-            manager.parse_startup_interaction(self.make_args(startup_choice="CUSTOM"))
+            manager.parse_startup_interaction(self.make_args(startup_choice="CUSTOM", startup_choice_user_quote="CUSTOM"))
 
     def test_complete_custom_description_needs_no_optional_followup(self):
         result = manager.parse_startup_interaction(self.make_args(
             startup_choice="CUSTOM",
-            startup_choice_user_quote="Указать свой вариант",
+            startup_choice_user_quote="CUSTOM",
             custom_parameters_user_quote="90%, библиотеку подключить, портрет 9:16, полный рост, нейтральная поза",
         ))
         self.assertTrue(result["custom_description_treated_as_complete"])
@@ -124,11 +187,13 @@ class StartupMenuTests(unittest.TestCase):
     def test_same_chat_reuse_does_not_present_menu_again(self):
         with tempfile.TemporaryDirectory() as folder:
             source = Path(folder) / "REFERENCE_PLAN.json"
-            original = manager.parse_startup_interaction(self.make_args())
-            original["resolved_parameters"] = {
-                "fidelity": 90,
-                "aux_body_decision": "SELECTED",
-            }
+            original = manager.parse_startup_interaction(self.make_args(
+                startup_selection_mode="DIRECT_CONFIRMATION",
+                confirmed_chat_id="chat-1",
+                confirmed_message_id="msg-1",
+                confirmed_parameters_user_quote="Keep 90% fidelity and select BODY_REFERENCE_LIBRARY.",
+            ))
+            original["resolved_parameters"] = {"fidelity": 90, "aux_body_decision": "SELECTED"}
             source.write_text(json.dumps({
                 "schema_version": 5,
                 "style_name": "SAMPLE",
@@ -137,6 +202,10 @@ class StartupMenuTests(unittest.TestCase):
             reused = manager.parse_startup_interaction(self.make_args(
                 startup_selection_mode="REUSE",
                 reuse_startup_from=str(source),
+                reuse_chat_id="chat-1",
+                reuse_message_id="msg-1",
+                fidelity=90,
+                aux_body_decision="SELECTED",
                 startup_choice="",
                 startup_choice_user_quote="",
                 startup_option=[],
@@ -145,14 +214,38 @@ class StartupMenuTests(unittest.TestCase):
             self.assertFalse(reused["menu_presented_this_turn"])
             self.assertEqual(reused["menu_surface_this_turn"], "NOT_PRESENTED_REUSED_SELECTION")
 
+    def test_menu_reuse_profile_change_uses_direct_correction_evidence(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "REFERENCE_PLAN.json"
+            original = manager.parse_startup_interaction(self.make_args(
+                startup_selection_mode="USER_CONFIRMATION", startup_menu_surface="TEXT_NUMBERED_MENU",
+                startup_choice="OPTION_2", startup_choice_user_quote="2", fidelity=90,
+                aux_body_decision="DECLINED",
+            ))
+            source.write_text(json.dumps({
+                "schema_version": 6, "style_name": "SAMPLE", "startup_parameter_selection": original,
+            }), encoding="utf-8")
+            reused = manager.parse_startup_interaction(self.make_args(
+                startup_selection_mode="REUSE", reuse_startup_from=str(source),
+                reuse_chat_id="chat-1", reuse_message_id="msg-1", fidelity=70,
+                aux_body_decision="DECLINED", user_requested_reselection=True,
+                confirmed_chat_id="chat-1", confirmed_message_id="msg-correction",
+                confirmed_parameters_user_quote="Use 70% fidelity and decline BODY_REFERENCE_LIBRARY.",
+            ))
+            self.assertEqual(reused["selection_state"], "REUSED_WITH_USER_RESELECTION")
+            self.assertEqual(reused["selected"], "DIRECT_CONFIRMED")
+            self.assertEqual(manager.validate_startup_profile_evidence(reused), (70, "DECLINED"))
+
     def test_reuse_rejects_silent_profile_change(self):
         with tempfile.TemporaryDirectory() as folder:
             source = Path(folder) / "REFERENCE_PLAN.json"
-            original = manager.parse_startup_interaction(self.make_args())
-            original["resolved_parameters"] = {
-                "fidelity": 90,
-                "aux_body_decision": "SELECTED",
-            }
+            original = manager.parse_startup_interaction(self.make_args(
+                startup_selection_mode="DIRECT_CONFIRMATION",
+                confirmed_chat_id="chat-1",
+                confirmed_message_id="msg-1",
+                confirmed_parameters_user_quote="Keep 90% fidelity and select BODY_REFERENCE_LIBRARY.",
+            ))
+            original["resolved_parameters"] = {"fidelity": 90, "aux_body_decision": "SELECTED"}
             source.write_text(json.dumps({
                 "schema_version": 5,
                 "style_name": "SAMPLE",
@@ -163,6 +256,52 @@ class StartupMenuTests(unittest.TestCase):
                     startup_selection_mode="REUSE",
                     reuse_startup_from=str(source),
                     fidelity=70,
+                    reuse_chat_id="chat-1",
+                    reuse_message_id="msg-1",
+                    aux_body_decision="SELECTED",
+                ))
+
+    def test_direct_current_chat_confirmation_needs_no_preset(self):
+        result = manager.parse_startup_interaction(self.make_args(
+            startup_selection_mode="DIRECT_CONFIRMATION",
+            confirmed_chat_id="chat-7",
+            confirmed_message_id="msg-12",
+            confirmed_parameters_user_quote="Use 70% fidelity and decline BODY_REFERENCE_LIBRARY.",
+            fidelity=70,
+            aux_body_decision="DECLINED",
+            startup_choice="",
+            startup_choice_user_quote="",
+            startup_option=[],
+        ))
+        self.assertEqual(result["selection_state"], "DIRECT_PARAMETERS_CONFIRMED")
+        self.assertEqual(result["confirmed_provenance"]["chat_id"], "chat-7")
+        self.assertEqual(result["resolved_parameters"]["aux_body_decision"], "DECLINED")
+
+    def test_direct_confirmation_reports_only_missing_provenance(self):
+        missing = manager.startup_clarification_requirements(self.make_args(
+            startup_selection_mode="DIRECT_CONFIRMATION",
+            confirmed_chat_id="chat-7",
+            confirmed_message_id="",
+            confirmed_parameters_user_quote="",
+        ))
+        self.assertEqual(missing, ["message_id", "body_library_confirmation", "fidelity_quote"])
+
+    def test_reuse_requires_matching_source_provenance(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "REFERENCE_PLAN.json"
+            original = manager.parse_startup_interaction(self.make_args(
+                startup_selection_mode="DIRECT_CONFIRMATION",
+                confirmed_chat_id="chat-1",
+                confirmed_message_id="msg-1",
+                confirmed_parameters_user_quote="Keep 90% fidelity and select BODY_REFERENCE_LIBRARY.",
+            ))
+            original["resolved_parameters"] = {"fidelity": 90, "aux_body_decision": "SELECTED"}
+            source.write_text(json.dumps({"schema_version": 5, "style_name": "SAMPLE", "startup_parameter_selection": original}), encoding="utf-8")
+            with self.assertRaises(manager.StylePackError):
+                manager.parse_startup_interaction(self.make_args(
+                    startup_selection_mode="REUSE", reuse_startup_from=str(source),
+                    reuse_chat_id="different-chat", reuse_message_id="msg-1",
+                    aux_body_decision="SELECTED",
                 ))
 
     def test_default_mode_text_menu_records_all_options(self):
@@ -182,11 +321,164 @@ class StartupMenuTests(unittest.TestCase):
             startup_menu_surface="TEXT_NUMBERED_MENU",
             startup_choice="OPTION_2",
             startup_choice_user_quote="2",
-            fidelity=70,
+            fidelity=90,
             aux_body_decision="DECLINED",
         ))
         self.assertEqual(result["selected"], "OPTION_2")
         self.assertEqual(result["menu_surface_this_turn"], "TEXT_NUMBERED_MENU")
+
+    def test_option_three_uses_its_contextual_displayed_profile(self):
+        result = manager.parse_startup_interaction(self.make_args(
+            startup_selection_mode="USER_CONFIRMATION",
+            startup_menu_surface="TEXT_NUMBERED_MENU",
+            startup_option=[
+                "OPTION_1=Recommended 90% fidelity; select BODY_REFERENCE_LIBRARY",
+                "OPTION_2=Contextual 90% fidelity; decline BODY_REFERENCE_LIBRARY",
+                "OPTION_3=Contextual 70% fidelity; decline BODY_REFERENCE_LIBRARY",
+            ],
+            startup_choice="OPTION_3", startup_choice_user_quote="3",
+            fidelity=70, aux_body_decision="DECLINED",
+        ))
+        self.assertEqual(result["resolved_parameters"], {"fidelity": 70, "aux_body_decision": "DECLINED"})
+
+    def test_saved_menu_evidence_accepts_literal_choice_and_rejects_tampering(self):
+        saved = manager.parse_startup_interaction(self.make_args(
+            startup_selection_mode="USER_CONFIRMATION", startup_menu_surface="TEXT_NUMBERED_MENU",
+            startup_choice="OPTION_2", startup_choice_user_quote="2", fidelity=90,
+            aux_body_decision="DECLINED",
+        ))
+        self.assertEqual(manager.validate_startup_profile_evidence(saved), (90, "DECLINED"))
+        wrong_choice = json.loads(json.dumps(saved))
+        wrong_choice["selected"] = "OPTION_3"
+        with self.assertRaises(manager.StylePackError):
+            manager.validate_startup_profile_evidence(wrong_choice)
+        wrong_profile = json.loads(json.dumps(saved))
+        wrong_profile["resolved_parameters"]["fidelity"] = 70
+        with self.assertRaises(manager.StylePackError):
+            manager.validate_startup_profile_evidence(wrong_profile)
+        wrong_quote = json.loads(json.dumps(saved))
+        wrong_quote["user_choice_quote"] = "3"
+        with self.assertRaises(manager.StylePackError):
+            manager.validate_startup_profile_evidence(wrong_quote)
+
+    def test_saved_custom_menu_evidence_uses_full_profile_quote(self):
+        saved = manager.parse_startup_interaction(self.make_args(
+            startup_selection_mode="USER_CONFIRMATION", startup_menu_surface="TEXT_NUMBERED_MENU",
+            startup_choice="CUSTOM", startup_choice_user_quote="4", fidelity=70,
+            aux_body_decision="DECLINED",
+            custom_parameters_user_quote="Use 70% fidelity and decline BODY_REFERENCE_LIBRARY.",
+        ))
+        self.assertEqual(manager.validate_startup_profile_evidence(saved), (70, "DECLINED"))
+
+    def test_custom_accepts_natural_complete_quote_but_rejects_incomplete_or_mismatched(self):
+        natural = "Use 70% fidelity and decline BODY_REFERENCE_LIBRARY."
+        saved = manager.parse_startup_interaction(self.make_args(
+            startup_selection_mode="USER_CONFIRMATION", startup_menu_surface="TEXT_NUMBERED_MENU",
+            startup_choice="CUSTOM", startup_choice_user_quote=natural, fidelity=70,
+            aux_body_decision="DECLINED",
+        ))
+        self.assertEqual(saved["user_choice_quote"], natural)
+        self.assertEqual(saved["custom_parameters_user_quote"], natural)
+        self.assertEqual(manager.validate_startup_profile_evidence(saved), (70, "DECLINED"))
+        with self.assertRaises(manager.StylePackError):
+            manager.parse_startup_interaction(self.make_args(
+                startup_selection_mode="USER_CONFIRMATION", startup_menu_surface="TEXT_NUMBERED_MENU",
+                startup_choice="CUSTOM", startup_choice_user_quote="Я хочу свой вариант.", fidelity=70,
+                aux_body_decision="DECLINED",
+            ))
+        with self.assertRaises(manager.StylePackError):
+            manager.parse_startup_interaction(self.make_args(
+                startup_selection_mode="USER_CONFIRMATION", startup_menu_surface="TEXT_NUMBERED_MENU",
+                startup_choice="CUSTOM", startup_choice_user_quote=natural, fidelity=90,
+                aux_body_decision="DECLINED",
+            ))
+        mismatched = json.loads(json.dumps(saved))
+        mismatched["custom_parameters_user_quote"] = "Use 90% fidelity and select BODY_REFERENCE_LIBRARY."
+        with self.assertRaises(manager.StylePackError):
+            manager.validate_startup_profile_evidence(mismatched)
+
+    def test_custom_rejects_conflicting_library_clauses_and_numeric_prefixes(self):
+        conflicting_quotes = (
+            "Use 70% fidelity and select BODY_REFERENCE_LIBRARY, but do not use BODY_REFERENCE_LIBRARY.",
+            "Use 70% fidelity, select BODY_REFERENCE_LIBRARY and do not use BODY_REFERENCE_LIBRARY.",
+            "Use 70% fidelity and decline BODY_REFERENCE_LIBRARY, but use BODY_REFERENCE_LIBRARY.",
+            "Use 70% fidelity without BODY_REFERENCE_LIBRARY, but select BODY_REFERENCE_LIBRARY.",
+            "Use 70% fidelity; BODY_REFERENCE_LIBRARY is enabled, BODY_REFERENCE_LIBRARY is disabled.",
+        )
+        for quote in conflicting_quotes:
+            with self.subTest(quote=quote), self.assertRaises(manager.StylePackError):
+                manager.parse_startup_interaction(self.make_args(
+                    startup_selection_mode="USER_CONFIRMATION", startup_menu_surface="TEXT_NUMBERED_MENU",
+                    startup_choice="CUSTOM", startup_choice_user_quote=quote, fidelity=70,
+                    aux_body_decision="DECLINED",
+                ))
+        with self.assertRaises(manager.StylePackError):
+            manager.parse_startup_interaction(self.make_args(
+                startup_selection_mode="USER_CONFIRMATION", startup_menu_surface="TEXT_NUMBERED_MENU",
+                startup_choice="CUSTOM", startup_choice_user_quote="Use 500% fidelity and decline BODY_REFERENCE_LIBRARY.",
+                fidelity=50, aux_body_decision="DECLINED",
+            ))
+        natural_choice = "Use 70% fidelity and decline BODY_REFERENCE_LIBRARY."
+        with self.assertRaisesRegex(manager.StylePackError, "Natural CUSTOM choice quote does not match"):
+            manager.parse_startup_interaction(self.make_args(
+                startup_selection_mode="USER_CONFIRMATION", startup_menu_surface="TEXT_NUMBERED_MENU",
+                startup_choice="CUSTOM", startup_choice_user_quote=natural_choice, fidelity=90,
+                aux_body_decision="SELECTED",
+                custom_parameters_user_quote="Use 90% fidelity and select BODY_REFERENCE_LIBRARY.",
+            ))
+
+    def test_custom_decision_is_library_directed_not_generic_unrelated_use(self):
+        quote = "Use 70% fidelity; do not use BODY_REFERENCE_LIBRARY; use only the style reference."
+        saved = manager.parse_startup_interaction(self.make_args(
+            startup_selection_mode="USER_CONFIRMATION", startup_menu_surface="TEXT_NUMBERED_MENU",
+            startup_choice="CUSTOM", startup_choice_user_quote=quote, fidelity=70,
+            aux_body_decision="DECLINED",
+        ))
+        self.assertEqual(manager.validate_startup_profile_evidence(saved), (70, "DECLINED"))
+        enabled = manager.parse_startup_interaction(self.make_args(
+            startup_selection_mode="USER_CONFIRMATION", startup_menu_surface="TEXT_NUMBERED_MENU",
+            startup_choice="CUSTOM", startup_choice_user_quote="Use 70% fidelity; BODY_REFERENCE_LIBRARY is enabled.",
+            fidelity=70, aux_body_decision="SELECTED",
+        ))
+        self.assertEqual(manager.validate_startup_profile_evidence(enabled), (70, "SELECTED"))
+
+    def test_style_name_yes_is_not_a_profile_selection(self):
+        with self.assertRaisesRegex(manager.StylePackError, "numbered or named menu choice"):
+            manager.parse_startup_interaction(self.make_args(
+                startup_selection_mode="USER_CONFIRMATION",
+                startup_menu_surface="TEXT_NUMBERED_MENU",
+                startup_choice="OPTION_1",
+                startup_choice_user_quote="да",
+            ))
+
+    def test_direct_fidelity_quote_plus_separate_library_reply_is_valid(self):
+        result = manager.parse_startup_interaction(self.make_args(
+            startup_selection_mode="DIRECT_CONFIRMATION",
+            confirmed_chat_id="chat-7", confirmed_message_id="msg-fidelity",
+            confirmed_parameters_user_quote="Use 70% fidelity.", fidelity=70,
+            aux_body_decision="DECLINED",
+            confirmed_body_library_chat_id="chat-7",
+            confirmed_body_library_message_id="msg-library",
+            confirmed_body_library_user_quote="Decline BODY_REFERENCE_LIBRARY.",
+        ))
+        self.assertEqual(result["body_library_provenance"]["message_id"], "msg-library")
+
+    def test_unresolved_legacy_profile_cannot_be_reused(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "REFERENCE_PLAN.json"
+            original = manager.parse_startup_interaction(self.make_args(
+                startup_selection_mode="DIRECT_CONFIRMATION",
+                confirmed_parameters_user_quote="Keep 90% fidelity and select BODY_REFERENCE_LIBRARY.",
+            ))
+            original["resolved_parameters"]["aux_body_decision"] = "NOT_SELECTED"
+            source.write_text(json.dumps({
+                "schema_version": 5, "style_name": "SAMPLE", "startup_parameter_selection": original,
+            }), encoding="utf-8")
+            with self.assertRaisesRegex(manager.StylePackError, "unresolved legacy profile"):
+                manager.parse_startup_interaction(self.make_args(
+                    startup_selection_mode="REUSE", reuse_startup_from=str(source),
+                    reuse_chat_id="chat-1", reuse_message_id="msg-1", aux_body_decision="SELECTED",
+                ))
 
     def test_default_mode_rejects_old_hidden_confirmation_surface(self):
         with self.assertRaises(manager.StylePackError):
@@ -217,20 +509,17 @@ class StartupMenuTests(unittest.TestCase):
             image.write_bytes(b"style")
             digest = hashlib.sha256(image.read_bytes()).hexdigest()
             report = root / "risk.json"
-            report.write_text(json.dumps({
-                "schema_version": 1,
-                "generation_risk": "D3",
-                "original_prompt": {"risk": "D2"},
-                "revised_prompt": None,
-                "references": [{
-                    "sha256": digest,
-                    "content_and_reference_risk": "D3",
-                }],
-            }), encoding="utf-8")
+            prompt_text = "A portrait in a neutral studio."
+            command = risk.build_parser().parse_args([
+                "--text", prompt_text,
+                "--reference", f"{image}::D3::+0D::Low-content identity reference::FACE",
+                "--output", str(report),
+            ])
+            risk.command_assess(command)
             path, loaded = manager.load_and_validate_risk_assessment(
                 str(report),
-                {"style": [{"path": str(image), "sha256": digest}]},
-                [],
+                prompt_text,
+                [{"slot": "face", "path": str(image), "sha256": digest, "active_roles": ["FACE"]}],
             )
             self.assertEqual(path, report.resolve())
             self.assertEqual(loaded["generation_risk"], "D3")
@@ -251,8 +540,8 @@ class StartupMenuTests(unittest.TestCase):
             with self.assertRaises(manager.StylePackError):
                 manager.load_and_validate_risk_assessment(
                     str(report),
-                    {"style": [{"path": str(image), "sha256": hashlib.sha256(image.read_bytes()).hexdigest()}]},
-                    [],
+                    "A portrait in a neutral studio.",
+                    [{"slot": "face", "path": str(image), "sha256": hashlib.sha256(image.read_bytes()).hexdigest(), "active_roles": ["FACE"]}],
                 )
 
 

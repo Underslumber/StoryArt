@@ -92,7 +92,8 @@ python tools\style_calibration_manager.py start `
   --state "<pending>\STYLE_CALIBRATION.json" `
   --calibration-id "AROMA_FACE_TRANSFER_V1" `
   --style-name "AROMA" `
-  --style-analysis-file "<pending>\STYLE_ANALYSIS.json"
+  --style-analysis-file "<pending>\STYLE_ANALYSIS.json" `
+  --authorization-quote "<exact user request or consent>"
 ```
 
 Открыть первую четвёрку. `strategy-file` создаётся по шаблону `templates/STYLE_CALIBRATION/ROUND_STRATEGY.json`:
@@ -105,7 +106,7 @@ python tools\style_calibration_manager.py open-round `
   --strategy-file "<pending>\ROUND_01_STRATEGY.json"
 ```
 
-После одного генераторного вызова и обязательного архивирования единственного композитного файла:
+После одного генераторного вызова передайте исходный файл менеджеру. Он сохранит исходный рабочий путь и архивирует байт-в-байт копию с исходным расширением в `GENERATION_RESULTS/STYLE_CALIBRATIONS`; повтор того же шага переиспользует копию с совпавшим хешем.
 
 ```powershell
 python tools\style_calibration_manager.py record-quartet-art `

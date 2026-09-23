@@ -16,6 +16,7 @@ import copy
 import hashlib
 import json
 import re
+import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -29,6 +30,7 @@ DEFAULT_ROUNDS = 4
 MIN_ROUNDS = 2
 BATCH_SIZE = 4
 ARTS_PER_ROUND = 1
+GENERATION_RESULTS_ROOT = Path(__file__).resolve().parents[1] / "GENERATION_RESULTS"
 PANEL_LABELS = ("A", "B", "C", "D")
 MIN_VISUAL_DELTA_PERCENT = 10.0
 MAX_STYLE_PROMPT_CHARS = 1200
@@ -402,9 +404,14 @@ def create_state(
     style_analysis_path: Path,
     target_rounds: int = DEFAULT_ROUNDS,
     user_approved_reduced_rounds: bool = False,
+    authorization_quote: str = "",
 ) -> dict[str, object]:
     if path.exists():
         raise StyleCalibrationError(f"Refusing to overwrite calibration state: {path}")
+    if not authorization_quote.strip():
+        raise StyleCalibrationError(
+            "Calibration requires an explicit user request or consent; record the exact authorization with --authorization-quote."
+        )
     if target_rounds < MIN_ROUNDS or target_rounds > DEFAULT_ROUNDS:
         raise StyleCalibrationError(f"--rounds must be {MIN_ROUNDS}, 3, or {DEFAULT_ROUNDS}; default is {DEFAULT_ROUNDS}.")
     if target_rounds < DEFAULT_ROUNDS and not user_approved_reduced_rounds:
@@ -423,6 +430,10 @@ def create_state(
         "batch_size": BATCH_SIZE,
         "arts_per_round": ARTS_PER_ROUND,
         "reduced_rounds_user_approved": user_approved_reduced_rounds,
+        "user_authorization": {
+            "quote": authorization_quote.strip(),
+            "recorded_at": now,
+        },
         "created_at": now,
         "updated_at": now,
         "status": "ACTIVE",
@@ -603,8 +614,33 @@ def record_quartet_art(path: Path, *, round_number: int, image_path: Path) -> di
     if not image.is_file():
         raise StyleCalibrationError(f"Composite calibration art does not exist: {image}")
     digest = sha256(image)
+    archive_dir = GENERATION_RESULTS_ROOT / "STYLE_CALIBRATIONS"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    prefix = f"{safe_token(str(state['calibration_id']))}_R{round_number:02d}_"
+    archived_image = next(
+        (
+            candidate for candidate in sorted(archive_dir.glob(f"{prefix}*{image.suffix}"))
+            if candidate.is_file() and sha256(candidate) == digest
+        ),
+        None,
+    )
+    if archived_image is None:
+        stamp = datetime.now().astimezone().strftime("%Y%m%d_%H%M%S_%f")
+        stem = f"{prefix}{stamp}"
+        archived_image = archive_dir / f"{stem}{image.suffix}"
+        suffix = 1
+        while archived_image.exists():
+            archived_image = archive_dir / f"{stem}_{suffix}{image.suffix}"
+            suffix += 1
+        shutil.copy2(image, archived_image)
+        if sha256(archived_image) != digest:
+            archived_image.unlink(missing_ok=True)
+            raise StyleCalibrationError("Archived quartet does not match the original image bytes.")
+    archived_digest = sha256(archived_image)
     current["quartet_art_path"] = str(image)
     current["quartet_art_sha256"] = digest
+    current["quartet_art_archive_path"] = str(archived_image.resolve())
+    current["quartet_art_archive_sha256"] = archived_digest
     for candidate in current["candidates"]:
         panel_label = str(candidate["panel_label"])
         candidate.update({
@@ -1029,6 +1065,11 @@ def build_parser() -> argparse.ArgumentParser:
     start.add_argument("--style-analysis-file", type=Path, required=True)
     start.add_argument("--rounds", type=int, default=DEFAULT_ROUNDS, choices=(2, 3, 4))
     start.add_argument("--user-approved-reduced-rounds", action="store_true")
+    start.add_argument(
+        "--authorization-quote",
+        required=True,
+        help="Exact user request or consent authorizing this calibration.",
+    )
 
     open_parser = subparsers.add_parser("open-round", help="Open the next quartet with a new temporary subject.")
     open_parser.add_argument("--state", type=Path, required=True)
@@ -1105,6 +1146,7 @@ def main() -> int:
                 style_analysis_path=args.style_analysis_file,
                 target_rounds=args.rounds,
                 user_approved_reduced_rounds=args.user_approved_reduced_rounds,
+                authorization_quote=args.authorization_quote,
             )
         elif args.command == "open-round":
             state = open_round(

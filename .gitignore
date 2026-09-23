@@ -22,6 +22,8 @@
 !/tools/task_execution_guard.py
 !/tools/style_calibration_manager.py
 !/tools/storyart_orchestrator.py
+!/tools/reference_compatibility.py
+!/tools/generation_call_contract.py
 
 # Local agent policy is copied from AGENTS.example.md during bootstrap.
 /AGENTS.md

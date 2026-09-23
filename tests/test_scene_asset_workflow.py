@@ -62,6 +62,13 @@ class SceneContractTests(unittest.TestCase):
         self.assertEqual(args.framing, "")
         self.assertEqual(args.dominant_body_source, "")
 
+    def test_prepare_parser_defaults_to_visible_numbered_startup_menu(self) -> None:
+        args = build_parser().parse_args([
+            "prepare-generation", "--style-name", "TEST", "--request-id", "menu-default", "--fidelity", "90",
+        ])
+        self.assertEqual(args.startup_selection_mode, "USER_CONFIRMATION")
+        self.assertEqual(args.startup_menu_surface, "TEXT_NUMBERED_MENU")
+
     def test_character_free_scene_has_no_character_reference_contract(self) -> None:
         contract = build_scene_contract(scene_args(), "SCENE", "NONE")
         self.assertTrue(contract["applicable"])
@@ -185,6 +192,20 @@ class SceneWorkflowTests(unittest.TestCase):
                 },
                 [],
             )
+
+    def test_character_bearing_scene_does_not_auto_expand_attachment_overflow(self) -> None:
+        args = Namespace(
+            reference_workflow="AUTO",
+            generation_purpose="SCENE",
+            character_id="CHAR_001",
+            attachment_limit=5,
+        )
+        selected = {
+            name: reference(name)
+            for name in ("style", "primary_face", "body", "pose", "clothes", "background")
+        }
+        with self.assertRaisesRegex(StylePackError, "cannot auto-expand into generated helper images"):
+            build_generation_workflow(args, selected, [])
 
 
 class SceneQaTests(unittest.TestCase):

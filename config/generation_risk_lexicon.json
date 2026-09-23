@@ -159,6 +159,14 @@
       "safe_replacements_ru": ["антидискриминационный плакат без воспроизведения ненавистнического призыва"]
     }
   ],
+  "review_flags": [
+    {
+      "id": "violence_context_manual_review",
+      "label_ru": "Упоминание насилия требует проверки контекста",
+      "patterns": ["\\bshootout\\b", "\\bgunfight\\b", "\\bnon[- ]?graphic violence\\b", "перестрелк", "\\bgraphic gore\\b", "\\bdismember(?:ed|ment)\\b", "\\bopen wound\\b", "графическ(?:ое|ие) расчлен", "открыт(?:ая|ые) ран"],
+      "context_ru": "Это только отметка для ручной проверки смысла и противоречий. Она не меняет D-оценку и не утверждает причину отказа генератора."
+    }
+  ],
   "modifiers": [
     {
       "id": "adult_unambiguous",

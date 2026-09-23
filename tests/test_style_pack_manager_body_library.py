@@ -10,6 +10,8 @@ from tools.style_pack_manager import (
     command_approve_standalone, command_init, command_validate,
     read_csv, registered_approved_generation, require_qa_passed_generation_for_approval,
     sha256,
+    parse_aux_body_references,
+    validate_reference_compatibility,
     style_readiness_proposal, validate_plan_reference, validate_prior_stages,
     validate_prompt_only_body_library_review, write_csv,
 )
@@ -76,6 +78,42 @@ def qa_manifest_fields(image: Path) -> dict[str, str]:
 
 
 class BodyLibraryReviewTests(unittest.TestCase):
+    def test_unselected_body_library_is_neutral_not_user_declined(self) -> None:
+        self.assertEqual(
+            parse_aux_body_references(Path("."), [], "NOT_SELECTED", "", False, False),
+            [],
+        )
+
+    def test_external_anatomy_requires_reviewed_compatible_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            workspace = Path(folder)
+            library = workspace / "BODY_REFERENCE_LIBRARY"
+            (library / "refs").mkdir(parents=True)
+            image = library / "refs" / "body.png"
+            image.write_bytes(b"body")
+            write_csv(library / "BODY_REFERENCE_MANIFEST.csv", [
+                "ref_id", "generator_safe", "generator_path", "allowed_roles", "source_character_id",
+                "anatomy_compatibility", "anatomy_evidence_source",
+            ], [{
+                "ref_id": "BR_0001", "generator_safe": "YES", "generator_path": "refs/body.png",
+                "allowed_roles": "AUX_BODY_BUILD", "source_character_id": "UNKNOWN",
+                "anatomy_compatibility": "FEMALE_ANATOMY", "anatomy_evidence_source": "reviewed source metadata",
+            }])
+            with self.assertRaisesRegex(StylePackError, "BLOCKED"):
+                parse_aux_body_references(
+                    workspace, ["BR_0001=BODY_BUILD_TARGET"], "SELECTED", "", True, False,
+                    {"character_id": "NEW", "target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "explicit user request"},
+                )
+
+    def test_soft_body_reference_role_crosses_visible_presentation(self) -> None:
+        decision = validate_reference_compatibility(
+            {"character_id": "CHAR_009", "target_anatomy": "UNKNOWN"},
+            {"source_character_id": "CHAR_004", "anatomy_compatibility": "UNKNOWN"},
+            ["AUX_POSE"],
+        )
+        self.assertTrue(decision["compatible"])
+        self.assertEqual(decision["status"], "ALLOWED")
+
     def test_selected_library_blocks_prompt_only_before_complete_relevant_review(self) -> None:
         with self.assertRaisesRegex(StylePackError, "reviewed 2 of 5"):
             validate_prompt_only_body_library_review(

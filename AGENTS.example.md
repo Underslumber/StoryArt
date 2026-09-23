@@ -23,20 +23,45 @@ historical stored text.
 - Preserve approval, identity, storyline, provenance, coverage/topology, and
   source-role rules from the relevant detailed sections. Do not treat partial
   praise or an intermediate result as permanent approval.
-- Generate only user-requested deliverables. Record `EXECUTION_STARTED` with
-  `--output-contract REQUESTED_DELIVERABLE` immediately before every ordinary
+- Generate only user-requested deliverables. After the manager prepares the
+  executable plan, record `EXECUTION_STARTED` against the same
+  `REFERENCE_PLAN.json` (an optional `CALL_VALIDATED` may precede it); retain
+  its returned attempt id and use
+  `--output-contract REQUESTED_DELIVERABLE` immediately before each ordinary
   real call.
 
 ## Efficient route
 
 1. Classify the task and read the matching detailed rules, active guard, and
    manager documentation.
-2. For substantial work, load `skills/storyart-orchestrator/SKILL.md` and
+2. Before asking about style/profile, check this chat for a complete prior
+   confirmation. If it is unresolved, make a bounded local metadata inventory:
+   enumerate `*_PROJECT_PACK` and `*_GENERATIONS` directories, including
+   git-ignored data, and inspect relevant `CHARACTER_REGISTRY.csv` files for a
+   character named in the request. Do not broadly search images or treat
+   `rg --files` as proof that ignored data is absent. Mention unambiguous local
+   style and approved-character candidates and any `REVIEW_REQUIRED` status;
+   discovery does not select or finalize them and grants no consent. Then show
+   the actual contextual profile question, with the identified style plus
+   recommended 90% fidelity and BODY_REFERENCE_LIBRARY first, two task-fit
+   alternatives and a custom/different-style choice. Wait for the answer; do
+   not ask for references already present locally. Never assume a style,
+   character, or profile. Resolve target anatomy from explicit current-request
+   wording or reviewed profile metadata and retain its evidence. If unknown, ask
+   before showing or attaching full-body references; do not guess from names or
+   images.
+3. Resolve the profile before preparing or generating art. A style name alone
+   does not confirm fidelity or BODY_REFERENCE_LIBRARY use. Use the permitted
+   native question tool when available; otherwise visibly print the contextual
+   choices from step 2 and wait. Reuse a complete same-chat confirmation; ask
+   only for a missing field in a partial profile. A recommendation is not
+   consent. A request for one scene produces one scene, with no helper art.
+4. For substantial work, load `skills/storyart-orchestrator/SKILL.md` and
    `docs/EFFICIENT_WORKFLOW.md`; use only the smallest role set that is useful.
-3. Reuse complete source-review evidence across tasks only when hashes, roles,
+5. Reuse complete source-review evidence across tasks only when hashes, roles,
    style/character, covered views and limitations still apply. Inspect selected
    originals plus changed/new or uncovered sources; missing proof requires review.
-4. Keep prompts short and prioritized: goal/invariants, identity, style, scene.
+6. Keep prompts short and prioritized: goal/invariants, identity, style, scene.
    Do not pile up synonyms or feed rejected outputs back as anchors.
 
 Calibration requires an explicit user request or consent after a proposal. This

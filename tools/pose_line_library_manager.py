@@ -41,7 +41,7 @@ REVIEW_NAME = "POSE_LINE_REVIEW.csv"
 CACHE_NAME = "SEARCH_CACHE.json"
 REPORT_NAME = "COLLECTION_REPORT.json"
 
-DEFAULT_QUERIES = (
+FEMALE_QUERIES = (
     "скетч женского тела контуры позы",
     "скетч обнаженного женского тела контуры",
     "female body outline pose sketch",
@@ -51,6 +51,23 @@ DEFAULT_QUERIES = (
     "female fashion croquis body outline poses",
     "adult woman body lineart reference",
 )
+PRESENTATION_QUERIES = {
+    "female": FEMALE_QUERIES,
+    "male": (
+        "adult male figure contour pose line art",
+        "male anatomy outline drawing poses adult",
+        "man body contour drawing pose reference adult",
+        "adult male fashion croquis line drawing",
+    ),
+    "neutral": (
+        "adult human figure contour pose line art",
+        "adult figure anatomy outline drawing poses",
+        "human body contour drawing pose reference adult",
+        "adult figure gesture line drawing reference",
+    ),
+}
+# Backwards-compatible name: the established female corpus and its searches remain intact.
+DEFAULT_QUERIES = FEMALE_QUERIES
 
 RESULT_PATTERN = re.compile(
     r"&quot;alt&quot;:&quot;(.*?)&quot;.*?"
@@ -148,9 +165,12 @@ def write_csv(path: Path, rows: Iterable[dict[str, object]], fields: Iterable[st
         writer.writerows(rows)
 
 
-def load_queries(path: str) -> list[str]:
+def load_queries(path: str, presentation: str = "female") -> list[str]:
     if not path:
-        return list(DEFAULT_QUERIES)
+        try:
+            return list(PRESENTATION_QUERIES[presentation.lower()])
+        except KeyError as exc:
+            raise PoseLineError(f"Unknown query presentation: {presentation}") from exc
     query_path = Path(path)
     queries = [line.strip() for line in query_path.read_text(encoding="utf-8-sig").splitlines() if line.strip()]
     if not queries:
@@ -335,7 +355,7 @@ def write_review_template(items: dict[str, Path], rows: list[dict[str, object]])
 def command_collect(args: argparse.Namespace) -> int:
     items = paths(Path(args.workspace))
     ensure_structure(items)
-    queries = load_queries(args.queries_file)
+    queries = load_queries(args.queries_file, args.presentation)
     records = collect_search_metadata(items, queries, args.pages, args.timeout)
     records.sort(key=lambda row: str(row["original_url"]))
     if args.max_downloads:
@@ -553,7 +573,7 @@ def status_payload(items: dict[str, Path]) -> dict[str, object]:
     return {
         "status": "NOT_BUILT",
         "library": str(items["root"]),
-        "offer": "Ask the user whether to build a local 200+ female-focused pose-line library.",
+        "offer": "Ask the user whether to build a local 200+ pose-line library; choose neutral, male, or female search queries when authorized.",
         "collect_command": ".\\scripts\\bootstrap.ps1 -CollectPoseLineLibrary",
     }
 
@@ -614,6 +634,7 @@ def build_parser() -> argparse.ArgumentParser:
     collect.add_argument("--max-bytes", type=int, default=16 * 1024 * 1024, help="Maximum bytes per image.")
     collect.add_argument("--max-downloads", type=int, default=600, help="Maximum unique candidate URLs per run.")
     collect.add_argument("--queries-file", default="", help="Optional UTF-8 file with one search query per line.")
+    collect.add_argument("--presentation", choices=tuple(PRESENTATION_QUERIES), default="female", help="Select neutral, male, or female query wording. Female preserves the established corpus searches.")
     collect.set_defaults(func=command_collect)
 
     sheets = subparsers.add_parser("build-contact-sheets", help="Build local QA sheets and archive their generated copies.")

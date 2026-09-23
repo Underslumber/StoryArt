@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -234,6 +235,10 @@ def dispatch_handoff(
     state = load_state(state_path)
     if role not in ROLE_DESCRIPTIONS:
         raise OrchestratorError(f"Unknown role: {role}")
+    if role in WRITER_ROLES:
+        raise OrchestratorError(
+            f"{role} is a root-only production responsibility and cannot be dispatched."
+        )
     if not objective.strip():
         raise OrchestratorError("A bounded handoff objective is required.")
     validate_dependencies(state, dependency_ids)
@@ -358,10 +363,12 @@ def complete_handoff(
     if not result.strip():
         raise OrchestratorError("A concise handoff result is required.")
 
+    if status == "DONE" and not evidence:
+        raise OrchestratorError("DONE requires at least one existing, relevant evidence file.")
     evidence_paths = [normalize_project_path(item) for item in evidence]
     for path in evidence_paths:
-        if not path.exists():
-            raise OrchestratorError(f"Handoff evidence does not exist: {path}")
+        if not path.is_file():
+            raise OrchestratorError(f"Handoff evidence must be an existing file: {path}")
 
     handoff_path = normalize_project_path(str(summary["path"]))
     handoff = load_json(handoff_path)
@@ -369,7 +376,10 @@ def complete_handoff(
         {
             "status": status,
             "result": result.strip(),
-            "evidence": [relative_project_path(path) for path in evidence_paths],
+            "evidence": [
+                {"path": relative_project_path(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+                for path in evidence_paths
+            ],
             "completed_at": utc_now(),
         }
     )

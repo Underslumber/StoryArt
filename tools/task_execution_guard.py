@@ -9,9 +9,12 @@ scope expansion, and post-readiness drift.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
+import re
 import sys
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence
@@ -188,6 +191,13 @@ def create_guard(
         "cycle_paused_seconds": 0,
         "waiting_since": None,
         "execution_started_at": None,
+        "active_attempt": None,
+        "attempts": [],
+        "available_results": [],
+        "delivered_result_at": None,
+        "latest_delivered_result_status": None,
+        "task_revision": 0,
+        "latest_delivered_attempt_id": None,
         "first_visible_result_at": None,
         "last_visible_result_at": None,
         "preflight_actions_in_cycle": 0,
@@ -225,19 +235,29 @@ def pending_required_stages(state: dict[str, object]) -> list[str]:
     ]
 
 
+def normalize_stage_key(stage: str | None) -> str:
+    value = str(stage or "").strip().casefold()
+    return re.sub(r"^\d+_", "", value)
+
+
 def find_required_stage(state: dict[str, object], stage: str | None) -> dict[str, object]:
     if not stage or not stage.strip():
         raise GuardError("This checkpoint requires --stage.")
-    stage_key = stage.strip().casefold()
+    stage_key = normalize_stage_key(stage)
+    matches: list[dict[str, object]] = []
     for entry in required_stage_entries(state):
-        if str(entry.get("id", "")).casefold() == stage_key:
-            return entry
+        if normalize_stage_key(str(entry.get("id", ""))) == stage_key:
+            matches.append(entry)
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        raise GuardError(f"Ambiguous required-stage alias {stage!r}; use the exact configured id.")
     known = ", ".join(str(entry.get("id")) for entry in required_stage_entries(state)) or "none"
     raise GuardError(f"Unknown required stage {stage!r}. Configured stages: {known}")
 
 
 def is_physique_stage(stage: str | None) -> bool:
-    return bool(stage and stage.strip().upper().startswith("PHYSIQUE_"))
+    return normalize_stage_key(stage).upper().startswith("PHYSIQUE_")
 
 
 def validate_image_execution_scope(
@@ -256,6 +276,8 @@ def validate_image_execution_scope(
             "Image EXECUTION_STARTED requires --output-contract "
             "REQUESTED_DELIVERABLE|USER_REQUESTED_EXTRA. Every generator call must be bound to the user's task."
         )
+
+
     lowered = summary.casefold()
     marker = next((item for item in AUXILIARY_GENERATION_MARKERS if item in lowered), None)
     if contract == "USER_REQUESTED_EXTRA" and not user_approved_extra_generation:
@@ -276,13 +298,408 @@ def validate_image_execution_scope(
         )
 
 
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+    except OSError as error:
+        raise GuardError(f"Cannot hash reference file {path}: {error}") from error
+    return digest.hexdigest()
+
+
+def _prompt_binding(plan: dict[str, object]) -> tuple[str, str]:
+    risk = plan.get("risk_assessment")
+    prompt = risk.get("prompt") if isinstance(risk, dict) else None
+    if not isinstance(prompt, dict):
+        raise GuardError("Executable REFERENCE_PLAN requires risk_assessment.prompt.text and text_sha256.")
+    text = str(prompt.get("text", ""))
+    digest = str(prompt.get("text_sha256", "")).lower()
+    actual = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    if not text.strip() or digest != actual:
+        raise GuardError("REFERENCE_PLAN prompt text is empty or its text_sha256 does not match.")
+    return text, digest
+
+
+def _planned_placeholder_role(workflow: dict[str, object], source_stage_id: str) -> str:
+    stages = workflow.get("stages", [])
+    if isinstance(stages, list):
+        for stage_row in stages:
+            if not isinstance(stage_row, dict):
+                continue
+            for slot in stage_row.get("slots", []):
+                if isinstance(slot, dict) and str(slot.get("path", "")) == f"<STAGE_OUTPUT:{source_stage_id}>":
+                    role = str(slot.get("stage_role", "")).strip()
+                    if role:
+                        return role
+    return {
+        "01_FACE_IDENTITY": "FACE_IDENTITY_STAGE",
+        "02_PHYSIQUE_FRONT": "PHYSIQUE_FRONT_STAGE",
+        "03_PHYSIQUE_SIDE": "PHYSIQUE_SIDE_STAGE",
+        "04_PHYSIQUE_BACK": "PHYSIQUE_BACK_STAGE",
+    }.get(source_stage_id, source_stage_id)
+
+
+def _validate_resolved_execution_slots(
+    plan_path: Path,
+    plan: dict[str, object],
+    workflow: dict[str, object],
+    stage_slots: list[dict[str, object]],
+    execution_call: dict[str, object],
+    request_id: str,
+) -> None:
+    if str(execution_call.get("request_id", "")) != request_id:
+        raise GuardError("execution_call belongs to another request_id.")
+    stage_outputs = execution_call.get("stage_output_bindings", [])
+    if not isinstance(stage_outputs, list):
+        raise GuardError("execution_call.stage_output_bindings must be a list.")
+    outputs: dict[str, dict[str, object]] = {}
+    for row in stage_outputs:
+        if not isinstance(row, dict):
+            raise GuardError("Invalid stage_output_bindings row.")
+        stage_id = str(row.get("stage_id", ""))
+        if not stage_id or stage_id in outputs:
+            raise GuardError("Stage output bindings must have unique stage_id values.")
+        if (
+            row.get("request_id") != request_id
+            or row.get("status") != "STAGING"
+            or row.get("qa_passed") is not True
+            or str(row.get("reference_plan", "")) != str(plan_path.resolve())
+        ):
+            raise GuardError(f"Stage output is not QA-passed STAGING for request {request_id}: {stage_id}.")
+        source = Path(str(row.get("path", ""))).expanduser().resolve()
+        expected_hash = str(row.get("sha256", "")).lower()
+        if not source.is_file() or not expected_hash or file_sha256(source) != expected_hash:
+            raise GuardError(f"Registered stage output path/hash is missing or changed: {stage_id}.")
+        outputs[stage_id] = {**row, "path": str(source), "sha256": expected_hash}
+
+    planned_real: dict[str, set[str]] = {}
+    expected_generated: dict[str, set[str]] = {}
+    expected_paths: dict[str, set[str]] = {}
+    target_pack_slots: dict[str, tuple[dict[str, object], list[str]]] = {}
+    required_output_ids: set[str] = set()
+    for planned in stage_slots:
+        source_path = str(planned.get("path", ""))
+        roles = {str(role) for role in planned.get("active_roles", [])}
+        stage_match = re.fullmatch(r"<STAGE_OUTPUT:([^<>]+)>", source_path)
+        pack_match = re.fullmatch(r"<TARGETED_STAGE_PACK:([^<>]+)>", source_path)
+        if stage_match:
+            source_stage_id = stage_match.group(1)
+            record = outputs.get(source_stage_id)
+            if record is None or str(record.get("stage_id", "")) != source_stage_id:
+                raise GuardError(f"A generated placeholder lacks an exact registered prior-stage binding: {source_stage_id}.")
+            required_output_ids.add(source_stage_id)
+            expected_generated.setdefault(str(record["sha256"]), set()).update(roles)
+            expected_paths.setdefault(str(record["sha256"]), set()).add(str(Path(str(record["path"])).resolve()))
+            continue
+        if pack_match:
+            sources = [value for value in pack_match.group(1).split("+") if value]
+            if not sources or len(sources) != len(set(sources)):
+                raise GuardError("Targeted pack placeholder has an invalid source stage list.")
+            target_pack_slots[source_path] = (planned, sources)
+            required_output_ids.update(sources)
+            continue
+        expected = str(planned.get("sha256", "")).lower()
+        if not expected:
+            raise GuardError(f"A non-generated planned slot has no SHA-256: {source_path}.")
+        planned_real.setdefault(expected, set()).update(roles)
+        expected_paths.setdefault(expected, set()).add(str(Path(source_path).expanduser().resolve()))
+
+    actual: dict[str, set[str]] = {}
+    actual_slots: dict[str, dict[str, object]] = {}
+    resolved_slots = execution_call.get("slots", [])
+    for slot in resolved_slots:
+        if not isinstance(slot, dict):
+            raise GuardError("execution_call contains an invalid resolved slot.")
+        digest = str(slot.get("sha256", "")).lower()
+        roles = {str(role) for role in slot.get("active_roles", [])}
+        if not digest or not roles:
+            raise GuardError("Resolved slots require a concrete SHA-256 and active_roles.")
+        actual.setdefault(digest, set()).update(roles)
+        actual_slots.setdefault(digest, slot)
+
+    target_bindings = execution_call.get("targeted_pack_bindings", [])
+    if not isinstance(target_bindings, list):
+        raise GuardError("execution_call.targeted_pack_bindings must be a list.")
+    binding_by_placeholder: dict[str, dict[str, object]] = {}
+    for row in target_bindings:
+        if not isinstance(row, dict):
+            raise GuardError("Invalid targeted_pack_bindings row.")
+        placeholder = str(row.get("placeholder", ""))
+        if not placeholder or placeholder in binding_by_placeholder:
+            raise GuardError("Targeted pack bindings require unique exact placeholder keys.")
+        binding_by_placeholder[placeholder] = row
+
+    for placeholder, (planned, source_ids) in target_pack_slots.items():
+        planned_roles = {str(value) for value in planned.get("active_roles", [])}
+        role = str(planned.get("stage_role", "")).strip()
+        if not planned_roles:
+            raise GuardError(f"Targeted pack placeholder has no planned active_roles: {placeholder}.")
+        binding = binding_by_placeholder.get(placeholder)
+        if not binding or binding.get("request_id") != request_id or str(binding.get("stage_id", "")) != str(execution_call.get("stage_id", "")):
+            raise GuardError(f"Targeted pack has no exact request/stage placeholder binding: {placeholder}.")
+        if binding.get("source_stage_ids") != source_ids:
+            raise GuardError(f"Targeted pack binding sources differ from the planned placeholder: {placeholder}.")
+        image_path = Path(str(binding.get("path", ""))).expanduser().resolve()
+        manifest_path = Path(str(binding.get("manifest_path", ""))).expanduser().resolve()
+        candidate = next((slot for slot in resolved_slots if isinstance(slot, dict)
+                          and Path(str(slot.get("path", ""))).expanduser().resolve() == image_path
+                          and Path(str(slot.get("manifest_path", ""))).expanduser().resolve() == manifest_path), None)
+        if candidate is None or role not in set(str(value) for value in candidate.get("active_roles", [])):
+            raise GuardError(f"Targeted pack binding does not match an exact resolved call slot: {placeholder}.")
+        technical_dir = (plan_path.parent / "TECHNICAL_REFERENCES").resolve()
+        if manifest_path.parent != technical_dir or image_path.parent != technical_dir or not manifest_path.is_file():
+            raise GuardError("Targeted pack image and manifest must be request-local TECHNICAL_REFERENCES artifacts.")
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise GuardError(f"Cannot read targeted pack manifest: {error}") from error
+        output = manifest.get("output") if isinstance(manifest, dict) else None
+        sources = manifest.get("sources") if isinstance(manifest, dict) else None
+        if (
+            not isinstance(manifest, dict)
+            or manifest.get("asset_type") != "TARGETED_GENERATOR_COLLAGE"
+            or manifest.get("generator_safe") is not True
+            or manifest.get("request_id") != request_id
+            or not isinstance(output, dict)
+            or not isinstance(sources, list)
+            or manifest_path.stem != image_path.stem
+            or Path(str(output.get("path", ""))).name != image_path.name
+            or str(output.get("sha256", "")).lower() != file_sha256(image_path)
+            or str(candidate.get("sha256", "")).lower() != file_sha256(image_path)
+            or str(binding.get("sha256", "")).lower() != file_sha256(image_path)
+            or manifest.get("forbidden_transfer") != ["NEW_FACE_IDENTITY", "NEW_STYLE", "NEW_WARDROBE", "NEW_BACKGROUND"]
+        ):
+            raise GuardError("Targeted pack manifest does not bind this request and current image bytes.")
+        expected_scope = [_planned_placeholder_role(workflow, source_id) for source_id in source_ids]
+        expected_scope = list(dict.fromkeys([value for value in expected_scope if value] + ["MULTIVIEW_CONSISTENCY"]))
+        if manifest.get("scope") != expected_scope:
+            raise GuardError("Targeted pack scope differs from its exact planned source roles.")
+        if len(sources) != len(source_ids):
+            raise GuardError("Targeted pack provenance source count differs from its planned placeholder.")
+        for source_id, record in zip(source_ids, sources):
+            registered = outputs.get(source_id)
+            if not isinstance(record, dict) or registered is None:
+                raise GuardError(f"Targeted pack references an unregistered prior stage: {source_id}.")
+            source_file = Path(str(record.get("path", ""))).resolve()
+            if (
+                Path(str(record.get("path", ""))).resolve() != Path(str(registered.get("path", ""))).resolve()
+                or str(record.get("sha256", "")).lower() != str(registered.get("sha256", "")).lower()
+                or not source_file.is_file()
+                or file_sha256(source_file) != str(registered.get("sha256", "")).lower()
+                or str(record.get("role", "")) != _planned_placeholder_role(workflow, source_id)
+            ):
+                raise GuardError(f"Targeted pack provenance does not match current QA-passed stage output: {source_id}.")
+        if not planned_roles.issubset(set(str(value) for value in candidate.get("active_roles", []))):
+            raise GuardError("Targeted pack resolved slot dropped its planned active_roles.")
+        digest = str(candidate["sha256"]).lower()
+        expected_generated.setdefault(digest, set()).update(planned_roles)
+        expected_paths.setdefault(digest, set()).add(str(image_path.resolve()))
+    if set(binding_by_placeholder) != set(target_pack_slots):
+        raise GuardError("execution_call has extra or missing targeted pack bindings.")
+    if set(outputs) != required_output_ids:
+        raise GuardError("Stage output bindings include missing or unplanned stage IDs.")
+    expected_hashes = set(planned_real) | set(expected_generated)
+    if set(actual) != expected_hashes:
+        raise GuardError("Resolved call contains omitted or unplanned source hashes.")
+    expected_roles: dict[str, set[str]] = {}
+    for source_map in (planned_real, expected_generated):
+        for digest, roles in source_map.items():
+            expected_roles.setdefault(digest, set()).update(roles)
+    for digest, roles in expected_roles.items():
+        if roles != actual.get(digest, set()):
+            raise GuardError("Resolved call changed the exact planned role set for a physical source hash.")
+        resolved_path = Path(str(actual_slots[digest].get("path", ""))).expanduser().resolve()
+        if str(resolved_path) not in expected_paths.get(digest, set()):
+            raise GuardError("Resolved call path does not correspond to a planned or registered physical source.")
+
+
+def _validate_request_local_style_manifest(plan: dict[str, object], slots: list[object]) -> None:
+    selected = plan.get("selected_references", {})
+    references = selected.get("style", []) if isinstance(selected, dict) else []
+    references = references if isinstance(references, list) else [references]
+    request_local = [
+        row for row in references
+        if isinstance(row, dict) and row.get("status") == "REQUEST_LOCAL_STYLE_CANDIDATE"
+    ]
+    if not request_local:
+        return
+    try:
+        from tools.style_pack_manager import has_positive_master_style_manifest_entry, make_paths
+    except ImportError:
+        try:
+            from style_pack_manager import has_positive_master_style_manifest_entry, make_paths
+        except ImportError as error:
+            raise GuardError(f"Cannot load style manifest validator for request-local STYLE references: {error}") from error
+    try:
+        paths = make_paths(Path(str(plan.get("pack_path", ""))).resolve().parent, str(plan.get("style_name", "")))
+    except (OSError, RuntimeError, ValueError) as error:
+        raise GuardError(f"Cannot resolve the request-local STYLE pack: {error}") from error
+    if not str(plan.get("pack_path", "")) or paths.pack.resolve() != Path(str(plan.get("pack_path", ""))).resolve():
+        raise GuardError("Request-local STYLE plan has an invalid pack_path/style_name binding.")
+    for reference in request_local:
+        if (
+            reference.get("reference_scope") != "CURRENT_REQUEST_ONLY"
+            or reference.get("permanent_anchor") is not False
+            or not reference.get("path")
+        ):
+            raise GuardError("Request-local STYLE reference has an invalid scope or anchor marker.")
+        file = Path(str(reference["path"])).expanduser().resolve()
+        slot = next(
+            (
+                item for item in slots
+                if isinstance(item, dict)
+                and item.get("path")
+                and Path(str(item["path"])).expanduser().resolve() == file
+            ),
+            None,
+        )
+        if slot is None or "STYLE" not in {str(role).upper() for role in slot.get("active_roles", [])}:
+            continue
+        try:
+            relative = file.relative_to(paths.pack.resolve())
+        except ValueError as error:
+            raise GuardError("Request-local STYLE reference escaped its selected style pack.") from error
+        if not has_positive_master_style_manifest_entry(paths, relative):
+            raise GuardError(f"Request-local STYLE reference is no longer positive and generator-safe in the manifest: {file}")
+
+def validate_reference_plan(
+    path_value: str | Path,
+    stage: str | None = None,
+    execution_call: dict[str, object] | None = None,
+    request_id: str | None = None,
+) -> dict[str, object]:
+    """Validate and snapshot the exact executable prompt and its physical inputs."""
+    path = Path(path_value).expanduser().resolve()
+    if not path.is_file():
+        raise GuardError(f"Executable REFERENCE_PLAN does not exist: {path}")
+    try:
+        plan = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise GuardError(f"Cannot read executable REFERENCE_PLAN: {error}") from error
+    if not isinstance(plan, dict):
+        raise GuardError("Executable REFERENCE_PLAN must be a JSON object.")
+    if plan.get("gate_status") != "READY_FOR_GENERATION":
+        raise GuardError("REFERENCE_PLAN gate_status must be READY_FOR_GENERATION.")
+    if request_id and str(plan.get("request_id", "")) != request_id:
+        raise GuardError("REFERENCE_PLAN belongs to another request_id.")
+    if execution_call is None and isinstance(plan.get("execution_call"), dict):
+        execution_call = plan["execution_call"]
+    risk = plan.get("risk_assessment")
+    prompt_info = risk.get("prompt") if isinstance(risk, dict) else None
+    if execution_call is not None:
+        prompt_info = execution_call.get("prompt")
+        if not isinstance(prompt_info, dict):
+            raise GuardError("execution_call requires prompt.text and prompt.text_sha256.")
+        prompt_text = str(prompt_info.get("text", ""))
+        prompt_hash = str(prompt_info.get("text_sha256", "")).lower()
+        if not prompt_text.strip() or hashlib.sha256(prompt_text.encode("utf-8")).hexdigest() != prompt_hash:
+            raise GuardError("execution_call prompt is empty or its text_sha256 does not match.")
+        plan_prompt = risk.get("prompt") if isinstance(risk, dict) else None
+        if isinstance(plan_prompt, dict) and str(plan_prompt.get("text_sha256", "")).lower() != prompt_hash:
+            raise GuardError("execution_call prompt does not match the REFERENCE_PLAN prompt hash.")
+        if isinstance(plan_prompt, str) and plan_prompt.strip() != prompt_text.strip():
+            raise GuardError("execution_call prompt text does not match the REFERENCE_PLAN prompt.")
+    else:
+        plan_prompt, prompt_hash = _prompt_binding(plan)
+        prompt_text = plan_prompt
+    workflow = plan.get("generation_workflow")
+    if not isinstance(workflow, dict):
+        raise GuardError("REFERENCE_PLAN is missing generation_workflow.")
+    mode = str(workflow.get("mode", "")).upper()
+    if execution_call is not None:
+        selected_stage = str(execution_call.get("stage_id") or stage or "SINGLE_PASS")
+        if mode == "MULTI_STAGE" and not stage:
+            raise GuardError("MULTI_STAGE readiness requires an explicit --stage.")
+        if stage and normalize_stage_key(selected_stage) != normalize_stage_key(stage):
+            raise GuardError("execution_call.stage_id must match the checkpoint --stage.")
+        slots = execution_call.get("slots")
+    elif mode == "SINGLE_PASS":
+        selected_stage = "SINGLE_PASS"
+        slots = workflow.get("slots")
+    elif mode == "MULTI_STAGE":
+        stages = workflow.get("stages")
+        if not isinstance(stages, list) or not stages:
+            raise GuardError("MULTI_STAGE plan has no executable stages.")
+        requested = normalize_stage_key(stage)
+        matches = [row for row in stages if isinstance(row, dict) and normalize_stage_key(str(row.get("stage_id", ""))) == requested]
+        if not requested or len(matches) != 1:
+            raise GuardError("MULTI_STAGE readiness requires --stage naming exactly one executable stage_id.")
+        selected_stage = str(matches[0]["stage_id"])
+        slots = matches[0].get("slots")
+    else:
+        raise GuardError("REFERENCE_PLAN generation_workflow.mode must be SINGLE_PASS or MULTI_STAGE.")
+    if not isinstance(slots, list) or not slots:
+        raise GuardError("Executable generation stage requires at least one physical reference slot.")
+    _validate_request_local_style_manifest(plan, slots)
+    planned_slots: list[dict[str, object]] | None = None
+    if execution_call is not None:
+        if mode == "SINGLE_PASS":
+            planned_slots = workflow.get("slots") if isinstance(workflow.get("slots"), list) else None
+        elif mode == "MULTI_STAGE":
+            stages = workflow.get("stages")
+            planned = next((row for row in stages if isinstance(row, dict) and normalize_stage_key(str(row.get("stage_id", ""))) == normalize_stage_key(selected_stage)), None)
+            if planned is None:
+                raise GuardError("execution_call.stage_id is not present in generation_workflow.stages.")
+            planned_slots = planned.get("slots") if isinstance(planned.get("slots"), list) else None
+        if planned_slots is None:
+            raise GuardError("REFERENCE_PLAN has no planned slots for the selected execution call.")
+        _validate_resolved_execution_slots(
+            path, plan, workflow, planned_slots, execution_call,
+            str(request_id or plan.get("request_id", "")),
+        )
+    bindings: list[dict[str, object]] = []
+    for slot in slots:
+        if not isinstance(slot, dict):
+            raise GuardError("REFERENCE_PLAN contains an invalid reference slot.")
+        if slot.get("generated_stage_output") or slot.get("planned_targeted_pack"):
+            raise GuardError("Executable stage still has an unresolved generated placeholder; complete and register that stage first.")
+        raw_path = str(slot.get("path", ""))
+        roles = slot.get("active_roles")
+        expected = str(slot.get("sha256", "")).lower()
+        ref = Path(raw_path).expanduser().resolve()
+        if not raw_path or not isinstance(roles, list) or not roles or not expected or not ref.is_file():
+            raise GuardError("Each executable reference slot requires an existing path, sha256, and active_roles.")
+        actual = file_sha256(ref)
+        if actual != expected:
+            raise GuardError(f"REFERENCE_PLAN source hash changed for {ref}.")
+        bindings.append({"path": str(ref), "sha256": actual, "roles": sorted(str(role) for role in roles)})
+    report = execution_call.get("risk_assessment") if execution_call is not None else None
+    if not isinstance(report, dict):
+        report = plan.get("risk_assessment")
+    if not isinstance(report, dict):
+        raise GuardError("Executable call requires an input-bound risk_assessment report.")
+    try:
+        from tools.generation_risk_assessor import RiskAssessmentError, validate_assessment
+    except ImportError:
+        try:
+            from generation_risk_assessor import RiskAssessmentError, validate_assessment
+        except ImportError as error:
+            raise GuardError(f"Cannot load exact-call risk assessor: {error}") from error
+    try:
+        validate_assessment(
+            report,
+            prompt_text,
+            [{"path": row["path"], "sha256": row["sha256"], "active_roles": row["roles"]} for row in bindings],
+        )
+    except RiskAssessmentError as error:
+        raise GuardError(f"Exact-call risk assessment validation failed: {error}") from error
+    return {
+        "path": str(path),
+        "sha256": file_sha256(path),
+        "prompt_sha256": prompt_hash,
+        "stage": selected_stage,
+        "references": bindings,
+    }
 def swimwear_failures(state: dict[str, object], stage: str) -> set[str]:
-    stage_key = stage.strip().casefold()
+    stage_key = normalize_stage_key(stage)
     return {
         str(event.get("swimwear_rung", "")).upper()
         for event in state.get("events", [])
         if event.get("event") == "ATTEMPT_REJECTED"
-        and str(event.get("stage", "")).casefold() == stage_key
+        and normalize_stage_key(str(event.get("stage", ""))) == stage_key
         and bool(event.get("rung_routes_exhausted"))
         and str(event.get("swimwear_rung", "")).upper() in SWIMWEAR_RUNGS
     }
@@ -298,7 +715,7 @@ def escalation_incident_key(
     def matches(row: dict[str, object]) -> bool:
         return (
             row.get("event") == "ATTEMPT_REJECTED"
-            and str(row.get("stage", "")).casefold() == stage.casefold()
+            and normalize_stage_key(str(row.get("stage", ""))) == normalize_stage_key(stage)
             and str(row.get("qa_layer", "")).casefold() == qa_layer.casefold()
         )
     correction_index = next(
@@ -306,7 +723,7 @@ def escalation_incident_key(
             index
             for index in range(len(events) - 1, -1, -1)
             if events[index].get("event") == "USER_CORRECTION"
-            and str(events[index].get("corrects_stage", "")).casefold() == stage.casefold()
+            and normalize_stage_key(str(events[index].get("corrects_stage", ""))) == normalize_stage_key(stage)
             and str(events[index].get("corrects_qa_layer", "")).casefold() == qa_layer.casefold()
             and events[index].get("corrects_attempt_at")
         ),
@@ -324,7 +741,7 @@ def escalation_incident_key(
     if not before_correction or len(after_correction) + int(include_current_rejection) < 1:
         return None
     correction_at = str(events[correction_index].get("at", ""))
-    return f"{correction_at}|{stage.casefold()}|{qa_layer.casefold()}"
+    return f"{correction_at}|{normalize_stage_key(stage)}|{qa_layer.casefold()}"
 
 
 def validate_swimwear_execution_start(
@@ -459,6 +876,99 @@ def assert_can_continue(path: Path, state: dict[str, object], now: datetime | No
         )
 
 
+def _matching_attempt(
+    state: dict[str, object], attempt_id: str, *, allow_unknown: bool = False
+) -> dict[str, object]:
+    if not attempt_id.strip():
+        raise GuardError("This checkpoint requires --attempt-id.")
+    for attempt in reversed(state.get("attempts", [])):
+        if attempt.get("attempt_id") == attempt_id:
+            active = state.get("active_attempt")
+            if isinstance(active, dict) and active.get("attempt_id") == attempt_id:
+                state["active_attempt"] = attempt
+            return attempt
+    raise GuardError(f"Unknown attempt_id: {attempt_id}")
+
+
+def validate_current_stage_output_authority(
+    reference_plan: str | Path,
+    execution_call: dict[str, object] | None,
+    request_id: str,
+) -> None:
+    """Ensure resolved stage inputs still match the latest QA-passed manifest rows."""
+    plan_path = Path(reference_plan).expanduser().resolve()
+    try:
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise GuardError(f"Cannot re-read generation plan for stage authority: {error}") from error
+    if not isinstance(plan, dict):
+        raise GuardError("Generation plan for stage authority must be a JSON object.")
+    call = execution_call
+    if call is None and isinstance(plan.get("execution_call"), dict):
+        call = plan["execution_call"]
+    if not isinstance(call, dict):
+        return
+    bindings = call.get("stage_output_bindings", [])
+    slots = call.get("slots", [])
+    if not isinstance(bindings, list):
+        raise GuardError("execution_call.stage_output_bindings must be a list.")
+    if not isinstance(slots, list):
+        raise GuardError("execution_call.slots must be a list.")
+    workflow = plan.get("generation_workflow", {})
+    multi_stage = isinstance(workflow, dict) and str(workflow.get("mode", "")).upper() == "MULTI_STAGE"
+    if not bindings and not slots and not multi_stage:
+        return
+    style_name = str(plan.get("style_name", "")).strip()
+    if not style_name and not bindings and not multi_stage:
+        # Legacy unit fixtures without a project manifest have no body-library or stage authority to recheck.
+        return
+    if not style_name or len(plan_path.parents) < 4:
+        raise GuardError("Cannot resolve the style manifest for current stage output authority.")
+    try:
+        from tools import style_pack_manager as manager
+    except ImportError:
+        import style_pack_manager as manager
+    try:
+        paths = manager.make_paths(plan_path.parents[3], style_name)
+        latest_outputs = manager.validated_stage_outputs(paths, plan_path, plan)
+        for slot in slots:
+            if not isinstance(slot, dict):
+                raise GuardError("Invalid execution_call slot.")
+            file = Path(str(slot.get("path", ""))).expanduser().resolve()
+            if manager.is_relative_to(file, (paths.workspace / manager.BODY_LIBRARY_NAME).resolve()):
+                manager.validate_resolved_slot_compatibility(paths, plan, slot, file)
+    except (OSError, ValueError, manager.StylePackError) as error:
+        raise GuardError(f"Cannot verify current execution input authority: {error}") from error
+    if multi_stage:
+        stages = workflow.get("stages", [])
+        stage_ids = [str(item.get("stage_id", "")) for item in stages if isinstance(item, dict)] if isinstance(stages, list) else []
+        selected_stage = str(call.get("stage_id", ""))
+        if selected_stage not in stage_ids:
+            raise GuardError(f"Current execution stage is missing from the generation workflow: {selected_stage}.")
+        for required_stage in stage_ids[:stage_ids.index(selected_stage)]:
+            if required_stage not in latest_outputs:
+                raise GuardError(
+                    f"Current generation manifest no longer authorizes required prior stage output: {required_stage}."
+                )
+    for row in bindings:
+        if not isinstance(row, dict):
+            raise GuardError("Invalid stage_output_bindings row.")
+        stage_id = str(row.get("stage_id", ""))
+        latest = latest_outputs.get(stage_id)
+        expected_path = str(Path(str(row.get("path", ""))).expanduser().resolve())
+        if (
+            not isinstance(latest, dict)
+            or latest.get("request_id") != request_id
+            or latest.get("status") != "STAGING"
+            or latest.get("qa_passed") is not True
+            or latest.get("path") != expected_path
+            or str(latest.get("sha256", "")).lower() != str(row.get("sha256", "")).lower()
+        ):
+            raise GuardError(
+                f"Current generation manifest no longer authorizes the bound stage output: {stage_id}."
+            )
+
+
 def checkpoint(
     path: Path,
     *,
@@ -484,11 +994,21 @@ def checkpoint(
     user_approved_extra_generation: bool = False,
     extra_generation_evidence: str = "",
     qa_layer: str = "",
+    reference_plan: str | Path | None = None,
+    execution_call: dict[str, object] | None = None,
+    attempt_id: str | None = None,
+    result_status: str | None = None,
+    delivery_evidence: Sequence[str] = (),
+    outcome: str | None = None,
+    reconciliation_evidence: str = "",
+    provider_operation_receipt: str = "",
     now: datetime | None = None,
 ) -> dict[str, object]:
     state = load_guard(path)
     moment = now or utc_now()
     event = event.upper()
+    if state.get("task_kind") != "IMAGE_GENERATION" and not attempt_id and isinstance(state.get("active_attempt"), dict):
+        attempt_id = str(state["active_attempt"].get("attempt_id", ""))
     if not summary.strip():
         raise GuardError("Every checkpoint requires a short factual summary.")
     asserted_invariants: dict[str, str] = {}
@@ -496,6 +1016,12 @@ def checkpoint(
     correction_binding: dict[str, str] = {}
 
     if event == "WAITING_FOR_USER":
+        if state.get("status") in {"BLOCKED", "COMPLETE", "STOPPED", "CANCELLED"}:
+            raise GuardError(f"Cannot enter WAITING_FOR_USER from status {state.get('status')}.")
+        if state.get("active_attempt"):
+            raise GuardActionRequired("An active attempt must produce a result, refusal, stop, or timeout reconciliation before waiting.")
+        if any(a.get("status") == "UNKNOWN" for a in state.get("attempts", [])):
+            raise GuardActionRequired("Reconcile the UNKNOWN attempt before asking the user or pausing the task.")
         if state.get("waiting_since"):
             raise GuardError("The guard is already waiting for the user.")
         if (
@@ -515,15 +1041,81 @@ def checkpoint(
         state["next_required_action"] = "USER_RESUMED"
     elif event == "USER_RESUMED":
         waiting_since = state.get("waiting_since")
-        if not waiting_since:
-            raise GuardError("USER_RESUMED requires a prior WAITING_FOR_USER checkpoint.")
-        paused = max(0.0, (moment - parse_time(str(waiting_since))).total_seconds())
-        state["cycle_paused_seconds"] = int(state.get("cycle_paused_seconds", 0) + paused)
+        if state.get("status") in {"STOPPED", "CANCELLED"}:
+            if any(a.get("status") == "UNKNOWN" for a in state.get("attempts", [])):
+                raise GuardActionRequired("Reconcile every UNKNOWN attempt before USER_RESUMED.")
+            state["cycle_started_at"] = iso_time(moment)
+            state["cycle_paused_seconds"] = 0
+        elif waiting_since:
+            paused = max(0.0, (moment - parse_time(str(waiting_since))).total_seconds())
+            state["cycle_paused_seconds"] = int(state.get("cycle_paused_seconds", 0) + paused)
+        else:
+            raise GuardError("USER_RESUMED requires a prior WAITING_FOR_USER, STOP, or CANCEL checkpoint.")
         state["waiting_since"] = None
         state["status"] = "ACTIVE"
         state["phase"] = "PREFLIGHT"
         state["next_required_action"] = "PREFLIGHT_OR_EXECUTION"
+    elif event == "READY_FOR_EXECUTION":
+        if state.get("status") in {"BLOCKED", "COMPLETE", "WAITING_FOR_USER", "STOPPED", "CANCELLED"} or state.get("waiting_since"):
+            raise GuardError(f"READY_FOR_EXECUTION is forbidden from status {state.get('status')}.")
+        if state.get("active_attempt") or any(a.get("status") == "UNKNOWN" for a in state.get("attempts", [])):
+            raise GuardActionRequired("Reconcile the active or UNKNOWN attempt before another readiness checkpoint.")
+        if state.get("next_required_action") == "CALL_VALIDATION_OR_EXECUTION_OR_BLOCKER":
+            raise GuardError("Duplicate READY_FOR_EXECUTION is forbidden; validate or start the existing ready call.")
+        if state.get("next_required_action") not in {
+            "PREFLIGHT_OR_EXECUTION", "NEXT_SAFE_EXECUTION", "NEXT_SAFE_EXECUTION_OR_COMPLETE",
+            "NEXT_EXECUTION_OR_COMPLETE_OR_BLOCKER", "NEXT_EXECUTION_OR_BLOCKER", "NEXT_EXECUTION_OR_COMPLETE",
+            "READY_FOR_EXECUTION_OR_EXECUTION_STARTED_OR_BLOCKER",
+        }:
+            raise GuardError("READY_FOR_EXECUTION is not the next allowed transition.")
+        if state.get("task_kind") == "IMAGE_GENERATION":
+            if not reference_plan:
+                raise GuardError("Image READY_FOR_EXECUTION requires --reference-plan.")
+            binding = validate_reference_plan(reference_plan, stage, execution_call, str(state.get("request_id", "")))
+            state["ready_binding"] = binding
+        state["status"] = "READY"
+        state["phase"] = "READY_FOR_EXECUTION"
+        state["next_required_action"] = "CALL_VALIDATION_OR_EXECUTION_OR_BLOCKER"
+        state.pop("watchdog_reason", None)
+        state.pop("watchdog_triggered_at", None)
+    elif event in {"STOP", "CANCEL"}:
+        if event == "STOP":
+            active = state.get("active_attempt")
+            if isinstance(active, dict):
+                active = _matching_attempt(state, str(active.get("attempt_id", "")))
+                active["status"] = "UNKNOWN"
+                active["stop_recorded_at"] = iso_time(moment)
+                active["stop_summary"] = summary.strip()
+                state["active_attempt"] = None
+            unknown_exists = any(a.get("status") == "UNKNOWN" for a in state.get("attempts", []))
+            state["status"] = "STOPPED"
+            state["phase"] = "ATTEMPT_UNKNOWN" if unknown_exists else "STOPPED"
+            state["next_required_action"] = "RECONCILE_UNKNOWN_ATTEMPT" if unknown_exists else "USER_RESUMED"
+            state["execution_started_at"] = None
+        else:
+            if not reconciliation_evidence.strip():
+                raise GuardError("CANCEL requires a durable operator cancellation receipt in reconciliation_evidence.")
+            active = state.get("active_attempt")
+            outstanding = active if isinstance(active, dict) else next(
+                (a for a in reversed(state.get("attempts", [])) if a.get("status") == "UNKNOWN"), None
+            )
+            if outstanding is not None:
+                if not attempt_id or str(outstanding.get("attempt_id")) != str(attempt_id):
+                    raise GuardError("CANCEL of an outstanding operation requires its exact --attempt-id.")
+                active = _matching_attempt(state, str(attempt_id), allow_unknown=True)
+                if active.get("status") not in {"ACTIVE", "UNKNOWN"}:
+                    raise GuardError("CANCEL requires the currently active or UNKNOWN attempt.")
+                active["status"] = "CANCELLED"
+                active["cancel_receipt"] = reconciliation_evidence.strip()
+            elif attempt_id:
+                raise GuardError("CANCEL cannot target an old or already resolved attempt.")
+            state["active_attempt"] = None
+            state["status"] = "CANCELLED"
+            state["phase"] = "CANCELLED"
+            state["next_required_action"] = "USER_DECISION"
     elif event == "SCOPE_CHANGE":
+        if state.get("status") in {"WAITING_FOR_USER", "STOPPED", "CANCELLED"} or state.get("waiting_since"):
+            raise GuardError("Resume the paused task explicitly before changing scope.")
         if not user_approved_scope_change:
             raise GuardError(
                 "Scope expansion is forbidden inside the active task without explicit user approval. "
@@ -574,25 +1166,23 @@ def checkpoint(
         assert_can_continue(path, state, moment)
         state["preflight_actions_in_cycle"] = int(state.get("preflight_actions_in_cycle", 0)) + 1
         state["phase"] = "PREFLIGHT"
-    elif event == "READY_FOR_EXECUTION":
-        state["status"] = "ACTIVE"
-        state["phase"] = "READY_FOR_EXECUTION"
-        state["next_required_action"] = "CALL_VALIDATION_OR_EXECUTION_OR_BLOCKER"
-        state.pop("watchdog_reason", None)
-        state.pop("watchdog_triggered_at", None)
     elif event == "CALL_VALIDATED":
         if state.get("next_required_action") != "CALL_VALIDATION_OR_EXECUTION_OR_BLOCKER":
             raise GuardError("CALL_VALIDATED is allowed exactly once after READY_FOR_EXECUTION.")
-        state["status"] = "ACTIVE"
+        state["status"] = "READY"
         state["phase"] = "CALL_VALIDATED"
         state["next_required_action"] = "EXECUTION_STARTED_OR_BLOCKER"
     elif event == "EXECUTION_STARTED":
-        if state.get("status") in {"BLOCKED", "COMPLETE"}:
+        if state.get("status") in {"BLOCKED", "COMPLETE", "WAITING_FOR_USER", "STOPPED", "CANCELLED"} or state.get("waiting_since"):
             raise GuardError(f"Cannot start execution from status {state.get('status')}.")
+        if state.get("active_attempt"):
+            raise GuardError("A duplicate in-flight EXECUTION_STARTED is forbidden.")
         if state.get("next_required_action") == "ESCALATION_ORCHESTRATOR_REQUIRED":
             raise GuardActionRequired(
                 "Two same-layer failures after an explicit correction require one read-only ESCALATION_ORCHESTRATOR result before another attempt."
             )
+        if state.get("task_kind") == "IMAGE_GENERATION" and state.get("next_required_action") not in {"CALL_VALIDATION_OR_EXECUTION_OR_BLOCKER", "EXECUTION_STARTED_OR_BLOCKER"}:
+            raise GuardError("EXECUTION_STARTED requires one preceding READY_FOR_EXECUTION transition.")
         validate_image_execution_scope(
             state,
             summary=summary,
@@ -600,6 +1190,15 @@ def checkpoint(
             user_approved_extra_generation=user_approved_extra_generation,
             extra_generation_evidence=extra_generation_evidence,
         )
+        attempt_stage = stage
+        if state.get("task_kind") == "IMAGE_GENERATION":
+            if not reference_plan:
+                raise GuardError("Image EXECUTION_STARTED requires --reference-plan.")
+            binding = validate_reference_plan(reference_plan, stage, execution_call, str(state.get("request_id", "")))
+            validate_current_stage_output_authority(reference_plan, execution_call, str(state.get("request_id", "")))
+            if binding != state.get("ready_binding"):
+                raise GuardError("Execution call differs from the ready prompt, plan, references, hashes, roles, or stage.")
+            attempt_stage = str(binding.get("stage", ""))
         asserted_invariants = validate_invariant_assertions(state, invariant_assertions)
         active_swimwear_attempt = validate_swimwear_execution_start(
             state,
@@ -610,6 +1209,22 @@ def checkpoint(
         )
         if active_swimwear_attempt:
             state["active_swimwear_attempt"] = active_swimwear_attempt
+        new_attempt_id = str(attempt_id or uuid.uuid4())
+        if any(row.get("attempt_id") == new_attempt_id for row in state.get("attempts", [])):
+            raise GuardError("Duplicate attempt_id is forbidden.")
+        record = {
+            "attempt_id": new_attempt_id,
+            "status": "ACTIVE",
+            "started_at": iso_time(moment),
+            "reference_binding": state.get("ready_binding"),
+            "stage": attempt_stage,
+            "task_revision": int(state.get("task_revision", 0)),
+        }
+        if provider_operation_receipt.strip():
+            record["provider_operation_receipt"] = provider_operation_receipt.strip()
+        state["attempts"] = [*state.get("attempts", []), record]
+        state["active_attempt"] = record
+        state.pop("ready_binding", None)
         state["status"] = "ACTIVE"
         state["phase"] = "EXECUTION"
         state["execution_started_at"] = iso_time(moment)
@@ -617,8 +1232,10 @@ def checkpoint(
         state.pop("watchdog_reason", None)
         state.pop("watchdog_triggered_at", None)
     elif event == "VISIBLE_RESULT":
-        if not state.get("execution_started_at"):
-            raise GuardError("VISIBLE_RESULT requires a prior EXECUTION_STARTED checkpoint.")
+        active = _matching_attempt(state, str(attempt_id or ""))
+        if active.get("status") not in {"ACTIVE", "UNKNOWN"}:
+            raise GuardError("VISIBLE_RESULT requires an active or UNKNOWN attempt.")
+        late_after_stop = active.get("status") == "UNKNOWN" or state.get("status") == "STOPPED"
         evidence_paths = [str(Path(item).resolve()) for item in evidence]
         if state.get("task_kind") == "IMAGE_GENERATION":
             if not evidence_paths:
@@ -629,6 +1246,21 @@ def checkpoint(
                     raise GuardError(f"Visible image evidence is missing or unsupported: {file}")
         elif not evidence_paths and not summary.strip():
             raise GuardError("A visible result requires file evidence or a factual user-facing result summary.")
+        status_value = str(result_status or "AVAILABLE").upper()
+        if state.get("task_kind") == "IMAGE_GENERATION" and status_value not in {"TEST", "STAGING", "REJECTED"}:
+            raise GuardError("Image result availability requires result_status TEST, STAGING, or REJECTED.")
+        if late_after_stop:
+            active["late_output"] = {"result_status": status_value, "evidence": evidence_paths, "available_at": iso_time(moment)}
+        else:
+            active["status"] = "RESULT_AVAILABLE"
+            active["result_status"] = status_value
+            active["result_evidence"] = evidence_paths
+            active["result_available_at"] = iso_time(moment)
+        state["available_results"] = [*state.get("available_results", []), {
+            "attempt_id": active["attempt_id"], "status": status_value,
+            "evidence": evidence_paths, "available_at": iso_time(moment), "late": late_after_stop,
+        }]
+        state["active_attempt"] = None
         timestamp = iso_time(moment)
         state["first_visible_result_at"] = state.get("first_visible_result_at") or timestamp
         state["last_visible_result_at"] = timestamp
@@ -636,24 +1268,124 @@ def checkpoint(
         state["cycle_started_at"] = timestamp
         state["cycle_paused_seconds"] = 0
         state["preflight_actions_in_cycle"] = 0
-        state["status"] = "ACTIVE"
-        state["phase"] = "RESULT_AVAILABLE"
-        state["next_required_action"] = "NEXT_EXECUTION_OR_COMPLETE_OR_BLOCKER"
+        if not late_after_stop:
+            state["status"] = "ACTIVE"
+            state["phase"] = "RESULT_AVAILABLE"
+            state["next_required_action"] = "NEXT_EXECUTION_OR_COMPLETE_OR_BLOCKER"
+        else:
+            state["phase"] = "LATE_RESULT_AVAILABLE"
+            state["next_required_action"] = "RECONCILE_UNKNOWN_ATTEMPT"
         state.pop("watchdog_reason", None)
         state.pop("watchdog_triggered_at", None)
+    elif event == "RESULT_DELIVERED":
+        result = _matching_attempt(state, str(attempt_id or ""))
+        if result.get("status") != "RESULT_AVAILABLE" or result.get("result_status") != "TEST":
+            raise GuardError("RESULT_DELIVERED requires an available TEST result; STAGING and REJECTED cannot be delivered as final.")
+        if int(result.get("task_revision", -1)) != int(state.get("task_revision", 0)):
+            raise GuardError("A result from an earlier task revision cannot satisfy current delivery.")
+        if not delivery_evidence or any(not str(item).strip() for item in delivery_evidence):
+            raise GuardError("RESULT_DELIVERED requires a UI message/link receipt as --delivery-evidence.")
+        result["status"] = "DELIVERED"
+        result["delivered_at"] = iso_time(moment)
+        result["delivery_evidence"] = [str(item).strip() for item in delivery_evidence]
+        state["delivered_result_at"] = iso_time(moment)
+        state["latest_delivered_result_status"] = result.get("result_status")
+        state["latest_delivered_attempt_id"] = result["attempt_id"]
+        state["phase"] = "RESULT_DELIVERED"
+        state["next_required_action"] = "NEXT_EXECUTION_OR_COMPLETE_OR_BLOCKER"
+    elif event == "ATTEMPT_UNKNOWN":
+        active = _matching_attempt(state, str(attempt_id or ""))
+        if active.get("status") != "ACTIVE":
+            raise GuardError("ATTEMPT_UNKNOWN requires an active attempt.")
+        active["status"] = "UNKNOWN"
+        active["unknown_at"] = iso_time(moment)
+        active["unknown_reason"] = summary.strip()
+        state["active_attempt"] = None
+        state["status"] = "ACTIVE"
+        state["phase"] = "ATTEMPT_UNKNOWN"
+        state["next_required_action"] = "RECONCILE_UNKNOWN_ATTEMPT"
+        state["execution_started_at"] = None
+    elif event == "ATTEMPT_RECONCILED":
+        attempt = _matching_attempt(state, str(attempt_id or ""), allow_unknown=True)
+        if attempt.get("status") != "UNKNOWN":
+            raise GuardError("ATTEMPT_RECONCILED requires a timeout/stop attempt with UNKNOWN status.")
+        resolved = str(outcome or "").upper()
+        if resolved not in {"AVAILABLE", "REFUSED", "CANCELLED", "UNKNOWN"}:
+            raise GuardError("ATTEMPT_RECONCILED outcome must be AVAILABLE, REFUSED, CANCELLED, or UNKNOWN.")
+        if not reconciliation_evidence.strip():
+            raise GuardError("ATTEMPT_RECONCILED requires durable provider/operator reconciliation evidence.")
+        was_stopped = state.get("status") == "STOPPED"
+        if resolved == "AVAILABLE":
+            if not evidence or not result_status:
+                raise GuardError("AVAILABLE reconciliation requires output evidence and explicit TEST/STAGING/REJECTED QA status.")
+            if result_status.upper() not in {"TEST", "STAGING", "REJECTED"}:
+                raise GuardError("Reconciled result_status must be TEST, STAGING, or REJECTED.")
+            resolved_paths = [str(Path(item).resolve()) for item in evidence]
+            resolved_hashes = [file_sha256(Path(item)) for item in resolved_paths]
+            if state.get("task_kind") == "IMAGE_GENERATION" and any(
+                not Path(item).is_file() or Path(item).suffix.lower() not in IMAGE_EXTENSIONS for item in resolved_paths
+            ):
+                raise GuardError("AVAILABLE reconciliation requires existing image output evidence.")
+        else:
+            resolved_paths = []
+        attempt["reconciliation"] = {"outcome": resolved, "evidence": reconciliation_evidence.strip(), "at": iso_time(moment)}
+        attempt["status"] = "UNKNOWN" if resolved == "UNKNOWN" else resolved
+        state["status"] = "STOPPED" if resolved == "UNKNOWN" or was_stopped else "ACTIVE"
+        state["phase"] = "ATTEMPT_UNKNOWN" if resolved == "UNKNOWN" else (f"ATTEMPT_{resolved}" if not was_stopped else "STOPPED")
+        state["next_required_action"] = "RECONCILE_UNKNOWN_ATTEMPT" if resolved == "UNKNOWN" else ("USER_RESUMED" if was_stopped else "NEXT_SAFE_EXECUTION_OR_COMPLETE")
+        if resolved == "AVAILABLE":
+            state["available_results"] = [*state.get("available_results", []), {
+                "attempt_id": attempt["attempt_id"], "status": result_status.upper(),
+                "evidence": resolved_paths, "evidence_sha256": resolved_hashes,
+                "available_at": iso_time(moment), "late": True,
+            }]
+            attempt["status"] = "RESULT_AVAILABLE"
+            attempt["result_status"] = result_status.upper()
+            attempt["result_evidence"] = resolved_paths
+            state["active_attempt"] = None
+        elif resolved in {"REFUSED", "CANCELLED"}:
+            state["active_attempt"] = None
+    elif event == "ATTEMPT_REFUSED":
+        active = _matching_attempt(state, str(attempt_id or ""))
+        current = state.get("active_attempt") or {}
+        if current.get("attempt_id") != active.get("attempt_id") or active.get("status") != "ACTIVE":
+            raise GuardError("ATTEMPT_REFUSED requires the current active attempt.")
+        if not reconciliation_evidence.strip():
+            raise GuardError("ATTEMPT_REFUSED requires provider/operator refusal receipt.")
+        active["status"] = "REFUSED"
+        active["refusal_receipt"] = reconciliation_evidence.strip()
+        state["active_attempt"] = None
+        state["execution_started_at"] = None
+        state["phase"] = "ATTEMPT_REFUSED"
+        state["next_required_action"] = "NEXT_SAFE_EXECUTION"
     elif event == "ATTEMPT_REJECTED":
-        if state.get("status") in {"BLOCKED", "COMPLETE"}:
+        if state.get("status") in {"BLOCKED", "COMPLETE", "WAITING_FOR_USER", "STOPPED", "CANCELLED"}:
             raise GuardError(f"Cannot reject an attempt from status {state.get('status')}.")
+        rejected_attempt = _matching_attempt(state, str(attempt_id or ""))
+        if rejected_attempt.get("status") not in {"ACTIVE", "RESULT_AVAILABLE"}:
+            raise GuardError("ATTEMPT_REJECTED requires the active attempt or its available result.")
+        current = state.get("active_attempt") or {}
+        if any(a.get("status") == "UNKNOWN" for a in state.get("attempts", [])) or (
+            current and current.get("attempt_id") != rejected_attempt.get("attempt_id")
+        ):
+            raise GuardError("ATTEMPT_REJECTED cannot target an older result while another operation is outstanding.")
+        if rejected_attempt.get("status") == "RESULT_AVAILABLE" and (
+            not state.get("attempts") or state["attempts"][-1].get("attempt_id") != rejected_attempt.get("attempt_id")
+        ):
+            raise GuardError("ATTEMPT_REJECTED must target the latest available attempt.")
+        rejection_kind = str(outcome or "QA_REJECTED").upper()
+        if rejection_kind != "QA_REJECTED":
+            raise GuardError("ATTEMPT_REJECTED records QA rejection only; use ATTEMPT_REFUSED or ATTEMPT_UNKNOWN for provider outcomes.")
         active_swimwear_attempt = state.get("active_swimwear_attempt")
-        result_available = bool(active_swimwear_attempt and state.get("phase") == "RESULT_AVAILABLE")
-        if not state.get("execution_started_at") and not result_available:
-            raise GuardError("ATTEMPT_REJECTED requires a prior EXECUTION_STARTED checkpoint.")
+        rejected_attempt["status"] = "REJECTED"
+        rejected_attempt["rejection_summary"] = summary.strip()
+        state["active_attempt"] = None
         if stage:
             find_required_stage(state, stage)
         if active_swimwear_attempt:
             expected_stage = str(active_swimwear_attempt.get("stage", ""))
             expected_rung = str(active_swimwear_attempt.get("swimwear_rung", ""))
-            if not stage or stage.casefold() != expected_stage.casefold():
+            if not stage or normalize_stage_key(stage) != normalize_stage_key(expected_stage):
                 raise GuardError(f"Rejected physique attempt must name --stage {expected_stage}.")
             if str(swimwear_rung or "").upper() != expected_rung:
                 raise GuardError(f"Rejected physique attempt must name --swimwear-rung {expected_rung}.")
@@ -698,6 +1430,12 @@ def checkpoint(
         state["phase"] = "ESCALATION_RECORDED"
         state["next_required_action"] = "NEXT_SAFE_EXECUTION"
     elif event == "USER_CORRECTION":
+        if state.get("status") in {"WAITING_FOR_USER", "STOPPED", "CANCELLED"} or state.get("waiting_since"):
+            raise GuardError("Resume the paused task explicitly before recording USER_CORRECTION.")
+        if state.get("active_attempt"):
+            raise GuardActionRequired("Resolve the active or UNKNOWN operation before applying a correction.")
+        if any(a.get("status") == "UNKNOWN" for a in state.get("attempts", [])):
+            raise GuardActionRequired("Reconcile every UNKNOWN operation before applying a correction.")
         locked = state.get("locked_invariants", {})
         impact = str(correction_impact or "").upper()
         if locked:
@@ -740,7 +1478,7 @@ def checkpoint(
                     row
                     for row in reversed(state.get("events", []))
                     if row.get("event") == "ATTEMPT_REJECTED"
-                    and str(row.get("stage", "")).casefold() == stage.casefold()
+                    and normalize_stage_key(str(row.get("stage", ""))) == normalize_stage_key(stage)
                     and str(row.get("qa_layer", "")).casefold() == qa_layer.casefold()
                 ),
                 None,
@@ -764,9 +1502,14 @@ def checkpoint(
         state["status"] = "ACTIVE"
         state["phase"] = "CORRECTION"
         state["next_required_action"] = "NEXT_SAFE_EXECUTION_OR_COMPLETE"
+        state["latest_delivered_result_status"] = None
+        state["delivered_result_at"] = None
+        state["task_revision"] = int(state.get("task_revision", 0)) + 1
     elif event == "STAGE_COMPLETED":
-        if state.get("status") in {"BLOCKED", "COMPLETE"}:
-            raise GuardError(f"Cannot complete a required stage from status {state.get('status')}.")
+        if state.get("status") in {"BLOCKED", "COMPLETE", "WAITING_FOR_USER", "STOPPED", "CANCELLED"} or state.get("waiting_since"):
+            raise GuardError(f"Cannot complete a required stage from status {state.get('status')}; explicitly resume first.")
+        if state.get("active_attempt") or any(a.get("status") == "UNKNOWN" for a in state.get("attempts", [])):
+            raise GuardActionRequired("Reconcile the outstanding operation before completing a stage.")
         entry = find_required_stage(state, stage)
         if entry.get("status") == "COMPLETED":
             raise GuardError(f"Required stage is already completed: {entry.get('id')}")
@@ -797,6 +1540,10 @@ def checkpoint(
             "NEXT_EXECUTION_OR_BLOCKER" if pending_required_stages(state) else "COMPLETE_OR_BLOCKER"
         )
     elif event == "STAGE_REOPENED":
+        if state.get("status") in {"BLOCKED", "COMPLETE", "WAITING_FOR_USER", "STOPPED", "CANCELLED"} or state.get("waiting_since"):
+            raise GuardError(f"Cannot reopen a required stage from status {state.get('status')}; explicitly resume first.")
+        if state.get("active_attempt") or any(a.get("status") == "UNKNOWN" for a in state.get("attempts", [])):
+            raise GuardActionRequired("Reconcile the outstanding operation before reopening a stage.")
         entry = find_required_stage(state, stage)
         if entry.get("status") != "COMPLETED":
             raise GuardError(f"Required stage is not completed and cannot be reopened: {entry.get('id')}")
@@ -809,7 +1556,7 @@ def checkpoint(
                 row for row in state.get("events", [])
                 if not (
                     row.get("event") == "ATTEMPT_REJECTED"
-                    and str(row.get("stage", "")).casefold() == str(entry.get("id", "")).casefold()
+                    and normalize_stage_key(str(row.get("stage", ""))) == normalize_stage_key(str(entry.get("id", "")))
                     and row.get("swimwear_rung")
                 )
             ]
@@ -818,6 +1565,8 @@ def checkpoint(
         state["phase"] = "CORRECTION"
         state["next_required_action"] = "NEXT_EXECUTION_OR_BLOCKER"
     elif event == "BLOCKER":
+        if state.get("active_attempt") or any(a.get("status") == "UNKNOWN" for a in state.get("attempts", [])):
+            raise GuardActionRequired("Record STOP/timeout and reconcile the active operation before declaring a blocker.")
         pending = pending_required_stages(state)
         if state.get("task_kind") == "IMAGE_GENERATION" and pending:
             if not (hard_blocker and safe_routes_exhausted):
@@ -832,13 +1581,29 @@ def checkpoint(
         state["next_required_action"] = "USER_DECISION"
         state["blocker"] = summary.strip()
     elif event == "COMPLETE":
-        if state.get("task_kind") == "IMAGE_GENERATION" and not state.get("first_visible_result_at"):
-            raise GuardError("An image-generation task cannot complete without a recorded visible image result.")
+        if state.get("status") in {"WAITING_FOR_USER", "STOPPED", "CANCELLED"} or state.get("waiting_since"):
+            raise GuardError("A waiting, stopped, or cancelled task cannot complete.")
+        if state.get("active_attempt") or any(a.get("status") == "UNKNOWN" for a in state.get("attempts", [])):
+            raise GuardActionRequired("Task completion requires no active or UNKNOWN attempt; reconcile it first.")
         pending = pending_required_stages(state)
         if pending:
             raise GuardActionRequired(
                 "Task completion is forbidden while required stages remain pending: " + ", ".join(pending)
             )
+        if state.get("task_kind") == "IMAGE_GENERATION":
+            latest = next((row for row in state.get("attempts", []) if row.get("attempt_id") == state.get("latest_delivered_attempt_id")), None)
+            most_recent = state.get("attempts", [])[-1] if state.get("attempts") else None
+            if not latest or not most_recent or latest.get("attempt_id") != most_recent.get("attempt_id"):
+                raise GuardError("Image completion requires the latest attempt to be the currently delivered TEST result.")
+            if latest and int(latest.get("task_revision", -1)) != int(state.get("task_revision", 0)):
+                raise GuardError("The delivered result belongs to an earlier task revision; produce and deliver the corrected result.")
+            if (
+                state.get("latest_delivered_result_status") != "TEST"
+                or not state.get("delivered_result_at")
+                or not latest
+                or latest.get("status") != "DELIVERED"
+            ):
+                raise GuardError("Image completion requires an available, QA-passed TEST result and RESULT_DELIVERED receipt.")
         state["status"] = "COMPLETE"
         state["phase"] = "COMPLETE"
         state["next_required_action"] = "NONE"
@@ -882,6 +1647,23 @@ def checkpoint(
     if event == "WAITING_FOR_USER":
         event_details["user_decision_essential"] = user_decision_essential
         event_details["safe_routes_exhausted"] = safe_routes_exhausted
+    if attempt_id:
+        event_details["attempt_id"] = attempt_id
+    if event == "EXECUTION_STARTED":
+        event_details["attempt_id"] = str(attempt_id or state["active_attempt"]["attempt_id"])
+        event_details["reference_binding"] = state["attempts"][-1].get("reference_binding")
+    if event == "VISIBLE_RESULT":
+        event_details["attempt_id"] = str(attempt_id)
+        event_details["result_status"] = str(result_status or "AVAILABLE").upper()
+    if event == "RESULT_DELIVERED":
+        event_details["delivery_evidence"] = list(delivery_evidence)
+    if event in {"ATTEMPT_UNKNOWN", "ATTEMPT_RECONCILED", "ATTEMPT_REFUSED", "STOP", "CANCEL"}:
+        event_details["outcome"] = outcome or event
+        if reconciliation_evidence:
+            event_details["reconciliation_evidence"] = reconciliation_evidence.strip()
+    if event == "ATTEMPT_REJECTED":
+        event_details["attempt_id"] = str(attempt_id)
+        event_details["outcome"] = "QA_REJECTED"
     append_event(state, event, summary, moment, **event_details)
     atomic_write_json(path, state)
     if event == "PREFLIGHT":
@@ -964,12 +1746,21 @@ def make_parser() -> argparse.ArgumentParser:
         required=True,
         choices=(
             "PREFLIGHT", "WAITING_FOR_USER", "USER_RESUMED", "SCOPE_CHANGE",
-            "READY_FOR_EXECUTION", "CALL_VALIDATED", "EXECUTION_STARTED", "VISIBLE_RESULT",
-            "ATTEMPT_REJECTED", "ESCALATION_ORCHESTRATOR_RECORDED", "USER_CORRECTION", "STAGE_COMPLETED", "STAGE_REOPENED",
+            "READY_FOR_EXECUTION", "CALL_VALIDATED", "EXECUTION_STARTED", "VISIBLE_RESULT", "RESULT_DELIVERED",
+            "ATTEMPT_REJECTED", "ATTEMPT_REFUSED", "ATTEMPT_UNKNOWN", "ATTEMPT_RECONCILED", "STOP", "CANCEL",
+            "ESCALATION_ORCHESTRATOR_RECORDED", "USER_CORRECTION", "STAGE_COMPLETED", "STAGE_REOPENED",
             "BLOCKER", "COMPLETE",
         ),
     )
     check.add_argument("--summary", required=True)
+    check.add_argument("--reference-plan", help="Executable REFERENCE_PLAN whose current prompt and source hashes are bound at readiness/start.")
+    check.add_argument("--attempt-id", help="Durable provider/operator attempt identifier returned by EXECUTION_STARTED.")
+    check.add_argument("--provider-operation-receipt", default="", help="Optional durable provider job/operation receipt.")
+    check.add_argument("--result-status", choices=("TEST", "STAGING", "REJECTED"))
+    check.add_argument("--outcome", help="Durable operation outcome for refusal, timeout reconciliation, or rejection.")
+    check.add_argument("--delivery-evidence", action="append", default=[], help="Actual user-visible delivery receipt/link.")
+    check.add_argument("--reconciliation-evidence", default="", help="Durable provider/operator receipt for timeout or cancellation reconciliation.")
+    check.add_argument("--execution-call", help="JSON file containing this exact resolved call's prompt and slots; otherwise use REFERENCE_PLAN.execution_call.")
     check.add_argument("--evidence", action="append", default=[])
     check.add_argument("--stage", help="Required-stage id for STAGE_COMPLETED or STAGE_REOPENED.")
     check.add_argument("--qa-layer", default="", help="Failed QA layer; required to trigger corrected repeated-failure escalation.")
@@ -1052,6 +1843,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 max_execution_minutes=args.max_execution_minutes,
             )
         elif args.command == "checkpoint":
+            execution_call = None
+            if args.execution_call:
+                try:
+                    execution_call = json.loads(Path(args.execution_call).read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError) as error:
+                    raise GuardError(f"Cannot read execution_call JSON: {error}") from error
             state = checkpoint(
                 Path(args.state),
                 event=args.event,
@@ -1076,6 +1873,14 @@ def main(argv: Sequence[str] | None = None) -> int:
                 user_approved_extra_generation=args.user_approved_extra_generation,
                 extra_generation_evidence=args.extra_generation_evidence,
                 qa_layer=args.qa_layer,
+                reference_plan=args.reference_plan,
+                execution_call=execution_call,
+                attempt_id=args.attempt_id,
+                result_status=args.result_status,
+                delivery_evidence=args.delivery_evidence,
+                outcome=args.outcome,
+                reconciliation_evidence=args.reconciliation_evidence,
+                provider_operation_receipt=args.provider_operation_receipt,
             )
         else:
             state = guard_status(Path(args.state))

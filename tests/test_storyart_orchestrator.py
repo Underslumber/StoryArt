@@ -111,7 +111,7 @@ class StoryArtOrchestratorTests(unittest.TestCase):
 
     def test_generator_requires_stage_and_requested_contract(self):
         self.initialize()
-        with self.assertRaisesRegex(orchestrator.OrchestratorError, "requires --stage"):
+        with self.assertRaisesRegex(orchestrator.OrchestratorError, "root-only"):
             orchestrator.dispatch_handoff(
                 self.state_path,
                 "GENERATOR_OPERATOR",
@@ -122,6 +122,17 @@ class StoryArtOrchestratorTests(unittest.TestCase):
                 "",
                 "REQUESTED_DELIVERABLE",
             )
+
+    def test_generator_and_registrar_are_root_only(self):
+        self.initialize()
+        for role in ("GENERATOR_OPERATOR", "REGISTRAR"):
+            with self.subTest(role=role), self.assertRaisesRegex(
+                orchestrator.OrchestratorError, "root-only"
+            ):
+                orchestrator.dispatch_handoff(
+                    self.state_path, role, "Perform production action.",
+                    [str(self.guard_path)], [str(self.request_root)], [], "FRAME", "REQUESTED_DELIVERABLE",
+                )
 
     def test_dependency_must_be_done(self):
         self.initialize()
@@ -159,12 +170,14 @@ class StoryArtOrchestratorTests(unittest.TestCase):
             "",
             "",
         )
+        evidence_path = self.request_root / "style-review.md"
+        evidence_path.write_text("Selected one compatible style reference.", encoding="utf-8")
         orchestrator.complete_handoff(
             self.state_path,
             first["handoff_id"],
             "DONE",
             "Selected one compatible style reference.",
-            [str(self.guard_path)],
+            [str(evidence_path)],
         )
         second = orchestrator.dispatch_handoff(
             self.state_path,
@@ -178,33 +191,24 @@ class StoryArtOrchestratorTests(unittest.TestCase):
         )
         self.assertEqual(second["status"], "PENDING")
 
-    def test_generator_cannot_write_to_infrastructure(self):
+    def test_done_requires_existing_file_evidence_and_records_hash(self):
         self.initialize()
-        with self.assertRaisesRegex(orchestrator.OrchestratorError, "infrastructure"):
-            orchestrator.dispatch_handoff(
-                self.state_path,
-                "GENERATOR_OPERATOR",
-                "Generate the declared frame",
-                [str(self.guard_path)],
-                [str(ROOT / "tools")],
-                [],
-                "FRAME_01",
-                "REQUESTED_DELIVERABLE",
+        handoff = orchestrator.dispatch_handoff(
+            self.state_path, "STYLE_LIBRARIAN", "Inspect style references.",
+            [str(self.guard_path)], [], [], "", "",
+        )
+        with self.assertRaisesRegex(orchestrator.OrchestratorError, "DONE requires"):
+            orchestrator.complete_handoff(
+                self.state_path, handoff["handoff_id"], "DONE", "Finished.", []
             )
-
-    def test_registrar_cannot_write_outside_generation_data(self):
-        self.initialize()
-        with self.assertRaisesRegex(orchestrator.OrchestratorError, "REGISTRAR may write"):
-            orchestrator.dispatch_handoff(
-                self.state_path,
-                "REGISTRAR",
-                "Record the accepted frame",
-                [str(self.guard_path)],
-                [str(ROOT / "README.md")],
-                [],
-                "FRAME_01",
-                "",
-            )
+        evidence_path = self.request_root / "evidence.md"
+        evidence_path.write_text("Inspected source hashes and role compatibility.", encoding="utf-8")
+        completed = orchestrator.complete_handoff(
+            self.state_path, handoff["handoff_id"], "DONE", "One compatible source selected.",
+            [str(evidence_path)],
+        )
+        self.assertEqual(completed["evidence"][0]["path"], orchestrator.relative_project_path(evidence_path))
+        self.assertEqual(len(completed["evidence"][0]["sha256"]), 64)
 
     def test_agent_prompt_contains_explicit_paths(self):
         self.initialize()

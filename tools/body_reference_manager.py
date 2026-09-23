@@ -37,6 +37,7 @@ REQUIRED_REVIEW_FIELDS = {
     "camera_angle", "framing", "body_build", "proportion_tags", "foreshortening",
     "clothing_interaction", "object_interaction", "contact_points",
     "anatomy_reliability", "allowed_roles", "safety_status",
+    "visible_presentation", "anatomy_compatibility", "anatomy_evidence_source",
 }
 
 
@@ -229,6 +230,9 @@ def command_stage_update(args: argparse.Namespace) -> None:
                 "object_interaction": "",
                 "contact_points": "",
                 "anatomy_reliability": "",
+                "visible_presentation": "UNKNOWN",
+                "anatomy_compatibility": "UNKNOWN",
+                "anatomy_evidence_source": "UNKNOWN",
                 "allowed_roles": [],
                 "not_for_roles": [],
                 "safety_status": "",
@@ -293,6 +297,9 @@ def validate_review_entries(inventory: list[dict[str, str]], entries: list[dict[
             roles = set(parse_list(entry["allowed_roles"]))
             if not roles or not roles.issubset(AUX_ROLES):
                 raise BodyReferenceError(f"Invalid allowed_roles for {source_id}: {sorted(roles)}")
+            compatibility = set(parse_list(entry["anatomy_compatibility"]))
+            if not compatibility.issubset({"UNKNOWN", "MALE_ANATOMY", "FEMALE_ANATOMY", "ANDROGYNOUS_ANATOMY"}):
+                raise BodyReferenceError(f"Invalid anatomy_compatibility for {source_id}: {sorted(compatibility)}")
             safety = str(entry["safety_status"]).upper()
             if safety not in SAFETY_STATUSES:
                 raise BodyReferenceError(f"Invalid safety_status for {source_id}: {safety}")
@@ -375,6 +382,9 @@ def command_apply_update(args: argparse.Namespace) -> None:
             "object_interaction": safe_token(str(entry["object_interaction"]), "NONE"),
             "contact_points": safe_token(str(entry["contact_points"]), "INFER_FROM_IMAGE"),
             "anatomy_reliability": safe_token(str(entry["anatomy_reliability"]), "MEDIUM"),
+            "visible_presentation": safe_token(str(entry.get("visible_presentation", "UNKNOWN")), "UNKNOWN"),
+            "anatomy_compatibility": ";".join(parse_list(entry.get("anatomy_compatibility", "UNKNOWN"))),
+            "anatomy_evidence_source": str(entry.get("anatomy_evidence_source", "UNKNOWN")).strip() or "UNKNOWN",
             "allowed_roles": ";".join(parse_list(entry["allowed_roles"])),
             "not_for_roles": ";".join(sorted(not_for)),
             "safety_status": safety,
@@ -385,6 +395,10 @@ def command_apply_update(args: argparse.Namespace) -> None:
             "do_not_use_for": "Face, identity, hair, skin tone, costume design, color, linework, rendering style, lighting, or background style.",
             "notes": str(entry.get("notes", "")),
         })
+    # Append new reviewed metadata columns without rebuilding or renumbering the
+    # existing library. Older rows have empty CSV cells, interpreted as UNKNOWN.
+    metadata_fields = ("visible_presentation", "anatomy_compatibility", "anatomy_evidence_source")
+    output_fields = list(fields) + [field for field in metadata_fields if field not in fields]
     destinations = [destination for _, destination in planned]
     if len(destinations) != len(set(destinations)) or any(path.exists() for path in destinations):
         raise BodyReferenceError("The append plan contains a duplicate or existing destination; no files were changed.")
@@ -406,7 +420,7 @@ def command_apply_update(args: argparse.Namespace) -> None:
                 raise BodyReferenceError(f"Hash mismatch after copy: {destination}")
         temporary = manifest.with_suffix(".csv.update.tmp")
         with temporary.open("w", encoding="utf-8-sig", newline="") as handle:
-            writer = csv.DictWriter(handle, fieldnames=fields)
+            writer = csv.DictWriter(handle, fieldnames=output_fields, extrasaction="ignore")
             writer.writeheader()
             writer.writerows(current + new_rows)
         temporary.replace(manifest)
@@ -418,7 +432,7 @@ def command_apply_update(args: argparse.Namespace) -> None:
 
     update_log = batch / "APPLIED_REFERENCES.csv"
     with update_log.open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer = csv.DictWriter(handle, fieldnames=output_fields, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(new_rows)
     metadata["status"] = "APPLIED"
