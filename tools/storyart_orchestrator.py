@@ -35,7 +35,7 @@ ROLE_DESCRIPTIONS = {
     "GENERATOR_OPERATOR": "Execute one declared generator call without research or prompt drift.",
     "VISUAL_QA": "Independently score every required semantic QA layer.",
     "REGISTRAR": "Record and store a finalized result through existing StoryArt managers.",
-    "ESCALATION_ORCHESTRATOR": "Exceptional read-only escalation: return one bounded Terra/Luna work order from corrected repeated-failure evidence.",
+    "ESCALATION_ORCHESTRATOR": "Exceptional read-only escalation: return one bounded Luna/Sol work order from corrected repeated-failure evidence.",
 }
 FORBIDDEN_INFRASTRUCTURE_ROOTS = {
     "tools",
@@ -315,7 +315,7 @@ def dispatch_handoff(
             "communicate with the user, or edit orchestration state. Return a concise result "
             "with evidence."
             + (
-                " This is a one-shot exceptional escalation only: do not use tools, generate, test, edit, QA, approve, or spawn agents. Return one evidence-based bounded work order for a Terra or Luna executor; the root dispatches it."
+                " This is a one-shot exceptional escalation only: do not use tools, generate, test, edit, QA, approve, or spawn agents. Return one evidence-based bounded work order for a Luna or Sol executor. Sol High requires evidence of a substantive Luna failure for either complex implementation or repair; complexity alone does not qualify. The root dispatches it."
                 if role == "ESCALATION_ORCHESTRATOR" else ""
             )
         ),

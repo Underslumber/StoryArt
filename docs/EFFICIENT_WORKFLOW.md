@@ -11,10 +11,11 @@ It cannot itself change the model of an already running session.
 
 | Work | Default assignment | Contract |
 | --- | --- | --- |
-| Image production root/planning/integration | Terra Medium | Owns user communication, guard transitions, choices, final decision, and evidence reconciliation. |
-| Bounded metadata/catalog discovery | Luna Low | Receives a bounded packet and returns evidence; no user conversation or broad writes. |
-| Code implementation/ordinary debugging | Terra High | Owns only explicitly named files and verification. |
-| Independent code review | fresh Sol Medium | Read-only review of the actual diff after machine checks. |
+| Ordinary image production | Luna Medium | Default model for image work; root keeps user communication, guard transitions, choices, final decision, and evidence reconciliation. |
+| Bounded metadata/catalog discovery | Luna High | Receives a bounded packet and returns evidence; no user conversation or broad writes. |
+| Code planning/integration and independent review | Sol Low | Root plans and integrates; a fresh Sol Low reviews the actual diff after machine checks. |
+| Discovery, mechanics, ordinary code implementation | Luna High | Owns only explicitly named files and verification. |
+| Complex implementation or repair after evidenced Luna failure | Sol High | Sol High requires evidence of a substantive Luna failure for either complex implementation or repair; complexity alone does not qualify. |
 
 Model and effort are requested when an agent is spawned; prose and tools cannot
 switch the current model. On a clean setup, the provided configuration template
@@ -37,9 +38,11 @@ Retain the overall limit of two ordinary repair loops. Reset neither the count
 nor the scope after a failed check; escalate the concrete evidence to root.
 
 The project TOML defaults are project-wide and optimized for image work, not
-a per-task scheduler. For a code/infrastructure task explicitly select Sol Medium
-for the root at task creation and Luna High for discovery, then Terra High for
-implementation and fresh Sol Medium for review. If an existing root differs,
+a per-task scheduler. For a code/infrastructure task explicitly select Sol Low
+for the root at task creation and Luna High for discovery and ordinary
+implementation, then fresh Sol Low for review. Sol High requires evidence of
+a substantive Luna failure for either complex implementation or repair;
+complexity alone does not qualify. If an existing root differs,
 report that fact and use explicit worker assignments; never claim it switched.
 
 ## Image-production route
@@ -52,10 +55,10 @@ required semantic layers remain separately inspected and recorded.
 
 | Delegated image role | Requested model and effort | Limit |
 | --- | --- | --- |
-| `STYLE_LIBRARIAN` / `IDENTITY_CURATOR` | `gpt-5.6-terra`, Medium | Artistic selection; normally root |
-| `CALL_PLANNER` | `gpt-5.6-terra`, Medium | Normally root |
-| Routine `VISUAL_QA` | `gpt-5.6-terra`, Medium | Normally root |
-| Critical independent QA | fresh `gpt-5.6-sol`, Medium | Objective high-impact gate only |
+| `STYLE_LIBRARIAN` / `IDENTITY_CURATOR` | `gpt-6-luna`, High | Bounded source discovery; root owns choices and integration |
+| `CALL_PLANNER` | `gpt-6-luna`, Medium | Ordinary image planning; root integrates |
+| Routine `VISUAL_QA` | `gpt-6-luna`, Medium | Only when a separate bounded review is useful |
+| Critical independent QA | fresh `gpt-6-sol`, Low | Objective high-impact gate only |
 | `GENERATOR_OPERATOR` / `REGISTRAR` | No agent; root executes sequentially | N/A |
 
 These are spawn requests, not a runtime scheduler or a way to switch the
@@ -112,7 +115,7 @@ When a second failure of the same QA layer at the same stage occurs after an
 explicit correction addressed the first, the guard requires one `ESCALATION_ORCHESTRATOR` incident before a
 further attempt. It is an exceptional, read-only `gpt-6-astra` Low error handler,
 not a per-frame worker: it receives recorded evidence and returns one bounded
-Terra/Luna work order. It must not use tools, generate, test, edit, perform QA,
+Luna/Sol work order. It must not use tools, generate, test, edit, perform QA,
 approve, or spawn agents; the root dispatches any recommended executor. It runs
 once per corrected incident. Calibration remains a user-requested or
 user-consented proposal only.
@@ -133,17 +136,14 @@ This section supersedes historical coding-model assignments and repeated full-po
 inspection requirements only for orchestration/preparation. All art, safety,
 archive, identity, approval and semantic QA requirements remain mandatory.
 
-- Use Terra Medium as the single ordinary image-production main. Existing sessions
+- Use Luna Medium as the single ordinary image-production default. Existing sessions
   do not switch models merely because this document or config changes.
-- Luna Low is only a bounded metadata/search worker; return ambiguous semantic
-  classification to Terra Medium root. It does not select authoritative visual identity.
-- Luna Medium may execute a repeatable fixed-reference small-delta task only after
-  its task class has retained quality in evaluation. It is not approved as the
-  sole visual acceptance gate by the current two-image pilot.
+- Luna High handles bounded metadata/search discovery; return ambiguous semantic
+  classification to the Luna Medium image lead. It does not select authoritative visual identity.
 - Usually use zero workers; one when there is useful separate work, at most two
   for independent preparation. No nested agents, full-history forks, or agents
   merely for CLI, archive, generator calls, or individual QA-layer checkboxes.
-- Request fresh Sol Medium for a new face before dependent base views, final
+- Request fresh Sol Low for a new face before dependent base views, final
   reusable-base acceptance, changed authoritative identity/style sources,
   conflicting QA requirements, or a repeated defect of the same layer. Do not
   request it automatically for every routine frame. An LLM PASS is not proof
@@ -151,8 +151,11 @@ archive, identity, approval and semantic QA requirements remain mandatory.
 - After the first failure, correct the specific cause. After the same-layer
   repeated failure, obtain one diagnosis before another authorized attempt;
   do not automatically generate a stack of prompt variants.
-- Astra Low is exceptional diagnosis only. Code development remains separate:
-  Terra High implementation and fresh Sol Medium actual-diff review.
+- Astra Low is exceptional read-only diagnosis only. Code development remains
+  separate: Sol Low planning/integration and fresh review; Luna High discovery
+  and ordinary implementation. Sol High requires evidence of a substantive Luna
+  failure for either complex implementation or repair; complexity alone does not
+  qualify.
 - Worker packets include explicit model/effort, fork_turns="none", authoritative
   input paths, acceptance and a bounded return. Never dump the complete tool
   catalog. Timing/tool discovery is optional and must not displace the task.

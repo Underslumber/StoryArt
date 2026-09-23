@@ -48,9 +48,9 @@ loop or change scope silently.
 
 ## Image-specific model routing
 
-Apply the image-specific authority in `docs/EFFICIENT_WORKFLOW.md`: Terra Medium
-main; optional Luna Low metadata worker; gated Luna Medium repeatable mode;
-Sol Medium only objective high-impact independent QA. Normal worker count is
+Apply the image-specific authority in `docs/EFFICIENT_WORKFLOW.md`: Luna Medium
+for ordinary image work; optional Luna High metadata discovery worker; Sol Low for
+planning/integration and objective high-impact independent review. Normal worker count is
 zero or one, maximum two independent workers. Code-development routing stays
 separate. Valid hash/role/view/applicability-backed complete reviews may be
 reused across tasks; inspect selected originals and changed/uncovered sources.

@@ -88,7 +88,7 @@ orchestration state directly.
 - When the guard records a same-stage, same-layer failure that persists after
   an explicit correction addressed the first, dispatch the one-shot `ESCALATION_ORCHESTRATOR` profile
   only while that incident is due. It is `gpt-6-astra` Low exceptional error
-  handling, read-only, and returns one bounded Terra/Luna work order. It must
+  handling, read-only, and returns one bounded Luna/Sol work order. It must
   not use tools, generate, test, edit, QA, approve, or spawn; root dispatches
   the recommended executor. It is never an ordinary diagnostic or per-frame role.
 - Use `style-readiness` only to surface a consent request when five unique
@@ -105,10 +105,12 @@ mandatory StoryArt stage is complete.
 
 ## Routing precedence
 
-Use `docs/EFFICIENT_WORKFLOW.md` image-specific routing: Terra Medium for the
-main artistic work and ordinary visual QA; Luna Low only bounded metadata;
-Luna Medium repeatable mode remains evaluation-gated; fresh Sol Medium only at
-objective critical QA gates. Zero workers normally, one if helpful, two only
+Use `docs/EFFICIENT_WORKFLOW.md` routing: Luna Medium for ordinary image work;
+Sol Low for planning/integration and fresh objective review; Luna High for
+discovery and ordinary code implementation. Sol High requires evidence of a
+substantive Luna failure for either complex implementation or repair; complexity
+alone does not qualify. Astra Low remains
+exceptional, read-only escalation only. Zero workers normally, one if helpful, two only
 for independent preparation. No agents for generator/archive/CLI operations.
 Complete hash/role/view/applicability-backed review evidence can span tasks;
 selected originals and changed or uncovered sources still require inspection.

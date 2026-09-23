@@ -63,17 +63,21 @@ references, change QA, call the generator, or modify infrastructure.
   that persists after an explicit correction addressed the first.
 - Requested profile is `gpt-6-astra` at Low effort, strictly as exceptional
   top-level error handling, not routine review or a per-frame worker.
-- Consume only listed evidence and return one bounded, evidence-based Terra or
-  Luna work order. The root alone dispatches that executor; no nesting.
+- Consume only listed evidence and return one bounded, evidence-based Luna or
+  Sol work order. The root alone dispatches that executor; no nesting. Sol High
+  requires evidence of a substantive Luna failure for either complex
+  implementation or repair; complexity alone does not qualify.
 - Remain read-only and do not use tools, generate, test, edit, perform QA,
   approve, or spawn agents.
 
 ## Routing precedence
 
-Use `docs/EFFICIENT_WORKFLOW.md` image-specific routing: Terra Medium for the
-main artistic work and ordinary visual QA; Luna Low only bounded metadata;
-Luna Medium repeatable mode remains evaluation-gated; fresh Sol Medium only at
-objective critical QA gates. Zero workers normally, one if helpful, two only
+Use `docs/EFFICIENT_WORKFLOW.md` routing: Luna Medium for ordinary image work;
+Sol Low for planning/integration and fresh objective review; Luna High for
+discovery and ordinary code implementation. Sol High requires evidence of a
+substantive Luna failure for either complex implementation or repair; complexity
+alone does not qualify. Astra Low remains
+exceptional, read-only escalation only. Zero workers normally, one if helpful, two only
 for independent preparation. No agents for generator/archive/CLI operations.
 Complete hash/role/view/applicability-backed review evidence can span tasks;
 selected originals and changed or uncovered sources still require inspection.

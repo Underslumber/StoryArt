@@ -517,10 +517,10 @@ class TaskExecutionGuardTests(unittest.TestCase):
             with self.assertRaises(guard.GuardActionRequired):
                 guard.checkpoint(path, event="EXECUTION_STARTED", stage="FRONT", summary="Incorrect extra retry.", now=BASE_TIME)
             evidence = Path(folder) / "work-order.md"
-            evidence.write_text("Terra work order", encoding="utf-8")
+            evidence.write_text("Luna/Sol work order", encoding="utf-8")
             state = guard.checkpoint(
                 path, event="ESCALATION_ORCHESTRATOR_RECORDED", stage="FRONT", qa_layer="FACE_GEOMETRY",
-                evidence=[str(evidence)], summary="Astra returned one bounded Terra work order.", now=BASE_TIME,
+                evidence=[str(evidence)], summary="Astra returned one bounded Luna/Sol work order.", now=BASE_TIME,
             )
             self.assertEqual(state["next_required_action"], "NEXT_SAFE_EXECUTION")
 

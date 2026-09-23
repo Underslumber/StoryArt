@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -35,6 +36,50 @@ class StoryArtOrchestratorTests(unittest.TestCase):
 
     def tearDown(self):
         self.temp.cleanup()
+
+    def test_project_config_template_uses_economical_gpt6_defaults(self):
+        config_path = ROOT / "config" / "codex.project.example.toml"
+        config_text = config_path.read_text(encoding="utf-8")
+        config = tomllib.loads(config_text)
+
+        self.assertEqual(config["model"], "gpt-6-luna")
+        self.assertEqual(config["model_reasoning_effort"], "medium")
+        self.assertEqual(config["agents"]["default_subagent_model"], "gpt-6-luna")
+        self.assertEqual(config["agents"]["default_subagent_reasoning_effort"], "high")
+        allowed_models = {"gpt-6-astra", "gpt-6-sol", "gpt-6-luna"}
+        configured_models = {config["model"], config["agents"]["default_subagent_model"]}
+        self.assertLessEqual(configured_models, allowed_models)
+
+    def test_sol_high_gate_is_consistent_across_routing_contracts(self):
+        required_condition = (
+            "Sol High requires evidence of a substantive Luna failure for either "
+            "complex implementation or repair; complexity alone does not qualify."
+        )
+        paths = (
+            ROOT / "docs" / "EFFICIENT_WORKFLOW.md",
+            ROOT / "skills" / "storyart-orchestrator" / "SKILL.md",
+            ROOT / "skills" / "storyart-orchestrator" / "references" / "roles.md",
+            ROOT / "skills" / "storyart-orchestrator" / "references" / "handoff-contract.md",
+        )
+        for path in paths:
+            with self.subTest(path=path):
+                contract_text = " ".join(path.read_text(encoding="utf-8").split())
+                self.assertIn(required_condition, contract_text)
+
+    def test_sol_low_is_reserved_for_planning_integration_and_review(self):
+        routing_paths = (
+            ROOT / "docs" / "EFFICIENT_WORKFLOW.md",
+            ROOT / "skills" / "storyart-orchestrator" / "SKILL.md",
+            ROOT / "skills" / "storyart-orchestrator" / "references" / "roles.md",
+            ROOT / "skills" / "storyart-orchestrator" / "references" / "handoff-contract.md",
+        )
+        for path in routing_paths:
+            with self.subTest(path=path):
+                self.assertNotIn("Sol Medium", path.read_text(encoding="utf-8"))
+
+        workflow = (ROOT / "docs" / "EFFICIENT_WORKFLOW.md").read_text(encoding="utf-8")
+        self.assertIn("| Code planning/integration and independent review | Sol Low |", workflow)
+        self.assertIn("| Critical independent QA | fresh `gpt-6-sol`, Low |", workflow)
 
     def initialize(self):
         return orchestrator.initialize_state(self.state_path, self.guard_path)
@@ -191,6 +236,12 @@ class StoryArtOrchestratorTests(unittest.TestCase):
         self.assertEqual(handoff["execution_profile"]["model"], "gpt-6-astra")
         self.assertEqual(handoff["execution_profile"]["reasoning_effort"], "low")
         self.assertIn("do not use tools", handoff["agent_prompt"])
+        self.assertIn("Luna or Sol executor", handoff["agent_prompt"])
+        self.assertIn("Sol High requires evidence of a substantive Luna failure", handoff["agent_prompt"])
+        self.assertIn("complex implementation or repair", handoff["agent_prompt"])
+        self.assertIn("complexity alone does not qualify", handoff["agent_prompt"])
+        self.assertNotIn("Sol High only for complex", handoff["agent_prompt"])
+        self.assertNotIn("Terra", handoff["agent_prompt"])
         guard_data = json.loads(self.guard_path.read_text(encoding="utf-8"))
         self.assertEqual(guard_data["escalation_incidents"][0]["status"], "CONSUMED")
         with self.assertRaisesRegex(orchestrator.OrchestratorError, "due corrected"):

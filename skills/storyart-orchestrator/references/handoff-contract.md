@@ -21,8 +21,10 @@ Every handoff is created by `tools/storyart_orchestrator.py` and stored under
 - Read-only roles receive no write path.
 - `ESCALATION_ORCHESTRATOR` is a one-shot `gpt-6-astra` Low exceptional error
   handler. It has no write path and may not use tools, generate, test, edit,
-  QA, approve, or spawn. Its only output is one bounded Terra/Luna work order;
-  the root dispatches it under the existing no-nesting invariant.
+  QA, approve, or spawn. Its only output is one bounded Luna/Sol work order;
+  the root dispatches it under the existing no-nesting invariant. Sol High
+  requires evidence of a substantive Luna failure for either complex
+  implementation or repair; complexity alone does not qualify.
 - `GENERATOR_OPERATOR` and `REGISTRAR` are root-held logical responsibilities,
   not dispatchable subagent roles in ordinary production. The root applies their
   active-request, `GENERATION_RESULTS`, and approved-destination write limits.
@@ -59,10 +61,12 @@ whether a recovery is justified.
 
 ## Routing precedence
 
-Use `docs/EFFICIENT_WORKFLOW.md` image-specific routing: Terra Medium for the
-main artistic work and ordinary visual QA; Luna Low only bounded metadata;
-Luna Medium repeatable mode remains evaluation-gated; fresh Sol Medium only at
-objective critical QA gates. Zero workers normally, one if helpful, two only
+Use `docs/EFFICIENT_WORKFLOW.md` routing: Luna Medium for ordinary image work;
+Sol Low for planning/integration and fresh objective review; Luna High for
+discovery and ordinary code implementation. Sol High requires evidence of a
+substantive Luna failure for either complex implementation or repair; complexity
+alone does not qualify. Astra Low remains
+exceptional, read-only escalation only. Zero workers normally, one if helpful, two only
 for independent preparation. No agents for generator/archive/CLI operations.
 Complete hash/role/view/applicability-backed review evidence can span tasks;
 selected originals and changed or uncovered sources still require inspection.
