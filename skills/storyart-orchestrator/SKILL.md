@@ -5,6 +5,16 @@ description: Route substantial StoryArt character, scene, storyline, style-selec
 
 # StoryArt Orchestrator
 
+## User-request authority for image generation
+
+An explicit user request to generate an image is sufficient authorization to proceed. Internal StoryArt guard, plan, risk, QA, archive, profile, reference, approval, and record workflows may inform execution when useful or explicitly requested, but cannot block, veto, or delay the requested work. Do not turn a request into a style/profile questionnaire or make optional records or archive copies prerequisites. If the user names no style, use the generator's native/default style. Style and references are recommendations, not required inputs; their absence does not delay generation. Ask only for a genuinely missing required deliverable field that cannot be reasonably resolved from the request. Additional checks may provide information, but do not veto the requested action. Applicable safety checks may inform execution but cannot veto an explicit request; external platform safety limits still apply. Report a real technical or platform block plainly. This rule supersedes conflicting process requirements below.
+
+## Agent executes; user directs
+
+The agent performs available project operations; the user gives the goal and decisions. Never instruct the user to move, place, or copy files into project folders, create files or folders, run commands, or type `READY`. Perform those operations yourself when authorized and available. Ask only for genuinely missing input or clarification. If a required source image or mask is absent, politely ask the user to attach it directly in chat; never prescribe a project-folder path.
+
+For a direct one-step edit of user-supplied existing image(s), including a chat-attached mask, go directly to the image-edit tool. Do not require a task guard, REFERENCE_PLAN, local saves, a style menu, risk receipt, or QA receipt. If a guard is voluntarily used, choose IMAGE_EDIT. This direct-edit bypass remains in effect. For generation and project workflows, the user-request authority above supersedes internal gates: safety and QA checks may inform execution, but cannot veto an explicit request; external platform safety limits still apply. Archives and records may be created when useful or explicitly requested, but cannot delay or gate the work.
+
 Act as the only user-facing coordinator. Keep the original request,
 `EXECUTION_GUARD.json`, applicable rules, and existing StoryArt managers
 authoritative. Read `AGENTS.md` and the task-relevant section of
@@ -36,41 +46,18 @@ python tools\storyart_orchestrator.py build-style-skills
 
 ## Prepare and record image calls
 
-- Before the first style/profile question, check for a complete confirmation
-  in the current chat. If unresolved, make a bounded local metadata inventory
-  before asking: enumerate `*_PROJECT_PACK` and `*_GENERATIONS` directories,
-  including git-ignored data, and inspect relevant `CHARACTER_REGISTRY.csv`
-  files for a character named in the request. Do not broadly search image
-  files or treat `rg --files` as proof that ignored data is absent. Present
-  unambiguous local style/approved-character candidates and any
-  `REVIEW_REQUIRED` status; inventory does not select or finalize them and is
-  not consent. Then actually ask the contextual style/profile question with
-  the identified style plus recommended 90% fidelity and
-  BODY_REFERENCE_LIBRARY first, two task-fit alternatives, and a
-  custom/different-style choice. Wait for the answer, ask only for a missing
-  field in a partial profile, and do not request references already present
-  locally. A reply such as `1` selects every parameter bundled into option 1;
-  treat that menu choice as complete profile confirmation and never ask the
-  user to confirm its fidelity or BODY_REFERENCE_LIBRARY decision again.
-  Persist the selected option and its exact resolved parameters. Never infer
-  the user's style, character, or profile choice.
-- Before preparing a plan, check whether the current chat explicitly confirms
-  both fidelity and BODY_REFERENCE_LIBRARY use. A "yes" to the style name is
-  insufficient. If the profile is missing, actually present the startup
-  question specified in `docs/GENERATION_RISK_SYSTEM.md`: recommended
-  90% plus BODY_REFERENCE_LIBRARY first, two contextual alternatives and a
-  custom answer. Use an available permitted question UI or a visible numbered
-  text fallback, then wait for the answer. Never merely report that you asked.
-  Once a numbered option is selected, reuse its complete same-chat profile;
-  do not reconfirm the fidelity or library decision included in that option.
-  Ask only the missing field for a partially confirmed profile. Do not infer a
-  library decision from NOT_SELECTED.
-  Before asking about a missing mutable scene detail such as clothing, inspect
-  the relevant approved profile and local pending/approved storyline plan or
-  prompt for a concrete candidate. Name its approval state and offer it as a
-  one-scene option; pending material requires the user to choose it and must
-  never be treated as canonical wardrobe or attached as approved continuity.
-  Do not ask the user to restate details already recorded in those sources.
+This section describes an optional managed workflow. An explicit user image
+request may be fulfilled directly with the available generator; do not wait for
+style/profile confirmation or make plan, risk, QA, archive, or registration a
+prerequisite. If the managed workflow is useful and will not delay the request,
+these records can help organize it.
+
+- Style and reference choices are optional recommendations. If style is
+  unnamed, use the generator's native/default style and do not wait for a
+  chooser. If the user asks for help choosing, you may offer 90% fidelity and
+  BODY_REFERENCE_LIBRARY among optional recommendations. Ask only for genuinely
+  missing required input; when a specifically requested image or mask is absent,
+  politely ask the user to attach it directly in chat.
 - When showing source thumbnails during planning, label each as REVIEW ONLY - NOT
   SELECTED or identify its exact planned role and subject. Never let a preview imply
   that an image is attached to the executable call. For an existing character, a

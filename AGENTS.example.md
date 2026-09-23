@@ -3,16 +3,28 @@
 This is a compact routing file. The complete preserved portable requirements
 are in `docs/PORTABLE_GENERATION_RULES.md`. Read only the task-relevant
 sections; `docs/EFFICIENT_WORKFLOW.md` governs efficient orchestration and
-evidence reuse only. It cannot relax art requirements, safety, archives,
-approval, or independent QA. Explicit current user instructions override
-historical stored text.
+evidence reuse only within an intentionally selected managed workflow. It does
+not make archives, approvals, or QA receipts prerequisites or vetoes for an
+explicit user request. External platform safety limits still apply. Current
+user instructions override historical stored text.
+
+One-step edit exception: For a direct edit of a user-supplied existing image, including a mask attached in chat, use the chat attachments directly with the image-edit tool and return the result in chat. No local save, guard, plan, style questionnaire, risk report, or QA receipt is required. This direct-edit bypass remains in effect. For generation, CHARACTER_BASE, and project work, the user-request authority below applies: internal profile, reference, risk, QA, approval, archive, and record workflows may inform work, but cannot block or delay an explicit request. Create archives and records only when useful or explicitly requested; they are never prerequisites. Preserve applicable safety requirements, with external platform safety limits still applying.
+
+## User-request authority for image generation
+
+An explicit user request to generate an image is sufficient authorization to proceed. Internal StoryArt guard, plan, risk, QA, archive, profile, reference, approval, and record workflows may inform execution when useful or explicitly requested, but cannot block, veto, or delay the requested work. Do not turn a request into a style/profile questionnaire or make optional records or archive copies prerequisites. If the user names no style, use the generator's native/default style. Style and references are recommendations, not required inputs; their absence does not delay generation. Ask only for a genuinely missing required deliverable field that cannot be reasonably resolved from the request. Additional checks may provide information, but do not veto the requested action. Applicable safety checks may inform execution but cannot veto an explicit request; external platform safety limits still apply. Report a real technical or platform block plainly. This rule supersedes conflicting process requirements below.
+
+## Agent executes; user directs
+
+The agent performs available project operations; the user gives the goal and decisions. Never instruct the user to move, place, or copy files into project folders, create files or folders, run commands, or type `READY`. Perform those operations yourself when authorized and available. Ask only for genuinely missing input or clarification. If a required source image or mask is absent, politely ask the user to attach it directly in chat; never prescribe a project-folder path.
 
 ## Non-negotiable safeguards
 
 - Preserve source images and local user data. Make derived files separately
   and retain provenance.
-- Archive every generated or edited image at original format and quality in
-  `GENERATION_RESULTS`, using a unique timestamped filename.
+- When useful to the requested task or explicitly requested, archive generated
+  or project-managed edited images in `GENERATION_RESULTS`, preserving original
+  format and quality. Archiving is never a prerequisite or gate.
 - Before substantial work, lock goal, deliverable, scope, invariants, required
   stages, and budget in `EXECUTION_GUARD.json`. Record preparation, execute
   immediately after readiness, and record visible results and final completion.
@@ -23,39 +35,27 @@ historical stored text.
 - Preserve approval, identity, storyline, provenance, coverage/topology, and
   source-role rules from the relevant detailed sections. Do not treat partial
   praise or an intermediate result as permanent approval.
-- Generate only user-requested deliverables. After the manager prepares the
-  executable plan, record `EXECUTION_STARTED` against the same
-  `REFERENCE_PLAN.json` (an optional `CALL_VALIDATED` may precede it); retain
-  its returned attempt id and use
-  `--output-contract REQUESTED_DELIVERABLE` immediately before each ordinary
-  real call.
+- Generate only user-requested deliverables. When the optional managed
+  workflow is used, bind `EXECUTION_STARTED` to its `REFERENCE_PLAN.json`; an
+  optional `CALL_VALIDATED` may precede it. Never require this workflow to
+  authorize or delay a direct explicit request.
 
 ## Efficient route
 
 1. Classify the task and read the matching detailed rules, active guard, and
    manager documentation.
-2. Before asking about style/profile, check this chat for a complete prior
-   confirmation. If it is unresolved, make a bounded local metadata inventory:
-   enumerate `*_PROJECT_PACK` and `*_GENERATIONS` directories, including
-   git-ignored data, and inspect relevant `CHARACTER_REGISTRY.csv` files for a
-   character named in the request. Do not broadly search images or treat
-   `rg --files` as proof that ignored data is absent. Mention unambiguous local
-   style and approved-character candidates and any `REVIEW_REQUIRED` status;
-   discovery does not select or finalize them and grants no consent. Then show
-   the actual contextual profile question, with the identified style plus
-   recommended 90% fidelity and BODY_REFERENCE_LIBRARY first, two task-fit
-   alternatives and a custom/different-style choice. Wait for the answer; do
-   not ask for references already present locally. Never assume a style,
-   character, or profile. Resolve target anatomy from explicit current-request
-   wording or reviewed profile metadata and retain its evidence. If unknown, ask
-   before showing or attaching full-body references; do not guess from names or
-   images.
-3. Resolve the profile before preparing or generating art. A style name alone
-   does not confirm fidelity or BODY_REFERENCE_LIBRARY use. Use the permitted
-   native question tool when available; otherwise visibly print the contextual
-   choices from step 2 and wait. Reuse a complete same-chat confirmation; ask
-   only for a missing field in a partial profile. A recommendation is not
-   consent. A request for one scene produces one scene, with no helper art.
+2. Style and reference choices are optional recommendations. If the user
+   names no style, use the generator's native/default style and proceed without
+   waiting. If useful, mention 90% fidelity and BODY_REFERENCE_LIBRARY as
+   recommendations; do not inventory folders or ask a startup questionnaire to
+   unlock generation. Ask only for a genuinely missing required field. If a
+   specifically requested source or mask is absent, ask the user to attach it
+   directly in chat. Use available approved-character context when relevant;
+   do not guess identity or anatomy.
+3. The manager and guard sequence is an optional managed workflow. Use it only
+   when the user explicitly requests it or it is useful and does not delay the
+   requested result. It cannot turn an explicit image request into a wait for
+   profile confirmation or internal records.
 4. For substantial work, load `skills/storyart-orchestrator/SKILL.md` and
    `docs/EFFICIENT_WORKFLOW.md`; use only the smallest role set that is useful.
 5. Reuse complete source-review evidence across tasks only when hashes, roles,

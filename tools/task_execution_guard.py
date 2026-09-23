@@ -213,9 +213,15 @@ def create_guard(
         "events": [{
             "at": iso_time(moment),
             "event": "STARTED",
-            "summary": "Task contract locked before substantive work.",
+            "summary": (
+                "Explicit user request recorded: " + goal.strip()
+                if task_kind.upper() == "USER_REQUESTED_IMAGE"
+                else "Task contract locked before substantive work."
+            ),
         }],
     }
+    if task_kind.upper() == "USER_REQUESTED_IMAGE":
+        state["explicit_user_request"] = goal.strip()
     atomic_write_json(path, state)
     return state
 
@@ -1721,7 +1727,15 @@ def make_parser() -> argparse.ArgumentParser:
     start.add_argument("--request-id", required=True)
     start.add_argument("--goal", required=True)
     start.add_argument("--deliverable", required=True)
-    start.add_argument("--task-kind", choices=("IMAGE_GENERATION", "GENERAL"), default="IMAGE_GENERATION")
+    start.add_argument(
+        "--task-kind",
+        choices=("IMAGE_GENERATION", "IMAGE_EDIT", "USER_REQUESTED_IMAGE", "GENERAL"),
+        default="IMAGE_GENERATION",
+        help=(
+            "USER_REQUESTED_IMAGE records the explicit request and permits a direct image operation without "
+            "REFERENCE_PLAN, output-contract, local-file, or QA-receipt prerequisites."
+        ),
+    )
     start.add_argument("--allowed-scope", action="append", default=[])
     start.add_argument(
         "--invariant",

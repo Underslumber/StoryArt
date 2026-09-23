@@ -135,6 +135,92 @@ class TaskExecutionGuardTests(unittest.TestCase):
             summary="Start the exact ready fixture call.", now=BASE_TIME,
         )
 
+    def test_image_edit_direct_chat_lifecycle_needs_no_plan_or_local_files(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, _ = self.make_guard(folder, task_kind="IMAGE_EDIT")
+            started = _raw_checkpoint(
+                path,
+                event="EXECUTION_STARTED",
+                summary="Edit the user-attached source with the user-attached mask.",
+                now=BASE_TIME,
+            )
+            attempt_id = started["active_attempt"]["attempt_id"]
+            available = _raw_checkpoint(
+                path,
+                event="VISIBLE_RESULT",
+                attempt_id=attempt_id,
+                summary="Edited image delivered directly in chat.",
+                now=BASE_TIME,
+            )
+            self.assertEqual(available["available_results"][-1]["status"], "AVAILABLE")
+            done = _raw_checkpoint(
+                path,
+                event="COMPLETE",
+                summary="Requested in-place image edit completed.",
+                now=BASE_TIME,
+            )
+            self.assertEqual(done["status"], "COMPLETE")
+
+    def test_cli_accepts_image_edit_while_generation_remains_default(self):
+        args = guard.make_parser().parse_args([
+            "start", "--state", "guard.json", "--request-id", "edit-1",
+            "--goal", "Edit supplied image.", "--deliverable", "Edited image",
+            "--task-kind", "IMAGE_EDIT",
+        ])
+        self.assertEqual(args.task_kind, "IMAGE_EDIT")
+        default_args = guard.make_parser().parse_args([
+            "start", "--state", "guard.json", "--request-id", "gen-1",
+            "--goal", "Generate image.", "--deliverable", "Generated image",
+        ])
+        self.assertEqual(default_args.task_kind, "IMAGE_GENERATION")
+
+    def test_user_requested_image_direct_lifecycle_records_request_without_generation_gates(self):
+        user_request = "Create the requested illustration using the generator's native style."
+        with tempfile.TemporaryDirectory() as folder:
+            path, state = self.make_guard(
+                folder,
+                task_kind="USER_REQUESTED_IMAGE",
+                goal=user_request,
+                deliverable="The requested image, returned in chat.",
+            )
+            self.assertEqual(state["explicit_user_request"], user_request)
+            self.assertIn(user_request, state["events"][0]["summary"])
+            started = _raw_checkpoint(
+                path,
+                event="EXECUTION_STARTED",
+                summary="Run the user-requested image operation without added style or reference requirements.",
+                now=BASE_TIME,
+            )
+            attempt_id = started["active_attempt"]["attempt_id"]
+            available = _raw_checkpoint(
+                path,
+                event="VISIBLE_RESULT",
+                attempt_id=attempt_id,
+                summary="The requested image is available directly in chat.",
+                now=BASE_TIME,
+            )
+            self.assertEqual(available["available_results"][-1]["status"], "AVAILABLE")
+            done = _raw_checkpoint(
+                path,
+                event="COMPLETE",
+                summary="The explicit image request is complete.",
+                now=BASE_TIME,
+            )
+            self.assertEqual(done["status"], "COMPLETE")
+
+    def test_user_requested_image_cli_kind_is_opt_in_and_generation_stays_default(self):
+        args = guard.make_parser().parse_args([
+            "start", "--state", "guard.json", "--request-id", "direct-1",
+            "--goal", "Edit the supplied image.", "--deliverable", "Edited image",
+            "--task-kind", "USER_REQUESTED_IMAGE",
+        ])
+        self.assertEqual(args.task_kind, "USER_REQUESTED_IMAGE")
+        default_args = guard.make_parser().parse_args([
+            "start", "--state", "guard.json", "--request-id", "gen-2",
+            "--goal", "Generate image.", "--deliverable", "Generated image",
+        ])
+        self.assertEqual(default_args.task_kind, "IMAGE_GENERATION")
+
     def test_execution_start_rechecks_unattached_prior_stage_authority(self):
         from tools.style_pack_manager import make_paths
         from unittest.mock import patch
