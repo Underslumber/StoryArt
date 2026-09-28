@@ -437,13 +437,61 @@ def adapter_skill_markdown(style: dict[str, Any]) -> str:
     generations_name = Path(str(style["generations_path"])).name
     return f"""---
 name: {skill_name}
-description: Provide project-local routing context for the ready StoryArt style {style_name}. Use only after the user selects this style inside StoryArt; always refresh live style context and inspect real local images before choosing references.
+description: Provide project-local routing context for the ready StoryArt style {style_name}. Use when the current request or an approved character profile resolves this style; never ask again for a style already resolved by the StoryArt scenario.
 ---
 
 # {style_name} style adapter
 
 Treat `{pack_name}` as the complete local visual source of truth and
 `{generations_name}` as its generated-work sibling.
+
+## Mandatory scenario lock
+
+The existing StoryArt scenario and its step order are mandatory for every
+image-generation request. This adapter supplies style context only; it never
+authorizes a direct/bare generator call or a route around project tools. Follow
+the central scenario exactly. If a required project tool fails or is
+unavailable, preserve request and artifact state, use supported repair/recovery
+routes, and continue in the same scenario while a safe route remains. Stop only
+for a concrete external/platform/safety blocker or a missing user-only decision
+when no safe authorized next step remains; never switch workflows to bypass it.
+Leaving the scenario requires the user's direct request, a concrete warning,
+and the user's confirmation after the warning in the same chat.
+
+Reuse this style when the approved character profile binds the requested
+character to `{style_name}` or when the user selected `{style_name}` in this
+chat. Do not ask for a style choice again. Never describe it only as “project
+style”; use the exact name above. Reuse a recorded same-chat menu selection
+without presenting it again.
+
+If a native chooser is required, present one chooser question containing the
+complete options and all unresolved parameters. For a new standard image
+generation chooser, use exactly these presets for the resolved `{style_name}`:
+90% and BODY_REFERENCE_LIBRARY selected (recommended); 90% without
+BODY_REFERENCE_LIBRARY; 70% without BODY_REFERENCE_LIBRARY (free
+interpretation). Keep the named character and mandatory approved identity refs
+in every option, use the exact style name, and state that the percent is style
+fidelity. For CHARACTER_BASE only, explain the library is for later physique
+stages and does not start calibration or pose collection. Do not use percentage
+ranges or vague “profile style”/“body references” wording. Never split it into
+multiple sequential questions. Preserve the original mapping for any choice
+already shown; this template is for a new menu only. After the chooser call returns, keep this turn active and
+wait using `clock.sleep({{duration_ms: 60000}})`. If it times out without an
+answer, repeat only that sleep in intervals no longer than 60 seconds. While
+waiting, do no searches, file reads, other tool calls, preflight, commentary, or
+final response. Continue with the user's exact selection as soon as it arrives.
+Build new menus with `python tools\\style_pack_manager.py startup-menu-template`
+using the approved character's exact style, id, and name. Pass its title,
+question, and labels verbatim to the native chooser and retain its exact
+machine-bound option descriptions and mappings for preparation; do not
+reconstruct them from memory.
+Before calling the native chooser, show a compact numbered text mirror using
+the same labels and say the card is the primary way to choose while the list is
+there as backup. Then invoke the chooser immediately. The user may click the
+card or reply with the corresponding number; accept the first clear answer. If
+the actual native call fails or is unavailable, state that concrete failure
+and continue waiting for a numeric reply to the mirrored list. Never claim the
+card appeared unless the chooser call succeeded.
 
 1. Run `python tools\\style_pack_manager.py style-context --style-name "{style_name}" --json`.
 2. Query complete file lists for every visually critical role.
@@ -549,6 +597,18 @@ def validate_style_skills(output_root: Path) -> dict[str, Any]:
         expected_name = str(entry.get("skill_name", ""))
         if f"name: {expected_name}" not in text:
             errors.append(f"Wrong skill name in {skill_file}")
+        if "The existing StoryArt scenario and its step order are mandatory" not in text:
+            errors.append(f"Missing mandatory StoryArt scenario lock in {skill_file}")
+        if "Reuse a recorded same-chat menu selection" not in text:
+            errors.append(f"Missing same-chat choice reuse rule in {skill_file}")
+        if "clock.sleep({duration_ms: 60000})" not in text:
+            errors.append(f"Missing active-turn chooser wait rule in {skill_file}")
+        if "90% and BODY_REFERENCE_LIBRARY selected (recommended)" not in text:
+            errors.append(f"Missing canonical 90/90/70 chooser preset in {skill_file}")
+        if "startup-menu-template" not in text:
+            errors.append(f"Missing deterministic chooser presenter in {skill_file}")
+        if "numbered text mirror" not in text:
+            errors.append(f"Missing chooser backup-list contract in {skill_file}")
         try:
             metadata = load_json(metadata_file)
             pack_path = normalize_project_path(str(metadata.get("pack_path", "")))

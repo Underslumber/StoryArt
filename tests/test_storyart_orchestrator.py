@@ -37,13 +37,13 @@ class StoryArtOrchestratorTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def test_project_config_template_uses_economical_gpt6_defaults(self):
+    def test_project_config_template_uses_luna_high_defaults(self):
         config_path = ROOT / "config" / "codex.project.example.toml"
         config_text = config_path.read_text(encoding="utf-8")
         config = tomllib.loads(config_text)
 
         self.assertEqual(config["model"], "gpt-6-luna")
-        self.assertEqual(config["model_reasoning_effort"], "medium")
+        self.assertEqual(config["model_reasoning_effort"], "high")
         self.assertEqual(config["agents"]["default_subagent_model"], "gpt-6-luna")
         self.assertEqual(config["agents"]["default_subagent_reasoning_effort"], "high")
         allowed_models = {"gpt-6-astra", "gpt-6-sol", "gpt-6-luna"}

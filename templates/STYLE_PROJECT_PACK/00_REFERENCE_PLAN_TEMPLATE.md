@@ -1,7 +1,7 @@
 # GENERATION REFERENCE PLAN — {{STYLE_NAME}}
 
 ```text
-STARTUP MENU: <1 recommended 90% + BODY_REFERENCE_LIBRARY; 2 contextual; 3 contextual; 4 Указать свой вариант>
+STARTUP MENU: <1 task-recommended complete profile with exact fidelity and BODY_REFERENCE_LIBRARY decision; 2 contextual complete profile; 3 contextual complete profile; 4 Указать свой вариант. OPTION_1 has no fixed parameter contract.>
 STARTUP SELECTION STATE: <NEW_SELECTION, USER_CONFIRMED_AFTER_NATIVE_UNAVAILABLE, or REUSED_IN_SAME_CHAT>
 STARTUP MENU SURFACE: <NATIVE_CONTEXT_MENU, USER_REPLY_AFTER_NATIVE_UNAVAILABLE, or NOT_PRESENTED_REUSED_SELECTION>
 REUSED FROM PLAN: <previous same-chat REFERENCE_PLAN.json or NONE>

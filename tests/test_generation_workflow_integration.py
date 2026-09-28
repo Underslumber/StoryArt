@@ -68,6 +68,27 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
     def _guard_path(self, request_id: str) -> Path:
         return self.generations / "00_PENDING" / request_id / "EXECUTION_GUARD.json"
 
+    def _user_selections_file(self, request_id: str, plan_path: Path) -> Path:
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        character_id = str(plan.get("character_id", "NONE")).upper()
+        selections = {
+            "style": {
+                "choice": f"PROJECT_STYLE:{self.style_name}",
+                "user_quote": f"Use project style {self.style_name} for this synthetic test.",
+            },
+            "reference_policy": {
+                "choice": "APPROVED_CHARACTER_REFERENCES" if character_id.startswith("CHAR_") else "USER_ATTACHED_REFERENCES" if character_id == "NEW" else "PROJECT_STYLE_ONLY",
+                "user_quote": "Use the selected synthetic test references.",
+            },
+            "character": {
+                "choice": character_id,
+                "user_quote": f"Selected character identity for the synthetic test: {character_id}.",
+            },
+        }
+        path = self.workspace / f"{request_id}-user-selections.json"
+        path.write_text(json.dumps(selections, ensure_ascii=False, indent=2), encoding="utf-8")
+        return path
+
     def test_approved_canonical_character_assets_are_positive_references(self):
         from tools import style_pack_manager as manager
 
@@ -182,6 +203,8 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         elif startup_mode in {"USER_CONFIRMATION", "NEW"}:
             args.extend(("--startup-menu-surface", menu_surface, "--startup-choice", startup_choice, "--startup-choice-user-quote", startup_choice_quote))
             for option in startup_options or ():
+                if "; style=" not in option:
+                    option += f"; style=PROJECT_STYLE:{self.style_name}; reference_policy=PROJECT_STYLE_ONLY; character=NONE"
                 args.extend(("--startup-option", option))
             if custom_profile_quote:
                 args.extend(("--custom-parameters-user-quote", custom_profile_quote))
@@ -272,7 +295,9 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         self._cli(
             "style_pack_manager.py", "prepare-call", "--workspace", self.workspace,
             "--style-name", self.style_name, "--request-id", "unformed-request-local-style",
-            "--prompt-text", prompt, "--risk-assessment", call["risk_assessment"]["path"], succeeds=False,
+            "--prompt-text", prompt, "--risk-assessment", call["risk_assessment"]["path"],
+            "--user-selections-json", self._user_selections_file("unformed-request-local-style", plan_path),
+            succeeds=False,
         )
 
         with reference_manifest.open("r", encoding="utf-8", newline="") as stream:
@@ -292,7 +317,9 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         self._cli(
             "style_pack_manager.py", "prepare-call", "--workspace", self.workspace,
             "--style-name", self.style_name, "--request-id", "unformed-request-local-style",
-            "--prompt-text", prompt, "--risk-assessment", call["risk_assessment"]["path"], succeeds=False,
+            "--prompt-text", prompt, "--risk-assessment", call["risk_assessment"]["path"],
+            "--user-selections-json", self._user_selections_file("unformed-request-local-style", plan_path),
+            succeeds=False,
         )
 
         with reference_manifest.open("r", encoding="utf-8", newline="") as stream:
@@ -424,7 +451,9 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
                 self._cli(
                     "style_pack_manager.py", "prepare-call", "--workspace", self.workspace,
                     "--style-name", self.style_name, "--request-id", request_id,
-                    "--prompt-text", prompt, "--risk-assessment", risk_path, succeeds=False,
+                    "--prompt-text", prompt, "--risk-assessment", risk_path,
+                    "--user-selections-json", self._user_selections_file(request_id, plan_path),
+                    succeeds=False,
                 )
                 plan = json.loads(plan_path.read_text(encoding="utf-8"))
                 self.assertEqual(plan["gate_status"], "PREPARED_AWAITING_EXECUTABLE_CALL")
@@ -451,7 +480,8 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             with self.subTest(request_id=request_id):
                 guard, plan_path = self._prepare_scene(
                     request_id, fidelity, startup_mode=mode, body_decision=decision,
-                    startup_choice=choice, startup_choice_quote=reply, startup_options=options,
+                    startup_choice=choice, startup_choice_quote=reply,
+                    startup_options=tuple(value + f"; style=PROJECT_STYLE:{self.style_name}; reference_policy=PROJECT_STYLE_ONLY; character=NONE" for value in options) if request_id == "menu-native-new" else options,
                     custom_profile_quote=custom_quote, menu_surface=surface,
                 )
                 plan = json.loads(plan_path.read_text(encoding="utf-8"))
@@ -462,7 +492,19 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
                 if choice == "CUSTOM":
                     self.assertEqual(startup["custom_parameters_user_quote"], custom_quote or reply)
                 prompt = f"Create one synthetic observatory fixture for {request_id}."
-                self._resolve_and_prepare_call(request_id, guard, plan_path, prompt)
+                call = self._resolve_and_prepare_call(request_id, guard, plan_path, prompt)
+                if request_id == "menu-native-new":
+                    self.assertEqual(call["user_selections"]["style"], {"choice": f"PROJECT_STYLE:{self.style_name}", "user_quote": reply})
+                if request_id == "menu-option-2":
+                    self.assertEqual(startup["resolved_user_selections"], {
+                        "style": f"PROJECT_STYLE:{self.style_name}",
+                        "reference_policy": "PROJECT_STYLE_ONLY",
+                        "character": "NONE",
+                    })
+                    self.assertEqual(call["user_selections"], {
+                        key: {"choice": value, "user_quote": "2"}
+                        for key, value in startup["resolved_user_selections"].items()
+                    })
                 if request_id == "menu-option-1":
                     source_plan = plan_path
 
@@ -512,7 +554,17 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         call_args: list[object] = [
             "prepare-call", "--workspace", self.workspace, "--style-name", self.style_name,
             "--request-id", request_id, "--prompt-text", prompt, "--risk-assessment", risk_path,
+            "--user-selections-json", self._user_selections_file(request_id, plan_path),
         ]
+        if plan.get("startup_parameter_selection", {}).get("resolved_user_selections"):
+            call_args = call_args[:-2]
+        if plan.get("character_id") == "NEW":
+            evidence_path = self.workspace / "user-reference-evidence.json"
+            evidence_path.write_text(json.dumps([
+                {"path": str(stored), "sha256": hashlib.sha256(stored.read_bytes()).hexdigest(), "source_path": str(self.workspace / source), "chat_id": "integration-chat", "message_id": "synthetic-user-attachment"}
+                for stored, source in ((self.primary_face, "primary-face.png"), (self.supporting_face, "supporting-face.png"))
+            ]), encoding="utf-8")
+            call_args.extend(("--user-reference-evidence-json", evidence_path))
         if stage_id:
             call_args.extend(("--stage-id", stage_id))
         self._cli("style_pack_manager.py", *call_args)
@@ -541,6 +593,46 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
 
     def _risk_level(self, plan_path: Path) -> str:
         return json.loads(plan_path.read_text(encoding="utf-8"))["risk_assessment"]["generation_risk"]
+
+    def _visual_review_args(self, guard: Path, attempt_id: str, output: Path) -> tuple[str, Path]:
+        """Create a fixture review bound to the exact attempt snapshot and output."""
+        from tools.style_pack_manager import prompt_review_clauses
+
+        state = json.loads(guard.read_text(encoding="utf-8"))
+        attempt = next(row for row in state["attempts"] if row["attempt_id"] == attempt_id)
+        snapshot = attempt["execution_snapshot"]
+        prompt = snapshot["execution_call"]["prompt"]["text"]
+        anatomy_status = "PASS" if snapshot["execution_stage"] in {
+            "01_FACE_IDENTITY", "02_PHYSIQUE_FRONT", "03_PHYSIQUE_SIDE", "04_PHYSIQUE_BACK", "05_CHARACTER_ASSEMBLY"
+        } else "NOT_APPLICABLE"
+        report = {
+            "schema_version": 1,
+            "request_id": state["request_id"],
+            "attempt_id": attempt_id,
+            "task_revision": attempt["task_revision"],
+            "output_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+            "prompt_sha256": snapshot["prompt_sha256"],
+            "executed_plan_sha256": snapshot["reference_plan_snapshot_sha256"],
+            "author": "integration fixture visual reviewer",
+            "anatomy_review": {
+                "status": anatomy_status,
+                "no_visible_anatomy": anatomy_status == "NOT_APPLICABLE",
+                "reason": "Synthetic fixture scene contains no visible human or animal anatomy." if anatomy_status == "NOT_APPLICABLE" else "Synthetic full-body stage is explicitly reviewed for anatomy.",
+                "checked_scope": "Visible anatomy across the full image at original resolution.",
+                "findings": [],
+            },
+            "visible_defect_review": {"status": "PASS", "checked_scope": "Entire synthetic output at full resolution.", "findings": []},
+            "prompt_adherence": {
+                "status": "PASS", "checked_scope": "FULL_EXECUTED_PROMPT", "all_explicit_constraints_assessed": True,
+                "constraints": [
+                    {"constraint": clause, "status": "PASS", "evidence": f"Synthetic fixture reviewed prompt clause: {clause}"}
+                    for clause in prompt_review_clauses(prompt)
+                ],
+            },
+        }
+        path = self.workspace / f"{attempt_id}-{output.stem}-visual-review.json"
+        path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return "--visual-review-json", path
 
     def test_qa_stage_contract_must_match_manifest_stage_marker(self):
         from unittest.mock import patch
@@ -616,6 +708,7 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "style_pack_manager.py", "prepare-call", "--workspace", self.workspace,
             "--style-name", self.style_name, "--request-id", request_id,
             "--prompt-text", prompt, "--risk-assessment", risk_path,
+            "--user-selections-json", self._user_selections_file(request_id, plan_path),
         )
         self.assertIn("unchanged retry", same_call_retry.stdout)
         self.assertEqual(plan_path.read_bytes(), ready_plan_bytes)
@@ -624,12 +717,24 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "style_pack_manager.py", "prepare-call", "--workspace", self.workspace,
             "--style-name", self.style_name, "--request-id", request_id,
             "--prompt-text", prompt + " Change the camera angle.", "--risk-assessment", risk_path,
+            "--user-selections-json", self._user_selections_file(request_id, plan_path),
             succeeds=False,
         )
         self.assertTrue(changed_call.stderr.strip())
         self.assertEqual(plan_path.read_bytes(), ready_plan_bytes)
         self.assertEqual(json.loads(guard.read_text(encoding="utf-8"))["ready_binding"], ready_binding)
         attempt_id = self._start_call(guard, plan_path, call)
+        # Reproduce the legacy mismatch: the guard stored the purpose label as
+        # its stage while the executable call is the canonical SINGLE_PASS stage.
+        state = json.loads(guard.read_text(encoding="utf-8"))
+        legacy_attempt = state["attempts"][-1]
+        legacy_attempt["stage"] = "SCENE"
+        legacy_attempt["reference_binding"]["stage"] = "SCENE"
+        legacy_attempt["execution_snapshot"]["stage"] = "SCENE"
+        legacy_attempt["execution_snapshot"]["guard_stage"] = "SCENE"
+        legacy_attempt["execution_snapshot"]["reference_binding"]["stage"] = "SCENE"
+        state["active_attempt"] = legacy_attempt
+        guard.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         result = self.workspace / "synthetic-scene.png"
         Image.new("RGB", (720, 1280), (65, 72, 84)).save(result)
         qa = (
@@ -642,14 +747,121 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "style_pack_manager.py", "record-generation", "--workspace", self.workspace,
             "--style-name", self.style_name, "--image", result, "--request-id", request_id,
             "--description", "Synthetic integration scene", "--fidelity", "70", "--status", "TEST",
-            "--character-id", "NONE", "--attempt-id", attempt_id, "--reference-plan", plan_path, *qa,
+            "--character-id", "NONE", "--attempt-id", attempt_id, "--reference-plan", plan_path,
+            "--stage-id", "SCENE", *self._visual_review_args(guard, attempt_id, result), *qa,
         )
         self.assertIn("STATUS=TEST", recorded.stdout)
         state = json.loads(guard.read_text(encoding="utf-8"))
         self.assertEqual(state["status"], "ACTIVE")
         self.assertEqual(state["phase"], "RESULT_AVAILABLE")
+        snapshot = state["attempts"][-1]["execution_snapshot"]
+        self.assertEqual(snapshot["request_id"], request_id)
+        self.assertEqual(snapshot["attempt_id"], attempt_id)
+        self.assertEqual(snapshot["stage"], "SCENE")
+        self.assertEqual(snapshot["guard_stage"], "SCENE")
+        self.assertEqual(snapshot["request_purpose"], "SCENE")
+        self.assertEqual(snapshot["execution_stage"], "SINGLE_PASS")
+        self.assertEqual(snapshot["provider_artifact"]["sha256"], hashlib.sha256(result.read_bytes()).hexdigest())
+        self.assertTrue(snapshot["execution_call_sha256"])
         self.assertIsNone(state["delivered_result_at"])
         self.assertNotEqual(state["status"], "COMPLETE")
+
+        retry = self._cli(
+            "style_pack_manager.py", "record-generation", "--workspace", self.workspace,
+            "--style-name", self.style_name, "--image", result, "--request-id", request_id,
+            "--description", "Synthetic integration scene", "--fidelity", "70", "--status", "TEST",
+            "--character-id", "NONE", "--attempt-id", attempt_id, "--reference-plan", plan_path,
+            "--stage-id", "SCENE", *self._visual_review_args(guard, attempt_id, result), *qa,
+        )
+        self.assertIn("UNCHANGED_RETRY=true", retry.stdout)
+        state = json.loads(guard.read_text(encoding="utf-8"))
+        self.assertEqual(len(state["available_results"]), 1)
+        state["attempts"][-1]["execution_snapshot"]["task_revision"] = 99
+        guard.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        tampered = self._cli(
+            "style_pack_manager.py", "record-generation", "--workspace", self.workspace,
+            "--style-name", self.style_name, "--image", result, "--request-id", request_id,
+            "--description", "Synthetic integration scene", "--fidelity", "70", "--status", "TEST",
+            "--character-id", "NONE", "--attempt-id", attempt_id, "--reference-plan", plan_path,
+            "--stage-id", "SCENE", *self._visual_review_args(guard, attempt_id, result), *qa, succeeds=False,
+        )
+        self.assertIn("executed-call snapshot", tampered.stderr)
+
+    def test_visible_old_revision_registers_after_correction_without_satisfying_current_revision(self):
+        request_id = "scene-corrected-after-visible"
+        guard, plan_path = self._prepare_scene(request_id)
+        call = self._resolve_and_prepare_call(request_id, guard, plan_path, "Create one synthetic observatory scene.")
+        attempt_id = self._start_call(guard, plan_path, call)
+        result = self.workspace / "old-revision-scene.png"
+        Image.new("RGB", (720, 1280), (65, 72, 84)).save(result)
+        self._cli(
+            "task_execution_guard.py", "checkpoint", "--state", guard, "--event", "VISIBLE_RESULT",
+            "--summary", "The provider returned the original scene.", "--attempt-id", attempt_id,
+            "--result-status", "TEST", "--evidence", result,
+        )
+        self._cli(
+            "task_execution_guard.py", "checkpoint", "--state", guard, "--event", "USER_CORRECTION",
+            "--summary", "Revise the scene genre after reviewing the visible result.",
+            "--correction-impact", "PRESERVE",
+        )
+        (self.workspace / f"{request_id}-SINGLE_PASS-risk.json").unlink()
+        corrected_call = self._resolve_and_prepare_call(
+            request_id, guard, plan_path, "Revise the observatory scene as a winter folklore genre composition.",
+        )
+        self.assertEqual(corrected_call["prompt"]["text"], "Revise the observatory scene as a winter folklore genre composition.")
+        corrected_state = json.loads(guard.read_text(encoding="utf-8"))
+        executed_snapshot = corrected_state["attempts"][-1]["execution_snapshot"]
+        self.assertNotEqual(hashlib.sha256(plan_path.read_bytes()).hexdigest(), executed_snapshot["reference_binding"]["sha256"])
+        immutable_plan = Path(executed_snapshot["reference_plan_snapshot_path"])
+        self.assertEqual(hashlib.sha256(immutable_plan.read_bytes()).hexdigest(), executed_snapshot["reference_plan_snapshot_sha256"])
+        qa = (
+            "--qa-attachments", "PASS", "--qa-canvas", "PASS", "--qa-stage-layer", "PASS",
+            "--qa-style", "PASS", "--qa-subject-accuracy", "PASS", "--qa-no-unrequested-characters", "PASS",
+            "--qa-focal-hierarchy", "PASS", "--qa-lighting", "PASS", "--qa-background", "PASS",
+            "--qa-composition", "PASS", "--qa-depth-and-scale", "PASS", "--qa-artifact-integrity", "PASS",
+        )
+        common = (
+            "style_pack_manager.py", "record-generation", "--workspace", self.workspace,
+            "--style-name", self.style_name, "--image", result, "--request-id", request_id,
+            "--description", "Original visible scene", "--fidelity", "70", "--status", "TEST",
+            "--character-id", "NONE", "--attempt-id", attempt_id, "--reference-plan", plan_path,
+            *self._visual_review_args(guard, attempt_id, result), *qa,
+        )
+        recorded = self._cli(*common)
+        self.assertIn("STATUS=TEST", recorded.stdout)
+        with (self.generations / "GENERATION_MANIFEST.csv").open(encoding="utf-8-sig", newline="") as manifest_file:
+            old_row = next(row for row in csv.DictReader(manifest_file) if row["request_id"] == request_id)
+        self.assertIn("[TASK_REVISION=0]", old_row["notes"])
+        results_dir = self.workspace / "GENERATION_RESULTS"
+        results_before_conflict = set(results_dir.iterdir())
+        conflicting_retry = list(common)
+        conflicting_retry[conflicting_retry.index("--status") + 1] = "REJECTED"
+        conflict = self._cli(*conflicting_retry, succeeds=False)
+        self.assertIn("different or unverifiable", conflict.stderr)
+        self.assertEqual(set(results_dir.iterdir()), results_before_conflict)
+        old_revision_delivery = self._cli(
+            "task_execution_guard.py", "checkpoint", "--state", guard, "--event", "RESULT_DELIVERED",
+            "--summary", "Attempt to deliver old revision.", "--attempt-id", attempt_id,
+            "--delivery-evidence", str(result), succeeds=False,
+        )
+        self.assertIn("earlier task revision", old_revision_delivery.stderr)
+        wrong_artifact = self.workspace / "wrong-old-scene.png"
+        Image.new("RGB", (720, 1280), (7, 8, 9)).save(wrong_artifact)
+        wrong_image_args = list(common)
+        wrong_image_args[wrong_image_args.index("--image") + 1] = wrong_artifact
+        rejected_image = self._cli(*wrong_image_args, succeeds=False)
+        self.assertIn("exact path recorded", rejected_image.stderr)
+        wrong_request_args = list(common)
+        wrong_request_args[wrong_request_args.index("--request-id") + 1] = "another-request"
+        rejected_request = self._cli(*wrong_request_args, succeeds=False)
+        self.assertIn("execution guard", rejected_request.stderr)
+        state = json.loads(guard.read_text(encoding="utf-8"))
+        self.assertEqual(state["task_revision"], 1)
+        self.assertEqual(state["status"], "READY")
+        self.assertEqual(state["phase"], "READY_FOR_EXECUTION")
+        self.assertEqual(state["next_required_action"], "CALL_VALIDATION_OR_EXECUTION_OR_BLOCKER")
+        self.assertIsNone(state["delivered_result_at"])
+        self.assertIsNone(state["active_attempt"])
 
     def test_reconciled_available_result_records_once_and_rejects_stale_evidence(self):
         request_id = "reconciled-available"
@@ -685,7 +897,8 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "style_pack_manager.py", "record-generation", "--workspace", self.workspace,
             "--style-name", self.style_name, "--image", stale, "--request-id", request_id,
             "--description", "Synthetic stale evidence", "--fidelity", "70", "--status", "TEST",
-            "--character-id", "NONE", "--attempt-id", attempt_id, "--reference-plan", plan_path, *qa,
+            "--character-id", "NONE", "--attempt-id", attempt_id, "--reference-plan", plan_path,
+            *self._visual_review_args(guard, attempt_id, result), *qa,
             succeeds=False,
         )
         self.assertIn("exact path recorded", rejected.stderr)
@@ -693,7 +906,8 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "style_pack_manager.py", "record-generation", "--workspace", self.workspace,
             "--style-name", self.style_name, "--image", result, "--request-id", request_id,
             "--description", "Synthetic changed reconciled scene", "--fidelity", "70", "--status", "TEST",
-            "--character-id", "NONE", "--attempt-id", attempt_id, "--reference-plan", plan_path, *qa,
+            "--character-id", "NONE", "--attempt-id", attempt_id, "--reference-plan", plan_path,
+            *self._visual_review_args(guard, attempt_id, result), *qa,
             succeeds=False,
         )
         self.assertIn("exact path recorded", changed_same_path.stderr)
@@ -702,7 +916,8 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "style_pack_manager.py", "record-generation", "--workspace", self.workspace,
             "--style-name", self.style_name, "--image", result, "--request-id", request_id,
             "--description", "Synthetic reconciled scene", "--fidelity", "70", "--status", "TEST",
-            "--character-id", "NONE", "--attempt-id", attempt_id, "--reference-plan", plan_path, *qa,
+            "--character-id", "NONE", "--attempt-id", attempt_id, "--reference-plan", plan_path,
+            *self._visual_review_args(guard, attempt_id, result), *qa,
         )
         first = self._cli(*common)
         retry = self._cli(*common)
@@ -734,13 +949,28 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
                 "--image", output, "--description", "Synthetic negative fixture", "--fidelity", "30",
                 "--risk-level", self._risk_level(plan_path), "--character-id", "NONE",
                 "--attempt-id", attempt_id, "--reference-plan", plan_path,
+                *self._visual_review_args(guard, attempt_id, output),
             ]
             return guard, common
 
         # Each failing result can archive its attempt, so exercise each contract
         # against a fresh request rather than chaining state-mutating failures.
         guard, common = start_negative("negative-request")
+        results_dir = self.workspace / "GENERATION_RESULTS"
+        results_before_failure = set(results_dir.iterdir()) if results_dir.exists() else set()
+        pending_before_risk_failure = set((self.generations / "00_PENDING" / "negative-request").iterdir())
         self._cli("style_pack_manager.py", *common, "--request-id", "wrong-request", succeeds=False)
+        self.assertEqual(set(results_dir.iterdir()) if results_dir.exists() else set(), results_before_failure)
+        conflicting_risk_description = list(common)
+        description_index = conflicting_risk_description.index("--description") + 1
+        conflicting_risk_description[description_index] = "Synthetic negative fixture [D10]"
+        risk_marker = self._cli(
+            "style_pack_manager.py", *conflicting_risk_description,
+            "--request-id", "negative-request", *semantic_qa, succeeds=False,
+        )
+        self.assertIn("Description risk marker conflicts", risk_marker.stderr)
+        self.assertEqual(set(results_dir.iterdir()) if results_dir.exists() else set(), results_before_failure)
+        self.assertEqual(set((self.generations / "00_PENDING" / "negative-request").iterdir()), pending_before_risk_failure)
         mismatch = self._cli(
             "style_pack_manager.py", *common, "--request-id", "negative-request", "--character-id", "CHAR_001",
             succeeds=False,
@@ -772,10 +1002,12 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         self.assertTrue(wrong_stage.stderr.strip())
 
         guard, common = start_negative("negative-low-fidelity-qa")
+        results_before_failure = set(results_dir.iterdir()) if results_dir.exists() else set()
         low_fidelity = self._cli(
             "style_pack_manager.py", *common, "--request-id", "negative-low-fidelity-qa", succeeds=False,
         )
         self.assertIn("Required post-generation QA was not performed", low_fidelity.stderr)
+        self.assertEqual(set(results_dir.iterdir()) if results_dir.exists() else set(), results_before_failure)
         with (self.generations / "GENERATION_MANIFEST.csv").open(encoding="utf-8-sig", newline="") as manifest_file:
             rows = list(csv.DictReader(manifest_file))
         self.assertFalse(any(row["request_id"] == "negative-low-fidelity-qa" for row in rows))
@@ -787,6 +1019,103 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         final_state = json.loads(guard.read_text(encoding="utf-8"))
         self.assertEqual(final_state["attempts"][-1]["attempt_id"], common[common.index("--attempt-id") + 1])
         self.assertEqual(final_state["phase"], "RESULT_AVAILABLE")
+
+    def test_visual_review_is_required_hash_bound_and_failure_is_preserved(self):
+        from tools import style_pack_manager as manager
+
+        request_id = "visual-review-required"
+        prompt = "Create one synthetic stone observatory artifact on a plain dark backdrop."
+        guard, plan_path = self._prepare_scene(request_id, fidelity=30)
+        call = self._resolve_and_prepare_call(request_id, guard, plan_path, prompt)
+        attempt_id = self._start_call(guard, plan_path, call)
+        output = self.workspace / "visual-review-result.png"
+        Image.new("RGB", (120, 180), (20, 24, 28)).save(output)
+        review_args = self._visual_review_args(guard, attempt_id, output)
+        semantic_qa = (
+            "--qa-attachments", "PASS", "--qa-canvas", "PASS", "--qa-stage-layer", "PASS",
+            "--qa-style", "PASS", "--qa-subject-accuracy", "PASS", "--qa-no-unrequested-characters", "PASS",
+            "--qa-focal-hierarchy", "PASS", "--qa-lighting", "PASS", "--qa-background", "PASS",
+            "--qa-composition", "PASS", "--qa-depth-and-scale", "PASS", "--qa-artifact-integrity", "PASS",
+        )
+        base = (
+            "style_pack_manager.py", "record-generation", "--workspace", self.workspace,
+            "--style-name", self.style_name, "--image", output, "--request-id", request_id,
+            "--description", "Synthetic visual review test", "--fidelity", "30", "--status", "TEST",
+            "--risk-level", self._risk_level(plan_path), "--character-id", "NONE",
+            "--attempt-id", attempt_id, "--reference-plan", plan_path,
+        )
+        missing = self._cli(*base, *semantic_qa, succeeds=False)
+        self.assertIn("visual-review-json", missing.stderr)
+        review_path = review_args[1]
+        report = json.loads(review_path.read_text(encoding="utf-8"))
+        report["prompt_sha256"] = "0" * 64
+        review_path.write_text(json.dumps(report), encoding="utf-8")
+        tampered = self._cli(*base, *review_args, *semantic_qa, succeeds=False)
+        self.assertIn("prompt_sha256 does not match", tampered.stderr)
+        report["prompt_sha256"] = json.loads(self._visual_review_args(guard, attempt_id, output)[1].read_text(encoding="utf-8"))["prompt_sha256"]
+        report["visible_defect_review"] = {
+            "status": "FAIL", "checked_scope": "Entire synthetic output at full resolution.",
+            "findings": [{"location": "center", "issue": "fixture artifact"}],
+        }
+        review_path.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+        rejected = self._cli(*base, *review_args, *semantic_qa)
+        self.assertIn("STATUS=REJECTED", rejected.stdout)
+        with (self.generations / "GENERATION_MANIFEST.csv").open(encoding="utf-8-sig", newline="") as stream:
+            row = next(row for row in csv.DictReader(stream) if row["request_id"] == request_id)
+        receipt = manager.generation_qa_evidence(row)
+        self.assertIsNotNone(receipt)
+        self.assertEqual(receipt["record_status"], "REJECTED")
+        self.assertEqual(receipt["visual_review"]["visible_defect_review"]["findings"], report["visible_defect_review"]["findings"])
+        self.assertIn("VISIBLE_DEFECTS", receipt["qa_failed"])
+
+    def test_visual_review_anatomy_not_applicable_requires_absence_and_rejects_body_plans(self):
+        from tools.style_pack_manager import StylePackError, prompt_review_clauses, validate_visual_review
+
+        image = self.workspace / "visual-na-fixture.png"
+        Image.new("RGB", (10, 10), (0, 0, 0)).save(image)
+        prompt_text = "Draw a stone observatory without people, with a red roof and blue windows."
+        plan_sha = "b" * 64
+        snapshot = {
+            "execution_call": {"prompt": {"text": prompt_text}},
+            "prompt_sha256": hashlib.sha256(prompt_text.encode("utf-8")).hexdigest(),
+            "reference_plan_snapshot_sha256": plan_sha,
+        }
+        report = {
+            "schema_version": 1, "request_id": "na-fixture", "attempt_id": "attempt-na",
+            "task_revision": 0, "output_sha256": hashlib.sha256(image.read_bytes()).hexdigest(),
+            "prompt_sha256": snapshot["prompt_sha256"], "executed_plan_sha256": plan_sha,
+            "author": "fixture reviewer",
+            "anatomy_review": {"status": "NOT_APPLICABLE", "no_visible_anatomy": True, "reason": "No human or animal anatomy is visible anywhere in this image."},
+            "visible_defect_review": {"status": "PASS", "checked_scope": "Entire image at full resolution.", "findings": []},
+            "prompt_adherence": {"status": "PASS", "checked_scope": "FULL_EXECUTED_PROMPT", "all_explicit_constraints_assessed": True, "constraints": [{"constraint": prompt_text, "status": "PASS", "evidence": "One broad checklist item is intentionally insufficient."}]},
+        }
+        path = self.workspace / "visual-na-fixture.json"
+        path.write_text(json.dumps(report), encoding="utf-8")
+        common = {
+            "review_path": path, "request_id": "na-fixture", "attempt_id": "attempt-na",
+            "task_revision": 0, "output": image, "execution_snapshot": snapshot,
+            "stage_id": "SINGLE_PASS",
+        }
+        with self.assertRaisesRegex(StylePackError, "every explicit constraint"):
+            validate_visual_review(plan={}, **common)
+        report["prompt_adherence"]["constraints"] = [
+            {"constraint": clause, "status": "PASS", "evidence": f"Reviewed clause: {clause}"}
+            for clause in prompt_review_clauses(prompt_text)
+        ]
+        path.write_text(json.dumps(report), encoding="utf-8")
+        self.assertEqual(validate_visual_review(plan={}, **common)["anatomy_review"]["status"], "NOT_APPLICABLE")
+        report["anatomy_review"]["no_visible_anatomy"] = False
+        path.write_text(json.dumps(report), encoding="utf-8")
+        with self.assertRaisesRegex(StylePackError, "no_visible_anatomy"):
+            validate_visual_review(plan={}, **common)
+        report["anatomy_review"]["no_visible_anatomy"] = True
+        path.write_text(json.dumps(report), encoding="utf-8")
+        with self.assertRaisesRegex(StylePackError, "full-body"):
+            validate_visual_review(plan={"canvas_contract": {"full_figure": True}}, **common)
+        with self.assertRaisesRegex(StylePackError, "visible character or face"):
+            validate_visual_review(plan={"scene_contract": {"has_character": True}}, **common)
+        with self.assertRaisesRegex(StylePackError, "visible character or face"):
+            validate_visual_review(plan={"face_review": {"face_visible": True}}, **common)
 
     def test_record_generation_recovers_exact_already_visible_output(self):
         request_id = "visible-before-record"
@@ -825,7 +1154,8 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--style-name", self.style_name, "--request-id", request_id,
             "--description", "Synthetic visible-result recovery", "--fidelity", "30", "--status", "TEST",
             "--risk-level", self._risk_level(plan_path), "--character-id", "NONE",
-            "--attempt-id", attempt_id, "--reference-plan", plan_path, *qa,
+            "--attempt-id", attempt_id, "--reference-plan", plan_path,
+            *self._visual_review_args(guard, attempt_id, provider_output), *qa,
         )
         rejected = self._cli(
             *record_args, "--image", wrong_archive, succeeds=False,
@@ -889,6 +1219,7 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--style-name", self.style_name, "--image", face_output, "--request-id", request_id,
             "--description", "Synthetic face stage", "--fidelity", "70", "--status", "STAGING",
             "--character-id", "NEW", "--attempt-id", face_attempt, "--reference-plan", plan_path,
+            *self._visual_review_args(guard, face_attempt, face_output),
             "--stage-id", "01_FACE_IDENTITY", "--qa-attachments", "PASS", "--qa-canvas", "PASS",
             "--qa-stage-layer", "PASS", "--qa-face", "PASS", "--qa-expression", "PASS",
             "--qa-style", "PASS", "--qa-neutral-backdrop", "PASS",
@@ -944,6 +1275,7 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--style-name", self.style_name, "--image", front_output, "--request-id", request_id,
             "--description", "Synthetic front physique stage", "--fidelity", "70", "--status", "STAGING",
             "--character-id", "NEW", "--attempt-id", front_attempt, "--reference-plan", plan_path,
+            *self._visual_review_args(guard, front_attempt, front_output),
             "--stage-id", "02_PHYSIQUE_FRONT", "--qa-attachments", "PASS", "--qa-canvas", "PASS",
             "--qa-stage-layer", "PASS", "--qa-face", "PASS", "--qa-body-silhouette", "PASS",
             "--qa-body-proportions", "PASS", "--qa-limb-proportions", "PASS", "--limb-qa-evidence", limb_evidence,
@@ -984,6 +1316,7 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--style-name", self.style_name, "--image", side_output, "--request-id", request_id,
             "--description", "Synthetic side physique stage", "--fidelity", "70", "--status", "STAGING",
             "--character-id", "NEW", "--attempt-id", side_attempt, "--reference-plan", plan_path,
+            *self._visual_review_args(guard, side_attempt, side_output),
             "--stage-id", "03_PHYSIQUE_SIDE", "--qa-attachments", "PASS", "--qa-canvas", "PASS",
             "--qa-stage-layer", "PASS", "--qa-face", "PASS", "--qa-body-silhouette", "PASS",
             "--qa-body-proportions", "PASS", "--qa-limb-proportions", "PASS", "--limb-qa-evidence", side_limb_evidence,
@@ -1017,6 +1350,7 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--style-name", self.style_name, "--image", back_output, "--request-id", request_id,
             "--description", "Synthetic back physique stage", "--fidelity", "70", "--status", "STAGING",
             "--character-id", "NEW", "--attempt-id", back_attempt, "--reference-plan", plan_path,
+            *self._visual_review_args(guard, back_attempt, back_output),
             "--stage-id", "04_PHYSIQUE_BACK", "--qa-attachments", "PASS", "--qa-canvas", "PASS",
             "--qa-stage-layer", "PASS", "--qa-face", "PASS", "--qa-body-silhouette", "PASS",
             "--qa-body-proportions", "PASS", "--qa-limb-proportions", "PASS", "--limb-qa-evidence", back_limb_evidence,
@@ -1045,6 +1379,7 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--style-name", self.style_name, "--image", assembly_output, "--request-id", request_id,
             "--description", "Synthetic canonical character assembly", "--fidelity", "70", "--status", "TEST",
             "--character-id", "NEW", "--attempt-id", assembly_attempt, "--reference-plan", plan_path,
+            *self._visual_review_args(guard, assembly_attempt, assembly_output),
             "--stage-id", "05_CHARACTER_ASSEMBLY", "--qa-attachments", "PASS", "--qa-canvas", "PASS",
             "--qa-stage-layer", "PASS", "--qa-face", "PASS", "--qa-body-silhouette", "PASS",
             "--qa-body-proportions", "PASS", "--qa-limb-proportions", "PASS", "--limb-qa-evidence", limb_evidence,

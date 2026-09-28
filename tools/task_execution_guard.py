@@ -134,6 +134,24 @@ def validate_invariant_assertions(state: dict[str, object], assertions: Sequence
     return declared
 
 
+def execution_start_assertions(
+    state: dict[str, object],
+    supplied: Sequence[str],
+) -> dict[str, str]:
+    """Bind EXECUTION_STARTED assertions to the guard's locked invariant set.
+
+    An omitted CLI list is safely derived from the already validated guard
+    state. Any explicit list still has to match that state exactly.
+    """
+    locked = state.get("locked_invariants", {})
+    if not isinstance(locked, dict):
+        raise GuardError("Execution guard locked_invariants must be an object.")
+    assertions = list(supplied)
+    if not assertions and locked:
+        assertions = [f"{name}={value}" for name, value in locked.items()]
+    return validate_invariant_assertions(state, assertions)
+
+
 def create_guard(
     path: Path,
     *,
@@ -151,6 +169,11 @@ def create_guard(
 ) -> dict[str, object]:
     if path.exists():
         raise GuardError(f"Execution guard already exists and will not be overwritten: {path}")
+    normalized_task_kind = task_kind.upper()
+    if normalized_task_kind not in {"IMAGE_GENERATION", "IMAGE_GENERATION_NATIVE_DEFAULT", "IMAGE_EDIT", "GENERAL"}:
+        raise GuardError(
+            "Unsupported task kind. Standalone image requests outside StoryArt do not use a StoryArt guard."
+        )
     if not request_id.strip() or not goal.strip() or not deliverable.strip():
         raise GuardError("request_id, goal, and deliverable are required.")
     if min(max_minutes_without_execution, max_preflight_actions, max_execution_minutes) <= 0:
@@ -166,12 +189,14 @@ def create_guard(
             raise GuardError(f"Duplicate required stage: {stage}")
         seen_stages.add(stage_key)
         normalized_stages.append(stage)
+    if normalized_task_kind == "IMAGE_GENERATION_NATIVE_DEFAULT" and len(normalized_stages) > 1:
+        raise GuardError("IMAGE_GENERATION_NATIVE_DEFAULT supports one requested output stage only.")
     locked_invariants = parse_invariant_assignments(invariants, label="invariant")
     moment = now or utc_now()
     state: dict[str, object] = {
         "schema_version": SCHEMA_VERSION,
         "request_id": request_id.strip(),
-        "task_kind": task_kind.upper(),
+        "task_kind": normalized_task_kind,
         "goal_lock": goal.strip(),
         "primary_deliverable": deliverable.strip(),
         "locked_invariants": locked_invariants,
@@ -213,15 +238,9 @@ def create_guard(
         "events": [{
             "at": iso_time(moment),
             "event": "STARTED",
-            "summary": (
-                "Explicit user request recorded: " + goal.strip()
-                if task_kind.upper() == "USER_REQUESTED_IMAGE"
-                else "Task contract locked before substantive work."
-            ),
+            "summary": "Task contract locked before substantive work.",
         }],
     }
-    if task_kind.upper() == "USER_REQUESTED_IMAGE":
-        state["explicit_user_request"] = goal.strip()
     atomic_write_json(path, state)
     return state
 
@@ -266,6 +285,202 @@ def is_physique_stage(stage: str | None) -> bool:
     return normalize_stage_key(stage).upper().startswith("PHYSIQUE_")
 
 
+def is_project_image_generation(state: dict[str, object]) -> bool:
+    return state.get("task_kind") in {"IMAGE_GENERATION", "IMAGE_GENERATION_NATIVE_DEFAULT"}
+
+
+def validate_user_generation_selections(execution_call: dict[str, object], *, no_references: bool) -> dict[str, str]:
+    """Require explicit, chat-quoted user choices for style, references, and identity."""
+    selections = execution_call.get("user_selections")
+    if not isinstance(selections, dict):
+        raise GuardError("Image readiness requires explicit user_selections for style, reference policy, and character identity.")
+    result: dict[str, str] = {}
+    for key in ("style", "reference_policy", "character"):
+        item = selections.get(key)
+        if not isinstance(item, dict):
+            raise GuardError(f"Image readiness requires an explicit user selection for {key}.")
+        choice_value = item.get("choice")
+        quote_value = item.get("user_quote")
+        if not isinstance(choice_value, str) or not isinstance(quote_value, str):
+            raise GuardError(f"The {key} selection choice and user_quote must be strings.")
+        choice = choice_value.strip()
+        quote = quote_value.strip()
+        if not choice or not quote:
+            raise GuardError(f"The {key} selection must include its choice and exact user_quote from this chat.")
+        result[key] = choice
+    if no_references:
+        if result["style"].upper() != "GENERATOR_DEFAULT":
+            raise GuardError("IMAGE_GENERATION_NATIVE_DEFAULT requires the user's explicit GENERATOR_DEFAULT style choice.")
+        if result["reference_policy"].upper() != "NO_REFERENCES":
+            raise GuardError("IMAGE_GENERATION_NATIVE_DEFAULT requires the user's explicit NO_REFERENCES choice.")
+        if result["character"].upper() not in {"NONE", "NO_CHARACTER"}:
+            raise GuardError("A named project character cannot use IMAGE_GENERATION_NATIVE_DEFAULT without approved identity references.")
+    elif result["reference_policy"].upper() == "NO_REFERENCES":
+        raise GuardError("A no-reference choice cannot use IMAGE_GENERATION; select the no-reference route explicitly.")
+    elif result["reference_policy"].upper() not in {
+        "PROJECT_STYLE_ONLY", "BODY_LIBRARY_ONLY", "APPROVED_CHARACTER_REFERENCES", "APPROVED_PLUS_USER_REFERENCES", "USER_ATTACHED_REFERENCES",
+    }:
+        raise GuardError("reference_policy must name an explicit supported choice.")
+    style_choice = result["style"].upper()
+    if style_choice != "GENERATOR_DEFAULT" and not style_choice.startswith(("PROJECT_STYLE:", "USER_STYLE:")):
+        raise GuardError("style must be GENERATOR_DEFAULT, PROJECT_STYLE:<name>, or USER_STYLE:<description>.")
+    character_choice = result["character"].upper()
+    if character_choice not in {"NONE", "NO_CHARACTER", "NEW"} and not re.fullmatch(r"CHAR_\d+", character_choice):
+        raise GuardError("character must be NONE, NEW, or an approved CHAR_NNN project identity.")
+    return result
+
+
+def validate_project_style_only_slots(
+    slots: list[object], style_choice: str, character_id: str, approved_identity_root: Path | None,
+    validated_lineage_paths: set[Path] | None = None,
+) -> None:
+    """Permit selected style, approved identity, and validated current-request lineage."""
+    project_style = style_choice.upper().startswith("PROJECT_STYLE:")
+    if not project_style:
+        raise GuardError("PROJECT_STYLE_ONLY requires the user's explicit project-style selection.")
+    if not any(
+        isinstance(slot, dict)
+        and set(str(role).upper() for role in slot.get("active_roles", [])) & {"STYLE", "STYLE_SOFT"}
+        for slot in slots
+    ):
+        raise GuardError("Selected project style has no style-role attachment in the exact generator call.")
+    for slot in slots:
+        if not isinstance(slot, dict):
+            raise GuardError("PROJECT_STYLE_ONLY contains an invalid physical slot.")
+        slot_roles = {
+            str(role).upper()
+            for role in (slot.get("active_roles") if isinstance(slot.get("active_roles"), list) else [])
+        }
+        slot_path = Path(str(slot.get("path", ""))).expanduser().resolve()
+        is_style_slot = bool(slot_roles) and slot_roles.issubset({"STYLE", "STYLE_SOFT"})
+        is_approved_identity_slot = (
+            re.fullmatch(r"CHAR_\d+", character_id.upper()) is not None
+            and approved_identity_root is not None
+            and slot_path.is_relative_to(approved_identity_root)
+        )
+        is_validated_lineage = slot_path in (validated_lineage_paths or set())
+        if not (is_style_slot or is_approved_identity_slot or is_validated_lineage):
+            raise GuardError("PROJECT_STYLE_ONLY cannot attach optional non-style references.")
+
+
+def registry_identity_matches_locked_name(locked_name: str, registry_row: dict[str, str], character_id: str) -> bool:
+    """Match a lock to the canonical registry name or an explicit parenthesized alias."""
+    def normalized(value: str) -> str:
+        return " ".join(value.split()).casefold().replace("ё", "е")
+
+    def russian_case_stem(value: str) -> str:
+        words = value.split()
+        if not words:
+            return ""
+        last = words[-1]
+        if not re.search(r"[а-яё]", last, flags=re.IGNORECASE):
+            return value
+        for ending in ("ом", "ем", "ой", "ей", "ью", "ия", "а", "я", "у", "ю", "ы", "и", "е"):
+            if len(last) > len(ending) + 1 and last.endswith(ending):
+                words[-1] = last[:-len(ending)]
+                break
+        return " ".join(words)
+
+    locked = normalized(locked_name)
+    canonical_id = str(registry_row.get("character_id", character_id)).strip().upper()
+    if locked.upper() == canonical_id:
+        return True
+    canonical_name = normalized(str(registry_row.get("name", "")))
+    if locked and (locked == canonical_name or russian_case_stem(locked) == canonical_name or locked == russian_case_stem(canonical_name)):
+        return True
+    notes = str(registry_row.get("notes", ""))
+    aliases = {
+        normalized(match)
+        for group in re.findall(r"\(([^()]*)\)", notes)
+        for match in re.split(r"[,;/|]", group)
+        if match.strip()
+    }
+    return bool(
+        locked
+        and any(
+            locked == alias
+            or russian_case_stem(locked) == alias
+            or locked == russian_case_stem(alias)
+            for alias in aliases
+        )
+    )
+
+
+def validate_native_default_call(
+    execution_call: dict[str, object] | None,
+    request_id: str,
+    reference_plan: str | Path | None,
+    locked_character: str = "",
+) -> dict[str, str]:
+    """Bind a no-reference native/default call without weakening planned generation."""
+    if reference_plan is not None:
+        raise GuardError("IMAGE_GENERATION_NATIVE_DEFAULT does not accept --reference-plan.")
+    if not isinstance(execution_call, dict):
+        raise GuardError("IMAGE_GENERATION_NATIVE_DEFAULT requires --execution-call with the exact prompt contract.")
+    if locked_character.strip().upper() not in {"", "NONE", "NO_CHARACTER", "NEW"}:
+        raise GuardError("A named project character cannot use IMAGE_GENERATION_NATIVE_DEFAULT; resolve and attach approved identity references.")
+    validate_user_generation_selections(execution_call, no_references=True)
+    forbidden_keys = {
+        "slots", "references", "reference_plan", "reference_plan_path", "reference_path",
+        "reference_image", "reference_inputs", "reference_slots", "selected_references",
+        "style_reference", "body_reference", "source_slots", "input_references", "plan",
+        "plan_path", "stage_output_bindings", "targeted_pack_bindings",
+    }
+
+    def reject_reference_fields(value: object) -> None:
+        if isinstance(value, dict):
+            for key, nested in value.items():
+                if str(key).casefold() == "user_selections":
+                    # This subtree was validated above and contains user-choice
+                    # vocabulary, not executable reference-slot payloads.
+                    continue
+                if str(key).casefold() in forbidden_keys:
+                    if str(key).casefold() == "references" and nested == []:
+                        continue
+                    raise GuardError(
+                        "IMAGE_GENERATION_NATIVE_DEFAULT is single-output and does not accept plan or reference slots."
+                    )
+                reject_reference_fields(nested)
+        elif isinstance(value, list):
+            for nested in value:
+                reject_reference_fields(nested)
+
+    reject_reference_fields(execution_call)
+    for count_key in ("n", "num_images", "num_outputs", "output_count"):
+        if count_key in execution_call and (type(execution_call[count_key]) is not int or execution_call[count_key] != 1):
+            raise GuardError("IMAGE_GENERATION_NATIVE_DEFAULT supports exactly one image output.")
+    if str(execution_call.get("request_id", "")) != request_id:
+        raise GuardError("execution_call belongs to another request_id.")
+    prompt = execution_call.get("prompt")
+    if not isinstance(prompt, dict):
+        raise GuardError("execution_call requires prompt.text and prompt.text_sha256.")
+    prompt_text = str(prompt.get("text", ""))
+    prompt_hash = str(prompt.get("text_sha256", "")).lower()
+    actual_prompt_hash = hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
+    if not prompt_text.strip() or prompt_hash != actual_prompt_hash:
+        raise GuardError("execution_call prompt is empty or its text_sha256 does not match.")
+    risk_report = execution_call.get("risk_assessment")
+    if not isinstance(risk_report, dict):
+        raise GuardError("IMAGE_GENERATION_NATIVE_DEFAULT requires an embedded exact-call risk_assessment.")
+    try:
+        from tools.generation_risk_assessor import RiskAssessmentError, validate_assessment
+    except ImportError:
+        try:
+            from generation_risk_assessor import RiskAssessmentError, validate_assessment
+        except ImportError as error:
+            raise GuardError(f"Cannot load exact-call risk assessor: {error}") from error
+    try:
+        validate_assessment(risk_report, prompt_text, [])
+    except RiskAssessmentError as error:
+        raise GuardError(f"Exact-call risk assessment validation failed: {error}") from error
+    call_json = json.dumps(execution_call, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return {
+        "request_id": request_id,
+        "prompt_sha256": prompt_hash,
+        "execution_call_sha256": hashlib.sha256(call_json.encode("utf-8")).hexdigest(),
+    }
+
+
 def validate_image_execution_scope(
     state: dict[str, object],
     *,
@@ -274,9 +489,12 @@ def validate_image_execution_scope(
     user_approved_extra_generation: bool,
     extra_generation_evidence: str,
 ) -> None:
-    if state.get("task_kind") != "IMAGE_GENERATION":
+    task_kind = state.get("task_kind")
+    if task_kind not in {"IMAGE_GENERATION", "IMAGE_GENERATION_NATIVE_DEFAULT"}:
         return
     contract = str(output_contract or "").upper()
+    if task_kind == "IMAGE_GENERATION_NATIVE_DEFAULT" and contract != "REQUESTED_DELIVERABLE":
+        raise GuardError("IMAGE_GENERATION_NATIVE_DEFAULT requires --output-contract REQUESTED_DELIVERABLE.")
     if contract not in {"REQUESTED_DELIVERABLE", "USER_REQUESTED_EXTRA"}:
         raise GuardError(
             "Image EXECUTION_STARTED requires --output-contract "
@@ -346,6 +564,46 @@ def _planned_placeholder_role(workflow: dict[str, object], source_stage_id: str)
         "03_PHYSIQUE_SIDE": "PHYSIQUE_SIDE_STAGE",
         "04_PHYSIQUE_BACK": "PHYSIQUE_BACK_STAGE",
     }.get(source_stage_id, source_stage_id)
+
+
+def _stage_has_identity_anchor(
+    workflow: dict[str, object], stage_id: str, assembly_path: Path, assembly_hash: str,
+    visiting: set[str] | None = None,
+) -> bool:
+    """Require a named-character stage to descend from its approved assembly source."""
+    normalized_id = normalize_stage_key(stage_id)
+    visited = set(visiting or ())
+    if normalized_id in visited:
+        return False
+    visited.add(normalized_id)
+    stage_rows = workflow.get("stages")
+    if not isinstance(stage_rows, list):
+        return False
+    row = next((item for item in stage_rows if isinstance(item, dict)
+                and normalize_stage_key(str(item.get("stage_id", ""))) == normalized_id), None)
+    row_slots = row.get("slots") if isinstance(row, dict) else None
+    if not isinstance(row_slots, list):
+        return False
+    parents: set[str] = set()
+    for slot in row_slots:
+        if not isinstance(slot, dict):
+            continue
+        raw_path = str(slot.get("path", ""))
+        if (
+            raw_path
+            and not raw_path.startswith(("<STAGE_OUTPUT:", "<TARGETED_STAGE_PACK:"))
+            and Path(raw_path).expanduser().resolve() == assembly_path
+            and str(slot.get("sha256", "")).lower() == assembly_hash
+            and "CHARACTER_ASSEMBLY" in {str(role).upper() for role in slot.get("active_roles", [])}
+        ):
+            return True
+        match = re.fullmatch(r"<STAGE_OUTPUT:([^>]+)>", raw_path)
+        if match:
+            parents.add(match.group(1))
+        sources = slot.get("targeted_pack_sources")
+        if isinstance(sources, list):
+            parents.update(str(source) for source in sources if str(source).strip())
+    return any(_stage_has_identity_anchor(workflow, parent, assembly_path, assembly_hash, visited) for parent in parents)
 
 
 def _validate_resolved_execution_slots(
@@ -576,6 +834,7 @@ def validate_reference_plan(
     stage: str | None = None,
     execution_call: dict[str, object] | None = None,
     request_id: str | None = None,
+    locked_character: str = "",
 ) -> dict[str, object]:
     """Validate and snapshot the exact executable prompt and its physical inputs."""
     path = Path(path_value).expanduser().resolve()
@@ -593,9 +852,82 @@ def validate_reference_plan(
         raise GuardError("REFERENCE_PLAN belongs to another request_id.")
     if execution_call is None and isinstance(plan.get("execution_call"), dict):
         execution_call = plan["execution_call"]
+    if not isinstance(execution_call, dict):
+        raise GuardError("REFERENCE_PLAN readiness requires a materialized exact execution_call with explicit user_selections.")
+    recorded_call = plan.get("execution_call")
+    if not isinstance(recorded_call, dict) or recorded_call != execution_call:
+        raise GuardError("The materialized execution_call must exactly match the call saved in REFERENCE_PLAN.")
+    recorded_selections = plan.get("user_selections")
+    if isinstance(recorded_selections, dict) and recorded_selections != execution_call.get("user_selections"):
+        raise GuardError("REFERENCE_PLAN user_selections differ from the exact execution_call selections.")
     risk = plan.get("risk_assessment")
     prompt_info = risk.get("prompt") if isinstance(risk, dict) else None
     if execution_call is not None:
+        user_selections = validate_user_generation_selections(execution_call, no_references=False)
+        character_id = user_selections["character"].upper()
+        reference_policy = user_selections["reference_policy"].upper()
+        approved_identity_root: Path | None = None
+        approved_assembly_path: Path | None = None
+        approved_assembly_hash = ""
+        if locked_character.strip().upper() not in {"", "NONE", "NO_CHARACTER", "NEW"} and not re.fullmatch(r"CHAR_\d+", character_id):
+            raise GuardError("The locked named character must resolve to an approved CHAR_NNN identity before readiness.")
+        if re.fullmatch(r"CHAR_\d+", character_id) and reference_policy not in {
+            "PROJECT_STYLE_ONLY", "BODY_LIBRARY_ONLY", "APPROVED_CHARACTER_REFERENCES", "APPROVED_PLUS_USER_REFERENCES", "USER_ATTACHED_REFERENCES",
+        }:
+            raise GuardError("An existing project character requires its approved identity references in the selected reference policy.")
+        if re.fullmatch(r"CHAR_\d+", character_id):
+            if str(plan.get("character_id", "")).upper() != character_id:
+                raise GuardError("Selected project character does not match REFERENCE_PLAN.character_id.")
+            selected = plan.get("selected_references")
+            assembly = selected.get("character_assembly") if isinstance(selected, dict) else None
+            if (
+                not isinstance(assembly, dict)
+                or str(assembly.get("status", "")).upper() != "APPROVED_CHARACTER_ASSET"
+                or str(assembly.get("source_character_id", "")).upper() != character_id
+            ):
+                raise GuardError("Named project character is missing its approved CHARACTER_ASSEMBLY binding.")
+            if locked_character.strip() and locked_character.strip().upper() not in {"NONE", "NO_CHARACTER", "NEW"}:
+                try:
+                    from tools import style_pack_manager as manager
+                except ImportError:
+                    import style_pack_manager as manager
+                try:
+                    pack_path = Path(str(plan.get("pack_path", ""))).resolve()
+                    style_name = str(plan.get("style_name", "")).strip()
+                    if not pack_path.is_dir() or not style_name:
+                        raise GuardError("Cannot resolve the approved character registry for the locked identity.")
+                    character_paths = manager.make_paths(pack_path.parent, style_name)
+                    identity_rows = [
+                        row for row in manager.read_csv(character_paths.character_registry)
+                        if str(row.get("character_id", "")).strip().upper() == character_id
+                        and str(row.get("status", "")).strip().upper() == "APPROVED"
+                    ]
+                    if len(identity_rows) != 1:
+                        raise GuardError("The selected character ID does not resolve to one approved registry entry.")
+                    if not registry_identity_matches_locked_name(locked_character, identity_rows[0], character_id):
+                        raise GuardError("The selected approved character ID does not match the locked character name.")
+                except (OSError, ValueError, RuntimeError) as error:
+                    raise GuardError(f"Cannot verify locked character against the approved registry: {error}") from error
+            assembly_path = str(assembly.get("path", ""))
+            assembly_hash = str(assembly.get("sha256", "")).lower()
+            try:
+                try:
+                    from tools import style_pack_manager as manager
+                except ImportError:
+                    import style_pack_manager as manager
+                pack_path = Path(str(plan.get("pack_path", ""))).resolve()
+                style_name = str(plan.get("style_name", "")).strip()
+                if not pack_path.is_dir() or not style_name:
+                    raise GuardError("Cannot resolve the approved character identity folder for readiness.")
+                approved_identity_root = manager.character_folder(
+                    manager.make_paths(pack_path.parent, style_name), character_id
+                ).resolve()
+                if not Path(assembly_path).expanduser().resolve().is_relative_to(approved_identity_root):
+                    raise GuardError("The selected CHARACTER_ASSEMBLY is outside the named character's approved identity folder.")
+                approved_assembly_path = Path(assembly_path).expanduser().resolve()
+                approved_assembly_hash = assembly_hash
+            except (OSError, ValueError, RuntimeError) as error:
+                raise GuardError(f"Cannot verify approved character identity attachment: {error}") from error
         prompt_info = execution_call.get("prompt")
         if not isinstance(prompt_info, dict):
             raise GuardError("execution_call requires prompt.text and prompt.text_sha256.")
@@ -608,6 +940,28 @@ def validate_reference_plan(
             raise GuardError("execution_call prompt does not match the REFERENCE_PLAN prompt hash.")
         if isinstance(plan_prompt, str) and plan_prompt.strip() != prompt_text.strip():
             raise GuardError("execution_call prompt text does not match the REFERENCE_PLAN prompt.")
+        style_choice = user_selections["style"].strip()
+        selected_slots = execution_call.get("slots")
+        if not isinstance(selected_slots, list):
+            raise GuardError("Executable call has no exact physical slots for the user's style/reference choices.")
+        roles = {
+            str(role).upper()
+            for slot in selected_slots if isinstance(slot, dict)
+            for role in (slot.get("active_roles") if isinstance(slot.get("active_roles"), list) else [])
+        }
+        if style_choice.upper() == "GENERATOR_DEFAULT" and roles.intersection({"STYLE", "STYLE_SOFT"}):
+            raise GuardError("The exact call attaches a style reference although the user selected GENERATOR_DEFAULT.")
+        if style_choice.upper().startswith("PROJECT_STYLE:"):
+            selected_style = style_choice.partition(":")[2].strip()
+            if not selected_style or selected_style.casefold() != str(plan.get("style_name", "")).strip().casefold():
+                raise GuardError("Selected project style does not match REFERENCE_PLAN.style_name.")
+            if not roles.intersection({"STYLE", "STYLE_SOFT"}):
+                raise GuardError("Selected project style has no style-role attachment in the exact generator call.")
+        if style_choice.upper().startswith("USER_STYLE:"):
+            selected_style = " ".join(style_choice.partition(":")[2].split())
+            normalized_prompt = " ".join(prompt_text.split()).casefold()
+            if not selected_style or selected_style.casefold() not in normalized_prompt:
+                raise GuardError("The exact prompt does not contain the user's selected custom style description.")
     else:
         plan_prompt, prompt_hash = _prompt_binding(plan)
         prompt_text = plan_prompt
@@ -652,10 +1006,64 @@ def validate_reference_plan(
             planned_slots = planned.get("slots") if isinstance(planned.get("slots"), list) else None
         if planned_slots is None:
             raise GuardError("REFERENCE_PLAN has no planned slots for the selected execution call.")
+        if approved_assembly_path is not None:
+            if mode == "SINGLE_PASS":
+                anchor_bound = any(
+                    isinstance(slot, dict)
+                    and str(Path(str(slot.get("path", ""))).expanduser().resolve()) == str(approved_assembly_path)
+                    and str(slot.get("sha256", "")).lower() == approved_assembly_hash
+                    and "CHARACTER_ASSEMBLY" in {str(role).upper() for role in slot.get("active_roles", [])}
+                    for slot in execution_call.get("slots", [])
+                )
+            else:
+                anchor_bound = _stage_has_identity_anchor(
+                    workflow, selected_stage, approved_assembly_path, approved_assembly_hash,
+                )
+            if not anchor_bound:
+                raise GuardError("The exact stage has no verified path to the approved CHARACTER_ASSEMBLY identity anchor.")
         _validate_resolved_execution_slots(
             path, plan, workflow, planned_slots, execution_call,
             str(request_id or plan.get("request_id", "")),
         )
+        # Only after exact slot resolution has been validated can prior outputs
+        # be treated as inherited references for a policy that excludes optional
+        # attachments. The validator above binds these paths to QA-passed,
+        # request-local stage output records and planned placeholders.
+        validated_lineage_paths = {
+            Path(str(row.get("path", ""))).expanduser().resolve()
+            for row in execution_call.get("stage_output_bindings", [])
+            if isinstance(row, dict) and row.get("path")
+        }
+        validated_lineage_paths.update(
+            Path(str(row.get("path", ""))).expanduser().resolve()
+            for row in execution_call.get("targeted_pack_bindings", [])
+            if isinstance(row, dict) and row.get("path")
+        )
+        if reference_policy == "PROJECT_STYLE_ONLY":
+            validate_project_style_only_slots(
+                selected_slots, style_choice, character_id, approved_identity_root,
+                validated_lineage_paths,
+            )
+        elif reference_policy == "BODY_LIBRARY_ONLY":
+            startup = plan.get("startup_parameter_selection", {})
+            resolved = startup.get("resolved_parameters", {}) if isinstance(startup, dict) else {}
+            if str(resolved.get("aux_body_decision", "")).upper() != "SELECTED":
+                raise GuardError("BODY_LIBRARY_ONLY requires the user's explicit request-level BODY_REFERENCE_LIBRARY selection.")
+            try:
+                workspace = Path(str(plan.get("pack_path", ""))).resolve().parent
+                body_library = (workspace / "BODY_REFERENCE_LIBRARY").resolve()
+            except (OSError, ValueError):
+                body_library = Path("<unresolved-body-library>")
+            for slot in selected_slots:
+                if not isinstance(slot, dict):
+                    raise GuardError("BODY_LIBRARY_ONLY contains an invalid physical slot.")
+                slot_path = Path(str(slot.get("path", ""))).expanduser().resolve()
+                slot_roles = {str(role).upper() for role in slot.get("active_roles", [])}
+                is_library = slot_path.is_relative_to(body_library)
+                is_identity = approved_identity_root is not None and slot_path.is_relative_to(approved_identity_root)
+                is_style = bool(slot_roles) and slot_roles.issubset({"STYLE", "STYLE_SOFT"})
+                if not (is_library or is_identity or is_style or slot_path in validated_lineage_paths):
+                    raise GuardError("BODY_LIBRARY_ONLY cannot attach optional non-library references outside validated stage lineage.")
     bindings: list[dict[str, object]] = []
     for slot in slots:
         if not isinstance(slot, dict):
@@ -692,13 +1100,17 @@ def validate_reference_plan(
         )
     except RiskAssessmentError as error:
         raise GuardError(f"Exact-call risk assessment validation failed: {error}") from error
-    return {
+    binding = {
         "path": str(path),
         "sha256": file_sha256(path),
         "prompt_sha256": prompt_hash,
         "stage": selected_stage,
         "references": bindings,
     }
+    if execution_call is not None:
+        call_json = json.dumps(execution_call, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        binding["execution_call_sha256"] = hashlib.sha256(call_json.encode("utf-8")).hexdigest()
+    return binding
 def swimwear_failures(state: dict[str, object], stage: str) -> set[str]:
     stage_key = normalize_stage_key(stage)
     return {
@@ -800,7 +1212,7 @@ def validate_swimwear_execution_start(
 
 def validate_stage_evidence(state: dict[str, object], evidence: Sequence[str]) -> list[str]:
     evidence_paths = [str(Path(item).resolve()) for item in evidence]
-    if state.get("task_kind") == "IMAGE_GENERATION":
+    if is_project_image_generation(state):
         if not evidence_paths:
             raise GuardError("Image-generation stages require a real output path as evidence.")
         for item in evidence_paths:
@@ -1013,7 +1425,7 @@ def checkpoint(
     state = load_guard(path)
     moment = now or utc_now()
     event = event.upper()
-    if state.get("task_kind") != "IMAGE_GENERATION" and not attempt_id and isinstance(state.get("active_attempt"), dict):
+    if not is_project_image_generation(state) and not attempt_id and isinstance(state.get("active_attempt"), dict):
         attempt_id = str(state["active_attempt"].get("attempt_id", ""))
     if not summary.strip():
         raise GuardError("Every checkpoint requires a short factual summary.")
@@ -1031,7 +1443,7 @@ def checkpoint(
         if state.get("waiting_since"):
             raise GuardError("The guard is already waiting for the user.")
         if (
-            state.get("task_kind") == "IMAGE_GENERATION"
+            is_project_image_generation(state)
             and pending_required_stages(state)
             and (state.get("first_visible_result_at") or state.get("execution_started_at"))
             and not (user_decision_essential and safe_routes_exhausted)
@@ -1077,8 +1489,18 @@ def checkpoint(
         if state.get("task_kind") == "IMAGE_GENERATION":
             if not reference_plan:
                 raise GuardError("Image READY_FOR_EXECUTION requires --reference-plan.")
-            binding = validate_reference_plan(reference_plan, stage, execution_call, str(state.get("request_id", "")))
+            if not isinstance(execution_call, dict):
+                raise GuardError("Image readiness requires the materialized exact execution call and user selections.")
+            binding = validate_reference_plan(
+                reference_plan, stage, execution_call, str(state.get("request_id", "")),
+                str(state.get("locked_invariants", {}).get("character", "")),
+            )
             state["ready_binding"] = binding
+        elif state.get("task_kind") == "IMAGE_GENERATION_NATIVE_DEFAULT":
+            state["ready_binding"] = validate_native_default_call(
+                execution_call, str(state.get("request_id", "")), reference_plan,
+                str(state.get("locked_invariants", {}).get("character", "")),
+            )
         state["status"] = "READY"
         state["phase"] = "READY_FOR_EXECUTION"
         state["next_required_action"] = "CALL_VALIDATION_OR_EXECUTION_OR_BLOCKER"
@@ -1187,7 +1609,7 @@ def checkpoint(
             raise GuardActionRequired(
                 "Two same-layer failures after an explicit correction require one read-only ESCALATION_ORCHESTRATOR result before another attempt."
             )
-        if state.get("task_kind") == "IMAGE_GENERATION" and state.get("next_required_action") not in {"CALL_VALIDATION_OR_EXECUTION_OR_BLOCKER", "EXECUTION_STARTED_OR_BLOCKER"}:
+        if is_project_image_generation(state) and state.get("next_required_action") not in {"CALL_VALIDATION_OR_EXECUTION_OR_BLOCKER", "EXECUTION_STARTED_OR_BLOCKER"}:
             raise GuardError("EXECUTION_STARTED requires one preceding READY_FOR_EXECUTION transition.")
         validate_image_execution_scope(
             state,
@@ -1196,16 +1618,78 @@ def checkpoint(
             user_approved_extra_generation=user_approved_extra_generation,
             extra_generation_evidence=extra_generation_evidence,
         )
+        if is_project_image_generation(state):
+            bound_stage = str((state.get("ready_binding") or {}).get("stage", "")).strip()
+            if state.get("task_kind") == "IMAGE_GENERATION_NATIVE_DEFAULT":
+                bound_stage = bound_stage or "SINGLE_PASS"
+            elif not bound_stage:
+                raise GuardError("EXECUTION_STARTED requires a validated ready stage binding.")
+            if stage and normalize_stage_key(stage) != normalize_stage_key(bound_stage):
+                raise GuardError(
+                    f"Explicit EXECUTION_STARTED stage {stage!r} conflicts with the ready binding {bound_stage!r}."
+                )
+            stage = bound_stage
         attempt_stage = stage
         if state.get("task_kind") == "IMAGE_GENERATION":
             if not reference_plan:
                 raise GuardError("Image EXECUTION_STARTED requires --reference-plan.")
-            binding = validate_reference_plan(reference_plan, stage, execution_call, str(state.get("request_id", "")))
+            binding = validate_reference_plan(
+                reference_plan, stage, execution_call, str(state.get("request_id", "")),
+                str(state.get("locked_invariants", {}).get("character", "")),
+            )
             validate_current_stage_output_authority(reference_plan, execution_call, str(state.get("request_id", "")))
             if binding != state.get("ready_binding"):
                 raise GuardError("Execution call differs from the ready prompt, plan, references, hashes, roles, or stage.")
             attempt_stage = str(binding.get("stage", ""))
-        asserted_invariants = validate_invariant_assertions(state, invariant_assertions)
+        elif state.get("task_kind") == "IMAGE_GENERATION_NATIVE_DEFAULT":
+            binding = validate_native_default_call(
+                execution_call, str(state.get("request_id", "")), reference_plan,
+                str(state.get("locked_invariants", {}).get("character", "")),
+            )
+            if binding != state.get("ready_binding"):
+                raise GuardError("Execution call differs from the prompt contract bound at readiness.")
+        if is_project_image_generation(state):
+            attempt_stage = str((state.get("ready_binding") or {}).get("stage") or "SINGLE_PASS")
+        new_attempt_id = str(attempt_id or uuid.uuid4())
+        if any(row.get("attempt_id") == new_attempt_id for row in state.get("attempts", [])):
+            raise GuardError("Duplicate attempt_id is forbidden.")
+        execution_snapshot_fields: dict[str, object] = {}
+        if state.get("task_kind") == "IMAGE_GENERATION":
+            if not reference_plan:
+                raise GuardError("Image execution snapshot requires the exact REFERENCE_PLAN path.")
+            plan_path = Path(reference_plan).expanduser().resolve()
+            request_folder = Path(path).expanduser().resolve().parent
+            if not plan_path.is_relative_to(request_folder):
+                raise GuardError("Executed REFERENCE_PLAN must remain inside the guard-scoped request directory.")
+            try:
+                plan_snapshot = json.loads(plan_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as error:
+                raise GuardError(f"Cannot snapshot the executed REFERENCE_PLAN: {error}") from error
+            if not isinstance(plan_snapshot, dict) or not isinstance(execution_call, dict):
+                raise GuardError("Executed-call snapshot requires the validated plan and exact execution call.")
+            call_json = json.dumps(execution_call, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+            call_stage = str(execution_call.get("stage_id", "")).strip()
+            purpose = str(plan_snapshot.get("generation_purpose", "")).strip().upper()
+            if not call_stage:
+                raise GuardError("Executed-call snapshot is missing its canonical executable stage.")
+            plan_snapshot_path = plan_path.parent / f"EXECUTED_PLAN_{hashlib.sha256(new_attempt_id.encode('utf-8')).hexdigest()[:20]}.json"
+            atomic_write_json(plan_snapshot_path, plan_snapshot)
+            execution_snapshot_fields = {
+                "request_purpose": purpose,
+                "execution_stage": call_stage,
+                "reference_plan_snapshot_path": str(plan_snapshot_path.resolve()),
+                "reference_plan_snapshot_sha256": file_sha256(plan_snapshot_path),
+                "execution_call": execution_call,
+            }
+        elif state.get("task_kind") == "IMAGE_GENERATION_NATIVE_DEFAULT":
+            call_json = json.dumps(execution_call, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+            execution_snapshot_fields = {
+                "request_purpose": "NATIVE_DEFAULT",
+                "execution_stage": attempt_stage or "SINGLE_PASS",
+                "execution_call": execution_call,
+                "execution_call_sha256": hashlib.sha256(call_json.encode("utf-8")).hexdigest(),
+            }
+        asserted_invariants = execution_start_assertions(state, invariant_assertions)
         active_swimwear_attempt = validate_swimwear_execution_start(
             state,
             stage=stage,
@@ -1215,9 +1699,6 @@ def checkpoint(
         )
         if active_swimwear_attempt:
             state["active_swimwear_attempt"] = active_swimwear_attempt
-        new_attempt_id = str(attempt_id or uuid.uuid4())
-        if any(row.get("attempt_id") == new_attempt_id for row in state.get("attempts", [])):
-            raise GuardError("Duplicate attempt_id is forbidden.")
         record = {
             "attempt_id": new_attempt_id,
             "status": "ACTIVE",
@@ -1225,6 +1706,18 @@ def checkpoint(
             "reference_binding": state.get("ready_binding"),
             "stage": attempt_stage,
             "task_revision": int(state.get("task_revision", 0)),
+            "execution_snapshot": {
+                "request_id": str(state.get("request_id", "")),
+                "attempt_id": new_attempt_id,
+                "task_revision": int(state.get("task_revision", 0)),
+                "stage": attempt_stage,
+                "guard_stage": attempt_stage,
+                "prompt_sha256": str((state.get("ready_binding") or {}).get("prompt_sha256", "")),
+                "execution_call_sha256": str((state.get("ready_binding") or {}).get("execution_call_sha256", "")),
+                "reference_binding": state.get("ready_binding"),
+                "provider_operation_receipt": provider_operation_receipt.strip(),
+                **execution_snapshot_fields,
+            },
         }
         if provider_operation_receipt.strip():
             record["provider_operation_receipt"] = provider_operation_receipt.strip()
@@ -1243,9 +1736,11 @@ def checkpoint(
             raise GuardError("VISIBLE_RESULT requires an active or UNKNOWN attempt.")
         late_after_stop = active.get("status") == "UNKNOWN" or state.get("status") == "STOPPED"
         evidence_paths = [str(Path(item).resolve()) for item in evidence]
-        if state.get("task_kind") == "IMAGE_GENERATION":
+        if is_project_image_generation(state):
             if not evidence_paths:
                 raise GuardError("Image generation requires a real output path as visible-result evidence.")
+            if state.get("task_kind") == "IMAGE_GENERATION_NATIVE_DEFAULT" and len(evidence_paths) != 1:
+                raise GuardError("IMAGE_GENERATION_NATIVE_DEFAULT requires exactly one output image.")
             for item in evidence_paths:
                 file = Path(item)
                 if not file.is_file() or file.suffix.lower() not in IMAGE_EXTENSIONS:
@@ -1253,7 +1748,7 @@ def checkpoint(
         elif not evidence_paths and not summary.strip():
             raise GuardError("A visible result requires file evidence or a factual user-facing result summary.")
         status_value = str(result_status or "AVAILABLE").upper()
-        if state.get("task_kind") == "IMAGE_GENERATION" and status_value not in {"TEST", "STAGING", "REJECTED"}:
+        if is_project_image_generation(state) and status_value not in {"TEST", "STAGING", "REJECTED"}:
             raise GuardError("Image result availability requires result_status TEST, STAGING, or REJECTED.")
         if late_after_stop:
             active["late_output"] = {"result_status": status_value, "evidence": evidence_paths, "available_at": iso_time(moment)}
@@ -1262,6 +1757,17 @@ def checkpoint(
             active["result_status"] = status_value
             active["result_evidence"] = evidence_paths
             active["result_available_at"] = iso_time(moment)
+        # Keep the exact provider artifact attached to the executed-call snapshot.
+        # Registration can then retry against this artifact without reopening generation.
+        active["provider_artifact"] = {
+            "path": evidence_paths[0] if evidence_paths else "",
+            "sha256": file_sha256(Path(evidence_paths[0])) if evidence_paths else "",
+            "result_status": status_value,
+            "available_at": iso_time(moment),
+        }
+        snapshot = active.get("execution_snapshot")
+        if isinstance(snapshot, dict):
+            snapshot["provider_artifact"] = dict(active["provider_artifact"])
         state["available_results"] = [*state.get("available_results", []), {
             "attempt_id": active["attempt_id"], "status": status_value,
             "evidence": evidence_paths, "available_at": iso_time(moment), "late": late_after_stop,
@@ -1328,10 +1834,12 @@ def checkpoint(
                 raise GuardError("Reconciled result_status must be TEST, STAGING, or REJECTED.")
             resolved_paths = [str(Path(item).resolve()) for item in evidence]
             resolved_hashes = [file_sha256(Path(item)) for item in resolved_paths]
-            if state.get("task_kind") == "IMAGE_GENERATION" and any(
+            if is_project_image_generation(state) and any(
                 not Path(item).is_file() or Path(item).suffix.lower() not in IMAGE_EXTENSIONS for item in resolved_paths
             ):
                 raise GuardError("AVAILABLE reconciliation requires existing image output evidence.")
+            if state.get("task_kind") == "IMAGE_GENERATION_NATIVE_DEFAULT" and len(resolved_paths) != 1:
+                raise GuardError("IMAGE_GENERATION_NATIVE_DEFAULT requires exactly one reconciled output image.")
         else:
             resolved_paths = []
         attempt["reconciliation"] = {"outcome": resolved, "evidence": reconciliation_evidence.strip(), "at": iso_time(moment)}
@@ -1340,6 +1848,18 @@ def checkpoint(
         state["phase"] = "ATTEMPT_UNKNOWN" if resolved == "UNKNOWN" else (f"ATTEMPT_{resolved}" if not was_stopped else "STOPPED")
         state["next_required_action"] = "RECONCILE_UNKNOWN_ATTEMPT" if resolved == "UNKNOWN" else ("USER_RESUMED" if was_stopped else "NEXT_SAFE_EXECUTION_OR_COMPLETE")
         if resolved == "AVAILABLE":
+            if is_project_image_generation(state) and resolved_paths:
+                artifact = {
+                    "path": resolved_paths[0],
+                    "sha256": resolved_hashes[0],
+                    "result_status": result_status.upper(),
+                    "available_at": iso_time(moment),
+                    "reconciliation_evidence": reconciliation_evidence.strip(),
+                }
+                attempt["provider_artifact"] = artifact
+                snapshot = attempt.get("execution_snapshot")
+                if isinstance(snapshot, dict):
+                    snapshot["provider_artifact"] = dict(artifact)
             state["available_results"] = [*state.get("available_results", []), {
                 "attempt_id": attempt["attempt_id"], "status": result_status.upper(),
                 "evidence": resolved_paths, "evidence_sha256": resolved_hashes,
@@ -1574,7 +2094,7 @@ def checkpoint(
         if state.get("active_attempt") or any(a.get("status") == "UNKNOWN" for a in state.get("attempts", [])):
             raise GuardActionRequired("Record STOP/timeout and reconcile the active operation before declaring a blocker.")
         pending = pending_required_stages(state)
-        if state.get("task_kind") == "IMAGE_GENERATION" and pending:
+        if is_project_image_generation(state) and pending:
             if not (hard_blocker and safe_routes_exhausted):
                 raise GuardActionRequired(
                     "A multi-stage image task cannot become BLOCKED after an ordinary rejected attempt while "
@@ -1596,7 +2116,7 @@ def checkpoint(
             raise GuardActionRequired(
                 "Task completion is forbidden while required stages remain pending: " + ", ".join(pending)
             )
-        if state.get("task_kind") == "IMAGE_GENERATION":
+        if is_project_image_generation(state):
             latest = next((row for row in state.get("attempts", []) if row.get("attempt_id") == state.get("latest_delivered_attempt_id")), None)
             most_recent = state.get("attempts", [])[-1] if state.get("attempts") else None
             if not latest or not most_recent or latest.get("attempt_id") != most_recent.get("attempt_id"):
@@ -1629,7 +2149,7 @@ def checkpoint(
     if event == "EXECUTION_STARTED" and user_approved_extra_generation:
         event_details["user_approved_extra_generation"] = True
         event_details["extra_generation_evidence"] = extra_generation_evidence.strip()
-    if event == "EXECUTION_STARTED" and state.get("task_kind") == "IMAGE_GENERATION":
+    if event == "EXECUTION_STARTED" and is_project_image_generation(state):
         event_details["output_contract"] = str(output_contract).upper()
     if event == "EXECUTION_STARTED" and asserted_invariants:
         event_details["invariant_assertions"] = asserted_invariants
@@ -1729,12 +2249,9 @@ def make_parser() -> argparse.ArgumentParser:
     start.add_argument("--deliverable", required=True)
     start.add_argument(
         "--task-kind",
-        choices=("IMAGE_GENERATION", "IMAGE_EDIT", "USER_REQUESTED_IMAGE", "GENERAL"),
+        choices=("IMAGE_GENERATION", "IMAGE_GENERATION_NATIVE_DEFAULT", "IMAGE_EDIT", "GENERAL"),
         default="IMAGE_GENERATION",
-        help=(
-            "USER_REQUESTED_IMAGE records the explicit request and permits a direct image operation without "
-            "REFERENCE_PLAN, output-contract, local-file, or QA-receipt prerequisites."
-        ),
+        help="IMAGE_GENERATION_NATIVE_DEFAULT is the single-output StoryArt lane for exact prompts with no plan or references.",
     )
     start.add_argument("--allowed-scope", action="append", default=[])
     start.add_argument(
@@ -1863,6 +2380,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                     execution_call = json.loads(Path(args.execution_call).read_text(encoding="utf-8"))
                 except (OSError, json.JSONDecodeError) as error:
                     raise GuardError(f"Cannot read execution_call JSON: {error}") from error
+            elif args.reference_plan and args.event.upper() in {"READY_FOR_EXECUTION", "EXECUTION_STARTED"}:
+                try:
+                    referenced_plan = json.loads(Path(args.reference_plan).read_text(encoding="utf-8"))
+                    candidate_call = referenced_plan.get("execution_call") if isinstance(referenced_plan, dict) else None
+                    execution_call = candidate_call if isinstance(candidate_call, dict) else None
+                except (OSError, json.JSONDecodeError) as error:
+                    raise GuardError(f"Cannot load exact execution_call from REFERENCE_PLAN: {error}") from error
             state = checkpoint(
                 Path(args.state),
                 event=args.event,

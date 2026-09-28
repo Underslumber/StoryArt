@@ -1,4 +1,5 @@
 from argparse import Namespace
+import hashlib
 import json
 import unittest
 
@@ -8,7 +9,7 @@ import tempfile
 from tools.style_pack_manager import (
     GENERATION_FIELDS, StylePackError, StylePaths, command_approve_character,
     command_approve_standalone, command_init, command_validate,
-    read_csv, registered_approved_generation, require_qa_passed_generation_for_approval,
+    generation_qa_evidence, read_csv, registered_approved_generation, require_qa_passed_generation_for_approval,
     sha256,
     parse_aux_body_references,
     validate_reference_compatibility,
@@ -34,17 +35,42 @@ def write_qa_evidence(
     plan_snapshot = image.with_suffix(image.suffix + ".qa-plan.json")
     contract = image.with_suffix(image.suffix + ".qa-contract.json")
     evidence = image.with_suffix(image.suffix + ".qa-evidence.json")
-    plan_snapshot.write_bytes(plan.read_bytes())
+    visual_review = {
+        "schema_version": 1,
+        "request_id": "fixture-request",
+        "attempt_id": "fixture-attempt",
+        "task_revision": 1,
+        "output_sha256": output_hash or sha256(image),
+        "prompt_sha256": "a" * 64,
+        "executed_plan_sha256": "b" * 64,
+        "author": "unit-test visual reviewer",
+        "anatomy_review": {"status": "NOT_APPLICABLE", "no_visible_anatomy": True, "reason": "Fixture image contains no visible human or animal anatomy."},
+        "visible_defect_review": {"status": "PASS", "checked_scope": "Full image at original resolution.", "findings": []},
+        "prompt_adherence": {"status": "PASS", "checked_scope": "FULL_EXECUTED_PROMPT", "all_explicit_constraints_assessed": True, "constraints": [{"constraint": "fixture prompt", "status": "PASS", "evidence": "Fixture assertion."}]},
+    }
+    visual_review_sha256 = hashlib.sha256(json.dumps(visual_review, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    plan_data = json.loads(plan.read_text(encoding="utf-8"))
+    if not isinstance(plan_data, dict):
+        plan_data = {}
+    plan_data.setdefault("request_id", "fixture-request")
+    plan_data.setdefault("execution_call", {"prompt": {"text": "fixture prompt"}})
+    plan_snapshot.write_text(json.dumps(plan_data, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    visual_review["request_id"] = str(plan_data.get("request_id", ""))
+    visual_review["executed_plan_sha256"] = sha256(plan_snapshot)
+    visual_review["prompt_sha256"] = hashlib.sha256(str(plan_data["execution_call"]["prompt"]["text"]).encode("utf-8")).hexdigest()
+    visual_review_sha256 = hashlib.sha256(json.dumps(visual_review, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
     contract.write_text(
         json.dumps(
             {
-                "schema_version": 1,
-                "contract_version": 1,
+                "schema_version": 2,
+                "contract_version": 2,
                 "plan_snapshot": str(plan_snapshot),
                 "plan_content_sha256": sha256(plan_snapshot),
                 "stage_id": stage_id,
-                "expected_qa_layers": ["STYLE"],
-                "qa_results": {"STYLE": "PASS"},
+                "expected_qa_layers": ["ANATOMY_REVIEW", "PROMPT_ADHERENCE", "STYLE", "VISIBLE_DEFECTS"],
+                "qa_results": {"ANATOMY_REVIEW": "NOT_APPLICABLE", "PROMPT_ADHERENCE": "PASS", "STYLE": "PASS", "VISIBLE_DEFECTS": "PASS"},
+                "visual_review": visual_review,
+                "visual_review_sha256": visual_review_sha256,
             }
         ),
         encoding="utf-8",
@@ -52,11 +78,14 @@ def write_qa_evidence(
     evidence.write_text(
         json.dumps(
             {
-                "schema_version": 2,
+                "schema_version": 3,
                 "record_status": record_status,
                 "output_sha256": output_hash or sha256(image),
                 "qa_contract": str(contract),
                 "qa_contract_sha256": sha256(contract),
+                "visual_review_sha256": visual_review_sha256,
+                "visual_review": visual_review,
+                "qa_failed": [],
             }
         ),
         encoding="utf-8",
@@ -78,6 +107,30 @@ def qa_manifest_fields(image: Path) -> dict[str, str]:
 
 
 class BodyLibraryReviewTests(unittest.TestCase):
+    def test_valid_legacy_qa_receipt_remains_usable(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            workspace = Path(folder)
+            image = workspace / "legacy.png"
+            image.write_bytes(b"legacy output")
+            plan = workspace / "plan.json"
+            plan.write_text("{}", encoding="utf-8")
+            plan_snapshot = image.with_suffix(image.suffix + ".qa-plan.json")
+            plan_snapshot.write_bytes(plan.read_bytes())
+            contract = image.with_suffix(image.suffix + ".qa-contract.json")
+            contract.write_text(json.dumps({
+                "schema_version": 1, "contract_version": 1,
+                "plan_snapshot": str(plan_snapshot), "plan_content_sha256": sha256(plan_snapshot),
+                "stage_id": "SINGLE_PASS", "expected_qa_layers": ["STYLE"], "qa_results": {"STYLE": "PASS"},
+            }), encoding="utf-8")
+            evidence = image.with_suffix(image.suffix + ".qa-evidence.json")
+            evidence.write_text(json.dumps({
+                "schema_version": 2, "record_status": "TEST", "output_sha256": sha256(image),
+                "qa_contract": str(contract), "qa_contract_sha256": sha256(contract),
+            }), encoding="utf-8")
+            row = {field: "" for field in GENERATION_FIELDS}
+            row.update({"status": "TEST", "style_file": str(image), "reference_plan": str(plan), "qa_evidence": str(evidence), **qa_manifest_fields(image)})
+            self.assertIsNotNone(generation_qa_evidence(row))
+
     def test_unselected_body_library_is_neutral_not_user_declined(self) -> None:
         self.assertEqual(
             parse_aux_body_references(Path("."), [], "NOT_SELECTED", "", False, False),
