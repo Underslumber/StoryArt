@@ -12,6 +12,9 @@ One-step edit exception: For a direct edit of a user-supplied existing image, in
 
 ## User-request authority for image generation
 
+A correction to the current delivered art in the same chat continues that request via USER_CORRECTION, even after COMPLETE. Keep its folder binding and explicit style/library choices until a new request replaces it; do not show the chooser again or classify the current delivered art as unrelated history. This never authorizes access to another request folder.
+
+
 ### Current-chat choices and active folder
 
 The approved profile fixes the STYLE NAME only, never fidelity or BODY_REFERENCE_LIBRARY. In a new chat, show the standard Стиль и референсы chooser before source selection/preparation unless both choices were explicitly made in this chat. Do not inherit choices from another chat.

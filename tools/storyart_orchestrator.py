@@ -448,6 +448,9 @@ Treat `{pack_name}` as the complete local visual source of truth and
 Access only approved project folders and ONE active current-chat request folder.
 Never list, search or open other pending/unapproved folders, including historical
 REJECTED results. Never inherit another request's attempts, statuses or choices.
+Corrections to the current delivered art continue the same request after COMPLETE
+through USER_CORRECTION. Preserve its folder binding and current-chat choices
+until a new request replaces it; do not show the chooser again for this correction.
 
 ## Mandatory scenario lock
 

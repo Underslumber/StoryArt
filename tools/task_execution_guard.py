@@ -127,10 +127,15 @@ def _bind_guard_to_current_chat(path: Path, task_kind: str) -> str | None:
     if existing_guard and existing_guard.get("thread_id") != thread_id:
         raise GuardError("FOREIGN_REQUEST: this image request folder is bound to another chat. Create a new unique guard in the current chat.")
     existing_chat = _read_binding(chat_binding)
-    if existing_chat and existing_chat.get("active_folder") != resolved:
+    replacing_completed = bool(
+        existing_chat
+        and existing_chat.get("active_folder") != resolved
+        and existing_chat.get("request_status") == "COMPLETE"
+    )
+    if existing_chat and existing_chat.get("active_folder") != resolved and not replacing_completed:
         raise GuardError("FOREIGN_REQUEST: this chat already has a different active request folder. Continue that request or complete it before starting another.")
-    if existing_chat is None:
-        atomic_write_json(chat_binding, {"thread_id": thread_id, "active_folder": resolved})
+    if existing_chat is None or replacing_completed:
+        atomic_write_json(chat_binding, {"thread_id": thread_id, "active_folder": resolved, "request_status": "ACTIVE"})
     if existing_guard is None:
         atomic_write_json(guard_binding, {"thread_id": thread_id, "active_folder": resolved, "task_kind": task_kind})
     return thread_id
@@ -2330,11 +2335,15 @@ def checkpoint(
         event_details["outcome"] = "QA_REJECTED"
     append_event(state, event, summary, moment, **event_details)
     atomic_write_json(path, state)
-    if event == "COMPLETE" and state.get("owner_chat_id"):
+    if event in {"COMPLETE", "USER_CORRECTION", "STAGE_REOPENED"} and state.get("owner_chat_id"):
         chat_binding = _chat_binding_path(str(state["owner_chat_id"]))
         current_binding = _read_binding(chat_binding)
         if current_binding and current_binding.get("active_folder") == str(path.resolve().parent):
-            chat_binding.unlink(missing_ok=True)
+            # Completion ends execution, not the user's ability to correct the
+            # current delivered art. A new request replaces this binding only
+            # while COMPLETE; corrections reactivate the same single folder.
+            current_binding["request_status"] = state["status"]
+            atomic_write_json(chat_binding, current_binding)
     if event == "PREFLIGHT":
         reason = evaluate_limits(state, moment)
         if reason:

@@ -46,8 +46,8 @@ def _request_fixture(tmp_path: Path, monkeypatch, binding: str = "unbound"):
                 "thread_id": thread_id,
                 "active_folder": str(new_folder.resolve()),
             })
-        # same-complete models COMPLETE deleting the chat index while retaining
-        # the folder binding. No old real request data is involved.
+        # same-complete models a legacy/missing chat index, not today's COMPLETE
+        # transition (which retains it). Never auto-adopt that historical folder.
 
     return workspace, paths, request_folder, plan_path, guard_path
 
