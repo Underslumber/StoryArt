@@ -45,7 +45,8 @@ class GuardCliLifecycleTests(unittest.TestCase):
             "request_id": "cli-scene",
             "gate_status": "READY_FOR_GENERATION",
             "generation_purpose": "SCENE",
-            "character_id": "CHAR_001",
+            "style_name": "CLI fixture style",
+            "character_id": "NONE",
             "risk_assessment": {**report, "prompt": report["original_prompt"]},
             "generation_workflow": {
                 "mode": "SINGLE_PASS", "slots": [slot],
@@ -55,6 +56,11 @@ class GuardCliLifecycleTests(unittest.TestCase):
                 "request_id": "cli-scene",
                 "stage_id": "SINGLE_PASS", "prompt": report["original_prompt"],
                 "slots": [slot], "risk_assessment": report,
+                "user_selections": {
+                    "style": {"choice": "PROJECT_STYLE:CLI fixture style", "user_quote": "Use CLI fixture style."},
+                    "reference_policy": {"choice": "USER_ATTACHED_REFERENCES", "user_quote": "Use the attached fixture reference."},
+                    "character": {"choice": "NONE", "user_quote": "No named project character."},
+                },
                 "stage_output_bindings": [], "targeted_pack_bindings": [],
             },
         }), encoding="utf-8")
@@ -62,6 +68,8 @@ class GuardCliLifecycleTests(unittest.TestCase):
             "task_execution_guard.py", "start", "--state", str(self.state),
             "--request-id", "cli-scene", "--goal", "One requested character scene.",
             "--deliverable", "One visible art.",
+            "--invariant", "composition=zipline flight toward viewer",
+            "--invariant", "background=burning castle",
         )
 
     def run_tool(self, tool, *arguments, succeeds=True):
@@ -113,6 +121,25 @@ class GuardCliLifecycleTests(unittest.TestCase):
         )
         self.checkpoint("COMPLETE")
         self.assertEqual(self.read_state()["status"], "COMPLETE")
+
+    def test_execution_started_derives_ready_stage_and_locked_invariants(self):
+        self.checkpoint("READY_FOR_EXECUTION", "--reference-plan", str(self.plan))
+        conflict = self.checkpoint(
+            "EXECUTION_STARTED", "--reference-plan", str(self.plan),
+            "--stage", "SCENE", "--output-contract", "REQUESTED_DELIVERABLE", succeeds=False,
+        )
+        self.assertIn("conflicts with the ready binding 'SINGLE_PASS'", conflict.stderr)
+        started = self.checkpoint(
+            "EXECUTION_STARTED", "--reference-plan", str(self.plan),
+            "--output-contract", "REQUESTED_DELIVERABLE",
+        )
+        state = self.read_state()
+        self.assertEqual(state["active_attempt"]["stage"], "SINGLE_PASS")
+        event = next(row for row in reversed(state["events"]) if row["event"] == "EXECUTION_STARTED")
+        self.assertEqual(event["invariant_assertions"], {
+            "composition": "zipline flight toward viewer",
+            "background": "burning castle",
+        })
 
     def test_cli_stop_reconciliation_never_implicitly_resumes(self):
         attempt = self.start_attempt()

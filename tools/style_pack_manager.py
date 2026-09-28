@@ -80,6 +80,7 @@ CHARACTER_REFERENCE_MODES = ("AUTO", "ASSEMBLY_ONLY", "ASSEMBLY_PLUS_VIEW", "IDE
 SHOT_COMPLEXITIES = ("SIMPLE", "NORMAL", "COMPLEX")
 BODY_VIEW_CHOICES = ("ASSEMBLY", "FRONT", "SIDE", "BACK")
 QA_LAYER_NAMES = {
+    "ANATOMY_REVIEW", "VISIBLE_DEFECTS", "PROMPT_ADHERENCE",
     "ATTACHMENTS", "CANVAS", "STAGE_LAYER", "FACE_GEOMETRY", "BODY_SILHOUETTE",
     "BODY_PROPORTIONS", "LIMB_PROPORTIONS", "STYLE", "BODY_RENDERING_STYLE",
     "EXPRESSION", "NEUTRAL_BACKDROP", "FRONT_VIEW", "SIDE_VIEW", "BACK_VIEW",
@@ -512,6 +513,271 @@ def command_list_styles(args: argparse.Namespace) -> None:
     print(f"LOCAL_READY_STYLES={sum(1 for style in styles if style.can_generate)}")
     print(f"WEB_READY_STYLES={sum(1 for style in styles if style.can_create_web_project)}")
     print("STATUS=DISCOVERY_COMPLETE")
+
+
+def _russian_name_stem(value: str) -> str:
+    """Normalize common Russian singular case endings for character lookup."""
+    words = value.split()
+    if not words:
+        return ""
+    last = words[-1]
+    if not re.search(r"[а-яё]", last, flags=re.IGNORECASE):
+        return value
+    for ending in ("ом", "ем", "ой", "ей", "ью", "ия", "а", "я", "у", "ю", "ы", "и", "е"):
+        if len(last) > len(ending) + 1 and last.endswith(ending):
+            words[-1] = last[:-len(ending)]
+            break
+    return " ".join(words)
+
+
+def command_resolve_character(args: argparse.Namespace) -> None:
+    """Resolve a named character from approved registries only.
+
+    This intentionally reads registry/profile metadata and the registered
+    approved identity files only. It never scans historical generation output.
+    """
+    workspace = args.workspace.resolve()
+    if not workspace.is_dir():
+        raise StylePackError(f"Workspace does not exist: {workspace}")
+    query = " ".join(unicodedata.normalize("NFKC", args.name).split()).casefold().replace("ё", "е")
+    matches: list[dict[str, str]] = []
+    invalid_matches: list[dict[str, object]] = []
+    for generations in sorted(workspace.glob("*_GENERATIONS"), key=lambda path: path.name.casefold()):
+        registry_path = generations / "CHARACTER_REGISTRY.csv"
+        if not registry_path.is_file():
+            continue
+        folder_slug = generations.name[: -len("_GENERATIONS")]
+        pack = workspace / f"{folder_slug}_PROJECT_PACK"
+        metadata_path = pack / ".style-pack.json"
+        style_name = folder_slug.replace("_", " ")
+        metadata_issue = ""
+        if metadata_path.is_file():
+            try:
+                metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+                style_name = str(metadata.get("style_name") or style_name)
+            except (OSError, json.JSONDecodeError) as error:
+                metadata_issue = f"Cannot read style-pack metadata: {error}"
+        paths = make_paths(workspace, style_name)
+        for row in read_csv(registry_path):
+            if row.get("status", "").strip().upper() != "APPROVED":
+                continue
+            character_id = row.get("character_id", "").strip().upper()
+            registered_name = " ".join(unicodedata.normalize("NFKC", row.get("name", "")).split())
+            name_key = registered_name.casefold().replace("ё", "е")
+            query_stem = _russian_name_stem(query)
+            name_stem = _russian_name_stem(name_key)
+            if query not in {name_key, character_id.casefold()} and query_stem != name_key and query != name_stem:
+                continue
+            if metadata_issue:
+                invalid_matches.append({
+                    "style_name": style_name,
+                    "character_id": character_id,
+                    "name": registered_name,
+                    "status": "INVALID_STYLE_METADATA",
+                    "metadata_path": str(metadata_path.resolve()),
+                    "issue": metadata_issue,
+                })
+                continue
+            profile = Path(row.get("profile_path", ""))
+            if not profile.is_absolute():
+                profile = generations / profile
+            try:
+                identity = _approved_profile_identity(paths, profile, character_id)
+            except (OSError, StylePackError, ValueError) as error:
+                invalid_matches.append({
+                    "style_name": style_name,
+                    "character_id": character_id,
+                    "name": registered_name,
+                    "status": "INVALID_APPROVED_PROFILE",
+                    "profile_path": str(profile.resolve()),
+                    "issue": str(error),
+                })
+                continue
+            base = Path(row.get("approved_base", ""))
+            if not base.is_absolute():
+                base = generations / base
+            registered_assets = {"CHARACTER_ASSEMBLY": base}
+            face_assets = _character_registry_paths(paths, row.get("face_references", ""))
+            body_assets = _character_registry_paths(paths, row.get("body_references", ""))
+            profile_face_assets = _character_profile_paths(profile, "character_face_references")
+            profile_body_assets = _character_profile_paths(profile, "character_body_references")
+            if len(face_assets) != 1 or len(body_assets) < 3:
+                invalid_matches.append({
+                    "style_name": style_name,
+                    "character_id": character_id,
+                    "name": registered_name,
+                    "status": "INVALID_APPROVED_ASSET_SET",
+                    "profile_path": str(profile.resolve()),
+                    "issue": f"Expected exactly one registered FACE and at least three BODY assets; found {len(face_assets)} FACE and {len(body_assets)} BODY.",
+                    "registered_roles": {
+                        "FACE": [str(path.resolve()) for path in sorted(face_assets)],
+                        "BODY": [str(path.resolve()) for path in sorted(body_assets)],
+                    },
+                })
+                continue
+            if not face_assets.issubset(profile_face_assets) or not body_assets.issubset(profile_body_assets):
+                invalid_matches.append({
+                    "style_name": style_name,
+                    "character_id": character_id,
+                    "name": registered_name,
+                    "status": "INVALID_PROFILE_ASSET_BINDING",
+                    "profile_path": str(profile.resolve()),
+                    "issue": "Registry FACE/BODY asset paths do not match the profile's approved identity references.",
+                    "registered_roles": {
+                        "FACE": [str(path.resolve()) for path in sorted(face_assets)],
+                        "BODY": [str(path.resolve()) for path in sorted(body_assets)],
+                    },
+                })
+                continue
+            base_record = registered_approved_character_asset(paths, base) or {}
+            if base_record.get("asset_role") != "BASE":
+                invalid_matches.append({
+                    "style_name": style_name,
+                    "character_id": character_id,
+                    "name": registered_name,
+                    "status": "INVALID_APPROVED_ASSET_ROLE",
+                    "profile_path": str(profile.resolve()),
+                    "issue": f"CHARACTER_ASSEMBLY asset role must be BASE; found {base_record.get('asset_role') or 'UNREGISTERED'}.",
+                    "path": str(base.resolve()),
+                })
+                continue
+            bad_face_assets = [asset for asset in face_assets if (registered_approved_character_asset(paths, asset) or {}).get("asset_role") != "FACE"]
+            if bad_face_assets:
+                invalid_matches.append({
+                    "style_name": style_name,
+                    "character_id": character_id,
+                    "name": registered_name,
+                    "status": "INVALID_APPROVED_ASSET_ROLE",
+                    "profile_path": str(profile.resolve()),
+                    "issue": "Every registered FACE identity path must have approved asset_role FACE.",
+                    "role": "FACE",
+                    "paths": [str(asset.resolve()) for asset in bad_face_assets],
+                })
+                continue
+            bad_body_assets = [asset for asset in body_assets if (registered_approved_character_asset(paths, asset) or {}).get("asset_role") != "BODY"]
+            if bad_body_assets:
+                invalid_matches.append({
+                    "style_name": style_name,
+                    "character_id": character_id,
+                    "name": registered_name,
+                    "status": "INVALID_APPROVED_ASSET_ROLE",
+                    "profile_path": str(profile.resolve()),
+                    "issue": "Every registered BODY identity path must have approved asset_role BODY.",
+                    "role": "BODY",
+                    "paths": [str(asset.resolve()) for asset in bad_body_assets],
+                })
+                continue
+            registered_assets["FACE_IDENTITY"] = next(iter(face_assets))
+            registered_assets.update({
+                f"BODY_IDENTITY_{index + 1}": asset
+                for index, asset in enumerate(sorted(body_assets, key=lambda item: item.name.casefold()))
+            })
+            if not base.is_file():
+                invalid_matches.append({
+                    "style_name": style_name,
+                    "character_id": character_id,
+                    "name": registered_name,
+                    "status": "MISSING_APPROVED_ASSET",
+                    "profile_path": str(profile.resolve()),
+                    "issue": "Approved CHARACTER_ASSEMBLY path is missing.",
+                    "role": "CHARACTER_ASSEMBLY",
+                    "path": str(base.resolve()),
+                })
+                continue
+            missing_assets = [role for role, asset in registered_assets.items() if not asset.is_file()]
+            if missing_assets:
+                invalid_matches.append({
+                    "style_name": style_name,
+                    "character_id": character_id,
+                    "name": registered_name,
+                    "status": "MISSING_APPROVED_ASSET",
+                    "profile_path": str(profile.resolve()),
+                    "issue": "One or more approved identity asset paths are missing.",
+                    "roles": missing_assets,
+                    "paths": [str(registered_assets[role].resolve()) for role in missing_assets],
+                })
+                continue
+            matches.append({
+                "style_name": style_name,
+                "style_slug": folder_slug,
+                "character_id": character_id,
+                "name": registered_name,
+                "status": "APPROVED",
+                "registry_path": str(registry_path.resolve()),
+                "profile_path": str(profile.resolve()),
+                "approved_base": str(base.resolve()),
+                "identity_assets": json.dumps(
+                    {role: str(asset.resolve()) for role, asset in registered_assets.items()},
+                    ensure_ascii=False,
+                ),
+                "profile_schema": str(identity.get("schema_version", "")),
+            })
+    if args.json:
+        status = "FOUND" if matches else "FOUND_BUT_INVALID" if invalid_matches else "NOT_FOUND"
+        print(json.dumps({"status": status, "query": args.name, "matches": matches, "invalid_matches": invalid_matches}, ensure_ascii=False, indent=2))
+    elif matches:
+        for match in matches:
+            for key, value in match.items():
+                print(f"{key.upper()}={value}")
+            print("STATUS=APPROVED_CHARACTER_RESOLVED")
+    else:
+        print(f"QUERY={args.name}")
+        if invalid_matches:
+            print("STATUS=APPROVED_CHARACTER_MATCH_INVALID")
+            for item in invalid_matches:
+                print(f"INVALID_MATCH={json.dumps(item, ensure_ascii=False, separators=(',', ':'))}")
+        else:
+            print("STATUS=NO_APPROVED_CHARACTER_MATCH")
+
+
+def command_startup_menu_template(args: argparse.Namespace) -> None:
+    """Emit the canonical chooser labels and exact parameter mappings."""
+    style_name = " ".join(unicodedata.normalize("NFKC", args.style_name).split())
+    character_id = args.character_id.strip().upper()
+    character_name = " ".join(unicodedata.normalize("NFKC", args.character_name).split())
+    if not style_name:
+        raise StylePackError("A resolved profile-bound style name is required.")
+    if not re.fullmatch(r"CHAR_\d+", character_id):
+        raise StylePackError("The standard profile-bound chooser requires an approved CHAR_NNN character id.")
+    if not character_name:
+        raise StylePackError("The resolved approved character name is required.")
+
+    question = (
+        f"Профиль персонажа: {character_name} ({character_id}); закреплённый стиль: {style_name}. "
+        f"Процент означает точность следования стилю. Утверждённые референсы личности "
+        f"{character_name} подключаются при любом варианте. BODY_REFERENCE_LIBRARY — "
+        f"дополнительная библиотека тела."
+    )
+    if args.generation_purpose == "CHARACTER_BASE":
+        question += (
+            " Она может использоваться только на последующих этапах фигуры; "
+            "выбор не запускает калибровку или сбор поз."
+        )
+
+    presets = (
+        ("OPTION_1", f"90% стиля {style_name} + использовать BODY_REFERENCE_LIBRARY (рекомендуемый профиль StoryArt)", 90, "SELECTED", "BODY_LIBRARY_ONLY"),
+        ("OPTION_2", f"90% стиля {style_name}, без BODY_REFERENCE_LIBRARY", 90, "DECLINED", "APPROVED_CHARACTER_REFERENCES"),
+        ("OPTION_3", f"70% стиля {style_name}, без BODY_REFERENCE_LIBRARY — более свободная интерпретация", 70, "DECLINED", "APPROVED_CHARACTER_REFERENCES"),
+    )
+    options = []
+    for option_id, label, fidelity, body_decision, reference_policy in presets:
+        description = (
+            f"{label}; style=PROJECT_STYLE:{style_name}; "
+            f"reference_policy={reference_policy}; character={character_id}"
+        )
+        options.append({
+            "id": option_id,
+            "label": label,
+            "description": description,
+            "fidelity": fidelity,
+            "aux_body_decision": body_decision,
+            "resolved_user_selections": {
+                "style": f"PROJECT_STYLE:{style_name}",
+                "reference_policy": reference_policy,
+                "character": character_id,
+            },
+        })
+    print(json.dumps({"title": "Стиль и референсы", "question": question, "options": options}, ensure_ascii=False, indent=2))
 
 
 def command_style_readiness(args: argparse.Namespace) -> None:
@@ -1008,7 +1274,6 @@ def command_body_ref_context(args: argparse.Namespace) -> None:
 PLAN_CATEGORIES = ("FACE", "BODY", "POSE", "CLOTHES", "LIGHTING", "BACKGROUND", "COMPOSITION")
 REVIEW_CATEGORIES = ("STYLE", "SUBJECT", *PLAN_CATEGORIES)
 STARTUP_CHOICES = ("OPTION_1", "OPTION_2", "OPTION_3", "CUSTOM")
-RECOMMENDED_PROFILE = (90, "SELECTED")
 
 
 def body_library_decision_supported(quote: str, decision: str) -> bool:
@@ -1025,7 +1290,65 @@ def body_library_decision_supported(quote: str, decision: str) -> bool:
     return False
 
 
+def menu_selection_fields(description: str) -> dict[str, str]:
+    """Read exact choices shown in a complete profile, without inferring omissions."""
+    fields: dict[str, str] = {}
+    for part in description.split(";"):
+        key, separator, value = part.strip().partition("=")
+        if key not in {"style", "reference_policy", "character"}:
+            continue
+        if not separator or not value.strip() or key in fields:
+            raise StylePackError("Menu selection fields must be unique and non-empty.")
+        fields[key] = value.strip()
+    if fields and set(fields) != {"style", "reference_policy", "character"}:
+        raise StylePackError("A complete menu profile must record style, reference_policy, and character together.")
+    return fields
+
+
+def validate_menu_user_selections(
+    startup: dict[str, object], selections: dict[str, object], *, allow_legacy_explicit: bool = False
+) -> None:
+    """Bind executable choices to the exact complete option displayed to the user."""
+    if startup.get("selection_source_menu"):
+        validate_menu_user_selections(
+            startup["selection_source_menu"], selections, allow_legacy_explicit=allow_legacy_explicit
+        )
+        if startup.get("resolved_user_selections") != startup["selection_source_menu"].get("resolved_user_selections"):
+            raise StylePackError("Reused choices differ from their original menu evidence.")
+        return
+    selected = startup.get("selected")
+    option = next((row for row in startup.get("options", []) if row.get("id") == selected), {})
+    fields = menu_selection_fields(str(option.get("description", "")))
+    if selected in STARTUP_CHOICES[:3] and not fields:
+        if not allow_legacy_explicit:
+            raise StylePackError("Incomplete legacy menu: show the structured chooser for missing style/reference/character choices.")
+        # Older plans only recorded the fidelity/library menu. Explicit current-chat
+        # selections may fill the fields that menu never displayed.
+        if any(
+            not isinstance(selections.get(key), dict)
+            or not str(selections[key].get("choice", "")).strip()
+            or not str(selections[key].get("user_quote", "")).strip()
+            for key in ("style", "reference_policy", "character")
+        ):
+            raise StylePackError("Legacy menu migration requires explicit style, reference_policy, and character choices with exact user quotes.")
+        return
+    resolved_fields = startup.get("resolved_user_selections", {})
+    if fields != resolved_fields:
+        raise StylePackError("Saved menu selections differ from the displayed option.")
+    expected_quote = str(
+        startup.get("resolved_selection_quote", startup.get("user_choice_quote", ""))
+    ).strip()
+    for key, value in fields.items():
+        supplied = selections.get(key)
+        if not isinstance(supplied, dict) or supplied.get("choice") != value:
+            raise StylePackError(f"Executable {key} selection differs from the selected menu option.")
+        if expected_quote and supplied.get("user_quote") != expected_quote:
+            raise StylePackError(f"Executable {key} quote differs from the exact selected menu reply.")
+
+
 def preset_profile_from_description(option_id: str, description: str) -> tuple[int, str]:
+    menu_selection_fields(description)
+    description = ";".join(part for part in description.split(";") if part.strip().partition("=")[0] not in {"style", "reference_policy", "character"})
     fidelity_matches = re.findall(r"(?<!\d)(30|50|70|90|100)\s*%?", description)
     if len(fidelity_matches) != 1:
         raise StylePackError(f"{option_id} must state exactly one fidelity percentage and BODY_REFERENCE_LIBRARY decision.")
@@ -1067,12 +1390,14 @@ def parse_startup_option_descriptions(values: Sequence[str]) -> dict[str, str]:
     if set(options) != set(STARTUP_CHOICES[:3]):
         raise StylePackError("Show and record exactly three complete startup profiles before CUSTOM.")
     profiles = {key: preset_profile_from_description(key, value) for key, value in options.items()}
-    if profiles["OPTION_1"] != RECOMMENDED_PROFILE:
-        raise StylePackError("OPTION_1 must recommend 90% fidelity with BODY_REFERENCE_LIBRARY selected.")
     return options
 
 
-def validate_menu_choice_quote(quote: str, choice: str) -> None:
+def _normalized_menu_text(value: str) -> str:
+    return " ".join(value.strip().casefold().split())
+
+
+def validate_menu_choice_quote(quote: str, choice: str, displayed_label: str = "") -> None:
     normalized = quote.strip().casefold()
     if normalized in {"yes", "yeah", "yep", "ok", "okay", "да", "ага", "хорошо", "подходит"}:
         raise StylePackError("A bare yes/ok does not select a profile; record the user's numbered or named menu choice.")
@@ -1082,8 +1407,20 @@ def validate_menu_choice_quote(quote: str, choice: str) -> None:
     choices = {str(number), f"option {number}", f"option_{number}", f"вариант {number}", f"вариант_{number}"}
     if choice == "CUSTOM":
         choices.update({"custom", "указать свой вариант", "свой вариант"})
-    if normalized not in choices and choice.casefold() not in normalized:
-        raise StylePackError("Menu selection quote must identify the numbered or named profile, not merely approve the preceding style name.")
+    elif choice == "OPTION_1":
+        choices.update({"option_1 (recommended)", "option 1 (recommended)"})
+    accepted = {_normalized_menu_text(value) for value in choices}
+    if displayed_label.strip():
+        accepted.add(_normalized_menu_text(displayed_label))
+        # The chooser's visible label is the human-facing prefix; semicolon fields
+        # are machine-readable style/reference/character bindings appended to it.
+        visible_label = ";".join(
+            part for part in displayed_label.split(";")
+            if part.strip().partition("=")[0].strip() not in {"style", "reference_policy", "character"}
+        )
+        accepted.add(_normalized_menu_text(visible_label))
+    if _normalized_menu_text(quote) not in accepted:
+        raise StylePackError("Menu selection quote must exactly identify the selected visible option, not merely approve the preceding style name.")
 
 
 def validate_startup_profile_evidence(startup: dict[str, object], fidelity: int | None = None) -> tuple[int, str]:
@@ -1117,11 +1454,10 @@ def validate_startup_profile_evidence(startup: dict[str, object], fidelity: int 
             raise StylePackError("The source menu profile cannot be verified for same-chat reuse.")
         option_map = {str(row.get("id", "")).upper(): str(row.get("description", "")) for row in options if isinstance(row, dict)}
         profiles = {key: preset_profile_from_description(key, option_map[key]) for key in STARTUP_CHOICES[:3]}
-        if profiles["OPTION_1"] != RECOMMENDED_PROFILE:
-            raise StylePackError("The saved recommended profile no longer matches OPTION_1's 90%+BODY_REFERENCE_LIBRARY contract.")
         choice = str(startup.get("selected", "")).upper()
         user_choice_quote = str(startup.get("user_choice_quote", "")).strip()
-        validate_menu_choice_quote(user_choice_quote, choice)
+        selected_description = option_map.get(choice, "")
+        validate_menu_choice_quote(user_choice_quote, choice, selected_description)
         if str(provenance.get("quote", "")).strip() != user_choice_quote:
             raise StylePackError("The recorded menu-choice evidence differs from the exact user reply.")
         if choice == "CUSTOM":
@@ -1318,6 +1654,9 @@ def parse_startup_interaction(args: argparse.Namespace) -> dict[str, object]:
             "custom_parameters_user_quote": str(source_startup.get("custom_parameters_user_quote", "")),
         })
         if profile_changed:
+            if source_startup.get("resolved_user_selections"):
+                reused["selection_source_menu"] = source_startup.get("selection_source_menu", source_startup)
+                reused["resolved_selection_quote"] = source_startup.get("resolved_selection_quote", source_startup["user_choice_quote"])
             reused["parameter_source"] = "DIRECT_USER_CORRECTION_IN_SAME_CHAT"
             reused["user_choice_quote"] = correction_quote
             reused["menu_contract"] = "DIRECT_CONFIRMED_PARAMETERS"
@@ -1354,8 +1693,10 @@ def parse_startup_interaction(args: argparse.Namespace) -> dict[str, object]:
         user_quote = args.startup_choice_user_quote.strip()
         if not user_quote:
             raise StylePackError("USER_CONFIRMATION requires the user's explicit reply in --startup-choice-user-quote.")
-        validate_menu_choice_quote(user_quote, choice)
         options = parse_startup_option_descriptions(args.startup_option)
+        validate_menu_choice_quote(user_quote, choice, options.get(choice, ""))
+        if any(not menu_selection_fields(description) for description in options.values()):
+            raise StylePackError("Every new preset must include style, reference_policy, and character; show the complete structured chooser.")
         custom_quote = args.custom_parameters_user_quote.strip()
         if choice == "CUSTOM":
             quoted_choice_profile = explicit_custom_profile(user_quote)
@@ -1368,8 +1709,6 @@ def parse_startup_interaction(args: argparse.Namespace) -> dict[str, object]:
             resolved_profile = (args.fidelity, args.aux_body_decision.upper())
         else:
             resolved_profile = preset_profile_from_description(choice, options[choice])
-            if choice == "OPTION_1" and resolved_profile != RECOMMENDED_PROFILE:
-                raise StylePackError("OPTION_1 must recommend 90% fidelity with BODY_REFERENCE_LIBRARY selected.")
             if (args.fidelity, args.aux_body_decision.upper()) != resolved_profile:
                 raise StylePackError(
                     f"The selected {choice} profile is {resolved_profile[0]}% with BODY_REFERENCE_LIBRARY "
@@ -1380,6 +1719,25 @@ def parse_startup_interaction(args: argparse.Namespace) -> dict[str, object]:
         if not args.confirmed_chat_id.strip() or not args.confirmed_message_id.strip():
             raise StylePackError("Menu selection requires the current chat id and the message id containing the user's choice.")
         quote = user_quote
+        selected_fields = menu_selection_fields(options[choice]) if choice != "CUSTOM" else {}
+        selected_style = selected_fields.get("style", "")
+        style_matches = selected_style == f"PROJECT_STYLE:{args.style_name}" or selected_style == "GENERATOR_DEFAULT"
+        if selected_fields and (
+            not style_matches
+            or selected_fields["character"] != str(getattr(args, "character_id", "NONE"))
+            or (
+                selected_style == "GENERATOR_DEFAULT"
+                and not re.fullmatch(r"CHAR_\d+", str(getattr(args, "character_id", "NONE")).upper())
+            )
+            or (
+                selected_style == "GENERATOR_DEFAULT"
+                and selected_fields.get("reference_policy") not in {
+                    "BODY_LIBRARY_ONLY", "APPROVED_CHARACTER_REFERENCES",
+                    "APPROVED_PLUS_USER_REFERENCES", "USER_ATTACHED_REFERENCES",
+                }
+            )
+        ):
+            raise StylePackError("Selected menu style, reference policy, or character differs from the prepared request.")
         menu_state = "USER_CONFIRMED_FROM_TEXT_MENU" if args.startup_menu_surface == "TEXT_NUMBERED_MENU" else "NEW_SELECTION"
         return {
             "menu_contract": "THREE_AI_PRESETS_PLUS_CUSTOM",
@@ -1408,10 +1766,13 @@ def parse_startup_interaction(args: argparse.Namespace) -> dict[str, object]:
                 "decision": resolved_profile[1],
             },
             "resolved_parameters": {"fidelity": resolved_profile[0], "aux_body_decision": resolved_profile[1]},
+            "resolved_user_selections": selected_fields,
             "profile_confirmation_complete": True,
             "same_profile_reconfirmation_forbidden": True,
             "style_confirmation_complete": True,
-            "confirmed_style_name": args.style_name,
+            "confirmed_style_name": (
+                args.style_name if selected_fields.get("style") == f"PROJECT_STYLE:{args.style_name}" else ""
+            ),
             "custom_parameters_user_quote": custom_quote,
             "custom_description_treated_as_complete": choice == "CUSTOM",
             "follow_up_allowed_only_for_genuinely_missing_required_information": True,
@@ -1513,6 +1874,8 @@ def validated_stage_outputs(paths: StylePaths, plan_path: Path, plan: dict[str, 
             "stage_id": stage_id,
             "status": "STAGING",
             "qa_passed": True,
+            "plan_snapshot": str(snapshot_path.resolve()),
+            "plan_snapshot_sha256": sha256(snapshot_path),
         }
     return result
 
@@ -1793,6 +2156,127 @@ def command_resolve_call(args: argparse.Namespace) -> None:
     print("STATUS=CALL_REFERENCES_RESOLVED_FOR_RISK_ASSESSMENT")
 
 
+def validate_reference_policy_slots(paths: StylePaths, plan: dict[str, object], call: dict[str, object], selections: dict[str, object], _seen: frozenset[str] = frozenset()) -> None:
+    """Check reference consent against resolved attachment provenance."""
+    policy = str(selections["reference_policy"]["choice"]).strip().upper()
+    supported_policies = {
+        "NO_REFERENCES",
+        "BODY_LIBRARY_ONLY",
+        "APPROVED_CHARACTER_REFERENCES",
+        "APPROVED_PLUS_USER_REFERENCES",
+        "USER_ATTACHED_REFERENCES",
+        "PROJECT_STYLE_ONLY",
+    }
+    if policy not in supported_policies:
+        raise StylePackError(f"Unsupported reference policy: {policy or '<empty>'}.")
+    character = selections["character"]["choice"]
+    slots = call.get("slots", [])
+    identity_root = character_folder(paths, character) if re.fullmatch(r"CHAR_\d+", character) else None
+    identity = [
+        slot for slot in slots
+        if identity_root and is_relative_to(Path(str(slot["path"])).resolve(), identity_root.resolve())
+    ]
+    if policy == "NO_REFERENCES":
+        if identity_root:
+            raise StylePackError("NO_REFERENCES conflicts with mandatory approved identity references for a named character.")
+        if slots:
+            raise StylePackError("NO_REFERENCES conflicts with attached slots.")
+        return
+    additional, library = [], []
+    user_evidence = plan.get("user_reference_evidence", [])
+    def is_user_attachment(slot: dict[str, object]) -> bool:
+        for evidence in user_evidence:
+            if not isinstance(evidence, dict) or not all(str(evidence.get(key, "")).strip() for key in ("path", "sha256", "source_path", "chat_id", "message_id")):
+                continue
+            source = Path(str(evidence["source_path"])).resolve()
+            if any(is_relative_to(source, root) for root in (paths.pack, paths.generations, (paths.workspace / BODY_LIBRARY_NAME).resolve())):
+                continue
+            if (Path(str(evidence["path"])).resolve() == Path(str(slot["path"])).resolve()
+                    and source.is_file() and sha256(source) == str(evidence["sha256"]).lower() == str(slot.get("sha256", "")).lower()
+                    and evidence["chat_id"] == plan.get("startup_parameter_selection", {}).get("confirmed_provenance", {}).get("chat_id")):
+                return True
+        return False
+    def inherits_reference_policy(slot: dict[str, object]) -> bool:
+        plan_path = paths.generations / "00_PENDING" / str(plan.get("request_id", "")) / "REFERENCE_PLAN.json"
+        outputs = validated_stage_outputs(paths, plan_path, plan)
+        sources = [slot]
+        if slot.get("manifest_path"):
+            try:
+                manifest = json.loads(Path(str(slot["manifest_path"])).read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                return False
+            sources = manifest.get("sources", [])
+            if not sources or manifest.get("request_id") != plan.get("request_id"):
+                return False
+        for source in sources:
+            output = next((entry for entry in outputs.values() if entry["path"] == source.get("path") and entry["sha256"] == source.get("sha256")), None)
+            if not output or output["path"] in _seen:
+                return False
+            snapshot_path = Path(output["plan_snapshot"])
+            if sha256(snapshot_path) != output["plan_snapshot_sha256"]:
+                return False
+            snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+            if (
+                str(snapshot.get("request_id", "")) != str(plan.get("request_id", ""))
+                or str(snapshot.get("character_id", "")) != str(plan.get("character_id", ""))
+                or snapshot.get("user_reference_evidence", []) != user_evidence
+            ):
+                return False
+            try:
+                validate_reference_policy_slots(paths, snapshot, snapshot.get("execution_call", {}), selections, _seen | {output["path"]})
+            except StylePackError:
+                return False
+        return True
+    if identity_root and not identity and not any(inherits_reference_policy(slot) for slot in slots):
+        raise StylePackError("A named character has no attachment for mandatory approved identity assets or validated stage lineage.")
+
+    def is_approved_project_reference(slot: dict[str, object]) -> bool:
+        if is_user_attachment(slot):
+            return False
+        try:
+            record = validate_plan_reference(paths, str(slot["path"]), "SCENE")
+            status = str(record.get("status", ""))
+            return (
+                (status.startswith("APPROVED_") or status in {"POSITIVE_CANDIDATE", "WEB_EXPORT_COPY"})
+                and record["sha256"] == str(slot.get("sha256", "")).lower()
+            )
+        except (StylePackError, OSError, ValueError):
+            return False
+    for slot in slots:
+        file = Path(str(slot["path"])).resolve()
+        roles = set(slot.get("active_roles", []))
+        if identity_root and is_relative_to(file, identity_root):
+            continue
+        elif is_relative_to(file, (paths.workspace / BODY_LIBRARY_NAME).resolve()):
+            library.append(slot)
+        elif roles and roles.issubset({"STYLE", "STYLE_SOFT"}):
+            continue  # Style consent is independently bound.
+        else:
+            additional.append(slot)
+    if policy == "PROJECT_STYLE_ONLY":
+        has_style = any(set(slot.get("active_roles", [])) & {"STYLE", "STYLE_SOFT"} for slot in slots)
+        inherited = [slot for slot in additional if inherits_reference_policy(slot)]
+        if selections["style"]["choice"] != f"PROJECT_STYLE:{paths.style_name}" or not has_style or len(inherited) != len(additional) or library:
+            raise StylePackError("PROJECT_STYLE_ONLY permits only selected project STYLE and required character identity slots.")
+        return
+    if policy == "BODY_LIBRARY_ONLY":
+        if str(plan.get("startup_parameter_selection", {}).get("resolved_parameters", {}).get("aux_body_decision", "")).upper() != "SELECTED":
+            raise StylePackError("BODY_LIBRARY_ONLY requires the user's explicit request-level BODY_REFERENCE_LIBRARY selection.")
+        inherited = [slot for slot in additional if inherits_reference_policy(slot)]
+        if len(inherited) != len(additional):
+            raise StylePackError("BODY_LIBRARY_ONLY permits the selected BODY_REFERENCE_LIBRARY and mandatory approved character identity slots only.")
+        return
+    if policy == "APPROVED_CHARACTER_REFERENCES":
+        if library or not all(is_approved_project_reference(slot) or inherits_reference_policy(slot) for slot in additional):
+            raise StylePackError("Approved-only reference policy conflicts with optional user/body-library reference slots.")
+        return
+    if policy == "APPROVED_PLUS_USER_REFERENCES" and not additional:
+        raise StylePackError("Approved-plus-user reference policy requires an additional user-reference slot.")
+    if policy in {"USER_ATTACHED_REFERENCES", "APPROVED_PLUS_USER_REFERENCES"}:
+        if not additional or not all(is_user_attachment(slot) or inherits_reference_policy(slot) for slot in additional):
+            raise StylePackError("User-reference policy requires actual non-style, non-library attachments with matching source hash and chat/message provenance.")
+
+
 def command_prepare_call(args: argparse.Namespace) -> None:
     paths = make_paths(args.workspace, args.style_name)
     request_id = safe_component(args.request_id, "request")
@@ -1807,6 +2291,42 @@ def command_prepare_call(args: argparse.Namespace) -> None:
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise StylePackError(f"Cannot read prepared reference plan: {error}") from error
+    startup = plan.get("startup_parameter_selection", {})
+    resolved = startup.get("resolved_user_selections", {})
+    menu_selections = {
+        key: {"choice": value, "user_quote": startup.get("resolved_selection_quote", startup.get("user_choice_quote", ""))}
+        for key, value in resolved.items()
+    }
+    explicit_selections_supplied = bool(args.user_selections_json)
+    if explicit_selections_supplied:
+        try:
+            user_selections = json.loads(Path(args.user_selections_json).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise StylePackError(f"Cannot read chat-sourced user selections: {error}") from error
+        if menu_selections and user_selections != menu_selections:
+            raise StylePackError("Explicit user selections differ from the complete resolved menu choices or exact menu reply; record a corrected selection before preparing the call.")
+    elif menu_selections:
+        user_selections = menu_selections
+    else:
+        raise StylePackError("This legacy plan has no complete menu selection mapping; show the structured chooser for missing choices before preparing the call.")
+    if not isinstance(user_selections, dict) or any(
+        not isinstance(user_selections.get(key), dict)
+        or not isinstance(user_selections[key].get("choice"), str)
+        or not user_selections[key]["choice"].strip()
+        or not isinstance(user_selections[key].get("user_quote"), str)
+        or not user_selections[key]["user_quote"].strip()
+        for key in ("style", "reference_policy", "character")
+    ):
+        raise StylePackError(
+            "User selections must record style, reference_policy, and character, each with choice and exact user_quote from this chat."
+        )
+    validate_menu_user_selections(
+        plan.get("startup_parameter_selection", {}), user_selections,
+        allow_legacy_explicit=explicit_selections_supplied,
+    )
+    recorded_selections = plan.get("user_selections")
+    if isinstance(recorded_selections, dict) and recorded_selections != user_selections:
+        raise StylePackError("User selections changed during this request; record the correction and prepare a new exact call.")
     if plan.get("request_id") != request_id or plan.get("gate_status") not in {
         "PREPARED_AWAITING_EXECUTABLE_CALL", "READY_FOR_GENERATION"
     }:
@@ -1854,6 +2374,7 @@ def command_prepare_call(args: argparse.Namespace) -> None:
             and Path(str(stored_risk.get("path", ""))).expanduser().resolve()
             == Path(args.risk_assessment).expanduser().resolve()
             and isinstance(stored_call.get("slots"), list)
+            and stored_call.get("user_selections") == user_selections
         )
         if same_candidate and binding_matches:
             current_slots = resolve_call_slots(paths, plan_path.resolve(), plan, stage_id)
@@ -1881,6 +2402,25 @@ def command_prepare_call(args: argparse.Namespace) -> None:
     call, risk_path, report = resolve_execution_call(
         paths, plan_path.resolve(), plan, stage_id, prompt_text, args.risk_assessment
     )
+    call["user_selections"] = user_selections
+    scene_prompt_sources = plan.get("scene_prompt_sources", {})
+    if scene_prompt_sources:
+        call["prompt_source_metadata"] = {
+            "source": "EXACT_EXECUTABLE_PROMPT",
+            "prompt_sha256": call["prompt"]["text_sha256"],
+            "roles": sorted(str(role).upper() for role in scene_prompt_sources),
+            "role_sources": scene_prompt_sources,
+        }
+    if args.user_reference_evidence_json:
+        try:
+            evidence = json.loads(Path(args.user_reference_evidence_json).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise StylePackError(f"Cannot read user attachment provenance: {error}") from error
+        if not isinstance(evidence, list):
+            raise StylePackError("User attachment provenance must be a list.")
+        plan["user_reference_evidence"] = evidence
+    validate_reference_policy_slots(paths, plan, call, user_selections)
+    plan["user_selections"] = user_selections
     plan["execution_call"] = call
     plan["risk_assessment"] = {
         "path": str(risk_path),
@@ -2366,7 +2906,7 @@ def generation_qa_evidence(row: dict[str, str]) -> dict[str, object] | None:
         evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
-    if not isinstance(evidence, dict) or evidence.get("schema_version") != 2:
+    if not isinstance(evidence, dict) or evidence.get("schema_version") not in {2, 3}:
         return None
     output_hash = evidence.get("output_sha256")
     contract_path = Path(str(evidence.get("qa_contract", "")))
@@ -2388,12 +2928,38 @@ def generation_qa_evidence(row: dict[str, str]) -> dict[str, object] | None:
     except (OSError, json.JSONDecodeError):
         return None
     plan_snapshot = style_file.with_suffix(style_file.suffix + ".qa-plan.json")
+    # Preserve previously valid manager-issued receipts. The new visual layer
+    # applies to records created under the current contract; historical v2/v1
+    # receipts remain usable when all their original hash checks still pass.
+    if evidence.get("schema_version") == 2:
+        expected_layers = contract.get("expected_qa_layers") if isinstance(contract, dict) else None
+        qa_results = contract.get("qa_results") if isinstance(contract, dict) else None
+        if (
+            not isinstance(contract, dict)
+            or contract.get("schema_version") != 1
+            or contract.get("contract_version") != 1
+            or Path(str(contract.get("plan_snapshot", ""))) != plan_snapshot
+            or not plan_snapshot.is_file()
+            or contract.get("plan_content_sha256") != sha256(plan_snapshot)
+            or row.get("qa_plan_sha256", "").casefold() != sha256(plan_snapshot)
+            or not isinstance(expected_layers, list)
+            or not expected_layers
+            or len(expected_layers) != len(set(expected_layers))
+            or not all(isinstance(layer, str) and layer in QA_LAYER_NAMES for layer in expected_layers)
+            or not isinstance(qa_results, dict)
+            or set(qa_results) != set(expected_layers)
+            or any(result != "PASS" for result in qa_results.values())
+        ):
+            return None
+        return evidence
     expected_layers = contract.get("expected_qa_layers") if isinstance(contract, dict) else None
     qa_results = contract.get("qa_results") if isinstance(contract, dict) else None
     if (
         not isinstance(contract, dict)
-        or contract.get("schema_version") != 1
-        or contract.get("contract_version") != 1
+        or contract.get("schema_version") != 2
+        or contract.get("contract_version") != 2
+        or evidence.get("visual_review_sha256") != contract.get("visual_review_sha256")
+        or evidence.get("visual_review") != contract.get("visual_review")
         or Path(str(contract.get("plan_snapshot", ""))) != plan_snapshot
         or not plan_snapshot.is_file()
         or contract.get("plan_content_sha256") != sha256(plan_snapshot)
@@ -2404,8 +2970,50 @@ def generation_qa_evidence(row: dict[str, str]) -> dict[str, object] | None:
         or not all(isinstance(layer, str) and layer in QA_LAYER_NAMES for layer in expected_layers)
         or not isinstance(qa_results, dict)
         or set(qa_results) != set(expected_layers)
-        or any(result != "PASS" for result in qa_results.values())
+        or any(result not in {"PASS", "FAIL", "NOT_APPLICABLE"} for result in qa_results.values())
+        or not isinstance(contract.get("visual_review"), dict)
+        or contract.get("visual_review_sha256") != hashlib.sha256(
+            json.dumps(contract.get("visual_review"), ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
     ):
+        return None
+    visual_review = contract["visual_review"]
+    plan_snapshot_data: dict[str, object] = {}
+    try:
+        plan_snapshot_data = json.loads(plan_snapshot.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    plan_call = plan_snapshot_data.get("execution_call") if isinstance(plan_snapshot_data, dict) else None
+    plan_prompt = plan_call.get("prompt") if isinstance(plan_call, dict) else None
+    plan_prompt_text = plan_prompt.get("text") if isinstance(plan_prompt, dict) else None
+    if (
+        not isinstance(visual_review.get("author"), str)
+        or not visual_review.get("author", "").strip()
+        or (plan_snapshot_data.get("request_id") and visual_review.get("request_id") != plan_snapshot_data.get("request_id"))
+        or not isinstance(visual_review.get("request_id"), str)
+        or not isinstance(visual_review.get("attempt_id"), str)
+        or not visual_review.get("attempt_id")
+        or not isinstance(visual_review.get("task_revision"), int)
+        or visual_review.get("task_revision", -1) < 0
+        or str(visual_review.get("executed_plan_sha256", "")).casefold() != sha256(plan_snapshot).casefold()
+        or not plan_prompt_text
+        or str(visual_review.get("prompt_sha256", "")).casefold() != hashlib.sha256(str(plan_prompt_text).encode("utf-8")).hexdigest()
+        or not re.fullmatch(r"[0-9a-f]{64}", str(visual_review.get("output_sha256", "")), flags=re.IGNORECASE)
+        or not re.fullmatch(r"[0-9a-f]{64}", str(visual_review.get("prompt_sha256", "")), flags=re.IGNORECASE)
+        or not re.fullmatch(r"[0-9a-f]{64}", str(visual_review.get("executed_plan_sha256", "")), flags=re.IGNORECASE)
+    ):
+        return None
+    if not {"ANATOMY_REVIEW", "VISIBLE_DEFECTS", "PROMPT_ADHERENCE"}.issubset(expected_layers):
+        return None
+    expected_visual_results = {
+        "ANATOMY_REVIEW": visual_review.get("anatomy_review", {}).get("status"),
+        "VISIBLE_DEFECTS": visual_review.get("visible_defect_review", {}).get("status"),
+        "PROMPT_ADHERENCE": visual_review.get("prompt_adherence", {}).get("status"),
+    }
+    if any(qa_results.get(layer) != result for layer, result in expected_visual_results.items()):
+        return None
+    expected_failed = sorted(name for name, result in qa_results.items() if result == "FAIL")
+    if evidence.get("qa_failed") != expected_failed:
         return None
     return evidence
 
@@ -2706,6 +3314,24 @@ def build_scene_contract(
     }
 
 
+def build_scene_prompt_source_contract(
+    purpose: str,
+    character_id: str,
+    selected_local_roles: dict[str, str],
+) -> dict[str, dict[str, str]]:
+    """Declare optional scene roles sourced from the exact executable prompt."""
+    if purpose.upper() != "SCENE" or not re.fullmatch(r"CHAR_\d+", character_id.upper()):
+        return {}
+    return {
+        role: {
+            "source": "EXACT_EXECUTABLE_PROMPT",
+            "evidence_required": "USER_SPECIFIED_SCENE_TEXT",
+        }
+        for role in ("POSE", "CLOTHES", "LIGHTING", "BACKGROUND", "COMPOSITION")
+        if not str(selected_local_roles.get(role, "")).strip()
+    }
+
+
 def build_canvas_contract(args: argparse.Namespace) -> dict[str, object]:
     orientation = args.orientation.upper()
     default_ratio = DEFAULT_ASPECT_BY_ORIENTATION[orientation]
@@ -2850,10 +3476,6 @@ def build_body_proportion_contract(
                 f"Full-body {target_family} output cannot take permanent proportions from a {source_family} source. "
                 "Use a same-family full-body source; seated or lying references may only support staging/torso details."
             )
-        if source_family != target_family and dominant == "CHARACTER_BODY" and "pose" not in selected:
-            raise StylePackError(
-                "An approved standing CHARACTER_BODY may be adapted to another pose only with a separate selected POSE reference."
-            )
         if not args.body_silhouette_notes.strip():
             raise StylePackError(
                 "Full-body output requires --body-silhouette-notes covering shoulders, torso, waist, hips, thighs, and leg-to-torso ratio."
@@ -2937,14 +3559,14 @@ def build_multistage_attachment_plan(
     if not 1 <= limit <= 5:
         raise StylePackError("Attachment limit must be within 1-5 for the current generator workflow.")
     style_records = selected.get("style", [])
-    if not isinstance(style_records, list) or not style_records:
-        raise StylePackError("A multi-stage workflow still requires at least one STYLE reference.")
-    style_anchor = style_records[0]
+    if not isinstance(style_records, list):
+        raise StylePackError("Multi-stage STYLE references must be a list.")
+    style_anchor = style_records[0] if style_records else None
     stages: list[dict[str, object]] = []
 
     def source_records(keys: Sequence[str], include_style: bool = True) -> list[dict[str, object]]:
         records: list[dict[str, object]] = []
-        if include_style:
+        if include_style and style_stage_record is not None:
             records.append({**style_stage_record, "stage_role": "STYLE"})
         for key in keys:
             value = selected.get(key)
@@ -3088,7 +3710,7 @@ def build_multistage_attachment_plan(
             ("FACE_GEOMETRY", "BODY_SILHOUETTE", "BODY_PROPORTIONS", "LIMB_PROPORTIONS", "BACK_VIEW", "SAFE_COVERAGE", "CLOTHING_TOPOLOGY", "MULTIVIEW_CONSISTENCY", "STYLE", "BODY_RENDERING_STYLE"),
         )
         assembly_inputs = [
-            style_stage_record | {"stage_role": "STYLE"},
+            *([{**style_stage_record, "stage_role": "STYLE"}] if style_stage_record is not None else []),
             face_output,
             front_output,
             side_output,
@@ -3115,12 +3737,12 @@ def build_multistage_attachment_plan(
         add_stage(
             "03_CLOTHING",
             "Dress the verified body/pose without changing its silhouette, anatomy, or camera.",
-            [style_stage_record | {"stage_role": "STYLE"}, body_output, *source_records(["clothes"], include_style=False)],
+            [*([{**style_stage_record, "stage_role": "STYLE"}] if style_stage_record is not None else []), body_output, *source_records(["clothes"], include_style=False)],
             ("CLOTHING", "BODY_SILHOUETTE", "BODY_PROPORTIONS", "STYLE"),
         )
         character_base_output = placeholder("03_CLOTHING", "CLOTHING_STAGE")
 
-    composite_inputs = [style_stage_record | {"stage_role": "STYLE"}, character_base_output]
+    composite_inputs = [*([{**style_stage_record, "stage_role": "STYLE"}] if style_stage_record is not None else []), character_base_output]
     if face_keys:
         composite_inputs.append(placeholder("01_FACE_IDENTITY", "FACE_IDENTITY_STAGE"))
     add_stage(
@@ -3131,7 +3753,7 @@ def build_multistage_attachment_plan(
     )
 
     final_inputs = [
-        style_stage_record | {"stage_role": "STYLE"},
+        *([{**style_stage_record, "stage_role": "STYLE"}] if style_stage_record is not None else []),
         placeholder("04_CHARACTER_COMPOSITE", "CHARACTER_COMPOSITE_STAGE"),
         *source_records(
             [key for key in ("lighting", "background", "composition") if key in selected],
@@ -3229,6 +3851,14 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
     validate_prompt_only_body_library_review(args)
     character_id = args.character_id.upper()
     is_new_character = character_id == "NEW"
+    scene_prompt_sources = build_scene_prompt_source_contract(purpose, character_id, {
+        "POSE": args.pose_reference,
+        "CLOTHES": args.clothes_reference,
+        "LIGHTING": args.lighting_reference,
+        "BACKGROUND": args.background_reference,
+        "COMPOSITION": args.composition_reference,
+    })
+    overrides.update(scene_prompt_sources)
     scene_contract = build_scene_contract(args, purpose, character_id)
     target_identity = compatibility_target(paths, args, character_id)
     character_free_scene = bool(scene_contract.get("applicable") and not scene_contract.get("has_character"))
@@ -3313,10 +3943,20 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         target_identity,
     )
 
-    if not args.style_reference:
-        raise StylePackError("At least one local --style-reference is required.")
-    selected: dict[str, object] = {
-        "style": [
+    resolved_user_selections = startup_interaction.get("resolved_user_selections", {})
+    selected_style_choice = str(resolved_user_selections.get("style", "")).upper()
+    allow_character_default_style = (
+        selected_style_choice == "GENERATOR_DEFAULT"
+        and bool(re.fullmatch(r"CHAR_\d+", character_id))
+        and purpose == "SCENE"
+    )
+    if not args.style_reference and not allow_character_default_style:
+        raise StylePackError("At least one local --style-reference is required unless the user explicitly selected GENERATOR_DEFAULT for an approved character scene.")
+    if args.style_reference and selected_style_choice == "GENERATOR_DEFAULT":
+        raise StylePackError("GENERATOR_DEFAULT cannot attach project STYLE reference slots.")
+    selected: dict[str, object] = {}
+    if args.style_reference:
+        selected["style"] = [
             validate_plan_reference(
                 paths,
                 value,
@@ -3324,12 +3964,12 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
                 allow_request_local_style_candidate=(
                     startup_interaction.get("profile_confirmation_complete") is True
                     and startup_interaction.get("style_confirmation_complete") is True
+                    and bool(str(startup_interaction.get("confirmed_style_name", "")).strip())
                     and style_slug(str(startup_interaction.get("confirmed_style_name", ""))) == style_slug(paths.style_name)
                 ),
             )
             for value in args.style_reference
         ]
-    }
     if scene_contract.get("applicable") and args.subject_reference:
         selected["subject"] = [
             validate_plan_reference(paths, value, "SUBJECT") for value in args.subject_reference
@@ -3428,6 +4068,8 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         "COMPOSITION": args.composition_reference,
     }
     for category, value in category_values.items():
+        if category == "POSE" and not value and "pose" not in selected:
+            continue  # The requested pose may be specified entirely by text.
         if category in overrides:
             continue
         if category.lower() in selected:
@@ -3470,7 +4112,12 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
     for record in auxiliary_body_references:
         compatibility_records.append({"path": record["path"], "roles": record["active_roles"], **record.get("compatibility", {})})
 
-    required_review_roles = {"STYLE", *(category for category in PLAN_CATEGORIES if category not in overrides)}
+    required_review_roles = {
+        *(category for category in PLAN_CATEGORIES if category not in overrides),
+        *(set() if selected_style_choice == "GENERATOR_DEFAULT" else {"STYLE"}),
+    }
+    if "pose" not in selected:
+        required_review_roles.discard("POSE")
     if "subject" in selected:
         required_review_roles.add("SUBJECT")
     review_pool_counts = {role: int(count) for role, count in context.get("review_pool_counts", {}).items()}
@@ -3560,6 +4207,7 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
             if purpose == "SCENE" and scene_contract.get("applicable") and scene_contract.get("has_character")
             else []
         ),
+        "scene_prompt_sources": scene_prompt_sources,
         "local_context": {
             "local_files_total": context["local_files_total"],
             "work_collection_counts": context["work_collection_counts"],
@@ -4038,6 +4686,7 @@ def evaluate_generation_qa(
 
     workflow = plan["generation_workflow"]
     required = ["ATTACHMENTS", "CANVAS", "STAGE_LAYER"]
+    required.extend(("ANATOMY_REVIEW", "VISIBLE_DEFECTS", "PROMPT_ADHERENCE"))
     stage_id = "SINGLE_PASS"
     if workflow["mode"] == "MULTI_STAGE":
         stage_id = args.stage_id.upper()
@@ -4112,6 +4761,9 @@ def evaluate_generation_qa(
         "BODY_SILHOUETTE": args.qa_body_silhouette,
         "BODY_PROPORTIONS": args.qa_body_proportions,
         "LIMB_PROPORTIONS": getattr(args, "qa_limb_proportions", "NOT_CHECKED"),
+        "ANATOMY_REVIEW": getattr(args, "visual_anatomy_status", "NOT_CHECKED"),
+        "VISIBLE_DEFECTS": getattr(args, "visual_defects_status", "NOT_CHECKED"),
+        "PROMPT_ADHERENCE": getattr(args, "visual_prompt_status", "NOT_CHECKED"),
     }
     if semantic_qa:
         view_value = getattr(args, "qa_view", "NOT_CHECKED")
@@ -4880,6 +5532,7 @@ def write_generation_qa_evidence(
     qa_required: Sequence[str],
     qa_results: dict[str, str],
     status: str,
+    visual_review: dict[str, object],
 ) -> Path:
     """Emit immutable plan/contract snapshots only after evaluated required QA at any fidelity."""
     evidence_path = style_file.with_suffix(style_file.suffix + ".qa-evidence.json")
@@ -4887,24 +5540,169 @@ def write_generation_qa_evidence(
     contract_path = style_file.with_suffix(style_file.suffix + ".qa-contract.json")
     shutil.copy2(reference_plan, plan_snapshot)
     contract = {
-        "schema_version": 1,
-        "contract_version": 1,
+        "schema_version": 2,
+        "contract_version": 2,
         "plan_snapshot": str(plan_snapshot),
         "plan_content_sha256": sha256(plan_snapshot),
         "stage_id": stage_id,
         "expected_qa_layers": sorted(qa_required),
         "qa_results": {name: qa_results[name] for name in sorted(qa_required)},
+        "visual_review": visual_review,
+        "visual_review_sha256": hashlib.sha256(
+            json.dumps(visual_review, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest(),
     }
     contract_path.write_text(json.dumps(contract, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
     receipt = {
-        "schema_version": 2,
+        "schema_version": 3,
         "record_status": status,
         "output_sha256": sha256(style_file),
         "qa_contract": str(contract_path),
         "qa_contract_sha256": sha256(contract_path),
+        "visual_review_sha256": contract["visual_review_sha256"],
+        "visual_review": visual_review,
+        "qa_failed": sorted(name for name, result in qa_results.items() if result == "FAIL"),
     }
     evidence_path.write_text(json.dumps(receipt, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
     return evidence_path
+
+
+def prompt_review_clauses(prompt_text: str) -> list[str]:
+    """Split exact prompt text into checklist clauses for visual adherence review."""
+    return [
+        part.strip(" \t\r\n,;:-")
+        for part in re.split(
+            r"(?:[.!?;\n]+|,|\b(?:and|while|but|then|и|а|но|затем|при этом|а также)\b)",
+            prompt_text,
+            flags=re.IGNORECASE,
+        )
+        if part.strip(" \t\r\n,;:-")
+    ]
+
+
+def validate_visual_review(
+    review_path: Path,
+    *,
+    request_id: str,
+    attempt_id: str,
+    task_revision: int,
+    output: Path,
+    execution_snapshot: dict[str, object],
+    plan: dict[str, object],
+    stage_id: str,
+) -> dict[str, object]:
+    """Validate human visual findings against the immutable executed attempt."""
+    try:
+        report = json.loads(review_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise StylePackError(f"Cannot read --visual-review-json: {error}") from error
+    if not isinstance(report, dict) or report.get("schema_version") != 1:
+        raise StylePackError("--visual-review-json must be an object with schema_version=1.")
+    executed_call = execution_snapshot.get("execution_call")
+    prompt = executed_call.get("prompt") if isinstance(executed_call, dict) else None
+    prompt_text = prompt.get("text") if isinstance(prompt, dict) else None
+    prompt_hash = hashlib.sha256(str(prompt_text or "").encode("utf-8")).hexdigest()
+    plan_hash = str(execution_snapshot.get("reference_plan_snapshot_sha256", "")).lower()
+    expected = {
+        "request_id": request_id,
+        "attempt_id": attempt_id,
+        "task_revision": task_revision,
+        "output_sha256": sha256(output),
+        "prompt_sha256": prompt_hash,
+        "executed_plan_sha256": plan_hash,
+    }
+    for key, value in expected.items():
+        actual = report.get(key)
+        if isinstance(value, str):
+            actual = str(actual or "").lower()
+            value = value.lower()
+        if actual != value:
+            raise StylePackError(f"--visual-review-json {key} does not match the verified active attempt/output.")
+    if not prompt_text or prompt_hash != str(execution_snapshot.get("prompt_sha256", "")).lower():
+        raise StylePackError("The immutable attempt snapshot does not contain a verifiable exact executed prompt.")
+    author = report.get("author")
+    if not isinstance(author, str) or not author.strip():
+        raise StylePackError("--visual-review-json requires an explicit non-empty author.")
+
+    anatomy = report.get("anatomy_review")
+    defects = report.get("visible_defect_review")
+    adherence = report.get("prompt_adherence")
+    if not isinstance(anatomy, dict) or anatomy.get("status") not in {"PASS", "FAIL", "NOT_APPLICABLE"}:
+        raise StylePackError("Visual review requires anatomy_review.status PASS, FAIL, or NOT_APPLICABLE.")
+    anatomy_reason = anatomy.get("reason")
+    if anatomy["status"] == "NOT_APPLICABLE":
+        if anatomy.get("no_visible_anatomy") is not True:
+            raise StylePackError("Anatomy NOT_APPLICABLE requires no_visible_anatomy=true.")
+        if not isinstance(anatomy_reason, str) or len(anatomy_reason.strip()) < 20:
+            raise StylePackError("Anatomy NOT_APPLICABLE requires a substantive reason of at least 20 characters.")
+        canvas_contract = plan.get("canvas_contract")
+        full_body = bool(canvas_contract.get("full_figure")) if isinstance(canvas_contract, dict) else False
+        face_review = plan.get("face_review")
+        scene_contract = plan.get("scene_contract")
+        visible_identity = bool(face_review.get("face_visible")) if isinstance(face_review, dict) else False
+        visible_identity = visible_identity or bool(scene_contract.get("has_character")) if isinstance(scene_contract, dict) else visible_identity
+        visible_identity = visible_identity or str(plan.get("generation_purpose", "")).upper() == "CHARACTER_BASE"
+        full_body = full_body or stage_id in {
+            "02_PHYSIQUE_FRONT", "03_PHYSIQUE_SIDE", "04_PHYSIQUE_BACK", "05_CHARACTER_ASSEMBLY"
+        }
+        if full_body:
+            raise StylePackError("Anatomy review cannot be NOT_APPLICABLE for a full-body or physique/assembly stage.")
+        if visible_identity:
+            raise StylePackError("Anatomy review cannot be NOT_APPLICABLE for a plan with a visible character or face.")
+    else:
+        anatomy_scope = anatomy.get("checked_scope")
+        anatomy_findings = anatomy.get("findings")
+        if not isinstance(anatomy_scope, str) or len(anatomy_scope.strip()) < 10 or not isinstance(anatomy_findings, list):
+            raise StylePackError("Anatomy PASS/FAIL requires a substantive checked_scope and findings list.")
+        if anatomy["status"] == "PASS" and anatomy_findings:
+            raise StylePackError("Anatomy PASS cannot contain unresolved findings.")
+        if anatomy["status"] == "FAIL" and not anatomy_findings:
+            raise StylePackError("Anatomy FAIL requires at least one finding.")
+    if not isinstance(defects, dict) or defects.get("status") not in {"PASS", "FAIL"}:
+        raise StylePackError("Visual review requires visible_defect_review.status PASS or FAIL.")
+    checked_scope = defects.get("checked_scope")
+    findings = defects.get("findings")
+    if not isinstance(checked_scope, str) or len(checked_scope.strip()) < 10 or not isinstance(findings, list):
+        raise StylePackError("Visible-defect review requires a substantive checked_scope and a findings list.")
+    if defects["status"] == "FAIL" and not findings:
+        raise StylePackError("Visible-defect review FAIL requires at least one finding.")
+    if defects["status"] == "PASS" and findings:
+        raise StylePackError("Visible-defect review PASS cannot contain unresolved findings.")
+    if not isinstance(adherence, dict) or adherence.get("status") not in {"PASS", "FAIL"}:
+        raise StylePackError("Visual review requires prompt_adherence.status PASS or FAIL.")
+    constraints = adherence.get("constraints")
+    # Require a reviewer-authored checklist for every clause-like segment in
+    # the exact prompt. This is a structural completeness check, not a claim
+    # that syntax can determine semantic atomicity in free-form language.
+    prompt_requirements = prompt_review_clauses(str(prompt_text))
+    if (
+        adherence.get("checked_scope") != "FULL_EXECUTED_PROMPT"
+        or adherence.get("all_explicit_constraints_assessed") is not True
+        or not isinstance(constraints, list)
+        or len(constraints) != len(prompt_requirements)
+    ):
+        raise StylePackError("Prompt-adherence review must assess every explicit constraint in the full executed prompt.")
+    for index, constraint in enumerate(constraints, start=1):
+        if (
+            not isinstance(constraint, dict)
+            or not isinstance(constraint.get("constraint"), str)
+            or not constraint["constraint"].strip()
+            or constraint.get("status") not in {"PASS", "FAIL"}
+            or not isinstance(constraint.get("evidence"), str)
+            or not constraint["evidence"].strip()
+        ):
+            raise StylePackError(f"Prompt-adherence constraint #{index} requires text, PASS/FAIL, and evidence.")
+        if constraint["constraint"].strip(" \t\r\n,;:-") != prompt_requirements[index - 1]:
+            raise StylePackError(
+                "Prompt-adherence constraints must match every clause of the exact executed prompt in order; "
+                f"constraint #{index} does not match its prompt clause."
+            )
+    failed_constraints = [row for row in constraints if row["status"] == "FAIL"]
+    if adherence["status"] == "PASS" and failed_constraints:
+        raise StylePackError("Prompt-adherence PASS conflicts with a failed explicit constraint.")
+    if adherence["status"] == "FAIL" and not failed_constraints:
+        raise StylePackError("Prompt-adherence FAIL requires at least one failed explicit constraint.")
+    return report
 
 
 def qa_manifest_digests(style_file: Path, evidence_path: Path) -> dict[str, str]:
@@ -4930,18 +5728,19 @@ def command_record_generation(args: argparse.Namespace) -> None:
     if status not in {"STAGING", "TEST", "REJECTED"}:
         raise StylePackError("New generation records may be STAGING, TEST, or REJECTED. Use an approval command after confirmation.")
     image = resolve_existing_file(args.image, paths)
-    # Archive first: even a QA failure or an invalid record attempt is still a produced generation.
-    archive_file = existing_archive_for_image(paths, image) or archive_generation(paths, image, args.description)
+    # Validate the exact request/attempt/plan binding before writing any archive or manifest row.
+    archive_file = existing_archive_for_image(paths, image)
+    output_reference = archive_file or image
     request_id = safe_component(args.request_id, "request")
     execution_guard_path = paths.generations / "00_PENDING" / request_id / "EXECUTION_GUARD.json"
     try:
         guard_state = load_execution_guard(execution_guard_path)
     except ExecutionGuardError as error:
         raise StylePackError(
-            f"Generated image was archived at {archive_file}, but recording is blocked by the execution guard: {error}"
+            f"Generated image at {output_reference} cannot be registered because the execution guard blocks it: {error}"
         ) from error
     if guard_state.get("request_id") != request_id:
-        raise StylePackError(f"Generated image was archived at {archive_file}, but the execution guard belongs to another request.")
+        raise StylePackError(f"Generated image at {output_reference} cannot be registered because the execution guard belongs to another request.")
     matching_attempt = next(
         (row for row in guard_state.get("attempts", []) if isinstance(row, dict) and row.get("attempt_id") == args.attempt_id),
         None,
@@ -4949,7 +5748,7 @@ def command_record_generation(args: argparse.Namespace) -> None:
     attempt_status = matching_attempt.get("status") if isinstance(matching_attempt, dict) else None
     if not isinstance(matching_attempt, dict) or attempt_status not in {"ACTIVE", "UNKNOWN", "RESULT_AVAILABLE"}:
         raise StylePackError(
-            f"Generated image was archived at {archive_file}, but --attempt-id does not identify an active, UNKNOWN, or already-visible request attempt."
+            f"Generated image at {output_reference} cannot be registered because --attempt-id does not identify an active, UNKNOWN, or already-visible request attempt."
         )
     if attempt_status == "RESULT_AVAILABLE":
         evidence = matching_attempt.get("result_evidence", [])
@@ -5005,17 +5804,45 @@ def command_record_generation(args: argparse.Namespace) -> None:
             and available_result.get("late") is True
             and matching_attempt.get("reconciliation", {}).get("outcome") == "AVAILABLE"
         )
+        attempt_revision = int(matching_attempt.get("task_revision", -1))
+        current_revision = int(guard_state.get("task_revision", 0))
+        result_event_indices = [
+            index
+            for index, event in enumerate(guard_state.get("events", []))
+            if isinstance(event, dict)
+            and event.get("attempt_id") == args.attempt_id
+            and event.get("event") in {"VISIBLE_RESULT", "ATTEMPT_RECONCILED"}
+        ]
+        result_event_index = max(result_event_indices, default=-1)
+        corrected_after_result = bool(
+            current_revision > attempt_revision
+            and result_event_index >= 0
+            and any(
+                isinstance(event, dict) and event.get("event") == "USER_CORRECTION"
+                for event in guard_state.get("events", [])[result_event_index + 1:]
+            )
+        )
+        historical_correction_available = (
+            guard_state.get("status") in {"ACTIVE", "READY"}
+            and guard_state.get("active_attempt") is None
+            and isinstance(available_result, dict)
+            and matching_attempt.get("status") == "RESULT_AVAILABLE"
+            and corrected_after_result
+            and (
+                (not available_result.get("late") and not matching_attempt.get("reconciliation"))
+                or (available_result.get("late") is True and matching_attempt.get("reconciliation", {}).get("outcome") == "AVAILABLE")
+            )
+        )
         if not (
             latest_attempt_id == args.attempt_id
             and guard_state.get("active_attempt") is None
-            and matching_attempt.get("task_revision") == guard_state.get("task_revision")
-            and (ordinary_available or reconciled_available)
+            and (ordinary_available or reconciled_available or historical_correction_available)
             and matches_evidence(evidence)
             and matches_evidence(available_result.get("evidence") if isinstance(available_result, dict) else None)
             and (not reconciled_available or matches_reconciled_evidence())
         ):
             raise StylePackError(
-                f"Generated image was archived at {archive_file}, but --image does not match the exact path recorded for the already-visible attempt."
+                f"Generated image at {output_reference} cannot be registered because --image does not match the exact path recorded for the already-visible attempt."
             )
         active_attempt = matching_attempt
         already_visible = True
@@ -5025,16 +5852,69 @@ def command_record_generation(args: argparse.Namespace) -> None:
             guard_state = require_execution_started(execution_guard_path, request_id)
         except ExecutionGuardError as error:
             raise StylePackError(
-                f"Generated image was archived at {archive_file}, but recording is blocked by the execution guard: {error}"
+                f"Generated image at {output_reference} cannot be registered because the execution guard blocks it: {error}"
             ) from error
         active_attempt = guard_state.get("active_attempt")
         if not isinstance(active_attempt, dict) or active_attempt.get("attempt_id") != args.attempt_id:
-            raise StylePackError(f"Generated image was archived at {archive_file}, but --attempt-id is not the active request attempt.")
+            raise StylePackError(f"Generated image at {output_reference} cannot be registered because --attempt-id is not the active request attempt.")
     else:
         # Preserve guard UNKNOWN/STOP state until QA finishes; a valid late
         # output is then recorded through VISIBLE_RESULT and remains late.
         active_attempt = matching_attempt
         already_visible = False
+    execution_snapshot = active_attempt.get("execution_snapshot") if isinstance(active_attempt, dict) else None
+    if not isinstance(execution_snapshot, dict):
+        raise StylePackError(
+            f"Generated image at {output_reference} cannot be registered because the attempt has no durable executed-call snapshot."
+        )
+    snapshot_binding = execution_snapshot.get("reference_binding")
+    if (
+        execution_snapshot.get("request_id") != request_id
+        or execution_snapshot.get("attempt_id") != args.attempt_id
+        or execution_snapshot.get("task_revision") != active_attempt.get("task_revision")
+        or execution_snapshot.get("guard_stage", execution_snapshot.get("stage")) != active_attempt.get("stage")
+        or not isinstance(snapshot_binding, dict)
+        or snapshot_binding != active_attempt.get("reference_binding")
+        or execution_snapshot.get("prompt_sha256") != snapshot_binding.get("prompt_sha256")
+        or execution_snapshot.get("execution_call_sha256") != snapshot_binding.get("execution_call_sha256")
+    ):
+        raise StylePackError(
+            f"Generated image at {output_reference} cannot be registered because the durable executed-call snapshot is missing, stale, or inconsistent with this request attempt."
+        )
+    provider_artifact = execution_snapshot.get("provider_artifact")
+    if isinstance(provider_artifact, dict):
+        artifact_path = Path(str(provider_artifact.get("path", ""))).resolve()
+        if (
+            not artifact_path.is_file()
+            or str(provider_artifact.get("sha256", "")).lower() != sha256(artifact_path)
+            or sha256(image) != str(provider_artifact.get("sha256", "")).lower()
+        ):
+            raise StylePackError(
+                f"Generated image at {output_reference} cannot be registered because it does not match the provider artifact bound to the executed-call snapshot."
+            )
+    registration_plan_arg = args.reference_plan
+    if args.reference_plan and isinstance(snapshot_binding, dict):
+        requested_plan_path = Path(args.reference_plan).expanduser()
+        if not requested_plan_path.is_absolute():
+            requested_plan_path = paths.workspace / requested_plan_path
+        requested_plan_path = requested_plan_path.resolve()
+        bound_plan_path = Path(str(snapshot_binding.get("path", ""))).resolve()
+        snapshot_plan_path = Path(str(execution_snapshot.get("reference_plan_snapshot_path", ""))).resolve()
+        expected_request_folder = (paths.generations / "00_PENDING" / request_id).resolve()
+        if (
+            requested_plan_path != bound_plan_path
+            or snapshot_plan_path.parent != expected_request_folder
+            or not snapshot_plan_path.name.startswith("EXECUTED_PLAN_")
+            or not snapshot_plan_path.is_file()
+            or sha256(snapshot_plan_path) != str(execution_snapshot.get("reference_plan_snapshot_sha256", "")).lower()
+        ):
+            raise StylePackError(
+                f"Generated image at {output_reference} cannot be registered because its immutable executed-plan snapshot is missing, stale, or bound to another request."
+            )
+        # A user correction can replace the request's mutable current plan.
+        # Registration continues against the immutable plan that launched this attempt.
+        if not bound_plan_path.is_file() or sha256(bound_plan_path) != str(snapshot_binding.get("sha256", "")).lower():
+            registration_plan_arg = str(snapshot_plan_path)
     plan: dict[str, object] | None = None
     risk_level = args.risk_level.upper() if args.risk_level else ""
     stage_id = ""
@@ -5042,29 +5922,79 @@ def command_record_generation(args: argparse.Namespace) -> None:
     qa_failed: list[str] = []
     qa_results: dict[str, str] = {}
     if args.reference_plan:
-        reference_plan_path, plan = validate_reference_plan_for_recording(paths, args.reference_plan, args.fidelity)
+        reference_plan_path, plan = validate_reference_plan_for_recording(paths, str(registration_plan_arg), args.fidelity)
         if plan.get("request_id") != request_id:
-            raise StylePackError(f"Generated image was archived at {archive_file}, but the reference plan belongs to a different request.")
+            raise StylePackError(f"Generated image at {output_reference} cannot be registered because the reference plan belongs to a different request.")
+        executed_call = plan.get("execution_call")
+        executed_stage = str(execution_snapshot.get("execution_stage", "")).strip()
+        request_purpose = str(execution_snapshot.get("request_purpose", "")).strip().upper() or "UNSPECIFIED"
+        workflow = plan.get("generation_workflow")
+        workflow_mode = str(workflow.get("mode", "")).upper() if isinstance(workflow, dict) else ""
+        plan_purpose = str(plan.get("generation_purpose", "")).strip().upper() or "UNSPECIFIED"
+        guard_stage = str(execution_snapshot.get("guard_stage", execution_snapshot.get("stage", ""))).strip()
+        if (
+            not isinstance(executed_call, dict)
+            or workflow_mode not in {"SINGLE_PASS", "MULTI_STAGE"}
+            or plan_purpose != request_purpose
+            or str(executed_call.get("stage_id", "")).upper() != executed_stage.upper()
+            or not executed_stage
+            or execution_snapshot.get("execution_call") != executed_call
+            or (
+                guard_stage.upper() != executed_stage.upper()
+                and not (request_purpose == "SCENE" and workflow_mode == "SINGLE_PASS" and guard_stage.upper() == "SCENE" and executed_stage.upper() == "SINGLE_PASS")
+            )
+        ):
+            raise StylePackError(
+                f"Generated image at {output_reference} cannot be registered because the reference plan purpose or executable stage does not match the durable attempt snapshot."
+            )
+        call_json = json.dumps(executed_call, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        if hashlib.sha256(call_json.encode("utf-8")).hexdigest() != execution_snapshot.get("execution_call_sha256"):
+            raise StylePackError(
+                f"Generated image at {output_reference} cannot be registered because the plan execution call differs from the durable attempt snapshot."
+            )
+        # A stale caller-supplied stage label is recoverable only because the
+        # exact executed stage above is bound to this request, attempt and plan.
+        # Use that stage for QA; never reinterpret SCENE/SINGLE_PASS globally.
+        args.stage_id = executed_stage if workflow_mode == "MULTI_STAGE" else ""
         if str(args.character_id).upper() != str(plan.get("character_id", "")).upper():
-            raise StylePackError(f"Generated image was archived at {archive_file}, but --character-id does not match the prepared plan.")
+            raise StylePackError(f"Generated image at {output_reference} cannot be registered because --character-id does not match the prepared plan.")
         binding = active_attempt.get("reference_binding", {})
         if (
-            Path(str(binding.get("path", ""))).resolve() != reference_plan_path.resolve()
-            or binding.get("sha256") != sha256(reference_plan_path)
+            Path(str(binding.get("path", ""))).resolve() != Path(str(snapshot_binding.get("path", ""))).resolve()
+            or binding.get("sha256") != snapshot_binding.get("sha256")
             or str(binding.get("stage", "")).upper() != str(active_attempt.get("stage", "")).upper()
         ):
-            raise StylePackError(f"Generated image was archived at {archive_file}, but the active attempt is not bound to this reference plan snapshot.")
-        if plan.get("execution_call", {}).get("stage_id", "").upper() != str(active_attempt.get("stage", "")).upper():
-            raise StylePackError(f"Generated image was archived at {archive_file}, but the active attempt stage does not match the executable call.")
+            raise StylePackError(f"Generated image at {output_reference} cannot be registered because the active attempt is not bound to this reference plan snapshot.")
+        if plan.get("execution_call", {}).get("stage_id", "").upper() != str(execution_snapshot.get("execution_stage", "")).upper():
+            raise StylePackError(f"Generated image at {output_reference} cannot be registered because the attempt snapshot stage does not match the executable call.")
         planned_risk = str(plan.get("risk_assessment", {}).get("generation_risk", "")).upper()
         if risk_level and risk_level != planned_risk:
             raise StylePackError(f"Recorded risk {risk_level} does not match prepared plan risk {planned_risk}.")
         risk_level = planned_risk
         try:
+            review_arg = str(getattr(args, "visual_review_json", "") or "").strip()
+            if not review_arg:
+                raise StylePackError("Every project-plan record-generation call requires --visual-review-json.")
+            review_path = Path(review_arg).expanduser()
+            if not review_path.is_absolute():
+                review_path = paths.workspace / review_path
+            visual_review = validate_visual_review(
+                review_path.resolve(),
+                request_id=request_id,
+                attempt_id=args.attempt_id,
+                task_revision=int(active_attempt.get("task_revision", -1)),
+                output=image,
+                execution_snapshot=execution_snapshot,
+                plan=plan,
+                stage_id=executed_stage.upper(),
+            )
+            args.visual_anatomy_status = visual_review["anatomy_review"]["status"]
+            args.visual_defects_status = visual_review["visible_defect_review"]["status"]
+            args.visual_prompt_status = visual_review["prompt_adherence"]["status"]
             qa_failed, stage_id, qa_required, qa_results = evaluate_generation_qa(plan, args, include_results=True)
-            if stage_id.upper() != str(active_attempt.get("stage", "")).upper():
+            if stage_id.upper() != str(execution_snapshot.get("execution_stage", "")).upper():
                 raise StylePackError(
-                    f"Recorded --stage-id {stage_id} does not match the active executable stage {active_attempt.get('stage', '')}."
+                    f"Recorded --stage-id {stage_id} does not match the executable stage in the attempt snapshot {execution_snapshot.get('execution_stage', '')}."
                 )
             validate_prior_stages(paths, plan, request_id, stage_id)
         except StylePackError:
@@ -5081,7 +6011,7 @@ def command_record_generation(args: argparse.Namespace) -> None:
         elif status == "STAGING" and plan.get("generation_purpose") != "TECHNICAL_TEST":
             raise StylePackError("Single-pass STAGING is reserved for a validated TECHNICAL_TEST plan.")
     else:
-        raise StylePackError(f"Generated image was archived at {archive_file}, but every fidelity now requires --reference-plan for identity, call, and QA binding.")
+        raise StylePackError(f"Generated image at {output_reference} cannot be registered because every fidelity requires --reference-plan for identity, call, and QA binding.")
     if not RISK_LABEL_RE.fullmatch(risk_level):
         raise StylePackError("Every generated image needs --risk-level D1-D10 or a schema-5 reference plan containing it.")
     pending_root = paths.generations / "00_PENDING" / request_id
@@ -5122,36 +6052,50 @@ def command_record_generation(args: argparse.Namespace) -> None:
         print(f"STATUS={prior_record.get('status', '')}")
         print("UNCHANGED_RETRY=true")
         return
+    # No archive or stored derivative is written until request/attempt/plan,
+    # stage, character, risk, QA and idempotency validation has completed.
+    # QA-failed output still flows through the explicit REJECTED record path.
+    existing_marker = re.search(r"\[(D(?:[1-9]|10))\]\s*$", args.description, flags=re.IGNORECASE)
+    if existing_marker and existing_marker.group(1).upper() != risk_level:
+        raise StylePackError("Description risk marker conflicts with --risk-level.")
+    limb_qa_evidence = str(getattr(args, "limb_qa_evidence", "") or "").strip()
+    anthropometric_violations: list[str] = []
+    if plan and limb_qa_evidence and int(plan.get("semantic_qa_schema", 0) or 0) >= 4:
+        anthropometric_violations = anthropometric_qa_violations(limb_qa_evidence, plan)
+    archive_file = archive_file or archive_generation(paths, image, args.description)
+    output_reference = archive_file
     style_file = copy_unique(image, pending_root / image.name)
     reference_plan = str(reference_plan_path) if reference_plan_path else ""
     qa_evidence = ""
     qa_binding: dict[str, str] = {}
     qa_note = ""
     if plan:
-        qa_note = f"[ATTEMPT_ID={args.attempt_id}] [STAGE_ID={stage_id}] [QA_REQUIRED={','.join(qa_required)}]"
+        qa_note = (
+            f"[ATTEMPT_ID={args.attempt_id}] [TASK_REVISION={int(active_attempt.get('task_revision', -1))}] "
+            f"[STAGE_ID={stage_id}] [QA_REQUIRED={','.join(qa_required)}]"
+        )
         if qa_failed:
             qa_note += f" [AUTO_REJECT_QA={','.join(qa_failed)}]"
         elif status in {"TEST", "STAGING"}:
             qa_note += f" [QA_OUTPUT_SHA256={sha256(image)}]"
-        limb_qa_evidence = str(getattr(args, "limb_qa_evidence", "") or "").strip()
         if limb_qa_evidence:
             qa_note += f" [LIMB_QA={limb_qa_evidence}]"
-            if int(plan.get("semantic_qa_schema", 0) or 0) >= 4:
-                violations = anthropometric_qa_violations(limb_qa_evidence, plan)
-                if violations:
-                    qa_note += f" [ANTHROPOMETRIC_VIOLATIONS={' | '.join(violations)}]"
+            if anthropometric_violations:
+                qa_note += f" [ANTHROPOMETRIC_VIOLATIONS={' | '.join(anthropometric_violations)}]"
     combined_notes = " ".join(part for part in (args.notes.strip(), qa_note) if part)
-    if plan and not qa_failed and all(result == "PASS" for result in qa_results.values()) and status in {"TEST", "STAGING"}:
-        # This receipt is deliberately not accepted as a CLI input: notes and
-        # --reference-plan values never establish QA completion without evaluated checks.
+    if plan:
+        # The receipt records both successful and rejected visual review so a
+        # correction can use the exact findings. Only a clean receipt can
+        # establish passed QA in downstream promotion gates.
         qa_evidence_path = write_generation_qa_evidence(
-                style_file,
-                reference_plan_path,
-                stage_id=stage_id,
-                qa_required=qa_required,
-                qa_results=qa_results,
-                status=status,
-            )
+            style_file,
+            Path(str(execution_snapshot["reference_plan_snapshot_path"])),
+            stage_id=stage_id,
+            qa_required=qa_required,
+            qa_results=qa_results,
+            status=status,
+            visual_review=visual_review,
+        )
         qa_evidence = str(qa_evidence_path)
         qa_binding = qa_manifest_digests(style_file, qa_evidence_path)
     scene_contract = plan.get("scene_contract", {}) if plan else {}
@@ -5717,6 +6661,26 @@ def build_parser() -> argparse.ArgumentParser:
     list_parser.add_argument("--json", action="store_true", help="Return machine-readable JSON for agent routing.")
     list_parser.set_defaults(handler=command_list_styles)
 
+    character_lookup_parser = subparsers.add_parser(
+        "resolve-character",
+        help="Resolve a named character from approved registries and identity assets only.",
+    )
+    character_lookup_parser.add_argument("--workspace", type=Path, default=DEFAULT_WORKSPACE)
+    character_lookup_parser.add_argument("--name", required=True, help="Exact approved character name or CHAR_NNN ID.")
+    character_lookup_parser.add_argument("--json", action="store_true")
+    character_lookup_parser.set_defaults(handler=command_resolve_character)
+
+    startup_menu_parser = subparsers.add_parser(
+        "startup-menu-template",
+        help="Build the canonical profile-bound 90/90/70 chooser with exact machine mappings.",
+    )
+    startup_menu_parser.add_argument("--style-name", required=True, help="Exact style from the approved character profile.")
+    startup_menu_parser.add_argument("--character-id", required=True, help="Approved CHAR_NNN identity.")
+    startup_menu_parser.add_argument("--character-name", required=True, help="Approved character display name.")
+    startup_menu_parser.add_argument("--generation-purpose", choices=("SCENE", "CHARACTER_BASE"), default="SCENE")
+    startup_menu_parser.add_argument("--json", action="store_true", help="Return machine-readable menu text and exact parameter mappings.")
+    startup_menu_parser.set_defaults(handler=command_startup_menu_template)
+
     context_parser = subparsers.add_parser(
         "style-context",
         help="Inventory the complete local style pack and expose role-specific candidate files.",
@@ -5811,8 +6775,8 @@ def build_parser() -> argparse.ArgumentParser:
     prepare_parser.add_argument(
         "--startup-selection-mode",
         choices=("DIRECT_CONFIRMATION", "NEW", "REUSE", "USER_CONFIRMATION"),
-        default="USER_CONFIRMATION",
-        help="Show and record a startup profile menu by default; DIRECT_CONFIRMATION is only for fully confirmed current-chat parameters.",
+        default="NEW",
+        help="Record a newly shown startup profile menu; explicitly set --startup-menu-surface to the control actually presented. Use USER_CONFIRMATION with TEXT_NUMBERED_MENU only for a visible text fallback. DIRECT_CONFIRMATION requires fully confirmed current-chat parameters.",
     )
     prepare_parser.add_argument(
         "--reuse-startup-from",
@@ -5822,8 +6786,8 @@ def build_parser() -> argparse.ArgumentParser:
     prepare_parser.add_argument(
         "--startup-menu-surface",
         choices=("NATIVE_CONTEXT_MENU", "TEXT_NUMBERED_MENU"),
-        default="TEXT_NUMBERED_MENU",
-        help="Record the visible numbered fallback or native menu used to collect a startup profile choice.",
+        default="",
+        help="Record the native menu actually shown; explicitly select TEXT_NUMBERED_MENU only for the visible text fallback.",
     )
     prepare_parser.add_argument(
         "--user-requested-reselection",
@@ -6075,6 +7039,8 @@ def build_parser() -> argparse.ArgumentParser:
     prompt_group.add_argument("--prompt-text", default="", help="Exact user-facing prompt text for this executable call.")
     prompt_group.add_argument("--prompt-text-file", default="", help="UTF-8 file containing the exact prompt text.")
     prepare_call_parser.add_argument("--risk-assessment", required=True, help="Input-bound report from generation_risk_assessor.py for this exact prompt and resolved slot set.")
+    prepare_call_parser.add_argument("--user-selections-json", default="", help="Optional explicit chat-sourced selections; must equal resolved menu selections when present. Required for legacy plans without a complete menu mapping.")
+    prepare_call_parser.add_argument("--user-reference-evidence-json", default="", help="User attachment provenance list: path, sha256, source_path, chat_id, message_id. Required for user-reference policies.")
     prepare_call_parser.set_defaults(handler=command_prepare_call)
 
     resolve_call_parser = subparsers.add_parser(
@@ -6104,6 +7070,7 @@ def build_parser() -> argparse.ArgumentParser:
     record_parser.add_argument("--parent-generation", default="")
     record_parser.add_argument("--reference-plan", required=True, help="Executable plan prepared by prepare-call for this exact request.")
     record_parser.add_argument("--stage-id", default="", help="Required for a MULTI_STAGE plan, for example 02_BODY_POSE.")
+    record_parser.add_argument("--visual-review-json", required=True, help="Required full-resolution visual review bound to request, attempt, output, prompt, and executed plan hashes.")
     record_parser.add_argument("--qa-attachments", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
     record_parser.add_argument("--qa-canvas", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
     record_parser.add_argument("--qa-stage-layer", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")

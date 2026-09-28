@@ -29,6 +29,22 @@ LEXICON = risk.load_lexicon(ROOT / "config" / "generation_risk_lexicon.json")
 
 
 class PromptRiskTests(unittest.TestCase):
+    def test_multistage_named_character_can_follow_approved_identity_without_style_slot(self):
+        assembly = {
+            "path": "approved/CHAR_001/assembly.png", "sha256": "a" * 64,
+            "active_roles": ["CHARACTER_ASSEMBLY"],
+        }
+        stages = manager.build_multistage_attachment_plan(
+            {"character_assembly": assembly}, [], limit=1, purpose="SCENE",
+        )
+        body = next(stage for stage in stages if stage["stage_id"] == "02_BODY_POSE")
+        composite = next(stage for stage in stages if stage["stage_id"] == "04_CHARACTER_COMPOSITE")
+        final = next(stage for stage in stages if stage["stage_id"] == "05_FINAL_SCENE")
+        self.assertTrue(any("CHARACTER_ASSEMBLY" in slot["active_roles"] for slot in body["slots"]))
+        self.assertFalse(any(set(slot["active_roles"]) & {"STYLE", "STYLE_SOFT"} for stage in stages for slot in stage["slots"]))
+        self.assertIn("<STAGE_OUTPUT:02_BODY_POSE>", {slot["path"] for slot in composite["slots"]})
+        self.assertIn("<STAGE_OUTPUT:04_CHARACTER_COMPOSITE>", {slot["path"] for slot in final["slots"]})
+
     def test_safe_prompt_is_d1(self):
         result = risk.evaluate_prompt(
             "Взрослый персонаж 30 лет, нейтральная каталожная поза, полностью непрозрачная одежда.",
@@ -95,6 +111,7 @@ class StartupMenuTests(unittest.TestCase):
             "aux_body_decision": "SELECTED",
         }
         values.update(updates)
+        values["startup_option"] = [value + f"; style=PROJECT_STYLE:{values['style_name']}; reference_policy=USER_ATTACHED_REFERENCES; character={values.get('character_id', 'NONE')}" if "; style=" not in value else value for value in values["startup_option"]]
         return Namespace(**values)
 
     def test_option_one_records_its_confirmed_profile(self):
@@ -111,6 +128,162 @@ class StartupMenuTests(unittest.TestCase):
         self.assertTrue(result["same_profile_reconfirmation_forbidden"])
         self.assertTrue(result["style_confirmation_complete"])
         self.assertEqual(result["confirmed_style_name"], "SAMPLE")
+
+    def test_native_option_one_confirms_whole_profile_without_second_question(self):
+        for quote in ("1", "OPTION_1", "OPTION_1 (Recommended)"):
+            with self.subTest(quote=quote):
+                result = manager.parse_startup_interaction(self.make_args(startup_choice_user_quote=quote))
+                self.assertEqual(result["menu_surface_this_turn"], "NATIVE_CONTEXT_MENU")
+                self.assertEqual(result["confirmed_style_name"], "SAMPLE")
+                self.assertEqual(manager.validate_startup_profile_evidence(result), (90, "SELECTED"))
+                self.assertTrue(result["profile_confirmation_complete"])
+                self.assertTrue(result["same_profile_reconfirmation_forbidden"])
+
+    def test_menu_accepts_exact_visible_label_and_rejects_loose_label_match(self):
+        options = [
+            "OPTION_1=Recommended 90% fidelity; select BODY_REFERENCE_LIBRARY; style=PROJECT_STYLE:SAMPLE; reference_policy=PROJECT_STYLE_ONLY; character=NONE",
+            "OPTION_2=Contextual 90% fidelity; decline BODY_REFERENCE_LIBRARY; style=PROJECT_STYLE:SAMPLE; reference_policy=PROJECT_STYLE_ONLY; character=NONE",
+            "OPTION_3=Contextual 70% fidelity; decline BODY_REFERENCE_LIBRARY; style=PROJECT_STYLE:SAMPLE; reference_policy=PROJECT_STYLE_ONLY; character=NONE",
+        ]
+        args = self.make_args(startup_choice_user_quote="Recommended 90% fidelity; select BODY_REFERENCE_LIBRARY")
+        args.startup_option = options
+        result = manager.parse_startup_interaction(args)
+        self.assertEqual(result["user_choice_quote"], "Recommended 90% fidelity; select BODY_REFERENCE_LIBRARY")
+        with self.assertRaisesRegex(manager.StylePackError, "exactly identify"):
+            manager.validate_menu_choice_quote("I like the recommended style", "OPTION_1", options[0].split("; style=")[0].split("=", 1)[1])
+
+    def test_named_character_can_explicitly_choose_generator_default_and_approved_refs(self):
+        args = self.make_args(
+            character_id="CHAR_100",
+            startup_choice="OPTION_2",
+            startup_choice_user_quote="Generator default, decline BODY_REFERENCE_LIBRARY, approved character references, 90% fidelity",
+            aux_body_decision="DECLINED",
+            startup_option=[
+                "OPTION_1=Recommended 90% fidelity; select BODY_REFERENCE_LIBRARY; style=PROJECT_STYLE:SAMPLE; reference_policy=BODY_LIBRARY_ONLY; character=CHAR_100",
+                "OPTION_2=Generator default, decline BODY_REFERENCE_LIBRARY, approved character references, 90% fidelity; style=GENERATOR_DEFAULT; reference_policy=APPROVED_CHARACTER_REFERENCES; character=CHAR_100",
+                "OPTION_3=Project style 70% fidelity; decline BODY_REFERENCE_LIBRARY; style=PROJECT_STYLE:SAMPLE; reference_policy=PROJECT_STYLE_ONLY; character=CHAR_100",
+            ],
+        )
+        result = manager.parse_startup_interaction(args)
+        self.assertEqual(result["resolved_user_selections"], {
+            "style": "GENERATOR_DEFAULT",
+            "reference_policy": "APPROVED_CHARACTER_REFERENCES",
+            "character": "CHAR_100",
+        })
+        self.assertEqual(result["confirmed_style_name"], "")
+
+    def test_legacy_menu_can_be_migrated_with_complete_explicit_choices(self):
+        legacy = {
+            "selected": "OPTION_2",
+            "options": [{"id": "OPTION_2", "description": "Contextual 70% fidelity; decline BODY_REFERENCE_LIBRARY"}],
+            "resolved_user_selections": {},
+        }
+        selections = {
+            "style": {"choice": "PROJECT_STYLE:SAMPLE", "user_quote": "Use SAMPLE style"},
+            "reference_policy": {"choice": "BODY_LIBRARY_ONLY", "user_quote": "Use the body reference library"},
+            "character": {"choice": "NONE", "user_quote": "No named character"},
+        }
+        with self.assertRaisesRegex(manager.StylePackError, "Incomplete legacy menu"):
+            manager.validate_menu_user_selections(legacy, selections)
+        manager.validate_menu_user_selections(legacy, selections, allow_legacy_explicit=True)
+
+    def test_complete_native_profile_binds_executable_choices(self):
+        args = self.make_args(character_id="CHAR_100", startup_choice_user_quote="1")
+        args.startup_option = [value.replace("USER_ATTACHED_REFERENCES", "APPROVED_CHARACTER_REFERENCES") for value in args.startup_option]
+        result = manager.parse_startup_interaction(args)
+        choices = {key: {"choice": value, "user_quote": "1"} for key, value in result["resolved_user_selections"].items()}
+        manager.validate_menu_user_selections(result, choices)
+        tampered_quote = {name: dict(value) for name, value in choices.items()}
+        tampered_quote["style"]["user_quote"] = "I prefer this style."
+        with self.assertRaisesRegex(manager.StylePackError, "exact selected menu reply"):
+            manager.validate_menu_user_selections(result, tampered_quote)
+        from tools.task_execution_guard import validate_user_generation_selections
+        validate_user_generation_selections({"user_selections": choices}, no_references=False)
+        for key in ("style", "reference_policy", "character"):
+            with self.subTest(key=key):
+                changed = {name: dict(value) for name, value in choices.items()}
+                changed[key]["choice"] = "DIFFERENT"
+                with self.assertRaisesRegex(manager.StylePackError, "differs from the selected menu"):
+                    manager.validate_menu_user_selections(result, changed)
+        args.style_name = "DIFFERENT"
+        with self.assertRaisesRegex(manager.StylePackError, "differs from the prepared request"):
+            manager.parse_startup_interaction(args)
+
+    def test_new_menu_rejects_unseen_choices_and_unrecorded_surface(self):
+        args = self.make_args()
+        args.startup_option = [value.split("; style=")[0] for value in args.startup_option]
+        with self.assertRaisesRegex(manager.StylePackError, "Every new preset"):
+            manager.parse_startup_interaction(args)
+        with self.assertRaisesRegex(manager.StylePackError, "visible numbered or native"):
+            manager.parse_startup_interaction(self.make_args(startup_menu_surface=""))
+
+    def test_reference_policy_matches_physical_slot_provenance(self):
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        paths = manager.make_paths(Path(folder.name), "SAMPLE")
+        (paths.generations / "01_APPROVED_CHARACTERS" / "CHAR_001_Fixture").mkdir(parents=True)
+        identity = manager.character_folder(paths, "CHAR_001") / "approved.png"
+        base = {"path": str(identity), "active_roles": ["CHARACTER_ASSEMBLY"]}
+        source = Path(folder.name) / "chat-pose.png"
+        source.write_bytes(b"synthetic attachment")
+        other = {"path": str(source), "sha256": manager.sha256(source), "active_roles": ["POSE"]}
+        plan = {"startup_parameter_selection": {"confirmed_provenance": {"chat_id": "chat-1"}}, "user_reference_evidence": [{"path": str(source), "source_path": str(source), "sha256": manager.sha256(source), "chat_id": "chat-1", "message_id": "msg-attachment"}]}
+        selections = {"reference_policy": {"choice": "APPROVED_CHARACTER_REFERENCES"}, "character": {"choice": "CHAR_001"}}
+        manager.validate_reference_policy_slots(paths, {}, {"slots": [base]}, selections)
+        with self.assertRaisesRegex(manager.StylePackError, "optional user/body-library"):
+            manager.validate_reference_policy_slots(paths, {}, {"slots": [base, other]}, selections)
+        with self.assertRaisesRegex(manager.StylePackError, "no attachment"):
+            manager.validate_reference_policy_slots(paths, {}, {"slots": [other]}, selections)
+        selections["reference_policy"]["choice"] = "APPROVED_PLUS_USER_REFERENCES"
+        manager.validate_reference_policy_slots(paths, plan, {"slots": [base, other]}, selections)
+        with self.assertRaisesRegex(manager.StylePackError, "requires an additional"):
+            manager.validate_reference_policy_slots(paths, {}, {"slots": [base]}, selections)
+        selections["reference_policy"]["choice"] = "USER_ATTACHED_REFERENCES"
+        selections["character"]["choice"] = "NONE"
+        style = {"path": str(paths.pack / "style.png"), "active_roles": ["STYLE"]}
+        body = {"path": str(paths.workspace / "BODY_REFERENCE_LIBRARY" / "body.png"), "active_roles": ["POSE"]}
+        for slots in ([style], [body], [other]):
+            with self.assertRaisesRegex(manager.StylePackError, "chat/message provenance"):
+                manager.validate_reference_policy_slots(paths, {}, {"slots": slots}, selections)
+        manager.validate_reference_policy_slots(paths, plan, {"slots": [other]}, selections)
+        for field, value in (("sha256", "0" * 64), ("chat_id", "other-chat"), ("source_path", str(paths.pack / "managed.png"))):
+            changed = json.loads(json.dumps(plan))
+            changed["user_reference_evidence"][0][field] = value
+            with self.assertRaisesRegex(manager.StylePackError, "chat/message provenance"):
+                manager.validate_reference_policy_slots(paths, changed, {"slots": [other]}, selections)
+        selections["reference_policy"]["choice"] = "PROJECT_STYLE_ONLY"
+        selections["character"]["choice"] = "CHAR_001"
+        selections["style"] = {"choice": "PROJECT_STYLE:SAMPLE"}
+        manager.validate_reference_policy_slots(paths, {}, {"slots": [style, base]}, selections)
+        for slots in ([style, base, body], [style, base, other]):
+            with self.assertRaisesRegex(manager.StylePackError, "permits only"):
+                manager.validate_reference_policy_slots(paths, plan, {"slots": slots}, selections)
+
+        selections["reference_policy"]["choice"] = "USER_ATTACHED_REFERENCES"
+        style_only = {"path": str(paths.pack / "style.png"), "active_roles": ["STYLE"]}
+        body_only = {"path": str(paths.workspace / manager.BODY_LIBRARY_NAME / "pose.png"), "active_roles": ["POSE"]}
+        for slots in ([style_only], [body_only], [other]):
+            with self.assertRaisesRegex(manager.StylePackError, "mandatory approved identity"):
+                manager.validate_reference_policy_slots(paths, {}, {"slots": slots}, selections)
+        selections["reference_policy"]["choice"] = "approved_character_references"
+        manager.validate_reference_policy_slots(paths, {}, {"slots": [base]}, selections)
+        selections["reference_policy"]["choice"] = "UNKNOWN_POLICY"
+        with self.assertRaisesRegex(manager.StylePackError, "Unsupported reference policy"):
+            manager.validate_reference_policy_slots(paths, {}, {"slots": [base]}, selections)
+        selections["reference_policy"]["choice"] = "NO_REFERENCES"
+        with self.assertRaisesRegex(manager.StylePackError, "NO_REFERENCES conflicts"):
+            manager.validate_reference_policy_slots(paths, {}, {"slots": [style_only]}, selections)
+
+        selections["reference_policy"]["choice"] = "BODY_LIBRARY_ONLY"
+        selections["character"]["choice"] = "NONE"
+        body_only = {"path": str(paths.workspace / manager.BODY_LIBRARY_NAME / "pose.png"), "active_roles": ["POSE"]}
+        library_plan = {"startup_parameter_selection": {"resolved_parameters": {"aux_body_decision": "SELECTED"}}}
+        manager.validate_reference_policy_slots(paths, library_plan, {"slots": [body_only]}, selections)
+        with self.assertRaisesRegex(manager.StylePackError, "explicit request-level BODY_REFERENCE_LIBRARY selection"):
+            manager.validate_reference_policy_slots(paths, {}, {"slots": [body_only]}, selections)
+        selections["character"]["choice"] = "CHAR_001"
+        with self.assertRaisesRegex(manager.StylePackError, "mandatory approved identity"):
+            manager.validate_reference_policy_slots(paths, library_plan, {"slots": [body_only]}, selections)
 
     def test_unformed_master_candidate_is_request_local_only_and_requires_profile_gate(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -235,6 +408,12 @@ class StartupMenuTests(unittest.TestCase):
             self.assertEqual(reused["selection_state"], "REUSED_WITH_USER_RESELECTION")
             self.assertEqual(reused["selected"], "DIRECT_CONFIRMED")
             self.assertEqual(manager.validate_startup_profile_evidence(reused), (70, "DECLINED"))
+            self.assertEqual(reused["resolved_user_selections"], original["resolved_user_selections"])
+            self.assertEqual(reused["resolved_selection_quote"], "2")
+            manager.validate_menu_user_selections(reused, {
+                key: {"choice": value, "user_quote": "2"}
+                for key, value in reused["resolved_user_selections"].items()
+            })
 
     def test_reuse_rejects_silent_profile_change(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -557,6 +736,11 @@ class SemanticGenerationQATests(unittest.TestCase):
             "qa_body_proportions": "NOT_CHECKED",
             "qa_limb_proportions": "NOT_CHECKED",
             "limb_qa_evidence": "",
+            # Pure evaluator tests supply the visual-review verdicts directly;
+            # record-generation tests exercise the hash-bound report gate.
+            "visual_anatomy_status": "PASS",
+            "visual_defects_status": "PASS",
+            "visual_prompt_status": "PASS",
             "qa_style": "PASS",
             "qa_body_style": "PASS",
             "qa_expression": "PASS",

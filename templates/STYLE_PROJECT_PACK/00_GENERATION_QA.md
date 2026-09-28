@@ -12,7 +12,7 @@
 - [ ] The first chat-level startup interaction used the native input-area chooser when available and showed exactly three AI presets plus its free-form `Указать свой вариант`/Other entry before requesting any numeric values.
 - [ ] When native UI was unavailable, the required numbered text menu was shown and generation waited for the user's explicit reply; no profile was applied silently.
 - [ ] An already selected same-chat style/profile was reused without presenting or asking for the chooser again; a new chooser was shown only after an explicit user reselection request.
-- [ ] Preset 1 was the recommended `90% + BODY_REFERENCE_LIBRARY` option; presets 2 and 3 were derived from the task context.
+- [ ] Every preset stated its exact fidelity and BODY_REFERENCE_LIBRARY choice; the selected preset's recorded parameters exactly match its displayed mapping (OPTION_1 has no fixed parameter contract).
 - [ ] The selected preset resolved its parameters automatically, or CUSTOM used the user's complete one-message description without optional follow-up questions.
 - [ ] Any CUSTOM follow-up identified a genuinely missing or contradictory required field that could not be resolved from context.
 - [ ] The exact prompt and every physical attachment have a current D1-D10 assessment; every displayed reference label ends in `[D#]`.

@@ -11,7 +11,7 @@ It cannot itself change the model of an already running session.
 
 | Work | Default assignment | Contract |
 | --- | --- | --- |
-| Ordinary image production | Luna Medium | Default model for image work; root keeps user communication, guard transitions, choices, final decision, and evidence reconciliation. |
+| Ordinary image production | Luna High | Default model for image work; root keeps user communication, guard transitions, choices, final decision, and evidence reconciliation. |
 | Bounded metadata/catalog discovery | Luna High | Receives a bounded packet and returns evidence; no user conversation or broad writes. |
 | Code planning/integration and independent review | Sol Low | Root plans and integrates; a fresh Sol Low reviews the actual diff after machine checks. |
 | Discovery, mechanics, ordinary code implementation | Luna High | Owns only explicitly named files and verification. |
@@ -56,7 +56,7 @@ required semantic layers remain separately inspected and recorded.
 | Delegated image role | Requested model and effort | Limit |
 | --- | --- | --- |
 | `STYLE_LIBRARIAN` / `IDENTITY_CURATOR` | `gpt-6-luna`, High | Bounded source discovery; root owns choices and integration |
-| `CALL_PLANNER` | `gpt-6-luna`, Medium | Ordinary image planning; root integrates |
+| `CALL_PLANNER` | `gpt-6-luna`, High | Ordinary image planning; root integrates |
 | Routine `VISUAL_QA` | `gpt-6-luna`, Medium | Only when a separate bounded review is useful |
 | Critical independent QA | fresh `gpt-6-sol`, Low | Objective high-impact gate only |
 | `GENERATOR_OPERATOR` / `REGISTRAR` | No agent; root executes sequentially | N/A |
@@ -136,10 +136,10 @@ This section supersedes historical coding-model assignments and repeated full-po
 inspection requirements only for orchestration/preparation. All art, safety,
 archive, identity, approval and semantic QA requirements remain mandatory.
 
-- Use Luna Medium as the single ordinary image-production default. Existing sessions
+- Use Luna High as the single ordinary image-production default. Existing sessions
   do not switch models merely because this document or config changes.
-- Luna High handles bounded metadata/search discovery; return ambiguous semantic
-  classification to the Luna Medium image lead. It does not select authoritative visual identity.
+- Luna High handles bounded metadata/search discovery and ordinary image production;
+  return ambiguous semantic classification to the Luna High image lead. It does not select authoritative visual identity.
 - Usually use zero workers; one when there is useful separate work, at most two
   for independent preparation. No nested agents, full-history forks, or agents
   merely for CLI, archive, generator calls, or individual QA-layer checkboxes.

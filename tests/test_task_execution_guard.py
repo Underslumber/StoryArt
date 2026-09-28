@@ -38,6 +38,11 @@ def _checkpoint_fixture(path, **kwargs):
                 "request_id": "request-1",
                 "stage_id": stage,
                 "prompt": {"text": prompt, "text_sha256": prompt_hash},
+                "user_selections": {
+                    "style": {"choice": "PROJECT_STYLE:fixture style", "user_quote": "Use this fixture style."},
+                    "reference_policy": {"choice": "USER_ATTACHED_REFERENCES", "user_quote": "Use these fixture references."},
+                    "character": {"choice": "NONE", "user_quote": "No named project character in this fixture."},
+                },
                 "slots": [{
                     "path": str(source_path.resolve()),
                     "sha256": hashlib.sha256(source_path.read_bytes()).hexdigest(),
@@ -73,6 +78,7 @@ def _checkpoint_fixture(path, **kwargs):
             execution_call["risk_assessment"] = report
             plan = {
                 "request_id": "request-1", "gate_status": "READY_FOR_GENERATION",
+                "style_name": "fixture style", "generation_purpose": "SCENE",
                 "risk_assessment": {"prompt": {"text": prompt, "text_sha256": prompt_hash}, **report},
                 "generation_workflow": {"mode": "SINGLE_PASS", "slots": execution_call["slots"]},
                 "execution_call": execution_call,
@@ -99,7 +105,165 @@ def _checkpoint_fixture(path, **kwargs):
     return _raw_checkpoint(path, **kwargs)
 
 
+def _native_default_call(folder: Path, prompt: str) -> dict[str, object]:
+    prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+    report_path = folder / f"risk-{prompt_hash[:12]}.json"
+    risk.command_assess(type("Args", (), {
+        "lexicon": risk.DEFAULT_LEXICON,
+        "text": prompt,
+        "prompt_file": "",
+        "revised_text": "",
+        "revised_prompt_file": "",
+        "reference": [],
+        "output": str(report_path),
+        "overwrite": False,
+        "json": False,
+    })())
+    return {
+        "request_id": "request-1",
+        "prompt": {"text": prompt, "text_sha256": prompt_hash},
+        "user_selections": {
+            "style": {"choice": "GENERATOR_DEFAULT", "user_quote": "I choose the generator default style."},
+            "reference_policy": {"choice": "NO_REFERENCES", "user_quote": "I choose no references."},
+            "character": {"choice": "NONE", "user_quote": "There is no project character in this request."},
+        },
+        "risk_assessment": json.loads(report_path.read_text(encoding="utf-8")),
+    }
+
+
 class TaskExecutionGuardTests(unittest.TestCase):
+    def test_multistage_character_identity_anchor_must_be_in_lineage(self):
+        assembly = Path("approved/CHAR_001/assembly.png").resolve()
+        workflow = {"stages": [
+            {"stage_id": "02_BODY_POSE", "slots": [{
+                "path": str(assembly), "sha256": "a" * 64,
+                "active_roles": ["CHARACTER_ASSEMBLY"],
+            }]},
+            {"stage_id": "04_CHARACTER_COMPOSITE", "slots": [{
+                "path": "<STAGE_OUTPUT:02_BODY_POSE>", "sha256": "STAGE_OUTPUT:02_BODY_POSE",
+                "active_roles": ["BODY"],
+            }]},
+            {"stage_id": "05_FINAL_SCENE", "slots": [{
+                "path": "<STAGE_OUTPUT:04_CHARACTER_COMPOSITE>", "sha256": "STAGE_OUTPUT:04_CHARACTER_COMPOSITE",
+                "active_roles": ["CHARACTER_COMPOSITE"],
+            }]},
+        ]}
+        self.assertTrue(guard._stage_has_identity_anchor(workflow, "05_FINAL_SCENE", assembly, "a" * 64))
+        self.assertFalse(guard._stage_has_identity_anchor(workflow, "05_FINAL_SCENE", assembly, "b" * 64))
+
+    def test_project_style_only_allows_approved_face_body_identity_by_path(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder) / "CHAR_001"
+            root.mkdir()
+            style = Path(folder) / "style.png"
+            outside_body = Path(folder) / "unapproved-body.png"
+            slots = [
+                {"path": str(style), "active_roles": ["STYLE"]},
+                {"path": str(root / "assembly.png"), "active_roles": ["CHARACTER_ASSEMBLY"]},
+                {"path": str(root / "face.png"), "active_roles": ["FACE"]},
+                {"path": str(root / "body.png"), "active_roles": ["BODY"]},
+            ]
+            guard.validate_project_style_only_slots(slots, "PROJECT_STYLE:TEST", "CHAR_001", root)
+            slots[-1] = {"path": str(outside_body), "active_roles": ["BODY"]}
+            with self.assertRaisesRegex(guard.GuardError, "optional non-style"):
+                guard.validate_project_style_only_slots(slots, "PROJECT_STYLE:TEST", "CHAR_001", root)
+
+    def test_project_style_only_accepts_only_explicitly_validated_stage_lineage(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            style = root / "style.png"
+            derived = root / "qa-passed-stage.png"
+            arbitrary = root / "unverified.png"
+            slots = [
+                {"path": str(style), "active_roles": ["STYLE"]},
+                {"path": str(derived), "active_roles": ["FACE"]},
+            ]
+            guard.validate_project_style_only_slots(
+                slots, "PROJECT_STYLE:TEST", "NONE", None, {derived.resolve()},
+            )
+            slots[-1] = {"path": str(arbitrary), "active_roles": ["FACE"]}
+            with self.assertRaisesRegex(guard.GuardError, "optional non-style"):
+                guard.validate_project_style_only_slots(
+                    slots, "PROJECT_STYLE:TEST", "NONE", None, {derived.resolve()},
+                )
+
+    def test_project_style_only_is_explicit_and_keeps_named_identity_allowed(self):
+        base = {
+            "user_selections": {
+                "style": {"choice": "PROJECT_STYLE:TEST", "user_quote": "Use project style."},
+                "reference_policy": {"choice": "PROJECT_STYLE_ONLY", "user_quote": "No optional references."},
+                "character": {"choice": "NONE", "user_quote": "No named character."},
+            }
+        }
+        self.assertEqual(
+            guard.validate_user_generation_selections(base, no_references=False)["reference_policy"],
+            "PROJECT_STYLE_ONLY",
+        )
+        base["user_selections"]["character"]["choice"] = "CHAR_001"
+        self.assertEqual(
+            guard.validate_user_generation_selections(base, no_references=False)["character"],
+            "CHAR_001",
+        )
+        base["user_selections"]["character"]["choice"] = "NONE"
+        base["user_selections"]["reference_policy"]["choice"] = "BODY_LIBRARY_ONLY"
+        self.assertEqual(
+            guard.validate_user_generation_selections(base, no_references=False)["reference_policy"],
+            "BODY_LIBRARY_ONLY",
+        )
+
+    def test_project_style_only_accepts_selected_textual_style_without_optional_references(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, _ = self.make_guard(folder)
+            self.checkpoint_fixture(path, event="READY_FOR_EXECUTION", summary="Bind the selected project style.", now=BASE_TIME)
+            plan_path = _fixture_plans[str(path.resolve())]
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            call = plan["execution_call"]
+            call["user_selections"]["reference_policy"]["choice"] = "PROJECT_STYLE_ONLY"
+            plan["execution_call"] = call
+            plan["user_selections"] = call["user_selections"]
+            plan_path.write_text(json.dumps(plan), encoding="utf-8")
+            binding = guard.validate_reference_plan(plan_path, execution_call=call)
+            self.assertEqual(binding["execution_call_sha256"], hashlib.sha256(
+                json.dumps(call, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            ).hexdigest())
+
+    def test_reference_plan_readiness_cannot_use_plan_only_without_materialized_call(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, _ = self.make_guard(folder)
+            self.checkpoint_fixture(path, event="READY_FOR_EXECUTION", summary="Build a fixture call.", now=BASE_TIME)
+            plan_path = _fixture_plans[str(path.resolve())]
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            plan.pop("execution_call")
+            plan_path.write_text(json.dumps(plan), encoding="utf-8")
+            with self.assertRaisesRegex(guard.GuardError, "materialized exact execution_call"):
+                guard.validate_reference_plan(plan_path)
+
+    def test_execution_start_rejects_a_changed_call_after_ready(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, _ = self.make_guard(folder)
+            self.checkpoint_fixture(path, event="READY_FOR_EXECUTION", summary="Bind exact fixture call.", now=BASE_TIME)
+            plan_path = _fixture_plans[str(path.resolve())]
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            changed_call = json.loads(json.dumps(plan["execution_call"]))
+            changed_call["user_selections"]["style"]["user_quote"] = "Use another project style."
+            with self.assertRaisesRegex(guard.GuardError, "exactly match the call saved"):
+                _raw_checkpoint(
+                    path, event="EXECUTION_STARTED", reference_plan=plan_path,
+                    execution_call=changed_call, summary="Reject changed selection after READY.",
+                    output_contract="REQUESTED_DELIVERABLE", now=BASE_TIME,
+                )
+
+    def test_locked_character_registry_matching_uses_exact_name_or_explicit_alias(self):
+        row = {
+            "character_id": "CHAR_001",
+            "name": "Anna",
+            "notes": "Character Anna (Annabelle) appears in a scene.",
+        }
+        self.assertTrue(guard.registry_identity_matches_locked_name("CHAR_001", row, "CHAR_001"))
+        self.assertTrue(guard.registry_identity_matches_locked_name("Anna", row, "CHAR_001"))
+        self.assertTrue(guard.registry_identity_matches_locked_name("Annabelle", row, "CHAR_001"))
+        self.assertFalse(guard.registry_identity_matches_locked_name("Ann", row, "CHAR_001"))
+
     def make_guard(self, folder: str, **updates):
         values = {
             "request_id": "request-1",
@@ -174,52 +338,183 @@ class TaskExecutionGuardTests(unittest.TestCase):
         ])
         self.assertEqual(default_args.task_kind, "IMAGE_GENERATION")
 
-    def test_user_requested_image_direct_lifecycle_records_request_without_generation_gates(self):
-        user_request = "Create the requested illustration using the generator's native style."
+    def test_standalone_image_guard_kind_is_rejected(self):
         with tempfile.TemporaryDirectory() as folder:
-            path, state = self.make_guard(
-                folder,
-                task_kind="USER_REQUESTED_IMAGE",
-                goal=user_request,
-                deliverable="The requested image, returned in chat.",
-            )
-            self.assertEqual(state["explicit_user_request"], user_request)
-            self.assertIn(user_request, state["events"][0]["summary"])
-            started = _raw_checkpoint(
-                path,
-                event="EXECUTION_STARTED",
-                summary="Run the user-requested image operation without added style or reference requirements.",
-                now=BASE_TIME,
-            )
-            attempt_id = started["active_attempt"]["attempt_id"]
-            available = _raw_checkpoint(
-                path,
-                event="VISIBLE_RESULT",
-                attempt_id=attempt_id,
-                summary="The requested image is available directly in chat.",
-                now=BASE_TIME,
-            )
-            self.assertEqual(available["available_results"][-1]["status"], "AVAILABLE")
-            done = _raw_checkpoint(
-                path,
-                event="COMPLETE",
-                summary="The explicit image request is complete.",
-                now=BASE_TIME,
-            )
-            self.assertEqual(done["status"], "COMPLETE")
-
-    def test_user_requested_image_cli_kind_is_opt_in_and_generation_stays_default(self):
-        args = guard.make_parser().parse_args([
-            "start", "--state", "guard.json", "--request-id", "direct-1",
-            "--goal", "Edit the supplied image.", "--deliverable", "Edited image",
-            "--task-kind", "USER_REQUESTED_IMAGE",
-        ])
-        self.assertEqual(args.task_kind, "USER_REQUESTED_IMAGE")
+            with self.assertRaisesRegex(guard.GuardError, "Standalone image requests outside StoryArt"):
+                self.make_guard(folder, task_kind="USER_REQUESTED_IMAGE")
+        with self.assertRaises(SystemExit):
+            guard.make_parser().parse_args([
+                "start", "--state", "guard.json", "--request-id", "direct-1",
+                "--goal", "Create a standalone image.", "--deliverable", "Generated image",
+                "--task-kind", "USER_REQUESTED_IMAGE",
+            ])
         default_args = guard.make_parser().parse_args([
             "start", "--state", "guard.json", "--request-id", "gen-2",
             "--goal", "Generate image.", "--deliverable", "Generated image",
         ])
         self.assertEqual(default_args.task_kind, "IMAGE_GENERATION")
+
+    def test_native_default_generation_completes_single_output_lifecycle_without_plan(self):
+        prompt = "A small watercolor fox beneath a pine tree."
+        with tempfile.TemporaryDirectory() as folder:
+            execution_call = _native_default_call(Path(folder), prompt)
+            path, _ = self.make_guard(folder, task_kind="IMAGE_GENERATION_NATIVE_DEFAULT")
+            ready = _raw_checkpoint(
+                path,
+                event="READY_FOR_EXECUTION",
+                summary="Bind the exact native/default prompt for one requested image.",
+                execution_call=execution_call,
+                now=BASE_TIME,
+            )
+            self.assertEqual(ready["status"], "READY")
+            self.assertEqual(ready["ready_binding"]["prompt_sha256"], execution_call["prompt"]["text_sha256"])
+            started = _raw_checkpoint(
+                path,
+                event="EXECUTION_STARTED",
+                summary="Generate the requested single image with the native/default style.",
+                execution_call=execution_call,
+                output_contract="REQUESTED_DELIVERABLE",
+                now=BASE_TIME,
+            )
+            attempt_id = started["active_attempt"]["attempt_id"]
+            image_path = Path(folder) / "requested.png"
+            image_path.write_bytes(b"visible image evidence")
+            visible = _raw_checkpoint(
+                path,
+                event="VISIBLE_RESULT",
+                summary="The requested image is available.",
+                evidence=[str(image_path)],
+                attempt_id=attempt_id,
+                result_status="TEST",
+                now=BASE_TIME,
+            )
+            self.assertEqual(visible["available_results"][-1]["status"], "TEST")
+            delivered = _raw_checkpoint(
+                path,
+                event="RESULT_DELIVERED",
+                summary="The requested image was delivered.",
+                attempt_id=attempt_id,
+                delivery_evidence=["Image returned in the user-visible response."],
+                now=BASE_TIME,
+            )
+            self.assertEqual(delivered["latest_delivered_attempt_id"], attempt_id)
+            complete = _raw_checkpoint(
+                path, event="COMPLETE", summary="The requested image task is complete.", now=BASE_TIME
+            )
+            self.assertEqual(complete["status"], "COMPLETE")
+
+    def test_native_default_generation_rejects_changed_prompt_after_readiness(self):
+        with tempfile.TemporaryDirectory() as folder:
+            call_a = _native_default_call(Path(folder), "A blue fox in a forest.")
+            call_b = _native_default_call(Path(folder), "A red fox in a forest.")
+            path, _ = self.make_guard(folder, task_kind="IMAGE_GENERATION_NATIVE_DEFAULT")
+            _raw_checkpoint(
+                path,
+                event="READY_FOR_EXECUTION",
+                summary="Bind the exact native/default prompt.",
+                execution_call=call_a,
+                now=BASE_TIME,
+            )
+            with self.assertRaisesRegex(guard.GuardError, "differs from the prompt contract bound at readiness"):
+                _raw_checkpoint(
+                    path,
+                    event="EXECUTION_STARTED",
+                    summary="Start with a changed prompt.",
+                    execution_call=call_b,
+                    output_contract="REQUESTED_DELIVERABLE",
+                    now=BASE_TIME,
+                )
+
+    def test_native_default_generation_requires_prompt_bound_empty_reference_risk_report(self):
+        prompt = "A paper boat on a calm lake."
+        with tempfile.TemporaryDirectory() as folder:
+            execution_call = _native_default_call(Path(folder), prompt)
+            path, _ = self.make_guard(folder, task_kind="IMAGE_GENERATION_NATIVE_DEFAULT")
+            missing_report = {key: value for key, value in execution_call.items() if key != "risk_assessment"}
+            with self.assertRaisesRegex(guard.GuardError, "requires an embedded exact-call risk_assessment"):
+                _raw_checkpoint(
+                    path,
+                    event="READY_FOR_EXECUTION",
+                    summary="Require the risk report bound to the prompt.",
+                    execution_call=missing_report,
+                    now=BASE_TIME,
+                )
+            invalid_report = json.loads(json.dumps(execution_call))
+            invalid_report["risk_assessment"]["input_binding"]["prompt_sha256"] = "0" * 64
+            with self.assertRaisesRegex(guard.GuardError, "Risk assessment prompt hash does not match"):
+                _raw_checkpoint(
+                    path,
+                    event="READY_FOR_EXECUTION",
+                    summary="Reject a risk report bound to a different prompt.",
+                    execution_call=invalid_report,
+                    now=BASE_TIME,
+                )
+
+    def test_native_default_generation_requires_explicit_user_selections(self):
+        prompt = "A paper boat on a calm lake."
+        with tempfile.TemporaryDirectory() as folder:
+            execution_call = _native_default_call(Path(folder), prompt)
+            path, _ = self.make_guard(folder, task_kind="IMAGE_GENERATION_NATIVE_DEFAULT")
+            missing = dict(execution_call)
+            missing.pop("user_selections")
+            with self.assertRaisesRegex(guard.GuardError, "requires explicit user_selections"):
+                _raw_checkpoint(path, event="READY_FOR_EXECUTION", summary="Missing user choices.",
+                                execution_call=missing, now=BASE_TIME)
+            named_character = json.loads(json.dumps(execution_call))
+            named_character["user_selections"]["character"] = {
+                "choice": "CHAR_001", "user_quote": "Draw Chance."
+            }
+            with self.assertRaisesRegex(guard.GuardError, "named project character"):
+                _raw_checkpoint(path, event="READY_FOR_EXECUTION", summary="No identity references.",
+                                execution_call=named_character, now=BASE_TIME)
+
+    def test_custom_user_style_must_be_present_in_the_exact_prompt(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, _ = self.make_guard(folder)
+            self.checkpoint_fixture(path, event="READY_FOR_EXECUTION", summary="Build a valid fixture call.", now=BASE_TIME)
+            plan_path = _fixture_plans[str(path.resolve())]
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            call = plan["execution_call"]
+            call["user_selections"]["style"] = {
+                "choice": "USER_STYLE:oil pastel", "user_quote": "Use an oil pastel style."
+            }
+            plan_path.write_text(json.dumps(plan), encoding="utf-8")
+            with self.assertRaisesRegex(guard.GuardError, "does not contain the user's selected custom style"):
+                guard.validate_reference_plan(plan_path, execution_call=call)
+
+    def test_native_default_generation_rejects_locked_named_character_even_if_call_says_none(self):
+        with tempfile.TemporaryDirectory() as folder:
+            execution_call = _native_default_call(Path(folder), "A fantasy scene with Chance.")
+            path, _ = self.make_guard(
+                folder,
+                task_kind="IMAGE_GENERATION_NATIVE_DEFAULT",
+                invariants=["character=Chance"],
+            )
+            with self.assertRaisesRegex(guard.GuardError, "named project character cannot use"):
+                _raw_checkpoint(path, event="READY_FOR_EXECUTION", summary="Attempt default route.",
+                                execution_call=execution_call, now=BASE_TIME)
+
+    def test_native_default_generation_rejects_plan_or_reference_slots(self):
+        prompt = "A single image."
+        with tempfile.TemporaryDirectory() as folder:
+            base_call = _native_default_call(Path(folder), prompt)
+            path, _ = self.make_guard(folder, task_kind="IMAGE_GENERATION_NATIVE_DEFAULT")
+            with self.assertRaisesRegex(guard.GuardError, "does not accept plan or reference slots"):
+                _raw_checkpoint(
+                    path,
+                    event="READY_FOR_EXECUTION",
+                    summary="Do not allow an implicit plan or reference slot.",
+                    execution_call={**base_call, "slots": []},
+                    now=BASE_TIME,
+                )
+            with self.assertRaisesRegex(guard.GuardError, "supports exactly one image output"):
+                _raw_checkpoint(
+                    path,
+                    event="READY_FOR_EXECUTION",
+                    summary="Do not allow a multi-image call in the native/default lane.",
+                    execution_call={**base_call, "num_outputs": 2},
+                    now=BASE_TIME,
+                )
 
     def test_execution_start_rechecks_unattached_prior_stage_authority(self):
         from tools.style_pack_manager import make_paths

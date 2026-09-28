@@ -2,12 +2,18 @@ from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+import json
+import contextlib
+import io
+from unittest.mock import patch
 
 from tools.style_pack_manager import (
     StylePackError,
     build_generation_workflow,
+    build_body_proportion_contract,
     build_parser,
     build_scene_contract,
+    build_scene_prompt_source_contract,
     evaluate_generation_qa,
     StylePaths,
     validate_plan_reference,
@@ -42,6 +48,40 @@ def reference(name: str) -> dict[str, object]:
 
 
 class SceneContractTests(unittest.TestCase):
+    def test_approved_character_scene_marks_only_missing_optional_roles_as_prompt_sources(self) -> None:
+        sources = build_scene_prompt_source_contract("SCENE", "CHAR_001", {
+            "POSE": "", "CLOTHES": "", "LIGHTING": "", "BACKGROUND": "", "COMPOSITION": "camera.png",
+        })
+        self.assertEqual(set(sources), {"POSE", "CLOTHES", "LIGHTING", "BACKGROUND"})
+        self.assertTrue(all(row == {
+            "source": "EXACT_EXECUTABLE_PROMPT",
+            "evidence_required": "USER_SPECIFIED_SCENE_TEXT",
+        } for row in sources.values()))
+        self.assertEqual(build_scene_prompt_source_contract("SCENE", "NONE", {}), {})
+        self.assertEqual(build_scene_prompt_source_contract("CHARACTER_BASE", "CHAR_001", {}), {})
+
+    def test_character_resolver_reports_matched_but_invalid_approved_profile(self) -> None:
+        from tools import style_pack_manager as manager
+
+        with TemporaryDirectory() as folder:
+            workspace = Path(folder)
+            paths = manager.make_paths(workspace, "TEST")
+            paths.generations.mkdir(parents=True)
+            profile = paths.generations / "CHARACTER_PROFILE.yaml"
+            profile.write_text("character_id: CHAR_001\nstatus: APPROVED\n", encoding="utf-8")
+            manager.write_csv(paths.character_registry, manager.CHARACTER_FIELDS, [{
+                "character_id": "CHAR_001", "name": "Shance", "approved_base": "missing-base.png",
+                "profile_path": str(profile), "face_references": "", "body_references": "",
+                "status": "APPROVED",
+            }])
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                manager.command_resolve_character(Namespace(workspace=workspace, name="Shance", json=True))
+            result = json.loads(output.getvalue())
+            self.assertEqual(result["status"], "FOUND_BUT_INVALID")
+            self.assertEqual(result["invalid_matches"][0]["status"], "INVALID_APPROVED_PROFILE")
+            self.assertIn("no registered approved base image", result["invalid_matches"][0]["issue"])
+
     def test_scene_cli_defaults_to_no_character_and_no_body_fields(self) -> None:
         args = build_parser().parse_args(
             [
@@ -62,9 +102,17 @@ class SceneContractTests(unittest.TestCase):
         self.assertEqual(args.framing, "")
         self.assertEqual(args.dominant_body_source, "")
 
-    def test_prepare_parser_defaults_to_visible_numbered_startup_menu(self) -> None:
+    def test_prepare_parser_defaults_to_native_startup_menu(self) -> None:
         args = build_parser().parse_args([
             "prepare-generation", "--style-name", "TEST", "--request-id", "menu-default", "--fidelity", "90",
+        ])
+        self.assertEqual(args.startup_selection_mode, "NEW")
+        self.assertEqual(args.startup_menu_surface, "")
+
+    def test_prepare_parser_preserves_explicit_text_fallback(self) -> None:
+        args = build_parser().parse_args([
+            "prepare-generation", "--style-name", "TEST", "--request-id", "menu-fallback", "--fidelity", "90",
+            "--startup-selection-mode", "USER_CONFIRMATION", "--startup-menu-surface", "TEXT_NUMBERED_MENU",
         ])
         self.assertEqual(args.startup_selection_mode, "USER_CONFIRMATION")
         self.assertEqual(args.startup_menu_surface, "TEXT_NUMBERED_MENU")
@@ -118,6 +166,67 @@ class SceneContractTests(unittest.TestCase):
 
 
 class SceneWorkflowTests(unittest.TestCase):
+    def test_character_body_can_follow_text_pose_without_pose_reference(self) -> None:
+        args = Namespace(
+            dominant_body_source="CHARACTER_BODY",
+            target_pose_family="SEATED",
+            body_source_coverage="FULL_BODY",
+            body_source_pose_family="STANDING",
+            framing="FULL_BODY",
+            allow_body_identity_change=False,
+            body_silhouette_notes="Preserve shoulders, torso, waist, hips, thighs, and leg-to-torso ratio.",
+            body_height_heads="SOURCE_LOCK",
+        )
+
+        contract = build_body_proportion_contract(
+            args,
+            selected={"body": reference("approved-character-body")},
+            auxiliary=[],
+            is_new_character=False,
+        )
+
+        self.assertEqual(contract["dominant_source"], "CHARACTER_BODY")
+        self.assertTrue(contract["pose_may_not_change_permanent_proportions"])
+
+    def test_character_body_with_pose_reference_keeps_proportion_lock(self) -> None:
+        args = Namespace(
+            dominant_body_source="CHARACTER_BODY",
+            target_pose_family="SEATED",
+            body_source_coverage="FULL_BODY",
+            body_source_pose_family="STANDING",
+            framing="FULL_BODY",
+            allow_body_identity_change=False,
+            body_silhouette_notes="Preserve shoulders, torso, waist, hips, thighs, and leg-to-torso ratio.",
+            body_height_heads="SOURCE_LOCK",
+        )
+
+        contract = build_body_proportion_contract(
+            args,
+            selected={
+                "body": reference("approved-character-body"),
+                "pose": reference("optional-pose-aid"),
+            },
+            auxiliary=[],
+            is_new_character=False,
+        )
+
+        self.assertTrue(contract["pose_may_not_change_permanent_proportions"])
+
+    def test_existing_character_still_requires_character_body_as_dominant(self) -> None:
+        args = Namespace(
+            dominant_body_source="PROMPT_BODY_SPEC",
+            target_pose_family="SEATED",
+            body_source_coverage="FULL_BODY",
+            body_source_pose_family="STANDING",
+            framing="FULL_BODY",
+            allow_body_identity_change=False,
+            body_silhouette_notes="Preserve all permanent proportions.",
+            body_height_heads="SOURCE_LOCK",
+        )
+
+        with self.assertRaisesRegex(StylePackError, "must use CHARACTER_BODY"):
+            build_body_proportion_contract(args, selected={}, auxiliary=[], is_new_character=False)
+
     def test_anonymous_scene_can_use_final_curated_body_contour_as_pose(self) -> None:
         with TemporaryDirectory() as folder:
             workspace = Path(folder)
@@ -245,6 +354,9 @@ class SceneQaTests(unittest.TestCase):
             qa_depth_and_scale="NOT_CHECKED",
             qa_phenomenon_causality="NOT_CHECKED",
             qa_artifact_integrity="PASS",
+            visual_anatomy_status="PASS",
+            visual_defects_status="PASS",
+            visual_prompt_status="PASS",
         )
         failed, stage_id, required = evaluate_generation_qa(plan, qa)
         self.assertEqual(failed, [])
@@ -252,6 +364,162 @@ class SceneQaTests(unittest.TestCase):
         self.assertIn("DESKTOP_USABILITY", required)
         self.assertIn("ARTIFACT_INTEGRITY", required)
         self.assertNotIn("FACE_GEOMETRY", required)
+
+
+class OptionalPoseCommandTests(unittest.TestCase):
+    def test_prepare_generation_without_pose_file_override_or_pool_review(self):
+        from tests.test_generation_workflow_integration import GenerationWorkflowIntegrationTests
+        fixture = GenerationWorkflowIntegrationTests()
+        self.addCleanup(fixture.doCleanups)
+        fixture.setUp()
+        fixture._classify("unused-pose.png", "POSE_CORE", (1, 2, 3))
+        original = fixture._cli
+
+        def without_pose_override(script, *args, **kwargs):
+            args = list(args)
+            if args and args[0] == "prepare-generation":
+                index = args.index("POSE")
+                self.assertEqual(args[index - 1], "--override")
+                del args[index - 1:index + 1]
+            return original(script, *args, **kwargs)
+
+        with patch.object(fixture, "_cli", side_effect=without_pose_override):
+            _, plan_path = fixture._prepare_scene("optional-pose")
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        self.assertNotIn("pose", plan.get("selected_references", {}))
+        self.assertEqual(plan["gate_status"], "PREPARED_AWAITING_EXECUTABLE_CALL")
+
+    def test_prepare_call_approved_policy_allows_project_scene_reference(self):
+        from tests.test_generation_workflow_integration import GenerationWorkflowIntegrationTests
+        fixture = GenerationWorkflowIntegrationTests()
+        self.addCleanup(fixture.doCleanups)
+        fixture.setUp()
+        background = fixture._classify("scene-background.png", "BACKGROUND_CORE", (4, 5, 6))
+        original = fixture._cli
+
+        def with_background(script, *args, **kwargs):
+            args = list(args)
+            if args and args[0] == "prepare-generation":
+                index = args.index("BACKGROUND")
+                del args[index - 1:index + 1]
+                args.extend(("--background-reference", background, "--reviewed", "BACKGROUND=1"))
+            return original(script, *args, **kwargs)
+
+        with patch.object(fixture, "_cli", side_effect=with_background):
+            guard, plan_path = fixture._prepare_scene("approved-scene")
+        original_selections = fixture._user_selections_file
+
+        def approved_selections(*args):
+            path = original_selections(*args)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["reference_policy"]["choice"] = "APPROVED_CHARACTER_REFERENCES"
+            path.write_text(json.dumps(data), encoding="utf-8")
+            return path
+
+        with patch.object(fixture, "_user_selections_file", side_effect=approved_selections):
+            call = fixture._resolve_and_prepare_call("approved-scene", guard, plan_path, "A stone artifact on the approved background.")
+        self.assertTrue(any("BACKGROUND" in slot["active_roles"] for slot in call["slots"]))
+
+    def test_approved_policy_checks_derived_lineage_and_rejects_unapproved_inputs(self):
+        from tools import style_pack_manager as manager
+        with TemporaryDirectory() as folder:
+            paths = manager.make_paths(Path(folder), "TEST")
+            identity = paths.generations / "01_APPROVED_CHARACTERS" / "CHAR_001"
+            identity.mkdir(parents=True)
+            source = identity / "identity.bin"
+            source.write_bytes(b"synthetic identity metadata fixture")
+            derived = paths.generations / "00_PENDING" / "request" / "derived.bin"
+            derived.parent.mkdir(parents=True)
+            derived.write_bytes(b"synthetic stage metadata fixture")
+            selections = {"reference_policy": {"choice": "APPROVED_CHARACTER_REFERENCES"}, "character": {"choice": "CHAR_001"}}
+            source_slot = {"path": str(source), "sha256": manager.sha256(source), "active_roles": ["BODY"]}
+            snapshot = derived.parent / "snapshot.json"
+            snapshot.write_text(json.dumps({"request_id": "request", "execution_call": {"slots": [source_slot]}}), encoding="utf-8")
+            output = {"path": str(derived), "sha256": manager.sha256(derived), "plan_snapshot": str(snapshot), "plan_snapshot_sha256": manager.sha256(snapshot)}
+            slot = {"path": str(derived), "sha256": manager.sha256(derived), "active_roles": ["BODY"]}
+            with patch.object(manager, "character_folder", return_value=identity), patch.object(manager, "validated_stage_outputs", return_value={"STAGE": output}):
+                manager.validate_reference_policy_slots(paths, {"request_id": "request"}, {"slots": [slot]}, selections)
+                for bad_path in (Path(folder) / "user.bin", paths.workspace / manager.BODY_LIBRARY_NAME / "body.bin"):
+                    bad = {"path": str(bad_path), "sha256": "unknown", "active_roles": ["BODY"]}
+                    with self.subTest(path=bad_path), self.assertRaises(manager.StylePackError):
+                        manager.validate_reference_policy_slots(paths, {"request_id": "request"}, {"slots": [source_slot, bad]}, selections)
+                library_style = {"path": str(paths.workspace / manager.BODY_LIBRARY_NAME / "style.bin"), "sha256": "unknown", "active_roles": ["STYLE"]}
+                with self.assertRaises(manager.StylePackError):
+                    manager.validate_reference_policy_slots(paths, {"request_id": "request"}, {"slots": [source_slot, library_style]}, selections)
+                snapshot.write_text(json.dumps({"request_id": "request", "execution_call": {"slots": [source_slot, {"path": str(Path(folder) / "user.bin"), "sha256": "unknown", "active_roles": ["BODY"]}]}}), encoding="utf-8")
+                output["plan_snapshot_sha256"] = manager.sha256(snapshot)
+                with self.assertRaises(manager.StylePackError):
+                    manager.validate_reference_policy_slots(paths, {"request_id": "request"}, {"slots": [slot]}, selections)
+                snapshot.write_text("tampered", encoding="utf-8")
+                with self.assertRaises(manager.StylePackError):
+                    manager.validate_reference_policy_slots(paths, {"request_id": "request"}, {"slots": [slot]}, selections)
+
+    def test_body_library_selection_is_request_scoped_and_not_required_on_every_stage(self):
+        from tools import style_pack_manager as manager
+        with TemporaryDirectory() as folder:
+            paths = manager.make_paths(Path(folder), "TEST")
+            style = paths.pack / "style.png"
+            style.parent.mkdir(parents=True, exist_ok=True)
+            style.write_bytes(b"selected style")
+            plan = {
+                "request_id": "request",
+                "startup_parameter_selection": {"resolved_parameters": {"aux_body_decision": "SELECTED"}},
+            }
+            selections = {
+                "style": {"choice": "PROJECT_STYLE:TEST"},
+                "reference_policy": {"choice": "BODY_LIBRARY_ONLY"},
+                "character": {"choice": "NONE"},
+            }
+            first_stage_call = {"slots": [{
+                "path": str(style), "sha256": manager.sha256(style), "active_roles": ["STYLE"],
+            }]}
+            # FACE_IDENTITY correctly has no physique library input; consent is
+            # recorded once for the request and consumed only by relevant stages.
+            manager.validate_reference_policy_slots(paths, plan, first_stage_call, selections)
+
+    def test_stage_lineage_inherits_only_the_selected_reference_policy(self):
+        from tools import style_pack_manager as manager
+        with TemporaryDirectory() as folder:
+            paths = manager.make_paths(Path(folder), "TEST")
+            request = paths.generations / "00_PENDING" / "request"
+            request.mkdir(parents=True)
+            source = paths.workspace / manager.BODY_LIBRARY_NAME / "body.bin"
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_bytes(b"approved selected body source")
+            derived = request / "front.png"
+            derived.write_bytes(b"qa passed stage output")
+            snapshot = request / "snapshot.json"
+            library_slot = {"path": str(source), "sha256": manager.sha256(source), "active_roles": ["BODY"]}
+            style_slot = {"path": str(paths.pack / "style.png"), "sha256": "a" * 64, "active_roles": ["STYLE"]}
+            selections = {
+                "style": {"choice": "PROJECT_STYLE:TEST"},
+                "reference_policy": {"choice": "BODY_LIBRARY_ONLY"},
+                "character": {"choice": "NONE"},
+            }
+            plan = {
+                "request_id": "request",
+                "startup_parameter_selection": {"resolved_parameters": {"aux_body_decision": "SELECTED"}},
+            }
+            snapshot.write_text(json.dumps({**plan, "execution_call": {"slots": [style_slot, library_slot]}}), encoding="utf-8")
+            output = {
+                "path": str(derived), "sha256": manager.sha256(derived),
+                "plan_snapshot": str(snapshot), "plan_snapshot_sha256": manager.sha256(snapshot),
+            }
+            derived_slot = {"path": str(derived), "sha256": output["sha256"], "active_roles": ["BODY"]}
+            with patch.object(manager, "validated_stage_outputs", return_value={"01_PHYSIQUE_FRONT": output}):
+                manager.validate_reference_policy_slots(paths, plan, {"slots": [derived_slot]}, selections)
+                selections["reference_policy"]["choice"] = "PROJECT_STYLE_ONLY"
+                snapshot.write_text(json.dumps({**plan, "execution_call": {"slots": [style_slot]}}), encoding="utf-8")
+                output["plan_snapshot_sha256"] = manager.sha256(snapshot)
+                manager.validate_reference_policy_slots(paths, plan, {"slots": [style_slot, derived_slot]}, selections)
+                selections["reference_policy"]["choice"] = "BODY_LIBRARY_ONLY"
+                snapshot.write_text(json.dumps({
+                    "request_id": "another-request", "execution_call": {"slots": [style_slot, library_slot]},
+                    "startup_parameter_selection": plan["startup_parameter_selection"],
+                }), encoding="utf-8")
+                output["plan_snapshot_sha256"] = manager.sha256(snapshot)
+                with self.assertRaises(manager.StylePackError):
+                    manager.validate_reference_policy_slots(paths, plan, {"slots": [derived_slot]}, selections)
 
 
 if __name__ == "__main__":

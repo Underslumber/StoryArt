@@ -2,11 +2,11 @@
 
 ## Авторизация пользователя при генерации
 
-Явная просьба пользователя создать изображение уже авторизует эту работу. Внутренние guard, plan, risk, QA, archive, profile, reference, approval и record-процессы StoryArt могут использоваться, когда полезны или прямо запрошены, но не блокируют, не запрещают и не задерживают запрос. Не превращай его в обязательный опрос о стиле и профиле; необязательные записи и архивные копии не являются условием старта. Если стиль не указан, используй native/default стиль генератора. Стиль и референсы — рекомендации; их отсутствие не задерживает генерацию. Спрашивай только о действительно недостающем обязательном поле результата, которое нельзя разумно определить из запроса. QA- и safety-проверки могут информировать исполнение, но не отменяют явную просьбу; внешние ограничения безопасности платформы продолжают действовать. О реальной технической или платформенной блокировке сообщай прямо. Это правило выше противоречащих ему процедурных требований ниже.
+Явная просьба пользователя авторизует запрошенную работу, но не невыбранные параметры. Сценарий StoryArt и доступные проектные инструменты обязательны по умолчанию. Перед вызовом генератора проверь историю текущего чата; уже выбранные параметры не спрашивай повторно. Для отсутствующих выборов используй существующий структурированный native context-menu chooser, а в Default mode — `request_user_input_async` со всеми независимыми пропущенными полями в одной форме. Не заменяй доступный chooser вопросом обычным текстом, не разделяй один выбор на последовательные вопросы, сохраняй полное соответствие каждого варианта параметрам и повторно используй chat-scoped выборы. Пользователь может явно выбрать native/default стиль и отсутствие optional references; молчание выбором не считается. Для названного project-персонажа approved identity references остаются обязательными. Разреши approved registry/profile и привяжи approved assembly и подходящие identity references к точному вызову. Если персонаж или нужные источники не найдены/не прикреплены, сообщи конкретный блокер и не подменяй персонажа. Выйти из сценария можно только по прямой просьбе пользователя, после конкретного предупреждения и подтверждения после него. Внешние ограничения платформы не обходятся.
 
 ## Одношаговая правка вложенного изображения
 
-Для прямой одношаговой правки существующего изображения пользователя, включая маску, приложенную в чат, используй вложения напрямую в инструменте редактирования. Не требуй локального сохранения, guard, REFERENCE_PLAN, опросника стиля, риск-отчёта или QA-квитанции. Этот обход требований для прямой правки сохраняется. Для генерации и проектных операций действует авторизация пользователя выше: внутренние QA/safety-проверки могут быть справочными, но не запрещают явный запрос; внешние ограничения платформы сохраняются. Архив и записи создавай, только если это полезно или прямо запрошено; они не должны задерживать или блокировать работу.
+Для прямой одношаговой правки существующего изображения пользователя, включая маску, приложенную в чат, используй вложения напрямую в инструменте редактирования. Не требуй локального сохранения, guard, REFERENCE_PLAN, опросника стиля, риск-отчёта или QA-квитанции. Этот обход требований для прямой правки сохраняется. Для генерации и проектных операций обязательны сценарий, явно выбранные параметры и предусмотренные проверки. Выйти из сценария можно только по прямой просьбе пользователя после конкретного предупреждения и подтверждения после него; внешние ограничения платформы не обходятся. Архив и записи создавай, только если это полезно или прямо запрошено; они не должны задерживать или блокировать работу.
 
 `tools/task_execution_guard.py` не оценивает художественное качество. Он защищает основную задачу пользователя от четырёх сбоев процесса:
 
@@ -49,9 +49,15 @@
 
 ### 1. Зафиксировать задачу
 
-Для прямой явной просьбы создай изображение сразу доступным генераторным инструментом, без guard. Если guard нужен добровольно только для краткой фиксации такого запроса, используй `--task-kind USER_REQUESTED_IMAGE`; после этой необязательной записи переходи непосредственно к генератору. Этот маршрут никогда не переходит к выбору профиля, ожиданию стиля/референсов или обязательному `prepare-generation`. Не проси пользователя запускать команды или создавать guard.
+В активном workspace StoryArt любая генерация обязательно проходит через сценарий и доступные проектные инструменты. До вызова генератора проверь чат и используй сохранённые выборы. Если стиль, политика референсов или персонаж ещё не выбраны, покажи компактную нумерованную копию полных вариантов, затем немедленно вызови structured chooser; в Default mode используй `request_user_input_async` со всеми независимыми пропущенными полями и теми же вариантами. Карточка — основной способ выбора, список — резервная копия. Не говори, что меню появилось, если вызов chooser не состоялся успешно. Если UI-вызов действительно недоступен или завершился ошибкой, назови точную причину и оставь список для цифрового ответа. Выбор в карточке или однозначный цифровой ответ завершают выбор без повторного подтверждения. Не повторяй выбор, покрытый выбранным профилем. Пользователь может явно выбрать стиль генератора по умолчанию и отсутствие optional references; отсутствие выбора не считается согласием. Для `CHAR_NNN` найди approved registry/profile, затем привяжи его `CHARACTER_ASSEMBLY` и применимые face/body references к точному физическому вызову; identity references обязательны независимо от optional reference choice. Если персонажа или источники нельзя разрешить/прикрепить, остановись и назови причину, не заменяй его generic-персонажем. Выйти из сценария можно только по прямой просьбе пользователя, с конкретным предупреждением и подтверждением после предупреждения. Для standalone-изображения вне StoryArt этот guard не используется; отдельный тип `USER_REQUESTED_IMAGE` запрещён. Правка вложенного изображения остаётся отдельным одношаговым маршрутом. Если проектный инструмент недоступен, зафиксируй конкретную ошибку и не заявляй об успешном запуске сценария.
 
-Подробная строгая последовательность ниже предназначена только для намеренно выбранного `--task-kind IMAGE_GENERATION`. В этом managed-режиме сохраняются план, точная привязка вызова и записи. Даже там стиль, фиделити и референсы остаются рекомендациями: если стиль не назван, используй native/default генератора и не ставь работу на ожидание ради необязательного выбора.
+Никогда не выводи желание обхода правила или сценария из краткости/формулировки запроса. Пользователь должен прямо попросить выйти из сценария. Перед выходом предупреди о конкретных вероятных последствиях и всегда дождись подтверждения после предупреждения. Внешние ограничения платформы обходить нельзя.
+
+Не ищи и не перечисляй исторические неподтверждённые генерации, чтобы выбрать базу, референс или вариант продолжения. Это включает `00_PENDING`, копии в `GENERATION_RESULTS` со статусом без одобрения, а также статусы `TEST`, `STAGING`, `REJECTED`, `DRAFT` и аналогичные. Наличие файла в архиве или другом чате не является одобрением. Для QA активного запроса разрешены только его собственные выходы внутри области, зафиксированной guard. Ранее созданный арт можно повторно использовать только если пользователь выбрал именно его в текущем чате либо authoritative manager нашёл его среди одобренных объектов подходящей роли.
+
+`IMAGE_GENERATION` использует точный `REFERENCE_PLAN`. В `execution_call.user_selections` перед readiness должны быть `style`, `reference_policy`, `character`; каждая запись содержит выбранное пользователем `choice` и точную `user_quote` из чата. Спрашивай только отсутствующие решения. `PROJECT_STYLE_ONLY` разрешает выбранный project STYLE без optional user/body-library references; для `CHAR_NNN` обязательные approved identity assets сохраняются. Для `CHAR_NNN` `character.choice` обязан совпасть с `REFERENCE_PLAN.character_id`, утверждённый `selected_references.character_assembly` — иметь тот же `source_character_id`, а его path/hash с ролью `CHARACTER_ASSEMBLY` — присутствовать в физических slots точного вызова. Точный execution-call hash также фиксируется в ready-binding.
+
+`IMAGE_GENERATION_NATIVE_DEFAULT` допустим только когда пользователь выбрал `GENERATOR_DEFAULT`, `NO_REFERENCES` и `NONE` для project-персонажа. Он остаётся внутри guard-сценария, фиксирует точный промпт, выборы и риск-отчёт, требует `READY_FOR_EXECUTION`, `REQUESTED_DELIVERABLE`, реальный файл результата и стандартные delivery/COMPLETE проверки. Не используй его для имени существующего персонажа или применимого утверждённого профиля.
 
 Команда создаёт неизменяемый контракт цели и бюджета. Её запускают до поиска стиля и выбора референсов:
 
@@ -76,7 +82,7 @@ python tools\task_execution_guard.py start `
 
 ### 2. Фиксировать подготовку в IMAGE_GENERATION
 
-Только в выбранном IMAGE_GENERATION managed-режиме команда учитывает логический блок подготовки и проверяет остаток бюджета. Для USER_REQUESTED_IMAGE этот и следующие manager-шаги не применяются:
+Для IMAGE_GENERATION команда учитывает логический блок подготовки и проверяет остаток бюджета. Отдельный тип USER_REQUESTED_IMAGE запрещён; standalone-запросы вне StoryArt не создают проектный guard:
 
 ```powershell
 python tools\task_execution_guard.py checkpoint `
@@ -87,9 +93,9 @@ python tools\task_execution_guard.py checkpoint `
 
 Один checkpoint соответствует логическому результату, а не каждой прочитанной строке. Искусственно дробить этапы или выполнять исследования без checkpoint запрещено.
 
-### 3. Необязательное ожидание реально недостающего ввода в IMAGE_GENERATION
+### 3. Обязательный выбор пользователя для IMAGE_GENERATION
 
-Этот шаг применим только к намеренно выбранному IMAGE_GENERATION managed-режиму, когда действительно отсутствует обязательное для запрошенного результата поле. Стиль, фиделити и референсы необязательны; их отсутствие никогда не требует вопроса или ожидания. Если требуется уточнение, задай только этот конкретный вопрос. Не используй этот переход для прямого USER_REQUESTED_IMAGE маршрута.
+До `READY_FOR_EXECUTION` пользователь должен явно выбрать стиль, политику референсов и персонажа. Если выбор уже сделан в текущем чате, зафиксируй его дословную цитату и используй; если нет — фактически вызови structured chooser и дождись ответа. В Default mode используй `request_user_input_async` со всеми независимыми недостающими полями вместе. Если UI-инструмент выбора недоступен, покажи варианты прямо в ответе; не объявляй невызванное меню открытым. Не задавай повторно поле, уже разрешённое выбранным вариантом. Пользователь может выбрать стиль генератора по умолчанию и отсутствие optional references, но молчание не является выбором. Имена персонажей проекта должны разрешаться в утверждённый ID и его identity assembly; обязательные identity refs не отменяются выбором no optional refs. Значение `user_quote` — provenance, а не автоматическое доказательство: передай точную цитату из текущего чата и сверь её с видимым диалогом.
 
 Первая команда фиксирует ожидание конкретного ответа; вторая продолжает отсчёт после фактического ответа. Это не объявление терминального `BLOCKER`:
 
@@ -100,15 +106,22 @@ python tools\task_execution_guard.py checkpoint --state "<path>" --event USER_RE
 
 ### 4. Подготовить задачу и вызов в IMAGE_GENERATION
 
-Этот шаг нужен только в явно выбранном IMAGE_GENERATION managed-режиме. Если для этого режима полезен style-pack план, `style_pack_manager.py prepare-generation` записывает `PREPARED_AWAITING_EXECUTABLE_CALL`; затем точная подготовка конкретного вызова переводит план в готовность. Не требуй выбор или подтверждение стиля, фиделити либо `BODY_REFERENCE_LIBRARY`: это необязательные рекомендации, а при неуказанном стиле используется native/default генератора. Не задавай меню и не жди ответа только ради этих параметров. Когда пользователь сам указал значения, менеджер может записать их как подтверждённый источник; не спрашивай повторно уже известные поля.
+Этот шаг применяется, когда к запросу относится существующий style-pack/персонажный план. `style_pack_manager.py prepare-generation` записывает `PREPARED_AWAITING_EXECUTABLE_CALL`; затем точная подготовка конкретного вызова переводит план в готовность. До этого проверь текущий чат: если стиль, референс-политика или личность персонажа ещё не выбраны пользователем, открой structured chooser с независимыми недостающими полями вместе и зафиксируй guard как `WAITING_FOR_USER`. Пользователь может явно выбрать `GENERATOR_DEFAULT`; нельзя выводить его из умолчания. Для названного персонажа этот выбор выполняется через reference-bound маршрут с обязательными утверждёнными identity refs. Не спрашивай повторно уже известное из текущего чата.
 
-Далее для каждой стадии отдельно:
+`IMAGE_GENERATION_NATIVE_DEFAULT` is only for a character-free request after the user explicitly selected default style and no references. A named character with explicitly selected generator-default style uses the reference-bound route, with no project STYLE slots and with the character's approved assembly and applicable identity refs attached. Create `execution_call.json` with `request_id`, `prompt: {text, text_sha256}`, `user_selections` containing exact style/reference/character choices and user quotes, and the complete `risk_assessment` JSON. For `IMAGE_GENERATION_NATIVE_DEFAULT`, its `input_binding.prompt_sha256` must match the prompt and `input_binding.references` must be empty. Pass the same file to both readiness and execution:
+
+```powershell
+python tools\task_execution_guard.py checkpoint --state "<path>\EXECUTION_GUARD.json" --event READY_FOR_EXECUTION --summary "Bind the exact native/default prompt and empty-reference risk assessment." --execution-call "<path>\execution_call.json"
+python tools\task_execution_guard.py checkpoint --state "<path>\EXECUTION_GUARD.json" --event EXECUTION_STARTED --summary "Generate the single requested native/default image." --output-contract REQUESTED_DELIVERABLE --execution-call "<path>\execution_call.json"
+```
+
+Далее для каждой стадии reference-bound плана отдельно:
 
 1. `resolve-call --request-id ... --stage-id ...` разрешает только конкретные файлы текущей стадии и сохраняет `TECHNICAL_REFERENCES/RESOLVED_CALL_<stage>.json` с путями, хешами и ролями слотов.
 2. Рассчитай риск для точного текста промпта и физических слотов этого манифеста. Каждое вложение укажи с его текущими байтами, D-оценкой, причиной и активной ролью или ролями. Отчёт с другой формулировкой, хешем или назначением роли непригоден.
-3. `prepare-call --request-id ... --stage-id ... --prompt-text-file ... --risk-assessment ...` повторно разрешает слоты, сверяет точный промпт и связанный риск-отчёт, фиксирует `execution_call` и переводит план в `READY_FOR_GENERATION`. Эта команда записывает `READY_FOR_EXECUTION` в guard с привязкой к стадии, тексту и хешам каждого файла/роли.
+3. `prepare-call --request-id ... --stage-id ... --prompt-text-file ... --risk-assessment ...` сверяет профиль, референс-политику и персонажа с точным выбранным вариантом меню, затем автоматически переносит выбор и исходную цитату в `execution_call.user_selections`. Для direct-confirmation или явно размеченного legacy-плана передай `--user-selections-json`; если complete menu mapping уже есть, повторный JSON запрещён как второй источник. Каждая запись содержит `choice` и точную `user_quote` из текущего чата. Неизвестные значения не подставляй и не выдумывай цитаты. Эта команда записывает `READY_FOR_EXECUTION` в guard с привязкой к стадии, тексту, выборам и хешам каждого файла/роли.
 
-Пример интерфейса менеджера для намеренно выбранного IMAGE_GENERATION managed-режима (добавь только параметры плана, источников и QA, необходимые выбранной конфигурации):
+Пример интерфейса менеджера для reference-bound IMAGE_GENERATION после показа нумерованного меню и выбора варианта 2. Замени шаблоны фактическими значениями проекта; записи `--startup-option` должны совпадать с реально показанными пунктами и их mapping:
 
 ```powershell
 python tools\style_pack_manager.py prepare-generation `
@@ -116,16 +129,28 @@ python tools\style_pack_manager.py prepare-generation `
   --style-name "<style>" `
   --request-id "<request-id>" `
   --fidelity 90 `
-  --aux-body-decision NOT_SELECTED `
+  --aux-body-decision DECLINED `
+  --startup-selection-mode USER_CONFIRMATION `
+  --startup-menu-surface TEXT_NUMBERED_MENU `
+  --startup-choice OPTION_2 `
+  --startup-choice-user-quote "2" `
   --confirmed-chat-id "<current-chat-id>" `
-  --confirmed-message-id "<message-id>" `
-  --confirmed-parameters-user-quote "<exact quote supporting fidelity and selected settings>"
+  --confirmed-message-id "<message-id-containing-choice>" `
+  --startup-option "OPTION_1=90% стиля <style> + использовать BODY_REFERENCE_LIBRARY (рекомендуемый профиль StoryArt); style=PROJECT_STYLE:<style>; reference_policy=BODY_LIBRARY_ONLY; character=NONE" `
+  --startup-option "OPTION_2=90% стиля <style>, без BODY_REFERENCE_LIBRARY; style=PROJECT_STYLE:<style>; reference_policy=PROJECT_STYLE_ONLY; character=NONE" `
+  --startup-option "OPTION_3=70% стиля <style>, без BODY_REFERENCE_LIBRARY — более свободная интерпретация; style=PROJECT_STYLE:<style>; reference_policy=PROJECT_STYLE_ONLY; character=NONE" `
+  --generation-purpose SCENE `
+  --scene-kind ARTIFACT `
+  --scene-output-use GENERAL_ART `
+  --scene-subject-from-prompt `
+  --style-reference "<local overall rendering reference>" `
+  --reviewed "STYLE=1"
 
 python tools\style_pack_manager.py resolve-call `
   --workspace "<workspace>" `
   --style-name "<style>" `
   --request-id "<request-id>" `
-  --stage-id "<stage-id>"
+  --stage-id "SINGLE_PASS"
 
 python tools\generation_risk_assessor.py `
   --prompt-file "<exact-prompt.txt>" `
@@ -137,7 +162,7 @@ python tools\style_pack_manager.py prepare-call `
   --workspace "<workspace>" `
   --style-name "<style>" `
   --request-id "<request-id>" `
-  --stage-id "<stage-id>" `
+  --stage-id "SINGLE_PASS" `
   --prompt-text-file "<exact-prompt.txt>" `
   --risk-assessment "<risk-report.json>"
 ```
@@ -157,19 +182,23 @@ python tools\task_execution_guard.py checkpoint `
   --summary "Точный вызов подготовлен для запуска."
 
 python tools\task_execution_guard.py checkpoint `
-  --state "<path>" `
+  --state "<path>\EXECUTION_GUARD.json" `
   --event EXECUTION_STARTED `
   --reference-plan "<request-dir>\REFERENCE_PLAN.json" `
-  --stage "FACE_IDENTITY" `
+  --stage "SCENE" `
   --output-contract REQUESTED_DELIVERABLE `
-  --summary "Запускается FACE_IDENTITY с четырьмя проверенными вложениями."
+  --summary "Запускается одноэтапная SCENE с проверенными вложениями."
 ```
+
+`--visual-review-json` относится к записи результата `record-generation`, а не к событию `EXECUTION_STARTED`.
 
 Пример выше включает необязательную отдельную запись `CALL_VALIDATED`; её можно пропустить и сразу выполнить `EXECUTION_STARTED` после `READY_FOR_EXECUTION`. Команда возвращает `attempt_id`. Если уже есть реальный durable receipt операции провайдера, запиши его через `--provider-operation-receipt`; не выдумывай его. Сразу после checkpoint вызывается генератор; между ними не вставляй исследование или редактирование проекта. В репозитории нет транспорта провайдера: guard фиксирует операторские события, но сам не запускает и не отменяет удалённую генерацию.
 
 ### 6. Зафиксировать результат
 
 Сохрани результат через `style_pack_manager.py record-generation` в исходном формате и качестве. Команда требует `--attempt-id`, `--reference-plan` и совпадающий `--character-id`; для многоэтапного плана укажи `--stage-id`. Она проверяет привязку попытки к запросу, персонажу, плану и стадии, архивирует оригинал, применяет нужные QA-слои, регистрирует результат и записывает `VISIBLE_RESULT` с правильным статусом. Используй `STAGING` для промежуточной стадии, `TEST` для готового прошедшего QA результата и `REJECTED` для результата, который не прошёл QA. Статус не означает пользовательскую доставку.
+
+Every project-plan registration requires a reviewer-authored `--visual-review-json`, validated against the immutable attempt snapshot before archive or copy side effects. Inspect the full-resolution result against the exact executed prompt and applicable approved identity/style references; independently assess anatomy/body mechanics, whole-image visible defects, and every explicit prompt constraint. The prompt checklist must contain one evidence-backed verdict for each sentence/clause segment of the exact prompt, in order; a generic whole-prompt item cannot stand in for the checklist. `NOT_APPLICABLE` anatomy requires an explicit no-visible-anatomy finding and substantive reason, and is forbidden for full-body, physique, and assembly stages. A failed layer is recorded as `REJECTED` with the report preserved for correction through the authorized scenario.
 
 ```powershell
 python tools\style_pack_manager.py record-generation `
@@ -181,11 +210,19 @@ python tools\style_pack_manager.py record-generation `
   --character-id "<planned id, or NONE>" `
   --attempt-id "<UUID returned by EXECUTION_STARTED>" `
   --reference-plan "<request-dir>\REFERENCE_PLAN.json" `
-  --stage-id "<stage-id>" `
-  --status STAGING `
+  --visual-review-json "<request-dir>\VISUAL_REVIEW.json" `
+  --status TEST `
   --qa-attachments PASS `
+  --qa-canvas PASS `
+  --qa-stage-layer PASS `
   --qa-style PASS `
-  --qa-view PASS
+  --qa-subject-accuracy PASS `
+  --qa-no-unrequested-characters PASS `
+  --qa-focal-hierarchy PASS `
+  --qa-lighting PASS `
+  --qa-background PASS `
+  --qa-composition PASS `
+  --qa-artifact-integrity PASS
 ```
 
 Передавай только те `--qa-*` проверки, которые перечислены как обязательные для текущей стадии в плане; они должны отражать фактический независимый просмотр.
