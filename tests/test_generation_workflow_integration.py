@@ -17,6 +17,19 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def review_declaration(role: str, slot_role: str, path: Path | str, *, outcome: str = "PASS") -> str:
+    return json.dumps({
+        "role": role,
+        "slot_role": slot_role,
+        "path": str(path),
+        "view": "FULL_RESOLUTION",
+        "outcome": outcome,
+        "applicability": f"{role.lower()} evidence for the selected {slot_role} slot",
+        "findings": "The selected source visibly supports its declared role.",
+        "limitations": "Only the declared role was reviewed; other roles remain unassessed.",
+    })
+
+
 class GenerationWorkflowIntegrationTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -189,6 +202,7 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         reuse_chat_id: str = "",
         reuse_message_id: str = "",
         reviewed_style: int = 1,
+        review_selected_source: bool = True,
     ) -> tuple[Path, Path]:
         guard = self._start_request(request_id) if start_guard else self._guard_path(request_id)
         args: list[object] = [
@@ -219,11 +233,84 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--override", "CLOTHES", "--override", "LIGHTING", "--override", "BACKGROUND",
             "--override", "COMPOSITION",
         ))
+        if review_selected_source:
+            args.extend(("--reviewed-source", review_declaration("STYLE", "STYLE", self.style_reference)))
         if body_decision == "SELECTED":
             args.extend(("--aux-body-selection-note", "No reviewed reusable body reference is relevant to this artifact scene."))
         self._cli("style_pack_manager.py", *args, succeeds=succeeds)
         plan_path = guard.parent / "REFERENCE_PLAN.json"
         return guard, plan_path
+
+    def test_prepare_generation_requires_exact_selected_source_review(self):
+        matrix_pool = self.style_pack / "01_WORK" / "STYLE_CROPS"
+        matrix_pool.mkdir(parents=True, exist_ok=True)
+        for index in range(25):
+            Image.new("RGB", (24, 32), (index, 90, 140)).save(matrix_pool / f"matrix-{index:02}.png")
+        _, plan_path = self._prepare_scene(
+            "selected-source-review-missing", review_selected_source=False, succeeds=False,
+        )
+        self.assertFalse(plan_path.exists())
+        guard, plan_path = self._prepare_scene("selected-source-review-bound")
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        reviews = plan["selected_source_reviews"]
+        self.assertEqual(len(reviews), 1)
+        self.assertEqual(Path(reviews[0]["path"]).resolve(), self.style_reference.resolve())
+        self.assertEqual(reviews[0]["sha256"], hashlib.sha256(self.style_reference.read_bytes()).hexdigest())
+        self.assertEqual(reviews[0]["role"], "STYLE")
+        self.assertEqual(plan["local_context"]["inventory_status"], "NOT_SCANNED_DURING_PREPARATION")
+        self.assertIsNone(plan["local_context"]["local_files_total"])
+        self.assertEqual(plan["local_context"]["review_pool_counts"], {})
+
+    def test_approved_scene_reviews_every_attached_slot_including_auxiliary_body(self):
+        from tools import style_pack_manager as manager
+
+        assembly = self.workspace / "approved-assembly.png"
+        auxiliary = self.workspace / "aux-body.png"
+        Image.new("RGB", (64, 96), (40, 50, 60)).save(assembly)
+        Image.new("RGB", (64, 96), (70, 80, 90)).save(auxiliary)
+        selected = {
+            "character_assembly": {"path": str(assembly), "sha256": manager.sha256(assembly)},
+            "primary_face": {"path": str(assembly), "sha256": manager.sha256(assembly)},
+        }
+        active_roles = {"character_assembly": ["FACE", "BODY"], "primary_face": ["FACE"]}
+        attached_auxiliary = [{
+            "ref_id": "BR_0007", "path": str(auxiliary), "sha256": manager.sha256(auxiliary),
+            "active_roles": ["AUX_BODY_BUILD", "AUX_POSE", "AUX_CAMERA", "AUX_CLOTHING_BEHAVIOR", "AUX_OBJECT_INTERACTION"],
+        }]
+        declarations = [
+            review_declaration("FACE", "CHARACTER_ASSEMBLY", assembly),
+            review_declaration("BODY", "CHARACTER_ASSEMBLY", assembly),
+            review_declaration("FACE", "PRIMARY_FACE", assembly),
+            review_declaration("BODY", "BR_0007:AUX_BODY_BUILD", auxiliary),
+            review_declaration("POSE", "BR_0007:AUX_POSE", auxiliary),
+            review_declaration("COMPOSITION", "BR_0007:AUX_CAMERA", auxiliary),
+            review_declaration("CLOTHES", "BR_0007:AUX_CLOTHING_BEHAVIOR", auxiliary),
+            review_declaration("BODY", "BR_0007:AUX_OBJECT_INTERACTION", auxiliary),
+            review_declaration("COMPOSITION", "BR_0007:AUX_OBJECT_INTERACTION", auxiliary),
+        ]
+        reviews = manager.parse_selected_source_reviews(declarations, selected, active_roles, attached_auxiliary)
+        self.assertEqual({(row["role"], tuple(row["active_slot_roles"])) for row in reviews}, {
+            ("FACE", ("CHARACTER_ASSEMBLY",)), ("BODY", ("CHARACTER_ASSEMBLY",)),
+            ("FACE", ("PRIMARY_FACE",)), ("BODY", ("BR_0007:AUX_BODY_BUILD",)),
+            ("POSE", ("BR_0007:AUX_POSE",)), ("COMPOSITION", ("BR_0007:AUX_CAMERA",)),
+            ("CLOTHES", ("BR_0007:AUX_CLOTHING_BEHAVIOR",)),
+            ("BODY", ("BR_0007:AUX_OBJECT_INTERACTION",)),
+            ("COMPOSITION", ("BR_0007:AUX_OBJECT_INTERACTION",)),
+        })
+        self.assertTrue(all(row["view"] == "FULL_RESOLUTION" and row["review_outcome"] == "PASS" for row in reviews))
+        self.assertTrue(all(row["review_basis"] == "CALLER_DECLARED_CURRENT_REQUEST_VISUAL_REVIEW" for row in reviews))
+        self.assertTrue(all(row["limitations"] and row["review_findings"] for row in reviews))
+        with self.assertRaisesRegex(manager.StylePackError, "BR_0007:AUX_BODY_BUILD"):
+            manager.parse_selected_source_reviews(declarations[:3] + declarations[4:], selected, active_roles, attached_auxiliary)
+        with self.assertRaisesRegex(manager.StylePackError, "attestation"):
+            manager.parse_selected_source_reviews([f"FACE={assembly}"], selected, active_roles, attached_auxiliary)
+        incomplete = json.dumps({"role": "FACE", "slot_role": "CHARACTER_ASSEMBLY", "path": str(assembly)})
+        with self.assertRaisesRegex(manager.StylePackError, "missing required fields"):
+            manager.parse_selected_source_reviews([incomplete, *declarations[1:]], selected, active_roles, attached_auxiliary)
+        with self.assertRaisesRegex(manager.StylePackError, "only PASS"):
+            manager.parse_selected_source_reviews([
+                review_declaration("FACE", "CHARACTER_ASSEMBLY", assembly, outcome="FAIL"), *declarations[1:],
+            ], selected, active_roles, attached_auxiliary)
 
     def test_style_only_yes_cannot_prepare_or_write_reference_plan(self):
         _, plan_path = self._prepare_scene(
@@ -1200,6 +1287,9 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--body-silhouette-notes", "Synthetic stable proportions for test fixture.", "--prompt-only-physique",
             "--style-reference", self.style_reference, "--primary-face", self.primary_face,
             "--supporting-face", self.supporting_face, "--reviewed", "STYLE=1",
+            "--reviewed-source", review_declaration("STYLE", "STYLE", self.style_reference),
+            "--reviewed-source", review_declaration("STYLE", "PRIMARY_FACE", self.primary_face),
+            "--reviewed-source", review_declaration("STYLE", "SUPPORTING_FACE", self.supporting_face),
             "--reviewed", "FACE=2",
             "--override", "CLOTHES", "--override", "LIGHTING", "--override", "BACKGROUND", "--override", "COMPOSITION",
         ]

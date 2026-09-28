@@ -52,7 +52,7 @@ class SceneContractTests(unittest.TestCase):
         sources = build_scene_prompt_source_contract("SCENE", "CHAR_001", {
             "POSE": "", "CLOTHES": "", "LIGHTING": "", "BACKGROUND": "", "COMPOSITION": "camera.png",
         })
-        self.assertEqual(set(sources), {"POSE", "CLOTHES", "LIGHTING", "BACKGROUND"})
+        self.assertEqual(set(sources), {"POSE", "CLOTHES", "ACCESSORY", "LIGHTING", "BACKGROUND"})
         self.assertTrue(all(row == {
             "source": "EXACT_EXECUTABLE_PROMPT",
             "evidence_required": "USER_SPECIFIED_SCENE_TEXT",
@@ -116,6 +116,65 @@ class SceneContractTests(unittest.TestCase):
         ])
         self.assertEqual(args.startup_selection_mode, "USER_CONFIRMATION")
         self.assertEqual(args.startup_menu_surface, "TEXT_NUMBERED_MENU")
+
+    def test_scene_adapter_instructions_are_matrix_first_and_selected_source_only(self) -> None:
+        from tools.storyart_orchestrator import adapter_skill_markdown
+
+        prompt = adapter_skill_markdown({
+            "style_name": "RIOT LOL SPLASH",
+            "slug": "riot-lol-splash",
+            "pack_path": "STYLE_PACK_RIOT",
+            "generations_path": "GENERATIONS_RIOT",
+        })
+        self.assertLess(prompt.index("written profile"), prompt.index("matrix or contact sheet"))
+        self.assertLess(prompt.index("matrix or contact sheet"), prompt.index("selected full-resolution"))
+        self.assertNotIn("Query complete file lists", prompt)
+
+    def test_selected_style_refresh_preserves_other_adapters_and_index_entries(self) -> None:
+        import json
+        import tempfile
+        from unittest.mock import patch
+        from tools import storyart_orchestrator as orchestrator
+
+        with patch.object(orchestrator, "ensure_inside_project", side_effect=lambda path: path), \
+             patch.object(orchestrator, "relative_project_path", side_effect=lambda path: str(path)):
+            with tempfile.TemporaryDirectory() as folder:
+                root = Path(folder) / "adapters"
+                selected = root / "storyart-style-selected"
+                other = root / "storyart-style-other"
+                (selected / "references").mkdir(parents=True)
+                (selected / "agents").mkdir()
+                (other / "references").mkdir(parents=True)
+                (other / "agents").mkdir()
+                (other / "SKILL.md").write_text("keep me", encoding="utf-8")
+                (other / "agents" / "openai.yaml").write_text("keep yaml", encoding="utf-8")
+                (other / "references" / "style.json").write_text("{}", encoding="utf-8")
+                stale_style = {
+                    "style_name": "Selected Style", "slug": "selected", "pack_path": "PACK_SELECTED",
+                    "generations_path": "GEN_SELECTED", "local_readiness": "READY", "can_generate": True,
+                    "management": {}, "source_images": [], "work_images": [], "characters": [],
+                }
+                (selected / "references" / "style.json").write_text(json.dumps(stale_style), encoding="utf-8")
+                index = {
+                    "custom": "preserve", "styles": [
+                        {"style_name": "Selected Style", "skill_name": "storyart-style-selected", "path": str(selected),
+                         "pack_path": "PACK_SELECTED", "local_readiness": "READY", "can_generate": True},
+                        {"style_name": "Other Style", "skill_name": "storyart-style-other", "path": str(other),
+                         "pack_path": "PACK_OTHER", "local_readiness": "READY", "can_generate": True},
+                    ],
+                }
+                (root).mkdir(parents=True, exist_ok=True)
+                (root / "index.json").write_text(json.dumps(index), encoding="utf-8")
+                other_before = {p.relative_to(other): p.read_bytes() for p in other.rglob("*") if p.is_file()}
+                live_style = dict(stale_style, pack_path="PACK_SELECTED_CURRENT", generations_path="GEN_SELECTED_CURRENT")
+                with patch.object(orchestrator, "query_ready_styles", return_value=[live_style]):
+                    result = orchestrator.build_style_skills(root, "Selected Style")
+                other_after = {p.relative_to(other): p.read_bytes() for p in other.rglob("*") if p.is_file()}
+                self.assertEqual(other_after, other_before)
+                self.assertEqual(result["custom"], "preserve")
+                self.assertEqual([entry["style_name"] for entry in result["styles"]], ["Selected Style", "Other Style"])
+                refreshed = json.loads((selected / "references" / "style.json").read_text(encoding="utf-8"))
+                self.assertEqual(refreshed["pack_path"], "PACK_SELECTED_CURRENT")
 
     def test_character_free_scene_has_no_character_reference_contract(self) -> None:
         contract = build_scene_contract(scene_args(), "SCENE", "NONE")
@@ -402,7 +461,14 @@ class OptionalPoseCommandTests(unittest.TestCase):
             if args and args[0] == "prepare-generation":
                 index = args.index("BACKGROUND")
                 del args[index - 1:index + 1]
-                args.extend(("--background-reference", background, "--reviewed", "BACKGROUND=1"))
+                attestation = json.dumps({
+                    "role": "BACKGROUND", "slot_role": "BACKGROUND", "path": str(background),
+                    "view": "FULL_RESOLUTION", "outcome": "PASS",
+                    "applicability": "scene background composition and palette",
+                    "findings": "The selected source supports the requested background role.",
+                    "limitations": "No subject identity or anatomy assessment.",
+                })
+                args.extend(("--background-reference", background, "--reviewed", "BACKGROUND=1", "--reviewed-source", attestation))
             return original(script, *args, **kwargs)
 
         with patch.object(fixture, "_cli", side_effect=with_background):

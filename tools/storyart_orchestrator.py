@@ -445,6 +445,10 @@ description: Provide project-local routing context for the ready StoryArt style 
 Treat `{pack_name}` as the complete local visual source of truth and
 `{generations_name}` as its generated-work sibling.
 
+Access only approved project folders and ONE active current-chat request folder.
+Never list, search or open other pending/unapproved folders, including historical
+REJECTED results. Never inherit another request's attempts, statuses or choices.
+
 ## Mandatory scenario lock
 
 The existing StoryArt scenario and its step order are mandatory for every
@@ -460,7 +464,10 @@ and the user's confirmation after the warning in the same chat.
 
 Reuse this style when the approved character profile binds the requested
 character to `{style_name}` or when the user selected `{style_name}` in this
-chat. Do not ask for a style choice again. Never describe it only as “project
+chat. Reuse only the style name: fidelity and BODY_REFERENCE_LIBRARY still
+require the standard `Стиль и референсы` chooser unless explicitly selected
+in the current chat. Never inherit those choices from another chat or profile.
+Never describe it only as “project
 style”; use the exact name above. Reuse a recorded same-chat menu selection
 without presenting it again.
 
@@ -493,10 +500,10 @@ the actual native call fails or is unavailable, state that concrete failure
 and continue waiting for a numeric reply to the mirrored list. Never claim the
 card appeared unless the chooser call succeeded.
 
-1. Run `python tools\\style_pack_manager.py style-context --style-name "{style_name}" --json`.
-2. Query complete file lists for every visually critical role.
-3. Inspect actual full-resolution candidates before selecting references.
-4. Use the smallest compatible set that satisfies the active `REFERENCE_PLAN.json`.
+1. Reuse this request's resolved pack path and source locations. Run `python tools\\style_pack_manager.py style-context --style-name "{style_name}" --json` only when those locations or role metadata remain unresolved; do not repeat an unchanged context lookup.
+2. Explain the style from its written profile, then inspect the existing style/reference matrix or contact sheet.
+3. Shortlist only a few role-compatible candidates; then inspect the exact selected full-resolution originals.
+4. Use the smallest compatible selected set that satisfies the active `REFERENCE_PLAN.json`.
 5. Keep this adapter read-only. Never copy images into the skill or treat its snapshot metadata
    as fresher than the live pack.
 
@@ -517,10 +524,26 @@ policy:
 """
 
 
-def build_style_skills(output_root: Path) -> dict[str, Any]:
+def build_style_skills(output_root: Path, style_name: str | None = None) -> dict[str, Any]:
     output_root = ensure_inside_project(output_root)
-    styles = query_ready_styles()
-    entries: list[dict[str, Any]] = []
+    existing_index_path = output_root / "index.json"
+    existing_index = load_json(existing_index_path) if existing_index_path.is_file() else {}
+    if style_name:
+        normalized_name = style_name.strip().casefold()
+        if not normalized_name:
+            raise OrchestratorError("--style-name cannot be empty.")
+        # A targeted refresh must resolve current pack metadata. Adapter snapshots
+        # are routing hints only and can be stale relative to the selected pack.
+        style = next((item for item in query_ready_styles()
+                      if str(item.get("style_name", "")).casefold() == normalized_name), None)
+        if style is None:
+            raise OrchestratorError(f"No READY style named {style_name!r} was found.")
+        styles = [style]
+        original_entries = [item for item in existing_index.get("styles", []) if isinstance(item, dict)]
+        entries: list[dict[str, Any]] = []
+    else:
+        styles = query_ready_styles()
+        entries = []
     for style in styles:
         skill_name = style_skill_name(str(style["slug"]))
         skill_root = output_root / skill_name
@@ -562,12 +585,27 @@ def build_style_skills(output_root: Path) -> dict[str, Any]:
                 "can_generate": style["can_generate"],
             }
         )
-    index = {
+    if style_name:
+        refreshed = entries[0]
+        merged: list[dict[str, Any]] = []
+        replaced = False
+        for item in original_entries:
+            if str(item.get("style_name", "")).casefold() == normalized_name:
+                if not replaced:
+                    merged.append(refreshed)
+                    replaced = True
+            else:
+                merged.append(item)
+        if not replaced:
+            merged.append(refreshed)
+        entries = merged
+    index = dict(existing_index)
+    index.update({
         "schema_version": STYLE_ADAPTER_SCHEMA_VERSION,
         "generated_at": utc_now(),
-        "source": "tools/style_pack_manager.py list-styles --json",
-        "styles": entries,
-    }
+        "source": "tools/style_pack_manager.py list-styles --json" if not style_name else existing_index.get("source", "tools/style_pack_manager.py list-styles --json"),
+    })
+    index["styles"] = entries
     save_json(output_root / "index.json", index)
     return index
 
@@ -666,9 +704,10 @@ def build_parser() -> argparse.ArgumentParser:
     status_parser.add_argument("--state", required=True)
 
     build_parser_ = subparsers.add_parser(
-        "build-style-skills", help="Refresh local style adapters from ready packs."
+        "build-style-skills", help="Refresh the selected or all ready local style adapters."
     )
     build_parser_.add_argument("--output", default=str(DEFAULT_STYLE_SKILLS_ROOT))
+    build_parser_.add_argument("--style-name", help="Refresh only this exact ready style adapter.")
 
     validate_parser = subparsers.add_parser(
         "validate-style-skills", help="Validate local style adapters."
@@ -709,7 +748,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "status":
             result = load_state(normalize_project_path(args.state))
         elif args.command == "build-style-skills":
-            result = build_style_skills(normalize_project_path(args.output))
+            result = build_style_skills(normalize_project_path(args.output), args.style_name)
         elif args.command == "validate-style-skills":
             result = validate_style_skills(normalize_project_path(args.output))
         else:

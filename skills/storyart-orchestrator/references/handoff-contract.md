@@ -65,9 +65,10 @@ whether a recovery is justified.
 
 ## Routing precedence
 
-Use `docs/EFFICIENT_WORKFLOW.md` routing: Luna Medium for ordinary image work;
-Sol Low for planning/integration and fresh objective review; Luna High for
-discovery and ordinary code implementation. Sol High requires evidence of a
+Use `docs/EFFICIENT_WORKFLOW.md` routing: Luna Low for ordinary image work,
+deterministic discovery and straightforward implementation; Luna High only for
+materially ambiguous or difficult work. Sol Low handles planning/integration
+and fresh objective review. Sol High requires evidence of a
 substantive Luna failure for either complex implementation or repair; complexity
 alone does not qualify. Astra Low remains
 exceptional, read-only escalation only. Zero workers normally, one if helpful, two only

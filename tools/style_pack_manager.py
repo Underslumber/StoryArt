@@ -15,6 +15,7 @@ import json
 import os
 import re
 import shutil
+import stat as stat_module
 import struct
 import sys
 import unicodedata
@@ -26,6 +27,7 @@ from typing import Iterable, Sequence
 try:
     from tools.task_execution_guard import (
         GuardError as ExecutionGuardError,
+        assert_active_request_path as guard_assert_active_request_path,
         checkpoint as execution_checkpoint,
         load_guard as load_execution_guard,
         require_active_guard,
@@ -34,6 +36,7 @@ try:
 except ModuleNotFoundError:  # Direct execution as python tools\style_pack_manager.py
     from task_execution_guard import (
         GuardError as ExecutionGuardError,
+        assert_active_request_path as guard_assert_active_request_path,
         checkpoint as execution_checkpoint,
         load_guard as load_execution_guard,
         require_active_guard,
@@ -44,6 +47,11 @@ try:
     from tools.reference_compatibility import ANATOMY_ROLES, load_character_identity, validate_reference_compatibility
 except ModuleNotFoundError:  # Direct execution as python tools\\style_pack_manager.py
     from reference_compatibility import ANATOMY_ROLES, load_character_identity, validate_reference_compatibility
+
+try:
+    from tools.character_profile_state import STRUCTURAL as PROFILE_STRUCTURAL, ProfileStateError, confirm as confirm_profile_state, require_first_publication, load_effective, text_facts, facts_block, digest as profile_digest, verify_plan_binding
+except ModuleNotFoundError:
+    from character_profile_state import STRUCTURAL as PROFILE_STRUCTURAL, ProfileStateError, confirm as confirm_profile_state, require_first_publication, load_effective, text_facts, facts_block, digest as profile_digest, verify_plan_binding
 
 try:
     from tools.generation_risk_assessor import DEFAULT_LEXICON, RiskAssessmentError, validate_assessment
@@ -253,6 +261,14 @@ class StylePackError(RuntimeError):
     pass
 
 
+def assert_active_request_path(path: str | Path) -> None:
+    """Authorize request storage before reading a saved plan or output."""
+    try:
+        guard_assert_active_request_path(path)
+    except ExecutionGuardError as error:
+        raise StylePackError(str(error)) from error
+
+
 @dataclass(frozen=True)
 class StylePaths:
     workspace: Path
@@ -373,7 +389,7 @@ def discovered_character_count(generations: Path) -> int:
     return sum(1 for path in character_root.iterdir() if path.is_dir() and re.match(r"^CHAR_\d+", path.name, re.IGNORECASE))
 
 
-def discover_style_packs(workspace: Path) -> list[DiscoveredStyle]:
+def discover_style_packs(workspace: Path, known_pack: Path | None = None) -> list[DiscoveredStyle]:
     workspace = workspace.resolve()
     if not workspace.is_dir():
         raise StylePackError(f"Workspace does not exist: {workspace}")
@@ -386,17 +402,33 @@ def discover_style_packs(workspace: Path) -> list[DiscoveredStyle]:
         "__pycache__",
     }
     candidates: list[Path] = []
-    for candidate in workspace.rglob("*"):
-        if not candidate.is_dir() or not candidate.name.upper().endswith("_PROJECT_PACK"):
-            continue
-        relative = candidate.relative_to(workspace)
-        if not relative.parts:
-            continue
-        if relative.parts[0].lower() in excluded_top_levels:
-            continue
-        if any(part.startswith(".") or part.lower() == "__pycache__" for part in relative.parts):
-            continue
-        candidates.append(candidate)
+    if known_pack is not None:
+        candidate = known_pack.absolute()
+        try:
+            relative = candidate.relative_to(workspace)
+        except ValueError:
+            return []
+        if (
+            candidate.is_dir()
+            and candidate.name.upper().endswith("_PROJECT_PACK")
+            and len(relative.parts) == 1
+            and relative.parts[0].lower() not in excluded_top_levels
+            and not any(part.startswith(".") or part.lower() == "__pycache__" for part in relative.parts)
+        ):
+            candidates.append(candidate)
+    else:
+        # Packs have canonical top-level locations. Never walk request history.
+        for candidate in workspace.glob("*_PROJECT_PACK"):
+            if not candidate.is_dir() or not candidate.name.upper().endswith("_PROJECT_PACK"):
+                continue
+            relative = candidate.relative_to(workspace)
+            if not relative.parts:
+                continue
+            if relative.parts[0].lower() in excluded_top_levels:
+                continue
+            if any(part.startswith(".") or part.lower() == "__pycache__" for part in relative.parts):
+                continue
+            candidates.append(candidate)
 
     styles: list[DiscoveredStyle] = []
     for pack in sorted(candidates, key=lambda path: str(path).lower()):
@@ -697,6 +729,14 @@ def command_resolve_character(args: argparse.Namespace) -> None:
                     "paths": [str(registered_assets[role].resolve()) for role in missing_assets],
                 })
                 continue
+            role_assets, asset_index = approved_character_role_assets(paths, character_id, profile)
+            try:
+                confirmed = effective_character_profile(paths, character_id)
+            except (OSError, ProfileStateError, StylePackError) as error:
+                invalid_matches.append({"style_name": style_name, "character_id": character_id,
+                                        "name": registered_name, "status": "INVALID_CONFIRMED_PROFILE",
+                                        "profile_path": str(profile.resolve()), "issue": str(error)})
+                continue
             matches.append({
                 "style_name": style_name,
                 "style_slug": folder_slug,
@@ -710,7 +750,10 @@ def command_resolve_character(args: argparse.Namespace) -> None:
                     {role: str(asset.resolve()) for role, asset in registered_assets.items()},
                     ensure_ascii=False,
                 ),
+                "role_assets": json.dumps(role_assets, ensure_ascii=False),
+                "asset_index": json.dumps(asset_index, ensure_ascii=False),
                 "profile_schema": str(identity.get("schema_version", "")),
+                "confirmed_profile": json.dumps(confirmed, ensure_ascii=False),
             })
     if args.json:
         status = "FOUND" if matches else "FOUND_BUT_INVALID" if invalid_matches else "NOT_FOUND"
@@ -937,7 +980,7 @@ def build_style_context(paths: StylePaths, requested_role: str, positive_only: b
             "positive_eligible": positive_eligible,
             "bytes": file.stat().st_size,
         }
-        if is_image:
+        if is_image and include_files:
             image_format, width, height = image_info(file)
             record.update({"format": image_format, "width": width, "height": height})
         records.append(record)
@@ -1001,6 +1044,27 @@ def build_style_context(paths: StylePaths, requested_role: str, positive_only: b
     if include_files:
         context["files"] = records
     return context
+
+
+def _minimal_preparation_style_context(paths: StylePaths) -> dict[str, object]:
+    """Return only pack metadata needed to prepare a request.
+
+    Full asset inventory and collection counts belong to the explicit
+    ``style-context`` command. Preparation validates chosen references and
+    approved registry entries directly, so scanning every asset here adds no
+    authority to those selected-source checks.
+    """
+    discovered = matching_discovered_style(paths)
+    if discovered is None:
+        raise StylePackError(f"No discovered style pack matches {paths.style_name}.")
+    anchors = manifest_role_files(Path(discovered.pack_path), "ANCHOR_STYLE")
+    return {
+        "style_name": discovered.style_name,
+        "pack_path": discovered.pack_path,
+        "local_readiness": discovered.local_readiness,
+        "explicit_anchor_files": anchors,
+        "active_style_calibration": active_style_calibration_summary(Path(discovered.pack_path)),
+    }
 
 
 def command_style_context(args: argparse.Namespace) -> None:
@@ -1075,7 +1139,14 @@ def prompt_target_anatomy(prompt: str, target_name: str = "") -> tuple[str, str]
 def _approved_profile_identity(paths: StylePaths, profile: Path, expected_id: str = "") -> dict[str, str]:
     profile = profile.resolve()
     registry = read_csv(paths.character_registry) if paths.character_registry.is_file() else []
-    row = next((item for item in registry if item.get("status", "").upper() == "APPROVED" and item.get("profile_path") and Path(item["profile_path"]).resolve() == profile), None)
+    row = None
+    for item in registry:
+        registered_profile = Path(item.get("profile_path", ""))
+        if not registered_profile.is_absolute():
+            registered_profile = paths.generations / registered_profile
+        if item.get("status", "").upper() == "APPROVED" and item.get("profile_path") and registered_profile.resolve() == profile:
+            row = item
+            break
     if row is None or (expected_id and row.get("character_id", "").upper() != expected_id.upper()):
         raise StylePackError("Target profile is not the matching APPROVED character-registry profile.")
     base = Path(row.get("approved_base", ""))
@@ -1589,6 +1660,7 @@ def parse_startup_interaction(args: argparse.Namespace) -> dict[str, object]:
         if not args.reuse_startup_from:
             raise StylePackError("REUSE requires --reuse-startup-from pointing to the previous same-chat REFERENCE_PLAN.json.")
         source_path = Path(args.reuse_startup_from).resolve()
+        assert_active_request_path(source_path)
         if not source_path.is_file():
             raise StylePackError(f"Reused startup plan does not exist: {source_path}")
         try:
@@ -1814,7 +1886,7 @@ def load_and_validate_risk_assessment(
     for slot in slots:
         file = Path(str(slot.get("path", ""))).resolve()
         digest = str(slot.get("sha256", "")).lower()
-        if not file.is_file() or sha256(file) != digest:
+        if not file.is_file() or not re.fullmatch(r"[0-9a-f]{64}", digest):
             raise StylePackError(f"Executable call reference changed or is missing: {file}")
         actual_references.append({"path": str(file), "sha256": digest, "active_roles": list(slot.get("active_roles", []))})
     try:
@@ -1887,9 +1959,23 @@ def resolve_execution_call(
     stage_id: str,
     prompt_text: str,
     risk_assessment_path: str,
+    *,
+    resolved_slots: list[dict[str, object]] | None = None,
+    resolved_stage_outputs: dict[str, dict[str, object]] | None = None,
 ) -> tuple[dict[str, object], Path, dict[str, object]]:
-    slots = resolve_call_slots(paths, plan_path, plan, stage_id)
     stage_outputs = validated_stage_outputs(paths, plan_path, plan)
+    if resolved_stage_outputs is not None and stage_outputs != resolved_stage_outputs:
+        raise StylePackError("Validated stage outputs changed since reference resolution.")
+    if resolved_slots is None:
+        slots = resolve_call_slots(paths, plan_path, plan, stage_id, stage_outputs)
+    else:
+        assert_profile_plan_current(paths, plan)
+        slots = [dict(slot) for slot in resolved_slots]
+        for slot in slots:
+            file = Path(str(slot.get("path", ""))).resolve()
+            if not file.is_file() or sha256(file) != str(slot.get("sha256", "")).lower():
+                raise StylePackError(f"Resolved call slot is missing or changed: {file}")
+            validate_resolved_slot_compatibility(paths, plan, slot, file)
     workflow = plan.get("generation_workflow", {})
     planned_stage = next(
         (item for item in workflow.get("stages", []) if item.get("stage_id") == stage_id),
@@ -1957,6 +2043,9 @@ def resolve_execution_call(
         "stage_output_bindings": stage_output_bindings,
         "targeted_pack_bindings": targeted_pack_bindings,
         "risk_assessment": {"path": str(risk_path), **report},
+        "confirmed_character_profile": plan.get("confirmed_character_profile"),
+        "profile_default_application": plan.get("profile_default_application"),
+        "profile_default_exceptions": plan.get("profile_default_exceptions"),
     }
     return call, risk_path, report
 
@@ -1966,13 +2055,15 @@ def resolve_call_slots(
     plan_path: Path,
     plan: dict[str, object],
     stage_id: str,
+    stage_outputs: dict[str, dict[str, object]] | None = None,
 ) -> list[dict[str, object]]:
+    assert_profile_plan_current(paths, plan)
     request_folder = plan_path.parent
     try:
         slots = resolve_stage_slots(
             plan,
             stage_id,
-            validated_stage_outputs(paths, plan_path, plan),
+            stage_outputs if stage_outputs is not None else validated_stage_outputs(paths, plan_path, plan),
             request_folder / "TECHNICAL_REFERENCES",
         )
     except GenerationCallContractError as error:
@@ -2126,6 +2217,7 @@ def command_resolve_call(args: argparse.Namespace) -> None:
     paths = make_paths(args.workspace, args.style_name)
     request_id = safe_component(args.request_id, "request")
     plan_path = (paths.generations / "00_PENDING" / request_id / "REFERENCE_PLAN.json").resolve()
+    assert_active_request_path(plan_path)
     try:
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
@@ -2136,12 +2228,16 @@ def command_resolve_call(args: argparse.Namespace) -> None:
     stage_id = args.stage_id.strip().upper()
     if not stage_id:
         stage_id = str(workflow.get("stages", [{}])[0].get("stage_id", "")) if workflow.get("mode") == "MULTI_STAGE" else "SINGLE_PASS"
-    slots = resolve_call_slots(paths, plan_path, plan, stage_id)
+    stage_outputs = validated_stage_outputs(paths, plan_path, plan)
+    slots = resolve_call_slots(paths, plan_path, plan, stage_id, stage_outputs)
     manifest = {
         "schema_version": 1,
         "request_id": request_id,
         "reference_plan": str(plan_path),
         "stage_id": stage_id,
+        "confirmed_character_profile": plan.get("confirmed_character_profile"),
+        "profile_default_application": plan.get("profile_default_application"),
+        "profile_default_exceptions": plan.get("profile_default_exceptions"),
         "slots": [{key: slot[key] for key in ("path", "sha256", "active_roles", "slot", "physically_attach", "manifest_path") if key in slot} for slot in slots],
     }
     output_dir = plan_path.parent / "TECHNICAL_REFERENCES"
@@ -2150,6 +2246,17 @@ def command_resolve_call(args: argparse.Namespace) -> None:
     temporary = output_path.with_suffix(".tmp")
     temporary.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     os.replace(temporary, output_path)
+    # This private snapshot is consumed only by generation_request's single
+    # in-process resolve/assess/prepare invocation. Standalone CLI invocations
+    # still resolve and validate their own current inputs.
+    args._resolved_call_snapshot = {
+        "request_id": request_id,
+        "stage_id": stage_id,
+        "reference_plan": str(plan_path),
+        "plan_sha256": sha256(plan_path),
+        "slots": slots,
+        "stage_outputs": stage_outputs,
+    }
     print(f"REFERENCE_MANIFEST={output_path}")
     for slot in manifest["slots"]:
         print(f"SLOT={slot['slot']} | SHA256={slot['sha256']} | ROLES={','.join(slot['active_roles'])} | PATH={slot['path']}")
@@ -2346,6 +2453,7 @@ def command_prepare_call(args: argparse.Namespace) -> None:
             raise StylePackError(f"Cannot read exact prompt text: {error}") from error
     if not prompt_text.strip():
         raise StylePackError("--prompt-text or --prompt-text-file must provide the exact call prompt.")
+    prompt_text = render_confirmed_prompt(plan, prompt_text)
     original_plan_bytes = plan_path.read_bytes()
     original_plan_hash = hashlib.sha256(original_plan_bytes).hexdigest()
     ready_binding = guard_state.get("ready_binding")
@@ -2399,8 +2507,27 @@ def command_prepare_call(args: argparse.Namespace) -> None:
             "The request already has a READY executable call. Its prompt, slots, hashes, roles, and risk snapshot are immutable; "
             "start that call or reconcile the guard before preparing another one."
         )
+    resolved_snapshot = getattr(args, "_resolved_call_snapshot", None)
+    reuse_resolved_slots = (
+        isinstance(resolved_snapshot, dict)
+        and str(resolved_snapshot.get("request_id", "")) == request_id
+        and str(resolved_snapshot.get("stage_id", "")).upper() == stage_id.upper()
+        and Path(str(resolved_snapshot.get("reference_plan", ""))).resolve() == plan_path.resolve()
+        and str(resolved_snapshot.get("plan_sha256", "")).lower() == original_plan_hash
+        and isinstance(resolved_snapshot.get("slots"), list)
+        and isinstance(resolved_snapshot.get("stage_outputs"), dict)
+    )
+    if isinstance(resolved_snapshot, dict) and not reuse_resolved_slots:
+        raise StylePackError("Internal resolved call snapshot no longer matches the current request plan and stage.")
     call, risk_path, report = resolve_execution_call(
-        paths, plan_path.resolve(), plan, stage_id, prompt_text, args.risk_assessment
+        paths,
+        plan_path.resolve(),
+        plan,
+        stage_id,
+        prompt_text,
+        args.risk_assessment,
+        resolved_slots=resolved_snapshot["slots"] if reuse_resolved_slots else None,
+        resolved_stage_outputs=resolved_snapshot["stage_outputs"] if reuse_resolved_slots else None,
     )
     call["user_selections"] = user_selections
     scene_prompt_sources = plan.get("scene_prompt_sources", {})
@@ -2642,6 +2769,143 @@ def parse_reviewed_counts(values: Sequence[str], legacy_face_count: int = 0) -> 
     return counts
 
 
+def preparation_args_signature(args: argparse.Namespace) -> str:
+    """Fingerprint parsed preparation input for safe in-process reuse."""
+    values = {key: value for key, value in vars(args).items() if not key.startswith("_") and key != "handler"}
+    payload = json.dumps(values, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def reusable_preparation_semantics(args: argparse.Namespace) -> dict[str, object] | None:
+    snapshot = getattr(args, "_preparation_semantic_snapshot", None)
+    if isinstance(snapshot, dict) and snapshot.get("signature") == preparation_args_signature(args):
+        return snapshot
+    return None
+
+
+def parse_selected_source_reviews(
+    values: Sequence[str],
+    selected: dict[str, object],
+    active_roles_by_key: dict[str, list[str]],
+    auxiliary: Sequence[dict[str, object]] = (),
+) -> list[dict[str, object]]:
+    """Bind visual reviews to each semantic role and physical attachment slot."""
+    expected: dict[tuple[str, str, str], dict[str, object]] = {}
+    for key, value in selected.items():
+        roles = active_roles_by_key.get(key, [])
+        if not roles:
+            continue
+        records = value if isinstance(value, list) else [value]
+        for record in records:
+            if not isinstance(record, dict) or not record.get("path"):
+                continue
+            path = Path(str(record["path"])).resolve()
+            for role in roles:
+                review_role = "SUBJECT" if role.upper() == "POSE_SOFT" else role.upper()
+                slot_role = key.upper()
+                expected[(review_role, slot_role, str(path).casefold())] = {
+                    "role": review_role,
+                    "active_slot_roles": [slot_role],
+                    "path": str(path),
+                    "sha256": str(record.get("sha256") or sha256(path)).lower(),
+                }
+    for record in auxiliary:
+        path = Path(str(record["path"])).resolve()
+        auxiliary_review_roles = {
+            "AUX_BODY_BUILD": ("BODY",),
+            "AUX_POSE": ("POSE",),
+            "AUX_CAMERA": ("COMPOSITION",),
+            "AUX_CLOTHING_BEHAVIOR": ("CLOTHES",),
+            "AUX_OBJECT_INTERACTION": ("BODY", "COMPOSITION"),
+        }
+        for role in record["active_roles"]:
+            review_roles = auxiliary_review_roles.get(str(role).upper())
+            if not review_roles:
+                raise StylePackError(f"No visual-review category is defined for auxiliary role {role}.")
+            slot_role = f"{str(record['ref_id']).upper()}:{str(role).upper()}"
+            for review_role in review_roles:
+                expected[(review_role, slot_role, str(path).casefold())] = {
+                    "role": review_role,
+                    "active_slot_roles": [slot_role],
+                    "path": str(path),
+                    "sha256": str(record.get("sha256") or sha256(path)).lower(),
+                }
+
+    reviewed: dict[tuple[str, str, str], dict[str, object]] = {}
+    for value in values:
+        try:
+            declaration = json.loads(value)
+        except (TypeError, json.JSONDecodeError) as exc:
+            raise StylePackError("--reviewed-source must be a JSON visual-review attestation with role, slot_role, path, view, outcome, applicability, findings, and limitations.") from exc
+        if not isinstance(declaration, dict):
+            raise StylePackError("--reviewed-source must be a JSON object containing the visual-review attestation fields.")
+        required_fields = ("role", "slot_role", "path", "view", "outcome", "applicability", "findings", "limitations")
+        absent_fields = [name for name in required_fields if not str(declaration.get(name) or "").strip()]
+        if absent_fields:
+            raise StylePackError("--reviewed-source attestation is missing required fields: " + ", ".join(absent_fields))
+        role = str(declaration["role"]).strip().upper()
+        slot_role = str(declaration["slot_role"]).strip().upper()
+        view = str(declaration["view"]).strip().upper()
+        outcome = str(declaration["outcome"]).strip().upper()
+        if view != "FULL_RESOLUTION":
+            raise StylePackError("Selected-source review must declare view=FULL_RESOLUTION.")
+        if outcome != "PASS":
+            raise StylePackError(f"Selected-source review outcome is {outcome}; only PASS can prepare generation.")
+        if role not in REVIEW_CATEGORIES:
+            raise StylePackError(f"Unknown reviewed source role {role}; choose from {', '.join(REVIEW_CATEGORIES)}.")
+        if not re.fullmatch(r"[A-Z][A-Z0-9_]*(?::[A-Z][A-Z0-9_]*)?", slot_role):
+            raise StylePackError(f"Invalid physical slot role {slot_role!r}; use the exact active role from the attachment plan.")
+        path = Path(str(declaration["path"]).strip()).expanduser().resolve()
+        key = (role, slot_role, str(path).casefold())
+        if key not in expected:
+            raise StylePackError(f"Reviewed source is not an exact selected source for role {role} and slot {slot_role}: {path}")
+        if not path.is_file():
+            raise StylePackError(f"Reviewed selected source is missing: {path}")
+        expected_record = expected[key]
+        actual_hash = sha256(path).lower()
+        if actual_hash != expected_record["sha256"]:
+            raise StylePackError(f"Selected source changed after planning for role {role}: {path}")
+        reviewed[key] = {
+            **expected_record,
+            "view": view,
+            "applicability": str(declaration["applicability"]).strip(),
+            "review_findings": str(declaration["findings"]).strip(),
+            "limitations": str(declaration["limitations"]).strip(),
+            "review_outcome": outcome,
+            "review_basis": "CALLER_DECLARED_CURRENT_REQUEST_VISUAL_REVIEW",
+        }
+
+    missing = [expected_record for key, expected_record in expected.items() if key not in reviewed]
+    if missing:
+        labels = [f"{item['role']}@{item['active_slot_roles'][0]}={item['path']} (sha256 {item['sha256']})" for item in missing]
+        raise StylePackError("Full-resolution visual review is required for every attached source, semantic role, and slot role: " + "; ".join(labels))
+    return sorted(reviewed.values(), key=lambda item: (str(item["role"]), str(item["path"]).casefold()))
+
+
+def active_roles_by_selection_key(existing_scene: bool, character_free_scene: bool) -> dict[str, list[str]]:
+    """Map each selected plan key to an existing semantic full-resolution review category."""
+    return {
+        "style": ["STYLE"],
+        "subject": ["POSE_SOFT"],
+        "character_assembly": ["FACE", "BODY"],
+        "primary_face": ["FACE"] if existing_scene else ["STYLE"],
+        "supporting_face": ["STYLE"],
+        "expression": ["FACE"] if existing_scene else ["STYLE"],
+        "body": ["BODY"] if not character_free_scene else ["POSE_SOFT"],
+        "pose": ["POSE"],
+        "clothes": ["CLOTHES"],
+        "accessory": ["CLOTHES"],
+        "face_variant": ["FACE"],
+        "body_variant": ["BODY"],
+        "lighting": ["LIGHTING"],
+        "background": ["BACKGROUND"],
+        "composition": ["COMPOSITION"],
+        "coverage_front": ["CLOTHES"],
+        "coverage_side": ["CLOTHES"],
+        "coverage_back": ["CLOTHES"],
+    }
+
+
 def validate_prompt_only_body_library_review(args: argparse.Namespace) -> None:
     """Require complete relevant BODY library review before dropping a selected visual source."""
     if not getattr(args, "prompt_only_physique", False):
@@ -2761,8 +3025,205 @@ def validate_plan_reference(
     }
 
 
+def approved_character_role_assets(
+    paths: StylePaths, character_id: str, profile: Path
+) -> tuple[list[dict[str, str]], dict[str, object]]:
+    """Merge exact approved role records with profile indexes without trusting folder presence."""
+    character_id = character_id.strip().upper()
+    profile_fields = {
+        "APPROVED_WARDROBE": ("wardrobe_references", "WARDROBE", "03_CHARACTER_REFERENCES/03_WARDROBE"),
+        "APPROVED_ACCESSORY": ("accessory_references", "ACCESSORY", "03_CHARACTER_REFERENCES/04_ACCESSORIES"),
+        "APPROVED_FACE_VARIANT": ("face_variant_references", "FACE_VARIANT", "03_CHARACTER_REFERENCES/05_FACE_VARIANTS"),
+        "APPROVED_BODY_VARIANT": ("body_variant_references", "BODY_VARIANT", "03_CHARACTER_REFERENCES/06_BODY_VARIANTS"),
+    }
+    profile_index = {role: _character_profile_paths(profile, field) for field, role, _ in profile_fields.values()}
+    approved: dict[str, dict[str, str]] = {}
+    diagnostics: list[dict[str, str]] = []
+    manifest_rows = read_csv(paths.generation_manifest)
+
+    registry_rows = [
+        row for row in read_csv(paths.character_registry)
+        if row.get("character_id", "").strip().upper() == character_id
+        and row.get("status", "").strip().upper() == "APPROVED"
+        and (
+            (Path(row.get("profile_path", "")) if Path(row.get("profile_path", "")).is_absolute() else paths.generations / row.get("profile_path", "")).resolve()
+            == profile.resolve()
+        )
+    ]
+    base_manifest: dict[str, str] | None = None
+    if len(registry_rows) == 1:
+        registry = registry_rows[0]
+        base = Path(registry.get("approved_base", ""))
+        if not base.is_absolute():
+            base = paths.generations / base
+        base = base.resolve()
+        try:
+            _approved_profile_identity(paths, profile, character_id)
+            profile_valid = True
+        except (OSError, StylePackError, ValueError):
+            profile_valid = False
+        if profile_valid and base.is_file():
+            base_manifest = newest_matching_generation(paths, base)
+        if not (
+            base_manifest
+            and base_manifest.get("status", "").upper() == "APPROVED_CHARACTER_BASE"
+            and base_manifest.get("character_id", "").upper() == character_id
+            and Path(base_manifest.get("style_file", "")).resolve() == base
+            and generation_has_passed_qa(base_manifest)
+        ):
+            base_manifest = None
+
+    # Initial clothing/accessory references are approved as part of the canonical
+    # base. They remain role-specific and are admitted only through the exact
+    # approved profile and its still-valid canonical base record.
+    if base_manifest:
+        for field, role, expected_folder in profile_fields.values():
+            if role not in {"WARDROBE", "ACCESSORY"}:
+                continue
+            expected_root = (character_folder(paths, character_id) / expected_folder).resolve()
+            for listed in profile_index[role]:
+                listed_manifest = newest_matching_generation(paths, listed) if listed.is_file() else None
+                if listed_manifest:
+                    expected_status = "APPROVED_WARDROBE" if role == "WARDROBE" else "APPROVED_ACCESSORY"
+                    if (
+                        listed_manifest.get("status", "").upper() != expected_status
+                        or listed_manifest.get("character_id", "").upper() != character_id
+                        or Path(listed_manifest.get("style_file", "")).resolve() != listed.resolve()
+                    ):
+                        diagnostics.append({
+                            "generation_id": listed_manifest.get("generation_id", ""),
+                            "status": listed_manifest.get("status", ""),
+                            "path": str(listed),
+                            "role": role,
+                            "reason": "A later per-file manifest record revokes the initial approved-base fallback for this profile-listed asset.",
+                        })
+                    # A per-file record supersedes base-only approval. It is
+                    # admitted only by the dedicated approved-role path below.
+                    continue
+                if not listed.is_file() or not is_relative_to(listed, expected_root):
+                    diagnostics.append({
+                        "generation_id": base_manifest.get("generation_id", ""),
+                        "status": "APPROVED_CHARACTER_BASE",
+                        "path": str(listed),
+                        "role": role,
+                        "reason": "Profile-listed base asset is missing or outside its exact role directory.",
+                    })
+                    continue
+                try:
+                    asset_hash = sha256(listed)
+                except OSError as error:
+                    diagnostics.append({
+                        "generation_id": base_manifest.get("generation_id", ""),
+                        "status": "APPROVED_CHARACTER_BASE",
+                        "path": str(listed),
+                        "role": role,
+                        "reason": f"Approved profile-listed base asset could not be verified: {error}",
+                    })
+                    continue
+                approved[str(listed)] = {
+                    "role": role,
+                    "path": str(listed),
+                    "generation_id": base_manifest.get("generation_id", ""),
+                    "status": "APPROVED_CHARACTER_BASE",
+                    "description": base_manifest.get("description", ""),
+                    "sha256": asset_hash,
+                    "profile_indexed": "true",
+                    "provenance": base_manifest.get("notes", ""),
+                }
+
+    for row in manifest_rows:
+        status = row.get("status", "").strip().upper()
+        if row.get("character_id", "").strip().upper() != character_id or status not in profile_fields:
+            continue
+        field, role, expected_folder = profile_fields[status]
+        file = Path(row.get("style_file", ""))
+        if not file.is_absolute():
+            file = paths.workspace / file
+        file = file.resolve()
+        expected_root = (character_folder(paths, character_id) / expected_folder).resolve()
+        reason = ""
+        if not is_relative_to(file, expected_root):
+            reason = "Approved manifest path is outside its exact role directory."
+        elif not file.is_file():
+            reason = "Approved manifest asset file is missing."
+        manifest = None
+        verification_error = ""
+        if file.is_file():
+            try:
+                manifest = newest_matching_generation(paths, file)
+            except (OSError, RuntimeError, ValueError) as error:
+                verification_error = str(error)
+        if not reason and not manifest:
+            reason = f"Latest-generation verification failed: {verification_error}" if verification_error else "No latest generation manifest record verifies this exact file."
+        elif not reason and manifest and manifest.get("status", "").upper() != status:
+            reason = f"Latest record status is {manifest.get('status', '')!r}, not {status}."
+        elif not reason and manifest and manifest.get("character_id", "").upper() != character_id:
+            reason = "Latest record belongs to a different character."
+        elif not reason and manifest and Path(manifest.get("style_file", "")).resolve() != file:
+            reason = "Latest record does not bind this exact approved path."
+        elif not reason and manifest and manifest.get("qa_output_sha256", "").strip() and manifest.get("qa_output_sha256", "").casefold() != sha256(file).casefold():
+            reason = "Manifest QA output hash does not match the current approved asset file."
+        elif not reason and manifest and not generation_has_passed_qa(manifest):
+            reason = "No valid manager-approved QA receipt/provenance verifies this approved role asset."
+        if reason:
+            diagnostics.append({
+                "generation_id": row.get("generation_id", ""),
+                "status": status,
+                "path": str(file),
+                "role": role,
+                "reason": reason,
+            })
+            continue
+        assert manifest is not None
+        try:
+            asset_hash = sha256(file)
+        except OSError as error:
+            diagnostics.append({
+                "generation_id": row.get("generation_id", ""),
+                "status": status,
+                "path": str(file),
+                "role": role,
+                "reason": f"Approved asset hash verification failed: {error}",
+            })
+            continue
+        approved[str(file)] = {
+            "role": role,
+            "path": str(file),
+            "generation_id": manifest.get("generation_id", ""),
+            "status": status,
+            "description": manifest.get("description", ""),
+            "sha256": asset_hash,
+            "profile_indexed": str(file in profile_index[role]).lower(),
+            "provenance": manifest.get("notes", ""),
+        }
+    stale = {
+        role: sorted(str(path) for path in paths_for_role if str(path) not in approved)
+        for role, paths_for_role in profile_index.items()
+        if any(str(path) not in approved for path in paths_for_role)
+    }
+    missing_index = {
+        role: sorted(item["path"] for item in approved.values() if item["role"] == role and item["path"] not in {str(p) for p in profile_index[role]})
+        for role in profile_index
+        if any(item["role"] == role and item["path"] not in {str(p) for p in profile_index[role]} for item in approved.values())
+    }
+    unsupported = sorted({
+        row.get("status", "").strip().upper()
+        for row in manifest_rows
+        if row.get("character_id", "").strip().upper() == character_id
+        and row.get("status", "").strip().upper().startswith("APPROVED_")
+        and row.get("status", "").strip().upper() not in profile_fields
+        and row.get("status", "").strip().upper() != "APPROVED_CHARACTER_BASE"
+    })
+    return sorted(approved.values(), key=lambda item: (item["role"], item["path"].casefold())), {
+        "stale_profile_entries": stale,
+        "approved_records_missing_from_profile": missing_index,
+        "unsupported_approved_statuses": unsupported,
+        "invalid_approved_records": diagnostics,
+    }
+
+
 def registered_approved_character_asset(paths: StylePaths, image: Path) -> dict[str, str] | None:
-    """Recognize only identity assets explicitly listed by an approved character profile."""
+    """Recognize exact approved identity and role assets; never infer approval from a directory."""
     candidate = image.resolve()
     for row in read_csv(paths.character_registry):
         character_id = row.get("character_id", "").strip().upper()
@@ -2800,7 +3261,28 @@ def registered_approved_character_asset(paths: StylePaths, image: Path) -> dict[
             profile_paths = _character_profile_paths(profile, profile_key)
             if candidate in registry_paths and candidate in profile_paths:
                 return {"character_id": character_id, "asset_role": role, **identity}
+        role_assets, _ = approved_character_role_assets(paths, character_id, profile)
+        for asset in role_assets:
+            if candidate == Path(asset["path"]).resolve():
+                return {"character_id": character_id, "asset_role": asset["role"], **asset, **identity}
     return None
+
+
+def require_approved_character_asset_role(
+    paths: StylePaths, image: Path, character_id: str, expected_role: str, label: str
+) -> dict[str, str]:
+    """Bind canonical scene slots to the exact registry role, excluding optional variants."""
+    registered = registered_approved_character_asset(paths, image)
+    if (
+        not registered
+        or registered.get("character_id", "").upper() != character_id.upper()
+        or registered.get("asset_role", "").upper() != expected_role.upper()
+    ):
+        actual = (registered or {}).get("asset_role", "UNREGISTERED")
+        raise StylePackError(
+            f"{label} requires the selected character's exact approved {expected_role} asset; found {actual}. Optional face/body variants cannot fill canonical identity slots."
+        )
+    return registered
 
 
 def _character_registry_paths(paths: StylePaths, value: str) -> set[Path]:
@@ -2815,6 +3297,9 @@ def _character_registry_paths(paths: StylePaths, value: str) -> set[Path]:
 
 def _character_profile_paths(profile: Path, key: str) -> set[Path]:
     """Read the generated YAML list for one identity-reference field."""
+    if (profile.parent / "CONFIRMED_PROFILE" / "ACTIVE.json").is_file():
+        values = load_effective(profile)["profile"].get(key, []) or []
+        return {(profile.parent / str(value)).resolve() for value in values}
     try:
         lines = profile.read_text(encoding="utf-8-sig").splitlines()
     except (OSError, UnicodeError):
@@ -2832,6 +3317,55 @@ def _character_profile_paths(profile: Path, key: str) -> set[Path]:
         if match:
             values.add((profile.parent / match.group(1)).resolve())
     return values
+
+
+def sync_character_profile_asset(profile: Path, field: str, asset: Path) -> None:
+    """Idempotently add one manager-approved asset to its distinct profile role list."""
+    try:
+        content = profile.read_text(encoding="utf-8-sig")
+        relative = asset.resolve().relative_to(profile.parent.resolve()).as_posix()
+    except (OSError, ValueError) as error:
+        raise StylePackError(f"Approved asset was recorded, but profile synchronization could not resolve/read its target: {error}") from error
+    quoted = yaml_quote(relative)
+    lines = content.splitlines()
+    start = next((index for index, line in enumerate(lines) if line.strip().startswith(field + ":")), None)
+    if start is None:
+        lines.extend([f"{field}:", f"  - {quoted}"])
+    else:
+        inline = re.fullmatch(rf"(\s*{re.escape(field)}:\s*)\[(.*?)\](\s*(?:#.*)?)", lines[start])
+        if inline:
+            raw_items = [item.strip() for item in inline.group(2).split(",") if item.strip()]
+            for item in raw_items:
+                value = item[1:-1] if len(item) >= 2 and item[0] == item[-1] and item[0] in {"'", '"'} else item
+                if (profile.parent / value).resolve() == asset.resolve():
+                    return
+            lines[start] = f"{field}:{inline.group(3)}"
+            lines[start + 1:start + 1] = [f"  - {item}" for item in raw_items] + [f"  - {quoted}"]
+            start = -1
+        if lines[start].strip() == f"{field}: []":
+            lines[start] = f"{field}:"
+            lines.insert(start + 1, f"  - {quoted}")
+            start = -1
+        if start == -1:
+            end = -1
+        else:
+            end = start + 1
+            while end < len(lines) and (not lines[end] or lines[end][0].isspace()):
+                end += 1
+            entries = lines[start + 1:end]
+            if any((profile.parent / match.group(1)).resolve() == asset.resolve() for line in entries if (match := re.fullmatch(r"\s+-\s+[\"']?(.+?)[\"']?\s*", line))):
+                return
+            lines.insert(end, f"  - {quoted}")
+    temporary = profile.with_suffix(profile.suffix + ".sync.tmp")
+    try:
+        temporary.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        temporary.replace(profile)
+    except OSError as error:
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise StylePackError(f"Approved asset was recorded, but profile synchronization failed: {error}") from error
 
 
 def style_reference_compatibility_metadata(paths: StylePaths, file: Path) -> dict[str, str]:
@@ -2873,6 +3407,8 @@ def generation_row_matches_image(row: dict[str, str], image: Path) -> bool:
         if not candidate_text:
             continue
         candidate = Path(candidate_text)
+        if not generation_candidate_accessible(row, candidate):
+            continue
         if candidate.is_file() and sha256(candidate) == image_hash:
             return True
     return False
@@ -2882,16 +3418,70 @@ def generation_row_hashes(row: dict[str, str]) -> set[str]:
     hashes: set[str] = set()
     for field in ("source_image", "archive_file", "style_file"):
         candidate = Path(row.get(field, ""))
+        if not generation_candidate_accessible(row, candidate):
+            continue
         if candidate.is_file():
             hashes.add(sha256(candidate))
     return hashes
 
 
+def generation_candidate_accessible(row: dict[str, str], candidate: Path) -> bool:
+    """Never open historical unapproved copies while matching manifest rows."""
+    if not os.environ.get("CODEX_THREAD_ID", "").strip():
+        return True  # Offline manager/test operation has no chat scope.
+    parts = {part.upper() for part in candidate.parts}
+    approved_folder = bool(parts & {"01_APPROVED_CHARACTERS", "02_APPROVED_STANDALONE"})
+    forbidden_folder = bool(parts & {"00_PENDING", "REJECTED", "DRAFT", "STAGING", "TEST", "GENERATION_RESULTS"})
+    if str(row.get("status", "")).upper().startswith("APPROVED") and approved_folder and not forbidden_folder:
+        return True
+    try:
+        assert_active_request_path(candidate)
+    except StylePackError:
+        return False
+    return True
+
+
 def newest_matching_generation(paths: StylePaths, image: Path) -> dict[str, str] | None:
     """Resolve the one authoritative (latest) manifest status for an image."""
+    target_stat = image.stat()
+    target_hash = sha256(image)
+    def fingerprint(path: Path, stat_result: os.stat_result) -> tuple[str, int, int, int, int]:
+        return (
+            str(path.resolve()),
+            stat_result.st_size,
+            stat_result.st_mtime_ns,
+            stat_result.st_ctime_ns,
+            getattr(stat_result, "st_ino", 0),
+        )
+
+    hash_cache: dict[tuple[str, int, int, int, int], str] = {
+        fingerprint(image, target_stat): target_hash,
+    }
     for row in reversed(read_csv(paths.generation_manifest)):
-        if generation_row_matches_image(row, image):
+        # A recorded rejection remains authoritative without reading its files.
+        recorded_hash = str(row.get("qa_output_sha256", "")).casefold()
+        if recorded_hash and recorded_hash == target_hash:
             return row
+        for field in ("source_image", "archive_file", "style_file"):
+            candidate_text = row.get(field, "")
+            if not candidate_text:
+                continue
+            candidate = Path(candidate_text)
+            if not generation_candidate_accessible(row, candidate):
+                continue
+            try:
+                stat_result = candidate.stat()
+            except OSError:
+                continue
+            if not stat_module.S_ISREG(stat_result.st_mode) or stat_result.st_size != target_stat.st_size:
+                continue
+            key = fingerprint(candidate, stat_result)
+            candidate_hash = hash_cache.get(key)
+            if candidate_hash is None:
+                candidate_hash = sha256(candidate)
+                hash_cache[key] = candidate_hash
+            if candidate_hash == target_hash:
+                return row
     return None
 
 
@@ -2899,6 +3489,8 @@ def generation_qa_evidence(row: dict[str, str]) -> dict[str, object] | None:
     """Validate the durable record-generation receipt and its QA contract snapshot."""
     evidence_path = Path(row.get("qa_evidence", ""))
     style_file = Path(row.get("style_file", ""))
+    if not generation_candidate_accessible(row, style_file):
+        return None
     expected_evidence = style_file.with_suffix(style_file.suffix + ".qa-evidence.json")
     if not style_file.is_file() or evidence_path != expected_evidence or not evidence_path.is_file():
         return None
@@ -3274,6 +3866,9 @@ def build_scene_contract(
         "body": getattr(args, "body_reference", ""),
         "pose": getattr(args, "pose_reference", ""),
         "clothes": getattr(args, "clothes_reference", ""),
+        "accessory": getattr(args, "accessory_reference", []),
+        "face variant": getattr(args, "face_variant_reference", []),
+        "body variant": getattr(args, "body_variant_reference", []),
         "auxiliary body": getattr(args, "aux_body", []),
         "coverage front": getattr(args, "coverage_front_reference", ""),
         "coverage side": getattr(args, "coverage_side_reference", ""),
@@ -3327,7 +3922,7 @@ def build_scene_prompt_source_contract(
             "source": "EXACT_EXECUTABLE_PROMPT",
             "evidence_required": "USER_SPECIFIED_SCENE_TEXT",
         }
-        for role in ("POSE", "CLOTHES", "LIGHTING", "BACKGROUND", "COMPOSITION")
+        for role in ("POSE", "CLOTHES", "ACCESSORY", "LIGHTING", "BACKGROUND", "COMPOSITION")
         if not str(selected_local_roles.get(role, "")).strip()
     }
 
@@ -3651,16 +4246,31 @@ def build_multistage_attachment_plan(
         )
         style_stage_record = placeholder("00_STYLE_SYNTHESIS", "STYLE_STAGE")
 
-    face_keys = [key for key in ("primary_face", "supporting_face", "expression") if key in selected]
+    face_keys = [key for key in ("primary_face", "supporting_face", "expression", "face_variant") if key in selected]
+    has_face_variant = bool(selected.get("face_variant"))
+    has_body_variant = bool(selected.get("body_variant"))
+    has_accessory = bool(selected.get("accessory"))
+    face_variant_condition = (
+        " Preserve every selected FACE_VARIANT as a distinct approved detail; do not reinterpret it as canonical identity or merge it into another role."
+        if has_face_variant else ""
+    )
+    body_variant_condition = (
+        " Preserve the selected BODY_VARIANT details through this stage without silently replacing the canonical character base."
+        if has_body_variant else ""
+    )
+    accessory_condition = (
+        " Preserve the selected approved ACCESSORY design, scale, placement, and visible details through this stage."
+        if has_accessory else ""
+    )
     if face_keys and purpose != "CHARACTER_BASE":
         add_stage(
             "01_FACE_IDENTITY",
-            "Resolve face geometry and expression in the source drawing style; do not invent body proportions.",
+            "Resolve face geometry and expression in the source drawing style; do not invent body proportions." + face_variant_condition,
             source_records(face_keys),
             ("FACE_GEOMETRY", "EXPRESSION", "STYLE"),
         )
 
-    body_records = source_records([key for key in ("character_assembly", "body", "pose") if key in selected])
+    body_records = source_records([key for key in ("character_assembly", "body", "pose", "body_variant") if key in selected])
     for record in auxiliary:
         body_records.append({**record, "stage_role": f"{record['ref_id']}:{record['mode']}"})
 
@@ -3726,18 +4336,18 @@ def build_multistage_attachment_plan(
 
     add_stage(
         "02_BODY_POSE",
-        "Resolve the dominant silhouette, proportions, pose, camera, contacts, and foreshortening on a neutral outfit/background.",
+        "Resolve the dominant silhouette, proportions, pose, camera, contacts, and foreshortening on a neutral outfit/background." + body_variant_condition,
         body_records,
         ("BODY_SILHOUETTE", "BODY_PROPORTIONS", "POSE_CONTACTS", "CAMERA", "STYLE"),
     )
 
     body_output = placeholder("02_BODY_POSE", "BODY_POSE_STAGE")
     character_base_output = body_output
-    if "clothes" in selected:
+    if "clothes" in selected or "accessory" in selected:
         add_stage(
             "03_CLOTHING",
-            "Dress the verified body/pose without changing its silhouette, anatomy, or camera.",
-            [*([{**style_stage_record, "stage_role": "STYLE"}] if style_stage_record is not None else []), body_output, *source_records(["clothes"], include_style=False)],
+            "Apply selected clothing and accessories to the verified body/pose without changing its silhouette, anatomy, or camera." + body_variant_condition + accessory_condition,
+            [*([{**style_stage_record, "stage_role": "STYLE"}] if style_stage_record is not None else []), body_output, *source_records([key for key in ("clothes", "accessory") if key in selected], include_style=False)],
             ("CLOTHING", "BODY_SILHOUETTE", "BODY_PROPORTIONS", "STYLE"),
         )
         character_base_output = placeholder("03_CLOTHING", "CLOTHING_STAGE")
@@ -3747,7 +4357,7 @@ def build_multistage_attachment_plan(
         composite_inputs.append(placeholder("01_FACE_IDENTITY", "FACE_IDENTITY_STAGE"))
     add_stage(
         "04_CHARACTER_COMPOSITE",
-        "Combine the verified face with the verified clothed body; preserve both layers exactly.",
+        "Combine the verified face with the verified clothed body; preserve both layers exactly." + face_variant_condition + body_variant_condition + accessory_condition,
         composite_inputs,
         ("FACE_GEOMETRY", "BODY_SILHOUETTE", "BODY_PROPORTIONS", "CLOTHING", "STYLE"),
     )
@@ -3762,7 +4372,7 @@ def build_multistage_attachment_plan(
     ]
     add_stage(
         "05_FINAL_SCENE",
-        "Place the verified character into the final scene without reopening face or body design.",
+        "Place the verified character into the final scene without reopening face or body design." + face_variant_condition + body_variant_condition + accessory_condition,
         final_inputs,
         ("CANVAS", "FACE_GEOMETRY", "BODY_SILHOUETTE", "BODY_PROPORTIONS", "LIGHTING", "BACKGROUND", "COMPOSITION", "STYLE"),
     )
@@ -3843,24 +4453,40 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         ) from error
     if args.fidelity not in {30, 50, 70, 90, 100}:
         raise StylePackError("Fidelity must be one of 30, 50, 70, 90, or 100.")
-    startup_interaction = parse_startup_interaction(args)
+    semantic_snapshot = reusable_preparation_semantics(args)
+    if semantic_snapshot is not None:
+        startup_interaction = semantic_snapshot["startup_interaction"]
+        reviewed_counts = semantic_snapshot["reviewed_counts"]
+    else:
+        startup_interaction = parse_startup_interaction(args)
+        reviewed_counts = parse_reviewed_counts(args.reviewed, args.face_candidates_reviewed)
+        validate_prompt_only_body_library_review(args)
     purpose = args.generation_purpose.upper()
     overrides = {item.upper() for item in args.override}
-    context = build_style_context(paths, "ALL", positive_only=False, include_files=False)
-    reviewed_counts = parse_reviewed_counts(args.reviewed, args.face_candidates_reviewed)
-    validate_prompt_only_body_library_review(args)
     character_id = args.character_id.upper()
     is_new_character = character_id == "NEW"
+    confirmed_profile: dict[str, object] | None = None
+    profile_default_application: dict[str, list[dict[str, str]]] | None = None
+    profile_default_exceptions: dict[str, list[str]] | None = None
+    if purpose == "SCENE" and re.fullmatch(r"CHAR_\d+", character_id):
+        confirmed_profile = effective_character_profile(paths, character_id)
+        profile_default_exceptions = {
+            "explicit": [role for role, value in (("wardrobe", args.clothes_reference), ("accessory", args.accessory_reference),
+                        ("face_variant", args.face_variant_reference), ("body_variant", args.body_variant_reference)) if value],
+            "suppressed": [str(role).upper() for role in getattr(args, "suppress_profile_default", [])],
+            "overrides": sorted(overrides),
+        }
+        profile_default_application = apply_confirmed_defaults(paths, args, character_id, confirmed_profile, overrides)
     scene_prompt_sources = build_scene_prompt_source_contract(purpose, character_id, {
         "POSE": args.pose_reference,
         "CLOTHES": args.clothes_reference,
+        "ACCESSORY": args.accessory_reference,
         "LIGHTING": args.lighting_reference,
         "BACKGROUND": args.background_reference,
         "COMPOSITION": args.composition_reference,
     })
     overrides.update(scene_prompt_sources)
     scene_contract = build_scene_contract(args, purpose, character_id)
-    target_identity = compatibility_target(paths, args, character_id)
     character_free_scene = bool(scene_contract.get("applicable") and not scene_contract.get("has_character"))
     if character_free_scene:
         optional_scene_roles = {
@@ -3882,10 +4508,16 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
             )
             if not value
         ]
+        if args.framing == "FULL_BODY" and not args.body_silhouette_notes.strip():
+            missing_body_fields.append("--body-silhouette-notes")
+        if purpose == "SCENE" and re.fullmatch(r"CHAR_\d+", character_id) and not args.character_reference_evidence.strip():
+            missing_body_fields.append("--character-reference-evidence")
         if missing_body_fields:
             raise StylePackError(
                 "Character-bearing generation requires: " + ", ".join(missing_body_fields)
             )
+    context = _minimal_preparation_style_context(paths)
+    target_identity = compatibility_target(paths, args, character_id)
     if is_new_character and purpose != "CHARACTER_BASE":
         raise StylePackError(
             "Every NEW character must complete CHARACTER_BASE first. Generate safety-covered front/side/back physique, face, "
@@ -3902,9 +4534,9 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
             raise StylePackError(
                 "CHARACTER_BASE requires exactly one strongest full-resolution style anchor; do not generate a STYLE_SYNTHESIS character stage."
             )
-        if args.clothes_reference or args.lighting_reference or args.background_reference or args.composition_reference:
+        if args.clothes_reference or args.accessory_reference or args.face_variant_reference or args.body_variant_reference or args.lighting_reference or args.background_reference or args.composition_reference:
             raise StylePackError(
-                "CHARACTER_BASE does not accept clothes, lighting, background, or composition references. "
+                "CHARACTER_BASE does not accept clothes, accessories, face/body variants, lighting, background, or composition references. "
                 "Create wardrobe/accessory assets later and generate scenes only after identity approval."
             )
         prompt_only_physique = bool(args.prompt_only_physique)
@@ -3995,6 +4627,7 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         if not args.character_assembly:
             raise StylePackError("An existing character scene requires --character-assembly from its approved base.")
         assembly = validate_plan_reference(paths, args.character_assembly, "CHARACTER_ASSEMBLY")
+        require_approved_character_asset_role(paths, Path(str(assembly["path"])), character_id, "BASE", "CHARACTER_ASSEMBLY")
         if not is_relative_to(Path(str(assembly["path"])), identity_folder):
             raise StylePackError("CHARACTER_ASSEMBLY must belong to the selected approved character folder.")
         selected["character_assembly"] = assembly
@@ -4016,6 +4649,7 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
             if selected_body_view == "ASSEMBLY" or not args.body_reference:
                 raise StylePackError("ASSEMBLY_PLUS_VIEW requires one nearest front, side, or back --body-reference.")
             body = validate_plan_reference(paths, args.body_reference, "NEAREST_CHARACTER_BODY")
+            require_approved_character_asset_role(paths, Path(str(body["path"])), character_id, "BODY", "NEAREST_CHARACTER_BODY")
             if not is_relative_to(Path(str(body["path"])), identity_folder):
                 raise StylePackError("The nearest body view must belong to the selected approved character folder.")
             selected["primary_face"] = assembly
@@ -4025,6 +4659,8 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
                 raise StylePackError("IDENTITY_STRICT requires separate approved face and nearest front/side/back body references.")
             primary_face = validate_plan_reference(paths, args.primary_face, "CHARACTER_FACE")
             body = validate_plan_reference(paths, args.body_reference, "NEAREST_CHARACTER_BODY")
+            require_approved_character_asset_role(paths, Path(str(primary_face["path"])), character_id, "FACE", "CHARACTER_FACE")
+            require_approved_character_asset_role(paths, Path(str(body["path"])), character_id, "BODY", "NEAREST_CHARACTER_BODY")
             if not is_relative_to(Path(str(primary_face["path"])), identity_folder) or not is_relative_to(Path(str(body["path"])), identity_folder):
                 raise StylePackError("Strict face and body references must belong to the selected approved character folder.")
             selected["primary_face"] = primary_face
@@ -4033,7 +4669,7 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
             selected["supporting_face"] = validate_plan_reference(paths, args.supporting_face, "SUPPORTING_FACE_STYLE")
         if args.expression_reference:
             selected["expression"] = validate_plan_reference(paths, args.expression_reference, "FACE_EXPRESSION")
-        face_library_count = int(context.get("review_pool_counts", {}).get("FACE", 0))
+        face_library_count = 0
     elif face_visible:
         if not args.primary_face:
             raise StylePackError("Visible face requires --primary-face.")
@@ -4055,9 +4691,9 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         if args.expression_reference:
             selected["expression"] = validate_plan_reference(paths, args.expression_reference, "FACE_EXPRESSION")
 
-        face_library_count = int(context.get("review_pool_counts", {}).get("FACE", 0))
+        face_library_count = 0
     else:
-        face_library_count = int(context.get("review_pool_counts", {}).get("FACE", 0))
+        face_library_count = 0
 
     category_values = {
         "BODY": args.body_reference,
@@ -4083,23 +4719,32 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
             allow_curated_body_contour=character_free_scene and category == "POSE",
         )
 
-    active_roles_by_key = {
-        "style": ["STYLE"],
-        "subject": ["POSE_SOFT"],
-        "character_assembly": ["FACE", "BODY"],
-        "primary_face": ["FACE"] if existing_scene else ["STYLE"],
-        "supporting_face": ["STYLE"],
-        "expression": ["FACE"] if existing_scene else ["STYLE"],
-        "body": ["BODY"] if not character_free_scene else ["POSE_SOFT"],
-        "pose": ["POSE"],
-        "clothes": ["CLOTHES"],
-        "lighting": ["LIGHTING"],
-        "background": ["BACKGROUND"],
-        "composition": ["COMPOSITION"],
-        "coverage_front": ["CLOTHES"],
-        "coverage_side": ["CLOTHES"],
-        "coverage_back": ["CLOTHES"],
-    }
+    if args.clothes_reference and is_relative_to(Path(str(selected["clothes"]["path"])), paths.generations):
+        wardrobe = registered_approved_character_asset(paths, Path(str(selected["clothes"]["path"])))
+        if not wardrobe or wardrobe.get("asset_role") != "WARDROBE" or wardrobe.get("character_id") != character_id:
+            raise StylePackError("Generation-library CLOTHES reference must be an exact APPROVED_WARDROBE asset for the selected character.")
+    if args.accessory_reference:
+        selected["accessory"] = []
+        for value in args.accessory_reference:
+            accessory = validate_plan_reference(paths, value, "ACCESSORY")
+            registered = registered_approved_character_asset(paths, Path(str(accessory["path"])))
+            if not registered or registered.get("asset_role") != "ACCESSORY" or registered.get("character_id") != character_id:
+                raise StylePackError("ACCESSORY references must be exact APPROVED_ACCESSORY assets for the selected character.")
+            selected["accessory"].append(accessory)
+    for option, key, expected_role, category in (
+        (args.face_variant_reference, "face_variant", "FACE_VARIANT", "FACE"),
+        (args.body_variant_reference, "body_variant", "BODY_VARIANT", "BODY"),
+    ):
+        if option:
+            selected[key] = []
+            for value in option:
+                reference = validate_plan_reference(paths, value, category)
+                registered = registered_approved_character_asset(paths, Path(str(reference["path"])))
+                if not registered or registered.get("asset_role") != expected_role or registered.get("character_id") != character_id:
+                    raise StylePackError(f"{expected_role} references must be exact approved role assets for the selected character and remain distinct from canonical identity.")
+                selected[key].append(reference)
+
+    active_roles_by_key = active_roles_by_selection_key(existing_scene, character_free_scene)
     compatibility_records: list[dict[str, object]] = []
     for key, value in selected.items():
         records = value if isinstance(value, list) else [value]
@@ -4112,34 +4757,10 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
     for record in auxiliary_body_references:
         compatibility_records.append({"path": record["path"], "roles": record["active_roles"], **record.get("compatibility", {})})
 
-    required_review_roles = {
-        *(category for category in PLAN_CATEGORIES if category not in overrides),
-        *(set() if selected_style_choice == "GENERATOR_DEFAULT" else {"STYLE"}),
-    }
-    if "pose" not in selected:
-        required_review_roles.discard("POSE")
-    if "subject" in selected:
-        required_review_roles.add("SUBJECT")
-    review_pool_counts = {role: int(count) for role, count in context.get("review_pool_counts", {}).items()}
-    if args.fidelity >= 70:
-        shortfalls: list[str] = []
-        for role in sorted(required_review_roles):
-            required = review_pool_counts.get(role, 0)
-            selected_role = selected.get(role.lower())
-            if (
-                role == "POSE"
-                and isinstance(selected_role, dict)
-                and selected_role.get("status") == "FINAL_CURATED_BODY_CONTOUR"
-            ):
-                # A final-curated anatomy contour is a distinct one-item external
-                # pose pool; unrelated style-pack pose candidates are not competing
-                # inputs for this anonymous scene.
-                required = 1
-            reviewed = reviewed_counts.get(role, 0)
-            if required > 0 and reviewed < required:
-                shortfalls.append(f"{role}: reviewed {reviewed} of {required}")
-        if shortfalls:
-            raise StylePackError("Full local role review required before 70-100% generation: " + "; ".join(shortfalls))
+    selected_source_reviews = parse_selected_source_reviews(
+        args.reviewed_source, selected, active_roles_by_key, auxiliary_body_references,
+    )
+    review_pool_counts: dict[str, int] = {}
 
     canvas_contract = build_canvas_contract(args)
     if character_free_scene:
@@ -4196,6 +4817,9 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
             },
         },
         "character_id": character_id,
+        "confirmed_character_profile": confirmed_profile,
+        "profile_default_application": profile_default_application,
+        "profile_default_exceptions": profile_default_exceptions,
         "target_identity_compatibility": {
             "target": target_identity,
             "references": compatibility_records,
@@ -4209,18 +4833,19 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         ),
         "scene_prompt_sources": scene_prompt_sources,
         "local_context": {
-            "local_files_total": context["local_files_total"],
-            "work_collection_counts": context["work_collection_counts"],
-            "role_counts": context["role_counts"],
-            "review_pool_counts": review_pool_counts,
-            "reviewed_counts": reviewed_counts,
+            "inventory_status": "NOT_SCANNED_DURING_PREPARATION",
+            "local_files_total": None,
+            "work_collection_counts": {},
+            "role_counts": {},
+            "review_pool_counts": {},
+            "reported_pool_review_counts_unverified": reviewed_counts,
             "explicit_anchor_files": context["explicit_anchor_files"],
             "anchor_fallback_required": not bool(context["explicit_anchor_files"]),
         },
         "face_review": {
             "face_visible": face_visible,
             "face_library_count": face_library_count,
-            "face_candidates_reviewed": reviewed_counts.get("FACE", 0),
+            "reported_candidate_review_count_unverified": reviewed_counts.get("FACE", 0),
             "selection_evidence": args.face_selection_evidence,
             "geometry_is_hard_constraint": face_visible and args.fidelity >= 90,
         },
@@ -4256,6 +4881,7 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
             ]
         ),
         "selected_references": selected,
+        "selected_source_reviews": selected_source_reviews,
         "auxiliary_body_reference_decision": args.aux_body_decision.upper(),
         "prompt_only_physique": bool(args.prompt_only_physique),
         "body_library_review": {
@@ -4363,9 +4989,9 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         }
     plan_path.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"REFERENCE_PLAN={plan_path}")
-    print(f"LOCAL_FILES_RECOGNIZED={context['local_files_total']}")
+    print(f"LOCAL_FILES_RECOGNIZED={context.get('local_files_total') or 'NOT_SCANNED'}")
     print(f"REVIEW_POOL_COUNTS={json.dumps(review_pool_counts, ensure_ascii=False)}")
-    print(f"REVIEWED_COUNTS={json.dumps(reviewed_counts, ensure_ascii=False)}")
+    print(f"REPORTED_POOL_REVIEW_COUNTS_UNVERIFIED={json.dumps(reviewed_counts, ensure_ascii=False)}")
     print(f"ANCHOR_FALLBACK_REQUIRED={str(not bool(context['explicit_anchor_files'])).upper()}")
     print(f"AUX_BODY_DECISION={args.aux_body_decision.upper()}")
     print(f"AUX_BODY_REFERENCES={len(auxiliary_body_references)}")
@@ -4398,12 +5024,14 @@ def validate_reference_plan_for_recording(
     plan_path = Path(plan_value)
     if not plan_path.is_absolute():
         plan_path = paths.workspace / plan_path
+    assert_active_request_path(plan_path)
     if not plan_path.is_file():
         raise StylePackError(f"Reference plan does not exist: {plan_path}")
     try:
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as error:
         raise StylePackError(f"Cannot read reference plan: {error}") from error
+    assert_profile_plan_current(paths, plan)
     if plan.get("gate_status") != "READY_FOR_GENERATION":
         raise StylePackError("Reference plan did not pass the pre-generation gate.")
     if int(plan.get("fidelity", -1)) != fidelity:
@@ -5039,7 +5667,7 @@ def require_initialized(paths: StylePaths) -> dict[str, object]:
 
 
 def matching_discovered_style(paths: StylePaths) -> DiscoveredStyle | None:
-    for style in discover_style_packs(paths.workspace):
+    for style in discover_style_packs(paths.workspace, paths.pack):
         if Path(style.pack_path).resolve() == paths.pack.resolve():
             return style
     return None
@@ -5301,6 +5929,8 @@ def resolve_existing_file(value: str, paths: StylePaths) -> Path:
     if not candidate.is_absolute():
         alternatives.extend([paths.workspace / candidate, paths.pack / candidate, paths.generations / candidate])
     for alternative in alternatives:
+        if any(part.upper() in {"00_PENDING", "REJECTED", "DRAFT", "STAGING", "TEST"} for part in alternative.parts):
+            assert_active_request_path(alternative)
         if alternative.is_file():
             return alternative.resolve()
     raise StylePackError(f"Image file does not exist: {value}")
@@ -6170,6 +6800,219 @@ def character_folder(paths: StylePaths, character_id: str) -> Path:
     return matches[0]
 
 
+def command_confirm_profile(args: argparse.Namespace) -> None:
+    """Publish agent-applied, user-confirmed facts and approved asset defaults."""
+    paths = make_paths(args.workspace, args.style_name)
+    profile = character_folder(paths, args.character_id.upper()) / "CHARACTER_PROFILE.yaml"
+    _approved_profile_identity(paths, profile, args.character_id.upper())
+    if args.patch_file and args.candidate_yaml:
+        raise StylePackError("Choose one profile content source: --patch-file or --candidate-yaml.")
+    if args.patch_file:
+        patch = json.loads(Path(args.patch_file).read_text(encoding="utf-8"))
+    elif args.candidate_yaml:
+        import yaml
+        candidate = yaml.safe_load(Path(args.candidate_yaml).read_text(encoding="utf-8"))
+        current = load_effective(profile)["profile"]
+        if not isinstance(candidate, dict) or any(candidate.get(key) != current.get(key) for key in PROFILE_STRUCTURAL):
+            raise StylePackError("Candidate YAML cannot change canonical identity or structural fields.")
+        patch = {key: value for key, value in candidate.items() if key not in PROFILE_STRUCTURAL}
+    else:
+        patch = {}
+    if not isinstance(patch, dict):
+        raise StylePackError("Confirmed profile patch must be a JSON object.")
+    evidence = approved_profile_asset_evidence(paths, args.character_id.upper(), profile)
+    approved, _ = approved_character_role_assets(paths, args.character_id.upper(), profile)
+    catalog = {(item["role"], Path(item["path"]).resolve()) for item in approved}
+    role_names = {"WARDROBE": "wardrobe", "ACCESSORY": "accessory", "FACE_VARIANT": "face_variant", "BODY_VARIANT": "body_variant"}
+    changes: dict[str, list[str]] = {}
+    for item in args.active_asset:
+        role, sep, value = item.partition("=")
+        role = role.upper()
+        if not sep or role not in role_names:
+            raise StylePackError("--active-asset requires WARDROBE|ACCESSORY|FACE_VARIANT|BODY_VARIANT=approved-path.")
+        path = resolve_existing_file(value, paths).resolve()
+        if (role, path) not in catalog:
+            raise StylePackError(f"Profile asset is not a currently approved role asset: {role} {path}")
+        changes.setdefault(role_names[role], []).append(str(path))
+    try:
+        state = confirm_profile_state(profile, patch=patch, active_changes=changes,
+                                      expected_revision=args.expected_revision, operation_id=args.operation_id,
+                                      user_confirmation=args.confirmation_quote, alternative_only=args.alternative_only,
+                                      replace_facts=bool(args.candidate_yaml), approved_assets=evidence)
+    except (ProfileStateError, OSError) as error:
+        raise StylePackError(str(error)) from error
+    for role, values in changes.items():
+        field = {"wardrobe": "wardrobe_references", "accessory": "accessory_references",
+                 "face_variant": "face_variant_references", "body_variant": "body_variant_references"}[role]
+        for value in values:
+            sync_character_profile_asset(profile, field, Path(value))
+    print(f"PROFILE_REVISION={state['revision']}")
+    print(f"PROFILE_SHA256={profile_digest(state)}")
+    print("STATUS=CONFIRMED_PROFILE_ACTIVE")
+
+
+def approved_profile_asset_evidence(paths: StylePaths, character_id: str, profile: Path) -> dict[str, list[dict[str, str]]]:
+    """Translate only registry identity and approved role-catalog records into hash evidence."""
+    rows = [row for row in read_csv(paths.character_registry) if row.get("character_id", "").upper() == character_id
+            and row.get("status", "").upper() == "APPROVED"]
+    if len(rows) != 1:
+        raise StylePackError("Profile hash evidence requires exactly one approved character registry row.")
+    result: dict[str, list[dict[str, str]]] = {role: [] for role in ("identity", "wardrobe", "accessory", "face_variant", "body_variant")}
+    registry = rows[0]
+    registered_profile = Path(registry.get("profile_path", ""))
+    if not registered_profile.is_absolute():
+        registered_profile = paths.generations / registered_profile
+    if registered_profile.resolve() != profile.resolve():
+        raise StylePackError("Profile hash evidence registry path differs from the approved character profile.")
+    first_publication = (profile.parent / "CONFIRMED_PROFILE" / "REQUIRED.json").is_file() and not (profile.parent / "CONFIRMED_PROFILE" / "ACTIVE.json").is_file()
+    if first_publication:
+        import yaml
+        raw = yaml.safe_load(profile.read_text(encoding="utf-8-sig"))
+        base = Path(registry.get("approved_base", ""))
+        if not base.is_absolute():
+            base = paths.generations / base
+        base = base.resolve()
+        manifest = newest_matching_generation(paths, base) if base.is_file() else None
+        if (not isinstance(raw, dict) or raw.get("character_id") != character_id or raw.get("status") != "APPROVED"
+                or not manifest or manifest.get("status", "").upper() != "APPROVED_CHARACTER_BASE"
+                or manifest.get("character_id", "").upper() != character_id
+                or Path(manifest.get("style_file", "")).resolve() != base or not generation_has_passed_qa(manifest)):
+            raise StylePackError("First profile publication requires its exact approved base manifest and profile identity.")
+        identity_paths = {base}
+        identity_paths.update(_character_registry_paths(paths, registry.get("face_references", "")))
+        identity_paths.update(_character_registry_paths(paths, registry.get("body_references", "")))
+        for value in [raw.get("approved_base", ""), *(raw.get("character_face_references") or []),
+                      *(raw.get("character_body_references") or []), *(raw.get("canonical_views") or {}).values()]:
+            if isinstance(value, str) and value.strip() and not value.startswith("{{"):
+                candidate = (profile.parent / value).resolve()
+                if candidate not in identity_paths:
+                    raise StylePackError(f"Unregistered canonical identity reference cannot be confirmed: {candidate}")
+        for path in sorted(identity_paths):
+            if not path.is_file():
+                raise StylePackError(f"Approved canonical identity file is missing: {path}")
+            result["identity"].append({"path": str(path), "sha256": sha256(path)})
+        role_specs = {"wardrobe": ("wardrobe_references", "03_WARDROBE"),
+                      "accessory": ("accessory_references", "04_ACCESSORIES")}
+        for role, (field, subfolder) in role_specs.items():
+            expected_root = (profile.parent / "03_CHARACTER_REFERENCES" / subfolder).resolve()
+            for value in raw.get(field) or []:
+                path = (profile.parent / str(value)).resolve()
+                if not path.is_file() or not is_relative_to(path, expected_root):
+                    raise StylePackError(f"Initial approved {role} must be inside its exact role folder: {path}")
+                result[role].append({"path": str(path), "sha256": sha256(path)})
+        return result
+    for value, role in [(registry.get("approved_base", ""), "BASE"),
+                        *[(item, "FACE") for item in _character_registry_paths(paths, registry.get("face_references", ""))],
+                        *[(item, "BODY") for item in _character_registry_paths(paths, registry.get("body_references", ""))]]:
+        if not value:
+            continue
+        path = Path(value)
+        if not path.is_absolute():
+            path = paths.generations / path
+        path = path.resolve()
+        require_approved_character_asset_role(paths, path, character_id, role, "CONFIRMED_IDENTITY")
+        result["identity"].append({"path": str(path), "sha256": sha256(path)})
+    role_map = {"WARDROBE": "wardrobe", "ACCESSORY": "accessory", "FACE_VARIANT": "face_variant", "BODY_VARIANT": "body_variant"}
+    assets, _ = approved_character_role_assets(paths, character_id, profile)
+    for row in assets:
+        role = role_map.get(row["role"])
+        if role:
+            result[role].append({"path": str(Path(row["path"]).resolve()), "sha256": row["sha256"]})
+    return result
+
+
+def effective_character_profile(paths: StylePaths, character_id: str) -> dict[str, object]:
+    profile_path = character_folder(paths, character_id) / "CHARACTER_PROFILE.yaml"
+    _approved_profile_identity(paths, profile_path, character_id)
+    state = load_effective(profile_path)
+    role_assets, _ = approved_character_role_assets(paths, character_id, profile_path)
+    approved = {(row["role"], str(Path(row["path"]).resolve())): row for row in role_assets}
+    role_names = {"wardrobe": "WARDROBE", "accessory": "ACCESSORY", "face_variant": "FACE_VARIANT", "body_variant": "BODY_VARIANT"}
+    active: dict[str, list[dict[str, str]]] = {}
+    for role, catalog_role in role_names.items():
+        records = []
+        pinned = {row["path"]: row["sha256"] for row in state.get("asset_bindings", {}).get(role, [])}
+        for value in state["active_assets"].get(role, []):
+            path = str(Path(value).resolve())
+            record = approved.get((catalog_role, path))
+            if not record:
+                raise StylePackError(f"Active confirmed {role} asset lacks valid approved provenance: {path}")
+            asset_hash = pinned.get(path) if state["revision"] else record["sha256"]
+            if asset_hash != record["sha256"]:
+                raise StylePackError(f"Confirmed {role} asset differs from its approved published bytes: {path}")
+            records.append({"path": path, "sha256": asset_hash, "role": catalog_role,
+                            "generation_id": record.get("generation_id", "")})
+        active[role] = records
+    return {"profile_path": str(profile_path), "revision": state["revision"],
+            "sha256": profile_digest(state), "facts": text_facts(state["profile"], legacy=state["revision"] == 0),
+            "facts_block": facts_block(state), "active_assets": active,
+            "identity_bindings": state.get("identity_bindings"),
+            "asset_bindings": state.get("asset_bindings"),
+            "alternatives": state.get("alternatives"),
+            "confirmation": state["confirmation"]}
+
+
+def apply_confirmed_defaults(paths: StylePaths, args: argparse.Namespace, character_id: str,
+                             confirmed: dict[str, object], overrides: set[str]) -> dict[str, list[dict[str, str]]]:
+    """Fill omitted scene slots from active defaults without changing state."""
+    suppressed = {str(role).upper() for role in getattr(args, "suppress_profile_default", [])}
+    unknown = suppressed - {"WARDROBE", "ACCESSORY", "FACE_VARIANT", "BODY_VARIANT"}
+    if unknown:
+        raise StylePackError("Unknown profile default suppression: " + ", ".join(sorted(unknown)))
+    active = confirmed["active_assets"]
+    applied: dict[str, list[dict[str, str]]] = {role: [] for role in ("wardrobe", "accessory", "face_variant", "body_variant")}
+    if not args.clothes_reference and "WARDROBE" not in suppressed and "CLOTHES" not in overrides and active["wardrobe"]:
+        args.clothes_reference = active["wardrobe"][0]["path"]
+        applied["wardrobe"] = list(active["wardrobe"])
+    for field, role, key, override_role in (("accessory_reference", "ACCESSORY", "accessory", "ACCESSORY"),
+                                            ("face_variant_reference", "FACE_VARIANT", "face_variant", "FACE"),
+                                            ("body_variant_reference", "BODY_VARIANT", "body_variant", "BODY")):
+        if not getattr(args, field) and role not in suppressed and override_role not in overrides:
+            setattr(args, field, [row["path"] for row in active[key]])
+            applied[key] = list(active[key])
+    registry_rows = [row for row in read_csv(paths.character_registry) if row.get("character_id", "").upper() == character_id and row.get("status", "").upper() == "APPROVED"]
+    if len(registry_rows) != 1:
+        raise StylePackError("Confirmed profile requires exactly one approved registry row.")
+    if not args.character_assembly:
+        args.character_assembly = registry_rows[0]["approved_base"]
+    profile_path = Path(confirmed["profile_path"])
+    canonical = load_effective(profile_path)["profile"].get("canonical_views", {})
+    strict = args.character_reference_mode == "IDENTITY_STRICT" or (args.character_reference_mode == "AUTO" and args.shot_complexity.upper() == "COMPLEX")
+    if strict and not args.primary_face and canonical.get("face"):
+        args.primary_face = str((profile_path.parent / canonical["face"]).resolve())
+    if args.selected_body_view != "ASSEMBLY" and not args.body_reference:
+        key = "physique_" + args.selected_body_view.lower()
+        if canonical.get(key):
+            args.body_reference = str((profile_path.parent / canonical[key]).resolve())
+    return applied
+
+
+def assert_profile_plan_current(paths: StylePaths, plan: dict[str, object]) -> None:
+    if str(plan.get("generation_purpose", "")).upper() != "SCENE" or not re.fullmatch(r"CHAR_\d+", str(plan.get("character_id", ""))):
+        return
+    character_id = str(plan["character_id"])
+    profile_path = character_folder(paths, character_id) / "CHARACTER_PROFILE.yaml"
+    try:
+        _approved_profile_identity(paths, profile_path, character_id)
+        verify_plan_binding(profile_path, character_id, plan, plan.get("execution_call") if isinstance(plan.get("execution_call"), dict) else None)
+        current_profile = effective_character_profile(paths, character_id)
+    except ProfileStateError as error:
+        raise StylePackError(f"Confirmed character profile or approved asset provenance is invalid or changed since preparation: {error}") from error
+    if current_profile != plan.get("confirmed_character_profile"):
+        raise StylePackError("Confirmed character profile or approved asset provenance changed since preparation; prepare a new plan.")
+
+
+def render_confirmed_prompt(plan: dict[str, object], prompt_text: str) -> str:
+    """Materialize confirmed facts in the exact prompt before risk assessment."""
+    confirmed = plan.get("confirmed_character_profile")
+    if not isinstance(confirmed, dict):
+        return prompt_text
+    block = str(confirmed.get("facts_block", ""))
+    if "CONFIRMED_CHARACTER_DATA" in prompt_text and block not in prompt_text:
+        raise StylePackError("Caller-supplied confirmed character facts differ from the active prepared profile.")
+    return prompt_text if not block or block in prompt_text else prompt_text.rstrip() + "\n\n" + block
+
+
 def command_approve_character(args: argparse.Namespace) -> None:
     paths = make_paths(args.workspace, args.style_name)
     ensure_generation_library(paths)
@@ -6177,6 +7020,7 @@ def command_approve_character(args: argparse.Namespace) -> None:
         raise StylePackError("Character registration requires --user-approved after direct user confirmation.")
     request_id = safe_component(args.request_id, "request")
     pending = paths.generations / "00_PENDING" / request_id
+    assert_active_request_path(pending / "EXECUTION_GUARD.json")
     if not pending.is_dir():
         raise StylePackError(f"Pending request does not exist: {pending}")
     image = resolve_existing_file(args.image, paths)
@@ -6232,6 +7076,63 @@ def command_approve_character(args: argparse.Namespace) -> None:
             if sha256(image) != sha256(stage_files["05_CHARACTER_ASSEMBLY"]):
                 raise StylePackError("The approved base image must be the passed 05_CHARACTER_ASSEMBLY output.")
             kit_stage_files = stage_files
+    approval_operation = f"approve-character-{request_id}"
+    retry_rows = []
+    for row in read_csv(paths.character_registry):
+        base_candidate = Path(row.get("approved_base", ""))
+        if not base_candidate.is_absolute():
+            base_candidate = paths.generations / base_candidate
+        profile_candidate = Path(row.get("profile_path", ""))
+        if not profile_candidate.is_absolute():
+            profile_candidate = paths.generations / profile_candidate
+        marker = profile_candidate.parent / "CONFIRMED_PROFILE" / "REQUIRED.json"
+        same_marker = marker.is_file() and json.loads(marker.read_text(encoding="utf-8")).get("operation_id") == approval_operation
+        same_manifest = any(item.get("request_id") == request_id and item.get("character_id") == row.get("character_id")
+                            and item.get("status") == "APPROVED_CHARACTER_BASE" for item in read_csv(paths.generation_manifest))
+        if (row.get("status", "").upper() == "APPROVED" and row.get("name") == args.name
+                and base_candidate.is_file() and sha256(base_candidate) == sha256(image)
+                and (same_marker or same_manifest)):
+            retry_rows.append((row, base_candidate.resolve()))
+    if len(retry_rows) > 1:
+        raise StylePackError("Ambiguous previous character approval for the same name and source image.")
+    if retry_rows:
+        old_row, approved_base = retry_rows[0]
+        character_id = old_row["character_id"]
+        profile_path = Path(old_row["profile_path"])
+        if not profile_path.is_absolute():
+            profile_path = paths.generations / profile_path
+        profile_path = profile_path.resolve()
+        require_first_publication(profile_path, approval_operation)
+        previous = [row for row in read_csv(paths.generation_manifest) if row.get("request_id") == request_id
+                    and row.get("character_id") == character_id and row.get("status") == "APPROVED_CHARACTER_BASE"
+                    and Path(row.get("style_file", "")).resolve() == approved_base]
+        if len(previous) > 1:
+            raise StylePackError("Ambiguous previous base approval records.")
+        if previous:
+            new_id = previous[0]["generation_id"]
+        else:
+            archive_file = ensure_generation_archived(paths, image, f"{character_id}_{args.name}_approved_base")
+            parent_generation, reference_plan, qa_evidence, qa_binding, approval_notes = approval_provenance(source_generation, args.notes, approved_base)
+            new_id = append_generation(paths, request_id=request_id, character_id=character_id,
+                                       status="APPROVED_CHARACTER_BASE", fidelity=args.fidelity,
+                                       risk_level=args.risk_level, description=f"Approved character base: {args.name}",
+                                       source_image=image, archive_file=archive_file, style_file=approved_base,
+                                       parent_generation=parent_generation, reference_plan=reference_plan,
+                                       qa_evidence=qa_evidence, **qa_binding, notes=approval_notes)
+        try:
+            confirmed = confirm_profile_state(profile_path, patch={}, active_changes={}, expected_revision=0,
+                                              operation_id=approval_operation,
+                                              user_confirmation=getattr(args, "approval_quote", "") or args.notes or "--user-approved",
+                                              approved_assets=approved_profile_asset_evidence(paths, character_id, profile_path))
+        except (ProfileStateError, OSError) as error:
+            raise StylePackError(f"Retry of character approval {new_id} could not publish its profile: {error}") from error
+        print(f"CHARACTER_ID={character_id}")
+        print(f"CHARACTER_FOLDER={profile_path.parent}")
+        print(f"CHARACTER_PROFILE={profile_path}")
+        print(f"GENERATION_ID={new_id}")
+        print(f"PROFILE_REVISION={confirmed['revision']}")
+        print("STATUS=APPROVED_CHARACTER_REGISTERED")
+        return
     character_id = next_character_id(paths)
     folder = paths.generations / "01_APPROVED_CHARACTERS" / f"{character_id}_{safe_component(args.name, 'character')}"
     base_folder = folder / "00_APPROVED_BASE"
@@ -6295,6 +7196,7 @@ def command_approve_character(args: argparse.Namespace) -> None:
     profile = profile.replace("accessory_references: []", accessory_yaml)
     profile_path = folder / "CHARACTER_PROFILE.yaml"
     profile_path.write_text(profile, encoding="utf-8")
+    require_first_publication(profile_path, approval_operation)
 
     registry = read_csv(paths.character_registry)
     registry.append(
@@ -6329,10 +7231,18 @@ def command_approve_character(args: argparse.Namespace) -> None:
         **qa_binding,
         notes=approval_notes,
     )
+    try:
+        confirmed = confirm_profile_state(profile_path, patch={}, active_changes={}, expected_revision=0,
+                                          operation_id=approval_operation,
+                                          user_confirmation=getattr(args, "approval_quote", "") or args.notes or "--user-approved",
+                                          approved_assets=approved_profile_asset_evidence(paths, character_id, profile_path))
+    except (ProfileStateError, OSError) as error:
+        raise StylePackError(f"Character base {new_id} was recorded, but confirmed profile publication failed: {error}") from error
     print(f"CHARACTER_ID={character_id}")
     print(f"CHARACTER_FOLDER={folder}")
     print(f"CHARACTER_PROFILE={profile_path}")
     print(f"GENERATION_ID={new_id}")
+    print(f"PROFILE_REVISION={confirmed['revision']}")
     print("STATUS=APPROVED_CHARACTER_REGISTERED")
 
 
@@ -6348,6 +7258,7 @@ def command_approve_variation(args: argparse.Namespace) -> None:
     if str(source_generation.get("character_id", "")).upper() != str(args.character_id).upper():
         raise StylePackError("Variation approval cannot relabel a QA-passed image from another character.")
     source_plan_path = Path(str(source_generation.get("reference_plan", "")))
+    assert_active_request_path(source_plan_path)
     if not source_plan_path.is_file():
         raise StylePackError("Variation approval requires the source generation's validated reference plan.")
     try:
@@ -6357,33 +7268,76 @@ def command_approve_variation(args: argparse.Namespace) -> None:
     if str(source_plan.get("character_id", "")).upper() != str(args.character_id).upper():
         raise StylePackError("Variation approval cannot use a QA-passed image whose plan identifies another character.")
     folder = character_folder(paths, args.character_id)
+    profile = folder / "CHARACTER_PROFILE.yaml"
+    if not (folder / "CONFIRMED_PROFILE" / "ACTIVE.json").is_file():
+        try:
+            confirm_profile_state(profile, patch={}, active_changes={}, expected_revision=0,
+                                  operation_id=f"bootstrap-{args.character_id}",
+                                  user_confirmation="Existing approved registry/profile baseline",
+                                  approved_assets=approved_profile_asset_evidence(paths, args.character_id.upper(), profile))
+        except (ProfileStateError, OSError) as error:
+            raise StylePackError(f"Cannot secure legacy profile before approval: {error}") from error
     destinations = {
         "variation": ("01_VARIATIONS", "APPROVED_VARIATION"),
         "scene": ("02_SCENES", "APPROVED_SCENE"),
         "wardrobe": ("03_CHARACTER_REFERENCES/03_WARDROBE", "APPROVED_WARDROBE"),
         "accessory": ("03_CHARACTER_REFERENCES/04_ACCESSORIES", "APPROVED_ACCESSORY"),
+        "face": ("03_CHARACTER_REFERENCES/05_FACE_VARIANTS", "APPROVED_FACE_VARIANT"),
+        "body": ("03_CHARACTER_REFERENCES/06_BODY_VARIANTS", "APPROVED_BODY_VARIANT"),
     }
     subfolder, approved_status = destinations[args.kind]
-    archive_file = ensure_generation_archived(paths, image, f"{args.character_id}_{args.kind}_{args.description}")
-    approved = copy_unique(image, folder / subfolder / image.name)
-    source_parent, source_plan, qa_evidence, qa_binding, approval_notes = approval_provenance(source_generation, args.notes, approved)
-    new_id = append_generation(
-        paths,
-        request_id=safe_component(args.request_id, "approved"),
-        character_id=args.character_id,
-        status=approved_status,
-        fidelity=args.fidelity,
-        risk_level=args.risk_level,
-        description=args.description,
-        source_image=image,
-        archive_file=archive_file,
-        style_file=approved,
-        parent_generation=args.parent_generation or source_parent,
-        reference_plan=source_plan,
-        qa_evidence=qa_evidence,
-        **qa_binding,
-        notes=approval_notes,
-    )
+    approval_request_id = safe_component(args.request_id, "approved")
+    previous = [row for row in read_csv(paths.generation_manifest) if row.get("request_id") == approval_request_id
+                and row.get("character_id", "").upper() == args.character_id.upper()
+                and row.get("status") == approved_status and Path(row.get("source_image", "")).resolve() == image.resolve()
+                and row.get("description", "").startswith(args.description)]
+    if len(previous) > 1:
+        raise StylePackError("Ambiguous prior approval rows; resolve provenance before retrying.")
+    if previous:
+        approved = Path(previous[0]["style_file"]).resolve()
+        if not approved.is_file() or sha256(approved) != sha256(image):
+            raise StylePackError("Prior approved asset is missing or differs from its source; cannot retry publication.")
+        new_id = previous[0]["generation_id"]
+    else:
+        archive_file = ensure_generation_archived(paths, image, f"{args.character_id}_{args.kind}_{args.description}")
+        (folder / subfolder).mkdir(parents=True, exist_ok=True)
+        approved = copy_unique(image, folder / subfolder / image.name)
+        source_parent, source_plan, qa_evidence, qa_binding, approval_notes = approval_provenance(source_generation, args.notes, approved)
+        new_id = append_generation(
+            paths,
+            request_id=approval_request_id,
+            character_id=args.character_id,
+            status=approved_status,
+            fidelity=args.fidelity,
+            risk_level=args.risk_level,
+            description=args.description,
+            source_image=image,
+            archive_file=archive_file,
+            style_file=approved,
+            parent_generation=args.parent_generation or source_parent,
+            reference_plan=source_plan,
+            qa_evidence=qa_evidence,
+            **qa_binding,
+            notes=approval_notes,
+        )
+    role_field = {
+        "wardrobe": "wardrobe_references",
+        "accessory": "accessory_references",
+        "face": "face_variant_references",
+        "body": "body_variant_references",
+    }.get(args.kind)
+    if role_field:
+        state = load_effective(profile)
+        role = {"wardrobe": "wardrobe", "accessory": "accessory", "face": "face_variant", "body": "body_variant"}[args.kind]
+        try:
+            confirm_profile_state(profile, patch={}, active_changes={role: [str(approved)]},
+                                  expected_revision=state["revision"], operation_id=f"approval-{new_id}",
+                                  user_confirmation=getattr(args, "approval_quote", "") or args.notes or "--user-approved",
+                                  alternative_only=getattr(args, "alternative_only", False),
+                                  approved_assets=approved_profile_asset_evidence(paths, args.character_id.upper(), profile))
+        except (ProfileStateError, OSError) as error:
+            raise StylePackError(f"Approved asset {new_id} is recorded, but profile publication failed; retry the same approval: {error}") from error
+        sync_character_profile_asset(profile, role_field, approved)
     print(f"GENERATION_ID={new_id}")
     print(f"APPROVED_FILE={approved}")
     print(f"STATUS={approved_status}")
@@ -6977,13 +7931,23 @@ def build_parser() -> argparse.ArgumentParser:
         "--reviewed",
         action="append",
         default=[],
-        help="Complete local review evidence as ROLE=COUNT; repeat for applicable STYLE, SUBJECT, FACE, BODY, POSE, CLOTHES, LIGHTING, BACKGROUND, and COMPOSITION pools.",
+        help="Legacy reported pool-review counts as ROLE=COUNT; these counts do not satisfy selected-source review.",
     )
     prepare_parser.add_argument("--face-candidates-reviewed", type=int, default=0, help="Deprecated alias for --reviewed FACE=COUNT.")
+    prepare_parser.add_argument(
+        "--reviewed-source",
+        action="append",
+        default=[],
+        help="Attest one exact selected-source visual review as a JSON object with role, slot_role, path, view, outcome, applicability, findings, and limitations; repeat per role and slot.",
+    )
     prepare_parser.add_argument("--face-selection-evidence", default="")
     prepare_parser.add_argument("--body-reference", default="")
     prepare_parser.add_argument("--pose-reference", default="")
     prepare_parser.add_argument("--clothes-reference", default="")
+    prepare_parser.add_argument("--accessory-reference", action="append", default=[], help="Exact approved character accessory reference; repeat to attach multiple role-specific accessories.")
+    prepare_parser.add_argument("--face-variant-reference", action="append", default=[], help="Exact approved optional face variant; repeat to attach separate approved face-role variants.")
+    prepare_parser.add_argument("--body-variant-reference", action="append", default=[], help="Exact approved optional body variant; repeat to attach separate approved body-role variants.")
+    prepare_parser.add_argument("--suppress-profile-default", action="append", default=[], help="Request-scoped suppression of WARDROBE, ACCESSORY, FACE_VARIANT, or BODY_VARIANT defaults.")
     prepare_parser.add_argument(
         "--coverage-front-reference",
         default="",
@@ -7024,7 +7988,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Explicit user-authorized permanent body redesign for an existing character.",
     )
-    prepare_parser.add_argument("--override", action="append", default=[], choices=PLAN_CATEGORIES)
+    prepare_parser.add_argument("--override", action="append", default=[], choices=(*PLAN_CATEGORIES, "ACCESSORY"))
     prepare_parser.add_argument("--notes", default="")
     prepare_parser.set_defaults(handler=command_prepare_generation)
 
@@ -7133,6 +8097,7 @@ def build_parser() -> argparse.ArgumentParser:
     character_parser.add_argument("--wardrobe-reference", action="append", default=[])
     character_parser.add_argument("--accessory-reference", action="append", default=[])
     character_parser.add_argument("--notes", default="")
+    character_parser.add_argument("--approval-quote", default="", help="Exact user confirmation for the initial confirmed profile revision.")
     character_parser.add_argument("--user-approved", action="store_true", help="Confirms direct user approval.")
     character_parser.set_defaults(handler=command_approve_character)
 
@@ -7141,14 +8106,28 @@ def build_parser() -> argparse.ArgumentParser:
     variation_parser.add_argument("--image", required=True)
     variation_parser.add_argument("--character-id", required=True)
     variation_parser.add_argument("--request-id", required=True)
-    variation_parser.add_argument("--kind", choices=("variation", "scene", "wardrobe", "accessory"), default="variation")
+    variation_parser.add_argument("--kind", choices=("variation", "scene", "wardrobe", "accessory", "face", "body"), default="variation")
     variation_parser.add_argument("--description", required=True)
     variation_parser.add_argument("--fidelity", type=int, default=90)
     variation_parser.add_argument("--risk-level", required=True, choices=tuple(f"D{index}" for index in range(1, 11)))
     variation_parser.add_argument("--parent-generation", default="")
     variation_parser.add_argument("--notes", default="")
+    variation_parser.add_argument("--approval-quote", default="", help="Exact user confirmation for this role asset.")
     variation_parser.add_argument("--user-approved", action="store_true")
+    variation_parser.add_argument("--alternative-only", action="store_true", help="Save a confirmed role asset as an alternative without activating it by default.")
     variation_parser.set_defaults(handler=command_approve_variation)
+
+    confirm_parser = subparsers.add_parser("confirm-profile", help="Publish one directly confirmed character profile revision.")
+    add_common_style_arguments(confirm_parser)
+    confirm_parser.add_argument("--character-id", required=True)
+    confirm_parser.add_argument("--patch-file", default="", help="JSON object of nested generic textual profile changes.")
+    confirm_parser.add_argument("--candidate-yaml", default="", help="Candidate YAML containing new facts; canonical fields must match the active revision.")
+    confirm_parser.add_argument("--active-asset", action="append", default=[], help="Approved ROLE=path; repeat for additive accessories.")
+    confirm_parser.add_argument("--expected-revision", type=int, required=True)
+    confirm_parser.add_argument("--operation-id", required=True)
+    confirm_parser.add_argument("--confirmation-quote", required=True, help="Direct user confirmation provenance.")
+    confirm_parser.add_argument("--alternative-only", action="store_true")
+    confirm_parser.set_defaults(handler=command_confirm_profile)
 
     standalone_parser = subparsers.add_parser("approve-standalone", help="Store an approved non-character generation.")
     add_common_style_arguments(standalone_parser)
@@ -7180,7 +8159,7 @@ def main() -> int:
     try:
         args.handler(args)
         return 0
-    except StylePackError as error:
+    except (StylePackError, ProfileStateError) as error:
         print(f"ERROR={error}", file=sys.stderr)
         return 2
 

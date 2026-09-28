@@ -1,5 +1,18 @@
 # Предохранитель выполнения StoryArt
 
+## Граница текущего чата
+
+Для изображений разрешены утверждённые папки проекта и одна активная папка
+текущего запроса. Нельзя перечислять, искать или открывать другие неутверждённые
+папки, даже для восстановления похожей сцены или проверки старого статуса.
+`CODEX_THREAD_ID` связывает новый guard с чатом; внешний индекс `.agent/chat_requests`
+проверяется до чтения guard/плана. Чужой или старый непривязанный запрос не
+переносится: создаётся новый уникальный запрос с нулевой историей попыток.
+При COMPLETE активная привязка освобождается, а владелец старой папки сохраняется.
+Выборы из текущего диалога сохраняются; старые планы из других папок не читаются.
+Профиль задаёт только название стиля. Процент и BODY_REFERENCE_LIBRARY требуют
+меню «Стиль и референсы», если пользователь ещё не выбрал их в этом чате.
+
 ## Авторизация пользователя при генерации
 
 Явная просьба пользователя авторизует запрошенную работу, но не невыбранные параметры. Сценарий StoryArt и доступные проектные инструменты обязательны по умолчанию. Перед вызовом генератора проверь историю текущего чата; уже выбранные параметры не спрашивай повторно. Для отсутствующих выборов используй существующий структурированный native context-menu chooser, а в Default mode — `request_user_input_async` со всеми независимыми пропущенными полями в одной форме. Не заменяй доступный chooser вопросом обычным текстом, не разделяй один выбор на последовательные вопросы, сохраняй полное соответствие каждого варианта параметрам и повторно используй chat-scoped выборы. Пользователь может явно выбрать native/default стиль и отсутствие optional references; молчание выбором не считается. Для названного project-персонажа approved identity references остаются обязательными. Разреши approved registry/profile и привяжи approved assembly и подходящие identity references к точному вызову. Если персонаж или нужные источники не найдены/не прикреплены, сообщи конкретный блокер и не подменяй персонажа. Выйти из сценария можно только по прямой просьбе пользователя, после конкретного предупреждения и подтверждения после него. Внешние ограничения платформы не обходятся.
@@ -115,72 +128,30 @@ python tools\task_execution_guard.py checkpoint --state "<path>\EXECUTION_GUARD.
 python tools\task_execution_guard.py checkpoint --state "<path>\EXECUTION_GUARD.json" --event EXECUTION_STARTED --summary "Generate the single requested native/default image." --output-contract REQUESTED_DELIVERABLE --execution-call "<path>\execution_call.json"
 ```
 
-Далее для каждой стадии reference-bound плана отдельно:
-
-1. `resolve-call --request-id ... --stage-id ...` разрешает только конкретные файлы текущей стадии и сохраняет `TECHNICAL_REFERENCES/RESOLVED_CALL_<stage>.json` с путями, хешами и ролями слотов.
-2. Рассчитай риск для точного текста промпта и физических слотов этого манифеста. Каждое вложение укажи с его текущими байтами, D-оценкой, причиной и активной ролью или ролями. Отчёт с другой формулировкой, хешем или назначением роли непригоден.
-3. `prepare-call --request-id ... --stage-id ... --prompt-text-file ... --risk-assessment ...` сверяет профиль, референс-политику и персонажа с точным выбранным вариантом меню, затем автоматически переносит выбор и исходную цитату в `execution_call.user_selections`. Для direct-confirmation или явно размеченного legacy-плана передай `--user-selections-json`; если complete menu mapping уже есть, повторный JSON запрещён как второй источник. Каждая запись содержит `choice` и точную `user_quote` из текущего чата. Неизвестные значения не подставляй и не выдумывай цитаты. Эта команда записывает `READY_FOR_EXECUTION` в guard с привязкой к стадии, тексту, выборам и хешам каждого файла/роли.
-
-Пример интерфейса менеджера для reference-bound IMAGE_GENERATION после показа нумерованного меню и выбора варианта 2. Замени шаблоны фактическими значениями проекта; записи `--startup-option` должны совпадать с реально показанными пунктами и их mapping:
+Для reference-bound плана используй один запуск подготовки:
 
 ```powershell
-python tools\style_pack_manager.py prepare-generation `
-  --workspace "<workspace>" `
-  --style-name "<style>" `
-  --request-id "<request-id>" `
-  --fidelity 90 `
-  --aux-body-decision DECLINED `
-  --startup-selection-mode USER_CONFIRMATION `
-  --startup-menu-surface TEXT_NUMBERED_MENU `
-  --startup-choice OPTION_2 `
-  --startup-choice-user-quote "2" `
-  --confirmed-chat-id "<current-chat-id>" `
-  --confirmed-message-id "<message-id-containing-choice>" `
-  --startup-option "OPTION_1=90% стиля <style> + использовать BODY_REFERENCE_LIBRARY (рекомендуемый профиль StoryArt); style=PROJECT_STYLE:<style>; reference_policy=BODY_LIBRARY_ONLY; character=NONE" `
-  --startup-option "OPTION_2=90% стиля <style>, без BODY_REFERENCE_LIBRARY; style=PROJECT_STYLE:<style>; reference_policy=PROJECT_STYLE_ONLY; character=NONE" `
-  --startup-option "OPTION_3=70% стиля <style>, без BODY_REFERENCE_LIBRARY — более свободная интерпретация; style=PROJECT_STYLE:<style>; reference_policy=PROJECT_STYLE_ONLY; character=NONE" `
-  --generation-purpose SCENE `
-  --scene-kind ARTIFACT `
-  --scene-output-use GENERAL_ART `
-  --scene-subject-from-prompt `
-  --style-reference "<local overall rendering reference>" `
-  --reviewed "STYLE=1"
-
-python tools\style_pack_manager.py resolve-call `
-  --workspace "<workspace>" `
-  --style-name "<style>" `
-  --request-id "<request-id>" `
-  --stage-id "SINGLE_PASS"
-
-python tools\generation_risk_assessor.py `
-  --prompt-file "<exact-prompt.txt>" `
-  --reference "<slot-path>::D2::0D::<reason>::<ACTIVE_ROLE[,ROLE...]>" `
-  --output "<risk-report.json>" `
-  --json
-
-python tools\style_pack_manager.py prepare-call `
-  --workspace "<workspace>" `
-  --style-name "<style>" `
-  --request-id "<request-id>" `
-  --stage-id "SINGLE_PASS" `
-  --prompt-text-file "<exact-prompt.txt>" `
-  --risk-assessment "<risk-report.json>"
+python tools/generation_request.py --request-file <request.json> --call-file <call.json>
 ```
+
+Схема JSON описана в `docs/EFFICIENT_WORKFLOW.md`, раздел One preparation request.
+Команда сама выполняет prepare-generation, resolve-call, оценку точного промпта
+и вложений, prepare-call и READY_FOR_EXECUTION. Не повторяй эти команды отдельно
+и не добавляй validate-only. Для исправления только вызова используй
+`--finalize-only`; для уже READY многоэтапного плана укажи stage_id.
+Самостоятельные команды менеджера остаются для адресного восстановления ошибки.
 
 Не начинай подготовку следующей обязательной стадии до QA и регистрации текущей. У нового `CHARACTER_BASE` сохраняются все пять этапов: `FACE_IDENTITY`, `PHYSIQUE_FRONT`, `PHYSIQUE_SIDE`, `PHYSIQUE_BACK`, `CHARACTER_ASSEMBLY`.
 
 ### 5. Непосредственно перед генератором
 
-После `prepare-call` можно записать один `CALL_VALIDATED` как отдельную последнюю проверку. Также разрешён прямой `EXECUTION_STARTED` после `READY_FOR_EXECUTION`. В обоих случаях используй тот же `REFERENCE_PLAN.json` и стадию. Guard сверяет точный промпт и хеши файлов/ролей, проверяет отсутствие активной попытки и возвращает уникальный `active_attempt.attempt_id`. Для дополнительных изображений по отдельной прямой просьбе сохраняются `--output-contract USER_REQUESTED_EXTRA`, `--user-approved-extra-generation` и точная цитата через `--extra-generation-evidence`.
+После READY_FOR_EXECUTION сразу выполняй EXECUTION_STARTED с тем же планом
+и стадией. Этот переход проверяет актуальные байты, промпт и отсутствие активной
+попытки. Отдельный CALL_VALIDATED в обычном маршруте не нужен.
 
 Не создавай вспомогательное изображение или варианты для запроса одной сцены. Манекен, маска, таблица пропорций, тест топологии и другой незапрошенный арт не разрешены из-за QA или риска модерации. Для внутренней проверки используй измерения и оверлеи. Перед генерацией сверяй все закреплённые инварианты.
 
 ```powershell
-python tools\task_execution_guard.py checkpoint `
-  --state "<path>\EXECUTION_GUARD.json" `
-  --event CALL_VALIDATED `
-  --summary "Точный вызов подготовлен для запуска."
-
 python tools\task_execution_guard.py checkpoint `
   --state "<path>\EXECUTION_GUARD.json" `
   --event EXECUTION_STARTED `
@@ -192,7 +163,7 @@ python tools\task_execution_guard.py checkpoint `
 
 `--visual-review-json` относится к записи результата `record-generation`, а не к событию `EXECUTION_STARTED`.
 
-Пример выше включает необязательную отдельную запись `CALL_VALIDATED`; её можно пропустить и сразу выполнить `EXECUTION_STARTED` после `READY_FOR_EXECUTION`. Команда возвращает `attempt_id`. Если уже есть реальный durable receipt операции провайдера, запиши его через `--provider-operation-receipt`; не выдумывай его. Сразу после checkpoint вызывается генератор; между ними не вставляй исследование или редактирование проекта. В репозитории нет транспорта провайдера: guard фиксирует операторские события, но сам не запускает и не отменяет удалённую генерацию.
+EXECUTION_STARTED возвращает attempt_id. Сразу после checkpoint вызови встроенный image_gen с подготовленными prompt и referenced_image_paths. Отдельного исполнителя StoryArt не требуется; не ищи и не проверяй его доступность. Если реальный receipt операции уже получен, сохрани его через --provider-operation-receipt; не выдумывай receipt. Guard сам не отправляет вызов провайдеру: этот вызов выполняет root через image_gen.
 
 ### 6. Зафиксировать результат
 

@@ -28,14 +28,14 @@ anatomy_compatibility:
   target_anatomy: "UNKNOWN"
   evidence_source: "UNKNOWN"
 locked_invariants:
-  face_geometry: "Describe approved eyes, nose, lips, cheeks, jaw, and face proportions before the next generation."
-  body_proportions: "Describe approved height, build, torso, chest, waist, hips, limbs, and other permanent proportions before the next generation."
-  skin_tone: "Record the approved permanent skin tone."
-  permanent_features: "Record permanent hair, marks, or other identity features."
+  face_geometry: ""
+  body_proportions: ""
+  skin_tone: ""
+  permanent_features: ""
 allowed_variation:
-  - "Clothing, accessories, expression, pose, scene, and lighting only when requested."
+  - "Confirmed clothing and accessory defaults apply in later scenes; scene-only changes require a request."
 forbidden_drift:
   - "Do not replace face identity with FACE_CORE or FACE_EXPRESSION."
   - "Do not replace body identity with BODY_CORE or POSE_CORE."
 known_failure_modes: []
-notes: "Complete all identity descriptions from the approved sources before further generation."
+notes: ""

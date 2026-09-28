@@ -12,6 +12,35 @@ One-step edit exception: For a direct edit of a user-supplied existing image, in
 
 ## User-request authority for image generation
 
+### Current-chat choices and active folder
+
+The approved profile fixes the STYLE NAME only, never fidelity or BODY_REFERENCE_LIBRARY. In a new chat, show the standard Стиль и референсы chooser before source selection/preparation unless both choices were explicitly made in this chat. Do not inherit choices from another chat.
+
+For image assets, access only approved project folders and ONE active request folder bound to this chat. Never enumerate, search, open or inspect other pending/unapproved folders or historical TEST, DRAFT and REJECTED outputs. Similar scene wording is not continuation authority. A new chat uses a fresh request; previous attempts, failures and budgets never transfer. Resolve reusable assets only from approved registries.
+
+
+### Scenario execution backend
+
+StoryArt is the preparation and validation workflow, not a separate image
+provider. Its execution backend is the available built-in `image_gen` tool
+(`image_gen__imagegen` in code mode). After preparing the exact call and recording
+`EXECUTION_STARTED`, invoke that tool with the validated prompt and physical
+reference paths. This is execution inside the scenario. "Do not use a bare
+generator" prohibits skipping preparation, not using this backend. Do not wait
+for a separate StoryArt generator, endpoint, plugin or executor. Do not add an
+executor-discovery or availability-check step: proceed to the prepared tool
+call. Handle an actual returned execution error if one occurs.
+
+Confirmed character-profile data applies by default to future requests.
+Use the shared `confirm-profile` lifecycle after the user's confirmation;
+the agent performs the operation without asking again or requiring manual
+file work. Resolve the effective confirmed revision and automatically include
+its arbitrary structured facts in the executable prompt and its active visual
+defaults in validated attachments. Scene-only overrides leave the persistent
+profile intact; unconfirmed edits never replace it. A stored alternative does
+not supersede an active default. Rebuild stale plans when the confirmed
+revision changes without requesting the same decision again.
+
 Scenario lock: preserve the established StoryArt route and step order unless
 the user directly requests an exit, receives a concrete risk warning, and
 confirms in the same chat. A refusal, timeout, validation error, missing
@@ -42,7 +71,7 @@ Build a new menu with `python tools\style_pack_manager.py startup-menu-template 
 
 In an active StoryArt workspace, every image-generation request must use the StoryArt scenario and available project tools, including brief and named-character requests. Never substitute a bare chat generator call. Check the current chat for explicit style, reference-policy, and character-identity choices; ask and wait for anything missing. A generator-only path is only for a user-supplied one-step edit or an explicitly requested standalone request outside StoryArt. If a required project tool is unavailable, try its supported recovery routes, preserve any completed artifact, and continue while a safe project route remains; report the specific blocker only when none remains.
 
-Do not search, enumerate, inspect, or surface prior unconfirmed generations as candidate bases, references, or continuation options. Treat historical `00_PENDING` folders and manifest statuses `TEST`, `STAGING`, `REJECTED`, `DRAFT`, or any other non-approved status as ineligible, even if a copy exists in `GENERATION_RESULTS` or appeared in another chat. During an active request, inspect only that request's guard-scoped outputs when required for its own stage QA. Reuse an earlier image only when the user selects that exact image in the current chat or an authoritative project manager resolves it as an approved asset for the requested role.
+Do not search, enumerate, inspect, or surface prior unconfirmed generations as candidate bases, references, or continuation options. Treat historical `00_PENDING` folders and manifest statuses `TEST`, `STAGING`, `REJECTED`, `DRAFT`, or any other non-approved status as ineligible, even if a copy exists in `GENERATION_RESULTS` or appeared in another chat. During an active request, inspect only that request's guard-scoped outputs when required for its own stage QA. Reuse earlier project images only from approved project folders through the authoritative approved registry. Previous unapproved outputs remain inaccessible and ineligible; do not open their folders even to inspect status or recover a similar scene.
 
 Never infer a request to bypass a project rule or leave the scenario. The user must directly ask to leave it. State the concrete likely consequences and wait for the user's confirmation after the warning every time. External platform limits cannot be bypassed.
 
@@ -113,8 +142,9 @@ loop or change scope silently.
 
 The StoryArt model family is selectable with `.\scripts\set-model-profile.ps1 5.6` or `.\scripts\set-model-profile.ps1 6`; see `docs/MODEL_PROFILES.md`. For future root and agent assignments, treat the family selected in `.codex/config.toml` as authoritative and use its matching `-sol` or `-luna` model for the role described below and in referenced project instructions. This supersedes fixed GPT-6 model IDs in older role tables. Existing running sessions do not change models.
 
-Apply the image-specific authority in `docs/EFFICIENT_WORKFLOW.md`: Luna High
-for ordinary image work; optional Luna High metadata discovery worker; Sol Low for
+Apply the image-specific authority in `docs/EFFICIENT_WORKFLOW.md`: Luna Low
+for ordinary image work and metadata discovery; Luna High only for materially
+ambiguous source compatibility or difficult diagnosis; Sol Low for
 planning/integration and objective high-impact independent review. Normal worker count is
 zero or one, maximum two independent workers. Code-development routing stays
 separate. Valid hash/role/view/applicability-backed complete reviews may be

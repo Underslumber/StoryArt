@@ -99,6 +99,26 @@ def load_character_identity(profile_path: str | Path) -> dict[str, str]:
         text = path.read_text(encoding="utf-8-sig")
     except (OSError, UnicodeError):
         return result
+    # A confirmed snapshot is authoritative; later YAML edits are candidates.
+    if path.suffix.lower() in {".yaml", ".yml"} and (path.parent / "CONFIRMED_PROFILE" / "ACTIVE.json").is_file():
+        try:
+            from tools.character_profile_state import load_effective
+        except ModuleNotFoundError:
+            from character_profile_state import load_effective
+        data = load_effective(path)["profile"]
+        identity = data.get("identity", {})
+        anatomy = data.get("anatomy_compatibility", {})
+        result.update({
+            "character_id": _clean(data.get("character_id")),
+            "character_name": _clean(data.get("name")),
+            "profile_status": _clean(data.get("status")),
+            "gender_identity": _clean(identity.get("gender_identity")) if isinstance(identity, dict) else UNKNOWN,
+            "visible_presentation": _clean(identity.get("visible_presentation")) if isinstance(identity, dict) else UNKNOWN,
+            "target_anatomy": _clean(anatomy.get("target_anatomy")) if isinstance(anatomy, dict) else UNKNOWN,
+            "anatomy_evidence_source": _clean(anatomy.get("evidence_source")) if isinstance(anatomy, dict) else UNKNOWN,
+        })
+        result["status"] = "KNOWN" if result["character_id"] != UNKNOWN else "UNKNOWN"
+        return result
     if path.suffix.lower() == ".json":
         try:
             data = json.loads(text)

@@ -76,7 +76,106 @@ def atomic_write_json(path: Path, payload: dict[str, object]) -> None:
     os.replace(temporary, path)
 
 
+def _chat_request_root() -> Path:
+    return Path(__file__).resolve().parent.parent / ".agent" / "chat_requests"
+
+
+def _binding_key(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _guard_binding_path(path: Path) -> Path:
+    return _folder_binding_path(path.resolve().parent)
+
+
+def _folder_binding_path(folder: Path) -> Path:
+    resolved = str(folder.resolve())
+    return _chat_request_root() / "folders" / f"{_binding_key(resolved)}.json"
+
+
+def _chat_binding_path(thread_id: str) -> Path:
+    return _chat_request_root() / "chats" / f"{_binding_key(thread_id)}.json"
+
+
+def _read_binding(path: Path) -> dict[str, object] | None:
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise GuardError(f"Chat request binding is unreadable: {error}") from error
+    if not isinstance(value, dict):
+        raise GuardError("Chat request binding is invalid.")
+    return value
+
+
+def _bind_guard_to_current_chat(path: Path, task_kind: str) -> str | None:
+    thread_id = os.environ.get("CODEX_THREAD_ID", "").strip()
+    if not thread_id:
+        return None
+    resolved = str(path.resolve().parent)
+    guard_binding = _guard_binding_path(path)
+    if task_kind == "GENERAL":
+        existing = _read_binding(guard_binding)
+        if existing and existing.get("thread_id") != "GENERAL":
+            raise GuardError("FOREIGN_REQUEST: this request folder is bound to another chat.")
+        if existing is None:
+            atomic_write_json(guard_binding, {"thread_id": "GENERAL", "guard_path": resolved, "task_kind": "GENERAL"})
+        return None
+    chat_binding = _chat_binding_path(thread_id)
+    existing_guard = _read_binding(guard_binding)
+    if existing_guard and existing_guard.get("thread_id") != thread_id:
+        raise GuardError("FOREIGN_REQUEST: this image request folder is bound to another chat. Create a new unique guard in the current chat.")
+    existing_chat = _read_binding(chat_binding)
+    if existing_chat and existing_chat.get("active_folder") != resolved:
+        raise GuardError("FOREIGN_REQUEST: this chat already has a different active request folder. Continue that request or complete it before starting another.")
+    if existing_chat is None:
+        atomic_write_json(chat_binding, {"thread_id": thread_id, "active_folder": resolved})
+    if existing_guard is None:
+        atomic_write_json(guard_binding, {"thread_id": thread_id, "active_folder": resolved, "task_kind": task_kind})
+    return thread_id
+
+
+def _authorize_guard_path(path: Path) -> str | None:
+    """Authorize by path registry before opening an image guard's JSON."""
+    thread_id = os.environ.get("CODEX_THREAD_ID", "").strip()
+    if not thread_id:
+        return None
+    chat_binding = _read_binding(_chat_binding_path(thread_id))
+    resolved_path = path.resolve()
+    if chat_binding:
+        active_folder = Path(str(chat_binding.get("active_folder", ""))).resolve()
+        try:
+            resolved_path.relative_to(active_folder)
+            inside_active_folder = True
+        except ValueError:
+            inside_active_folder = False
+        if inside_active_folder:
+            binding = _read_binding(_folder_binding_path(active_folder))
+            if not binding or binding.get("thread_id") != thread_id:
+                raise GuardError("FOREIGN_REQUEST: active request folder binding does not match the current chat.")
+            return thread_id
+    binding = _read_binding(_guard_binding_path(path))
+    if binding and binding.get("thread_id") == "GENERAL" and binding.get("task_kind") == "GENERAL":
+        return None
+    if binding and binding.get("thread_id") != thread_id:
+        raise GuardError("FOREIGN_REQUEST: this request folder belongs to another chat. Create a new unique guard in the current chat; do not inspect or reuse its outputs.")
+    # The project task folder is an approved location for engineering guards
+    # created before chat bindings were introduced. Image guards there still
+    # fail closed after their kind is read below.
+    approved_tasks = Path(__file__).resolve().parent.parent / ".agent" / "tasks"
+    if not binding and resolved_path.parent == approved_tasks.resolve():
+        return thread_id
+    raise GuardError("UNBOUND_LEGACY_REQUEST: this guard has no trustworthy current-chat binding. Create a new unique guard in the current chat; do not reuse or reconcile its outputs.")
+
+
+def assert_active_request_path(path: str | Path) -> None:
+    """Reject foreign or unbound image request paths before their JSON is opened."""
+    _authorize_guard_path(Path(path))
+
+
 def load_guard(path: Path) -> dict[str, object]:
+    thread_id = _authorize_guard_path(path)
     if not path.is_file():
         raise GuardError(f"Execution guard does not exist: {path}")
     try:
@@ -85,6 +184,8 @@ def load_guard(path: Path) -> dict[str, object]:
         raise GuardError(f"Cannot read execution guard: {error}") from error
     if state.get("schema_version") != SCHEMA_VERSION:
         raise GuardError(f"Unsupported execution guard schema: {state.get('schema_version')}")
+    if thread_id and state.get("task_kind") != "GENERAL" and state.get("owner_chat_id") != thread_id:
+        raise GuardError("UNBOUND_LEGACY_REQUEST: this image guard lacks a matching owner_chat_id. Create a new unique guard in the current chat; do not adopt it.")
     return state
 
 
@@ -192,11 +293,13 @@ def create_guard(
     if normalized_task_kind == "IMAGE_GENERATION_NATIVE_DEFAULT" and len(normalized_stages) > 1:
         raise GuardError("IMAGE_GENERATION_NATIVE_DEFAULT supports one requested output stage only.")
     locked_invariants = parse_invariant_assignments(invariants, label="invariant")
+    owner_chat_id = _bind_guard_to_current_chat(path, normalized_task_kind)
     moment = now or utc_now()
     state: dict[str, object] = {
         "schema_version": SCHEMA_VERSION,
         "request_id": request_id.strip(),
         "task_kind": normalized_task_kind,
+        **({"owner_chat_id": owner_chat_id} if owner_chat_id else {}),
         "goal_lock": goal.strip(),
         "primary_deliverable": deliverable.strip(),
         "locked_invariants": locked_invariants,
@@ -940,6 +1043,38 @@ def validate_reference_plan(
             raise GuardError("execution_call prompt does not match the REFERENCE_PLAN prompt hash.")
         if isinstance(plan_prompt, str) and plan_prompt.strip() != prompt_text.strip():
             raise GuardError("execution_call prompt text does not match the REFERENCE_PLAN prompt.")
+        if re.fullmatch(r"CHAR_\d+", character_id) and str(plan.get("generation_purpose", "")).upper() == "SCENE":
+            try:
+                try:
+                    from tools import style_pack_manager as manager
+                    from tools.character_profile_state import ProfileStateError, verify_plan_binding
+                except ImportError:
+                    import style_pack_manager as manager
+                    from character_profile_state import ProfileStateError, verify_plan_binding
+                pack_path = Path(str(plan.get("pack_path", ""))).resolve()
+                style_name = str(plan.get("style_name", "")).strip()
+                if not style_name:
+                    raise GuardError("Named scene has no approved style registry route.")
+                character_paths = manager.make_paths(pack_path.parent, style_name)
+                if character_paths.pack.resolve() != pack_path:
+                    raise GuardError("Named scene pack path differs from its approved style registry route.")
+                rows = [row for row in manager.read_csv(character_paths.character_registry)
+                        if str(row.get("character_id", "")).upper() == character_id
+                        and str(row.get("status", "")).upper() == "APPROVED"]
+                if len(rows) != 1:
+                    raise GuardError("Named scene requires exactly one approved character registry entry.")
+                profile_path = Path(str(rows[0].get("profile_path", "")))
+                if not profile_path.is_absolute():
+                    profile_path = character_paths.generations / profile_path
+                profile_path = profile_path.resolve()
+                if approved_identity_root is None or profile_path.parent != approved_identity_root:
+                    raise GuardError("Approved character registry profile lies outside its identity folder.")
+                manager._approved_profile_identity(character_paths, profile_path, character_id)
+                verify_plan_binding(profile_path, character_id, plan, execution_call)
+                if manager.effective_character_profile(character_paths, character_id) != plan.get("confirmed_character_profile"):
+                    raise GuardError("Named scene profile or approved visual provenance changed since preparation.")
+            except (ProfileStateError, OSError, ValueError, RuntimeError) as error:
+                raise GuardError(f"Named scene confirmed profile verification failed: {error}") from error
         style_choice = user_selections["style"].strip()
         selected_slots = execution_call.get("slots")
         if not isinstance(selected_slots, list):
@@ -1076,10 +1211,10 @@ def validate_reference_plan(
         ref = Path(raw_path).expanduser().resolve()
         if not raw_path or not isinstance(roles, list) or not roles or not expected or not ref.is_file():
             raise GuardError("Each executable reference slot requires an existing path, sha256, and active_roles.")
-        actual = file_sha256(ref)
-        if actual != expected:
-            raise GuardError(f"REFERENCE_PLAN source hash changed for {ref}.")
-        bindings.append({"path": str(ref), "sha256": actual, "roles": sorted(str(role) for role in roles)})
+        # Keep the declared digest for the exact-call handoff. The mandatory
+        # risk assessor below performs the fresh byte read and verifies that
+        # this digest still matches the physical file.
+        bindings.append({"path": str(ref), "sha256": expected, "roles": sorted(str(role) for role in roles)})
     report = execution_call.get("risk_assessment") if execution_call is not None else None
     if not isinstance(report, dict):
         report = plan.get("risk_assessment")
@@ -1099,6 +1234,8 @@ def validate_reference_plan(
             [{"path": row["path"], "sha256": row["sha256"], "active_roles": row["roles"]} for row in bindings],
         )
     except RiskAssessmentError as error:
+        if "Selected reference hash does not match file" in str(error):
+            raise GuardError(f"REFERENCE_PLAN source hash changed: {error}") from error
         raise GuardError(f"Exact-call risk assessment validation failed: {error}") from error
     binding = {
         "path": str(path),
@@ -1315,6 +1452,7 @@ def validate_current_stage_output_authority(
 ) -> None:
     """Ensure resolved stage inputs still match the latest QA-passed manifest rows."""
     plan_path = Path(reference_plan).expanduser().resolve()
+    assert_active_request_path(plan_path)
     try:
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
@@ -2192,6 +2330,11 @@ def checkpoint(
         event_details["outcome"] = "QA_REJECTED"
     append_event(state, event, summary, moment, **event_details)
     atomic_write_json(path, state)
+    if event == "COMPLETE" and state.get("owner_chat_id"):
+        chat_binding = _chat_binding_path(str(state["owner_chat_id"]))
+        current_binding = _read_binding(chat_binding)
+        if current_binding and current_binding.get("active_folder") == str(path.resolve().parent):
+            chat_binding.unlink(missing_ok=True)
     if event == "PREFLIGHT":
         reason = evaluate_limits(state, moment)
         if reason:
@@ -2374,13 +2517,16 @@ def main(argv: Sequence[str] | None = None) -> int:
                 max_execution_minutes=args.max_execution_minutes,
             )
         elif args.command == "checkpoint":
+            assert_active_request_path(Path(args.state))
             execution_call = None
             if args.execution_call:
+                assert_active_request_path(Path(args.execution_call))
                 try:
                     execution_call = json.loads(Path(args.execution_call).read_text(encoding="utf-8"))
                 except (OSError, json.JSONDecodeError) as error:
                     raise GuardError(f"Cannot read execution_call JSON: {error}") from error
             elif args.reference_plan and args.event.upper() in {"READY_FOR_EXECUTION", "EXECUTION_STARTED"}:
+                assert_active_request_path(Path(args.reference_plan))
                 try:
                     referenced_plan = json.loads(Path(args.reference_plan).read_text(encoding="utf-8"))
                     candidate_call = referenced_plan.get("execution_call") if isinstance(referenced_plan, dict) else None

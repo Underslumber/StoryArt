@@ -11,10 +11,12 @@ It cannot itself change the model of an already running session.
 
 | Work | Default assignment | Contract |
 | --- | --- | --- |
-| Ordinary image production | Luna High | Default model for image work; root keeps user communication, guard transitions, choices, final decision, and evidence reconciliation. |
-| Bounded metadata/catalog discovery | Luna High | Receives a bounded packet and returns evidence; no user conversation or broad writes. |
+| Ordinary image production | Luna Low for deterministic steps; Luna High only for material ambiguity | Root keeps user communication, guard transitions, choices, final decision, and evidence reconciliation. |
+| Deterministic lookups, CLI execution, cache reuse, straightforward registration | Luna Low (fastest supported) | Reuse unchanged request-scoped results; retry a lookup only after a concrete error or changed input. |
+| Bounded metadata/catalog discovery | Luna Low (fastest supported) | Receives a bounded packet and returns evidence; no user conversation or broad writes. |
 | Code planning/integration and independent review | Sol Low | Root plans and integrates; a fresh Sol Low reviews the actual diff after machine checks. |
-| Discovery, mechanics, ordinary code implementation | Luna High | Owns only explicitly named files and verification. |
+| Discovery, mechanics, straightforward code implementation | Luna Low (fastest supported) | Owns only explicitly named files and verification. |
+| Ambiguous compatibility, difficult planning, substantive QA diagnosis | Luna High | Escalate only the materially uncertain part; keep deterministic steps at Low. |
 | Complex implementation or repair after evidenced Luna failure | Sol High | Sol High requires evidence of a substantive Luna failure for either complex implementation or repair; complexity alone does not qualify. |
 
 Model and effort are requested when an agent is spawned; prose and tools cannot
@@ -39,13 +41,110 @@ nor the scope after a failed check; escalate the concrete evidence to root.
 
 The project TOML defaults are project-wide and optimized for image work, not
 a per-task scheduler. For a code/infrastructure task explicitly select Sol Low
-for the root at task creation and Luna High for discovery and ordinary
-implementation, then fresh Sol Low for review. Sol High requires evidence of
+for the root at task creation and Luna Low for deterministic discovery and
+straightforward implementation, raising only materially difficult work to
+Luna High, then fresh Sol Low for review. Sol High requires evidence of
 a substantive Luna failure for either complex implementation or repair;
 complexity alone does not qualify. If an existing root differs,
 report that fact and use explicit worker assignments; never claim it switched.
 
 ## Image-production route
+
+### Minimal execution path
+
+### Current-chat choices and active folder
+
+The approved profile fixes the STYLE NAME only, never fidelity or BODY_REFERENCE_LIBRARY. In a new chat, show the standard Стиль и референсы chooser before source selection/preparation unless both choices were explicitly made in this chat. Do not inherit choices from another chat.
+
+For image assets, access only approved project folders and ONE active request folder bound to this chat. Never enumerate, search, open or inspect other pending/unapproved folders or historical TEST, DRAFT and REJECTED outputs. Similar scene wording is not continuation authority. A new chat uses a fresh request; previous attempts, failures and budgets never transfer. Resolve reusable assets only from approved registries.
+
+
+The scenario's generation backend is the built-in `image_gen` tool, exposed as
+`image_gen__imagegen` in code mode. Project CLIs prepare and validate its call;
+they do not need their own generation endpoint. Execute the exact prepared
+prompt and references through this tool after `EXECUTION_STARTED`. That is
+scenario execution, not a bypass. Do not search for an additional StoryArt
+generator or declare a blocker because no tool has that name.
+Do not add an executor-discovery or availability-check step before that call.
+
+Keep one request state and advance it through these phases. A phase is not a
+reason to rediscover information already resolved for the unchanged request.
+
+1. Resolve the approved character once and keep the returned canonical identity,
+   confirmed profile revision, active assets and bound style. Record the actual
+   menu response and provenance when it arrives. Ask only for genuinely missing
+   choices; internal command errors never invalidate an accepted user answer.
+2. Read the selected style's verbal profile and existing matrix, shortlist the
+   few relevant sources, then inspect selected originals only. Reuse valid
+   hash/role/applicability-backed evidence. Do not search optional libraries or
+   create extra references unless requested. Read a changed source again only
+   for the affected role.
+3. Save one structured preparation request with source observations and the
+   prompt. Assemble deterministic plan, reference, risk and exact-call data in
+   one invocation when their inputs are available. Repair the reported field
+   in that request; do not restart source selection or reconstruct the menu.
+   After a plan is prepared, a call-only correction must resume call preparation
+   rather than rebuild the plan.
+4. Use the prepared exact prompt and attachments. After READY, perform only the
+   permitted exact-call validation/start and invoke the generator. Keep the
+   same pending provider operation/tool handle until it resolves. Elapsed time
+   or a yielded tool result never authorizes a duplicate generation. Resolve
+   an unknown outcome before another attempt.
+5. Inspect the returned image in one coordinated pass and record separate
+   outcomes for all required layers. Reopen or zoom only an uncertain region;
+   do not reopen the entire image once per checklist label. Batch deterministic
+   registration and guard updates after evidence is ready. Deliver promptly;
+   optional archiving and reporting must not delay the visible result.
+
+Fresh byte checks at a later execution boundary remain necessary. Repeating
+the same scan or hash within one unchanged validation operation does not add
+evidence. Keep these two cases distinct: remove duplicate work inside the
+operation, but invalidate saved evidence when its source, profile revision,
+roles, prompt or user choice changes. Do not hide a failure by reusing an old
+PASS. Additional agents are never needed merely to run these commands.
+
+### One preparation request
+
+Keep the current request's resolved character/profile, selected sources, exact
+menu answer and its provenance together in one UTF-8 JSON request file. Use
+`python tools/generation_request.py --request-file <request.json>` to invoke
+the existing `prepare-generation` handler. Keys are the manager's argument
+names with underscores; values keep their native JSON types. Repeated options
+are arrays, and JSON evidence is stored as objects rather than shell-escaped
+strings. The wrapper checks basic input errors before expensive preparation
+and returns them together. Correct those fields in the same file.
+
+When the prompt and reference risk observations are ready, add
+`--call-file <call.json>` to that same invocation. This runs reference
+resolution, exact-prompt risk assessment and `prepare-call` in process, then
+returns the exact executable call. Do not separately run those three commands.
+The call file contains exactly one of `prompt_text` / `prompt_text_file`, an
+optional `stage_id`, and `reference_ratings`. Each rating records the resolved
+`path`, its `active_roles`, `content_and_reference_risk` (D1–D10), `use_impact`
+(-2D through +2D), and the observed `reason_ru`. Collect these observations
+during the selected-source inspection; do not add a second viewing pass for
+the risk form. An empty rating array applies only to a call with no physical
+references. The tool binds confirmed profile facts before assessing the exact
+prompt and never invents visual ratings.
+
+For a call-only correction after successful plan preparation, use
+`--finalize-only --call-file <call.json>` with the existing request file. This
+continues from the saved plan. A request that is already READY must resume its
+existing guard/call or follow the recorded correction path; never overwrite its
+risk report, rebuild the plan, or launch another provider operation as a retry.
+For an already READY multi-stage plan, supply its intended `stage_id` explicitly;
+the wrapper verifies the permitted transition before writing. Each replacement
+assessment uses a new file so a failed preparation preserves the previous call's
+bound evidence.
+
+Do not add a separate routine `--validate-only` call: the normal invocation
+already performs input validation. A successful input check does not replace
+source, identity, exact-call or output validation. Once preparation succeeds,
+continue to exact-call binding and generation; do not repeat preparation,
+re-resolve unchanged character/style data, or reopen the same reviewed sources
+without changed input or a specific invalidated result. Retain menu provenance
+when the choice arrives so preparation never needs a later chat search merely
+to reconstruct an already accepted answer.
 
 The root performs `GENERATOR_OPERATOR` and `REGISTRAR` responsibilities
 sequentially. Do not spawn agents merely to call a generator, run project CLI,
@@ -55,9 +154,9 @@ required semantic layers remain separately inspected and recorded.
 
 | Delegated image role | Requested model and effort | Limit |
 | --- | --- | --- |
-| `STYLE_LIBRARIAN` / `IDENTITY_CURATOR` | `gpt-6-luna`, High | Bounded source discovery; root owns choices and integration |
-| `CALL_PLANNER` | `gpt-6-luna`, High | Ordinary image planning; root integrates |
-| Routine `VISUAL_QA` | `gpt-6-luna`, Medium | Only when a separate bounded review is useful |
+| `STYLE_LIBRARIAN` / `IDENTITY_CURATOR` | `gpt-6-luna`, Low; High for materially ambiguous compatibility | Bounded source discovery; root owns choices and integration |
+| `CALL_PLANNER` | `gpt-6-luna`, Low; High for difficult planning | Routine image planning; root integrates |
+| Routine `VISUAL_QA` | `gpt-6-luna`, Low; High for substantive diagnosis | Only when a separate bounded review is useful |
 | Critical independent QA | fresh `gpt-6-sol`, Low | Objective high-impact gate only |
 | `GENERATOR_OPERATOR` / `REGISTRAR` | No agent; root executes sequentially | N/A |
 
@@ -82,18 +181,25 @@ Do not accumulate synonym stacks, stale constraints, or rejected output anchors.
 
 ## Evidence reuse and adapters
 
-Recorded complete source-pool review can be reused across tasks only when file
-hashes, source roles, style/character, covered views and recorded limitations
-still apply. Inspect the selected authoritative originals for the current shot.
-Review changed/new sources and any uncovered requirement; never invent reviewed
-counts. Missing evidence requires the normal complete applicable review. This
-is an evidence protocol, not a claim that an automatic software cache exists.
+Reuse an existing review only for the exact selected source with matching
+path and SHA-256, active role, full-resolution view, applicability and recorded
+limitations. Unselected candidate pools require no source review. Review changed
+or newly selected originals and any uncovered requirement; never invent review
+receipts or assume an automatic cache. Confirm current selected originals still
+match before relying on a prior review.
+
+For a new source review, `--reviewed-source` takes a JSON reviewer attestation
+with the exact semantic role, attachment slot, path, full-resolution view,
+outcome, applicability, visual findings and limitations. Record the attestation
+only after inspecting that selected source; the manager binds its path and
+current SHA-256 but cannot independently prove what the reviewer saw. A result
+other than `PASS`, missing findings, or missing limitations blocks preparation.
 
 Reuse a current selected local style adapter when its actual inputs are
-unchanged. Run the existing builder only when the selected adapter is missing or
-stale for the selected source set. Its current CLI has no per-style selector and
-refreshes the local root; do not invent a selector or run it merely because a
-workflow begins. Adapters remain routing indexes, not visual sources.
+unchanged. Run the builder only when that adapter is missing or stale for the
+selected source set, and pass `--style-name "<selected STYLE>"` so it refreshes
+only the selected adapter and index entry. Do not rebuild every style adapter
+as routine startup. Adapters remain routing indexes, not visual sources.
 
 ## Failure handling
 
@@ -136,10 +242,14 @@ This section supersedes historical coding-model assignments and repeated full-po
 inspection requirements only for orchestration/preparation. All art, safety,
 archive, identity, approval and semantic QA requirements remain mandatory.
 
-- Use Luna High as the single ordinary image-production default. Existing sessions
-  do not switch models merely because this document or config changes.
-- Luna High handles bounded metadata/search discovery and ordinary image production;
-  return ambiguous semantic classification to the Luna High image lead. It does not select authoritative visual identity.
+- Use Luna Low for deterministic lookups, CLI execution, cache reuse and
+  straightforward registration; use Luna High only for materially ambiguous
+  source compatibility, difficult planning or substantive QA diagnosis. Existing
+  sessions do not switch models merely because this document or config changes.
+- Reuse the resolver result, approved IDs and user choices while the request
+  inputs remain unchanged. Retry `resolve-character` only after a concrete
+  invalidation, changed input or resolver error. Ambiguous semantic classification
+  goes to the Luna High image lead; it does not select authoritative visual identity.
 - Usually use zero workers; one when there is useful separate work, at most two
   for independent preparation. No nested agents, full-history forks, or agents
   merely for CLI, archive, generator calls, or individual QA-layer checkboxes.
@@ -152,8 +262,9 @@ archive, identity, approval and semantic QA requirements remain mandatory.
   repeated failure, obtain one diagnosis before another authorized attempt;
   do not automatically generate a stack of prompt variants.
 - Astra Low is exceptional read-only diagnosis only. Code development remains
-  separate: Sol Low planning/integration and fresh review; Luna High discovery
-  and ordinary implementation. Sol High requires evidence of a substantive Luna
+  separate: Sol Low planning/integration and fresh review; Luna Low deterministic
+  discovery and straightforward implementation, Luna High for material ambiguity
+  or difficulty. Sol High requires evidence of a substantive Luna
   failure for either complex implementation or repair; complexity alone does not
   qualify.
 - Worker packets include explicit model/effort, fork_turns="none", authoritative

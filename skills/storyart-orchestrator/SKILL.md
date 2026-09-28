@@ -5,6 +5,37 @@ description: Route every StoryArt image-generation request, including a single-f
 
 # StoryArt Orchestrator
 
+## Current-request boundary and required chooser
+
+For image assets, access only approved project folders and ONE active request
+folder bound to the current chat. Never list, search, open or inspect any other
+pending/unapproved folder, including historical TEST, DRAFT and REJECTED outputs.
+Scene similarity is not request identity. A new chat starts a fresh request;
+never inherit previous attempts, failures, budgets or choices from another chat.
+Resolve reusable assets only through approved registries, not old request plans.
+
+An approved character profile supplies the STYLE NAME only. It does not choose
+style fidelity or BODY_REFERENCE_LIBRARY. Unless both were explicitly selected
+in the CURRENT chat, immediately show the standard `Стиль и референсы` chooser
+after resolving the style/character, before source selection or preparation.
+Keep the three existing 90%+library / 90% without / 70% without options. Do not
+infer these choices from a profile, silence, scene wording or another chat.
+
+## Scenario execution backend
+
+StoryArt prepares and validates a call; the built-in `image_gen` tool executes it.
+There is no additional StoryArt-named generator or executor to discover or wait
+for. After the scenario prepares the exact call and records `EXECUTION_STARTED`,
+invoke `image_gen` (`image_gen__imagegen` in code mode), passing the exact prepared
+prompt as `prompt` and the physical attachment paths as `referenced_image_paths`.
+For a reference-free call, omit reference parameters. Use the tool's returned
+image/operation for subsequent scenario steps. This is the scenario's normal
+execution path; the ban on a "bare generator" means bypassing preparation.
+Never report an unavailable StoryArt executor merely because only `image_gen`
+is exposed. Do not add an executor-discovery or availability-check step;
+proceed to the prepared call. Handle an actual returned execution error if one
+occurs, preserving approved selections while recovering.
+
 ## Absolute scenario lock
 
 The user's request authorizes this task only inside the established StoryArt
@@ -67,7 +98,7 @@ Never infer a request to bypass a project rule or leave the scenario. The user m
 
 ## Approved-generation source boundary
 
-Do not search, enumerate, inspect, or surface prior unconfirmed generations as candidate bases, references, or continuation options. Treat historical `00_PENDING` folders and manifest statuses `TEST`, `STAGING`, `REJECTED`, `DRAFT`, or any other non-approved status as ineligible, even if a copy exists in `GENERATION_RESULTS` or appeared in another chat. During an active request, inspect only that request's guard-scoped outputs when required for its own stage QA; such outputs cannot become reusable references for another request. Reuse an earlier image only when the user selects that exact image in the current chat or an authoritative project manager resolves it as an approved asset for the requested role.
+Do not search, enumerate, inspect, or surface prior unconfirmed generations as candidate bases, references, or continuation options. Treat historical `00_PENDING` folders and manifest statuses `TEST`, `STAGING`, `REJECTED`, `DRAFT`, or any other non-approved status as ineligible, even if a copy exists in `GENERATION_RESULTS` or appeared in another chat. During an active request, inspect only that request's guard-scoped outputs when required for its own stage QA; such outputs cannot become reusable references for another request. Reuse earlier project images only from approved project folders through the authoritative approved registry. Previous unapproved outputs remain inaccessible and ineligible; do not open their folders even to inspect status or recover a similar scene.
 
 ### Resolve named characters before reporting a blocker
 
@@ -95,6 +126,49 @@ remain, ask only which matching project/style the user means. Never claim the
 scenario tool is unavailable before attempting its documented project CLI in
 the active workspace and recording the actual failure.
 
+The resolver must also supply the effective confirmed character profile, not
+just a catalog. Every user-confirmed profile addition is persistent input for
+later requests: arbitrary nested profile facts, approved wardrobe/accessory
+defaults, and explicitly active face/body variants.
+Treat numeric and boolean values, zero, false, and explicit null as profile
+data too; an accepted value must not disappear because it is not a string.
+Use the shared profile confirmation operation (`confirm-profile`) after the user's confirmation;
+the agent performs the operation without asking for a second confirmation or
+requiring the user to edit files. Image approval commands use the same state.
+Do not implement a confirmed update by editing YAML or a role list alone.
+Use the `confirm-profile` command contract in `docs/PROJECT_ORCHESTRATOR.md`:
+submit the confirmed patch or candidate YAML, the resolver's expected revision,
+a stable operation ID, and the actual user confirmation quote. Keep that
+operation ID for retries. This is an internal agent operation, not an extra
+question or a manual user step.
+
+Preparation consumes the current confirmed revision automatically. Preserve
+all effective profile facts in the manager-built executable prompt and attach
+the applicable active visual defaults through normal source review and role
+validation. An explicit scene override affects only that scene. Saving a
+variant as an alternative does not activate it; an already established
+default resolves the choice even if other approved alternatives exist.
+Unconfirmed edits never replace the last confirmed revision. If a confirmed
+revision changes after preparation, rebuild the stale plan using that revision
+without asking the user to repeat the confirmation. Never silently discard a
+default because of an attachment limit or a validation failure.
+
+The resolver also returns the approved character-asset catalog by role. Read
+the complete catalog and its profile-index diagnostics; `profile_schema`, an
+empty profile list, or the canonical `identity_assets` object alone does not
+prove that wardrobe, accessories, or approved variants are absent. For a
+requested costume or accessory, bind the matching approved role asset through
+the scenario manager when one eligible match exists. Preserve the user's
+already selected asset and the effective profile's active default; when several
+eligible alternatives remain and neither a scene selection nor a confirmed
+default exists, ask only which one they want. If the profile index is
+stale, use the exact active approved registry record and report the mismatch
+for repair. If a registered file is missing or invalid, state that concrete
+error. Never ask the user to reattach a character card when its approved
+registry already resolves the required asset, and never infer approval from a
+file's presence in a role folder alone. Face/body variants remain optional
+role assets and must never replace canonical face, body, or assembly identity.
+
 ## Agent executes; user directs
 
 The agent performs available project operations; the user gives the goal and decisions. Never instruct the user to move, place, or copy files into project folders, create files or folders, run commands, or type `READY`. Perform those operations yourself when authorized and available. Ask only for genuinely missing input or clarification. If a required source image or mask is absent, politely ask the user to attach it directly in chat; never prescribe a project-folder path.
@@ -110,8 +184,17 @@ when it is explicitly present and applicable. Do not wholesale-read historical r
 
 ## Start
 
+On Windows, run project tools with `./scripts/storyart.ps1 <tool_name> <args>`
+(for example, `./scripts/storyart.ps1 style_pack_manager resolve-character ...`).
+The launcher selects an installed Python with the project dependencies and
+preserves tool arguments. Do not cycle through broken interpreters, install
+packages during an image request, or substitute an old request for a failed
+profile lookup. Tool commands written as `python tools/<name>.py` below use this
+launcher on Windows.
+
 1. Read `AGENTS.md`, the active guard, and only the relevant workflow sections.
-2. Initialize `ORCHESTRATION_STATE.json` beside the guard:
+2. Only when actually delegating work, initialize `ORCHESTRATION_STATE.json`
+   beside the guard. With zero workers, skip orchestration init/status/handoff:
 
 ```powershell
 python tools\storyart_orchestrator.py init `
@@ -119,22 +202,26 @@ python tools\storyart_orchestrator.py init `
   --guard "<request-dir>\EXECUTION_GUARD.json"
 ```
 
-3. Inspect the selected local adapter. Run the existing builder only when that
-   adapter is missing or stale for its actual source inputs. The current builder
-   has no per-style selector and refreshes its local root, so do not invent one
-   or run it as routine startup:
+3. An adapter is an optional routing index, not a preparation gate. If approved
+   profile/source paths are already resolved, use them directly. When using an
+   adapter, run the builder only when that adapter
+   is missing or stale for its actual source inputs. Pass the exact selected
+   style name to refresh only that adapter and its index entry; do not rebuild
+   every style adapter as routine startup:
 
 ```powershell
-python tools\storyart_orchestrator.py build-style-skills
+python tools\storyart_orchestrator.py build-style-skills --style-name "<selected STYLE>"
 ```
 
-4. Read only the selected adapter under `.agents/style-skills/`. Never install it globally.
+4. If needed, read only the selected adapter under `.agents/style-skills/`.
+   Never install it globally or validate all adapters during image preparation.
 
 ## Style and reference chooser
 
 Resolve a named character before asking about style. If its single approved
 profile is bound to a project style, inherit that exact style as the default;
-do not ask the user to pick a style again. If the profile explicitly records
+reuse only the style name. Fidelity and BODY_REFERENCE_LIBRARY still require
+the current-chat chooser unless already explicitly answered. If the profile explicitly records
 the generator default, preserve that. If the user asks to change style, or the
 character has no unique recorded style, resolve the available names with
 `style_pack_manager.py list-styles --json` and show the actual style names.
@@ -301,10 +388,22 @@ no-reference lane.
   This does not relax the required project style, approved identity assembly,
   or applicable body identity references, and never selects
   `BODY_REFERENCE_LIBRARY` or user-added references.
-- For each current stage, use `resolve-call` to write the exact slot manifest.
-  Run the risk assessor against the exact prompt and resolved paths, hashes, and
-  active roles, then use `prepare-call` with that prompt and report. It rechecks
-  the slots and risk binding and records `READY_FOR_EXECUTION`.
+- Select reference sources in this order: explain the style from its written profile,
+  inspect the existing style/reference matrix or contact sheet, shortlist a few
+  compatible candidates, then inspect only the exact selected full-resolution
+  sources. Do not visually review an unrelated full candidate pool as a
+  preparation prerequisite. `prepare-generation` binds each selected source
+  review to its exact path and SHA-256 under every active role; a role count
+  cannot stand in for that source-bound evidence. A selected source without a
+  matching review declaration remains blocked.
+- For the current stage, save the resolved inputs and observed source ratings
+  once, then use `python tools/generation_request.py --request-file <request.json>
+  --call-file <call.json>`. This bundles plan preparation, `resolve-call`, exact
+  prompt risk assessment and `prepare-call` through the existing managers.
+  Do not run those commands again individually. For a call-only correction,
+  use `--finalize-only`; supply the explicit stage for an already READY
+  multi-stage plan. Follow `docs/EFFICIENT_WORKFLOW.md` under "One preparation
+  request" for the schema. Separate manager commands remain recovery tools.
 - After `prepare-call` records readiness, run `EXECUTION_STARTED` with that
   same plan and stage immediately before the generator operation. The guard
   derives the canonical stage and locked invariant assertions from its validated
@@ -406,9 +505,15 @@ orchestration state directly.
 - Use the existing StoryArt managers as the authority for their domains; do not
   bypass their validation or invent capabilities outside their CLI contracts.
 - Do not duplicate complete project rules inside role prompts or style adapters.
-- Reuse complete visual-review evidence across tasks only if source hashes, roles,
-  style/character, covered views and limitations still apply. Inspect selected
-  originals and changed/new or uncovered sources; missing proof requires review.
+- Reuse visual-review evidence only for an exact selected source with matching
+  hash, active role, full-resolution view, applicability and limitations. Inspect
+  newly selected, changed or uncovered sources. Unselected candidate pools do
+  not require review; missing proof for a selected source still blocks readiness.
+- For new review evidence, declare `--reviewed-source` as a JSON attestation
+  containing the exact role, physical slot, path, full-resolution view, PASS
+  outcome, applicability, visual findings and limitations. Declare it only
+  after inspecting the selected original. The manager binds the path and SHA-256
+  but does not independently verify the visual inspection.
 - Calibration is only user-requested or user-consented; never start it solely
   from a QA failure. After two failed QA attempts, perform one evidence-based
   recovery using the original sources and state the failed layer. Record the
@@ -429,18 +534,19 @@ orchestration state directly.
 ## Finish
 
 Require all dispatched handoffs to reach `DONE`, `REJECTED`, or a concrete `BLOCKED` state.
-Run `storyart_orchestrator.py status`, then complete the execution guard only when every
+Run `storyart_orchestrator.py status` only if handoffs were dispatched; complete the execution guard only when every
 mandatory StoryArt stage is complete.
 
 ## Routing precedence
 
-Use `docs/EFFICIENT_WORKFLOW.md` routing: Luna Medium for ordinary image work;
-Sol Low for planning/integration and fresh objective review; Luna High for
-discovery and ordinary code implementation. Sol High requires evidence of a
-substantive Luna failure for either complex implementation or repair; complexity
-alone does not qualify. Astra Low remains
-exceptional, read-only escalation only. Zero workers normally, one if helpful, two only
-for independent preparation. No agents for generator/archive/CLI operations.
-Complete hash/role/view/applicability-backed review evidence can span tasks;
-selected originals and changed or uncovered sources still require inspection.
-This overrides older same-task-only reuse wording, not the art/QA requirements.
+Use `docs/EFFICIENT_WORKFLOW.md` routing: Luna Low for deterministic lookups,
+prepared CLI execution, cache reuse, and straightforward registration; Luna High
+only for materially ambiguous source compatibility, difficult planning or
+substantive QA diagnosis. Sol remains root planning/integration and fresh
+objective review; Astra Low is exceptional read-only diagnosis. Use zero workers
+normally, one when there is useful separate work, two only for independent
+preparation, and no agents for generator/archive/CLI operations. Reuse selected
+source review evidence only when hash, role, view, applicability and limitations
+match exactly. This changes preparation effort, not art/QA requirements.
+Sol High requires evidence of a substantive Luna failure for either complex
+implementation or repair; complexity alone does not qualify.

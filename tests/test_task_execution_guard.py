@@ -5,6 +5,10 @@ import unittest
 import hashlib
 import json
 import csv
+import shutil
+import uuid
+from contextlib import contextmanager
+from unittest.mock import patch
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -226,6 +230,35 @@ class TaskExecutionGuardTests(unittest.TestCase):
             self.assertEqual(binding["execution_call_sha256"], hashlib.sha256(
                 json.dumps(call, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
             ).hexdigest())
+
+    def test_reference_plan_hashes_each_reference_once_and_detects_later_mutation(self):
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as folder:
+            path, _ = self.make_guard(folder)
+            self.checkpoint_fixture(path, event="READY_FOR_EXECUTION", summary="Bind exact fixture call.", now=BASE_TIME)
+            plan_path = _fixture_plans[str(path.resolve())]
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            call = plan["execution_call"]
+            reference = Path(call["slots"][0]["path"]).resolve()
+            original_read_bytes = Path.read_bytes
+            reads: list[Path] = []
+
+            def counted_read_bytes(file_path, *args, **kwargs):
+                resolved = Path(file_path).resolve()
+                if resolved == reference:
+                    reads.append(resolved)
+                return original_read_bytes(file_path, *args, **kwargs)
+
+            with patch.object(Path, "read_bytes", counted_read_bytes):
+                binding = guard.validate_reference_plan(plan_path, execution_call=call)
+                self.assertEqual(reads, [reference])
+                self.assertEqual(binding["references"][0]["sha256"], call["slots"][0]["sha256"])
+
+                reference.write_bytes(b"mutated after first validation")
+                with self.assertRaisesRegex(guard.GuardError, "REFERENCE_PLAN source hash changed"):
+                    guard.validate_reference_plan(plan_path, execution_call=call)
+                self.assertEqual(reads, [reference, reference])
 
     def test_reference_plan_readiness_cannot_use_plan_only_without_materialized_call(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -1586,6 +1619,71 @@ class TaskExecutionGuardTests(unittest.TestCase):
             )
             self.assertEqual(guard.pending_required_stages(state), ["SIDE"])
             self.assertEqual(state["events"][-1]["stage"], "SIDE")
+
+
+class ChatOwnershipTests(unittest.TestCase):
+    def _cleanup_bindings(self, path: Path, thread_ids: tuple[str, ...]) -> None:
+        guard._guard_binding_path(path).unlink(missing_ok=True)
+        for thread_id in thread_ids:
+            guard._chat_binding_path(thread_id).unlink(missing_ok=True)
+
+    @contextmanager
+    def _temporary_folder(self):
+        folder = Path(__file__).resolve().parents[1] / f".guard_chat_test_{uuid.uuid4().hex}"
+        folder.mkdir()
+        try:
+            yield str(folder)
+        finally:
+            shutil.rmtree(folder)
+
+    def test_new_image_guard_is_owned_by_current_chat_and_same_chat_can_continue(self):
+        with self._temporary_folder() as folder:
+            path = Path(folder) / "EXECUTION_GUARD.json"
+            thread_id = "chat-owner-same-9c572b"
+            self.addCleanup(self._cleanup_bindings, path, (thread_id,))
+            with patch.dict("os.environ", {"CODEX_THREAD_ID": thread_id}):
+                state = guard.create_guard(
+                    path, request_id="owned-request", goal="Create one image", deliverable="One PNG",
+                )
+                self.assertEqual(state["owner_chat_id"], thread_id)
+                self.assertEqual(guard.require_active_guard(path, "owned-request")["owner_chat_id"], thread_id)
+                guard.assert_active_request_path(path.parent / "REFERENCE_PLAN.json")
+                guard.assert_active_request_path(path.parent / "stage" / "output.png")
+
+    def test_foreign_chat_denied_before_guard_json_changes(self):
+        with self._temporary_folder() as folder:
+            path = Path(folder) / "EXECUTION_GUARD.json"
+            owner, other = "chat-owner-cross-9c572b", "chat-other-cross-9c572b"
+            self.addCleanup(self._cleanup_bindings, path, (owner, other))
+            with patch.dict("os.environ", {"CODEX_THREAD_ID": owner}):
+                guard.create_guard(path, request_id="foreign-request", goal="Create one image", deliverable="One PNG")
+            before = path.read_bytes()
+            with patch.dict("os.environ", {"CODEX_THREAD_ID": other}):
+                with self.assertRaisesRegex(guard.GuardError, "FOREIGN_REQUEST"):
+                    guard.load_guard(path)
+            self.assertEqual(path.read_bytes(), before)
+
+    def test_unbound_legacy_image_guard_is_rejected_before_json_parse(self):
+        with self._temporary_folder() as folder:
+            path = Path(folder) / "EXECUTION_GUARD.json"
+            path.write_text("not valid json", encoding="utf-8")
+            thread_id = "chat-owner-legacy-9c572b"
+            self.addCleanup(self._cleanup_bindings, path, (thread_id,))
+            with patch.dict("os.environ", {"CODEX_THREAD_ID": thread_id}):
+                with self.assertRaisesRegex(guard.GuardError, "UNBOUND_LEGACY_REQUEST"):
+                    guard.load_guard(path)
+
+    def test_general_guard_remains_usable_with_chat_environment(self):
+        with self._temporary_folder() as folder:
+            path = Path(folder) / "EXECUTION_GUARD.json"
+            thread_id = "chat-owner-general-9c572b"
+            self.addCleanup(self._cleanup_bindings, path, (thread_id,))
+            with patch.dict("os.environ", {"CODEX_THREAD_ID": thread_id}):
+                guard.create_guard(
+                    path, request_id="general-request", goal="Engineering task", deliverable="Code change",
+                    task_kind="GENERAL",
+                )
+                self.assertEqual(guard.load_guard(path)["task_kind"], "GENERAL")
 
 
 if __name__ == "__main__":

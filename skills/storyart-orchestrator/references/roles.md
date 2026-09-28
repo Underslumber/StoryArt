@@ -13,15 +13,19 @@ call/time/word budget from `docs/EFFICIENT_WORKFLOW.md`.
 
 ## STYLE_LIBRARIAN
 
-- Read the complete applicable candidate pools and current `style-context`.
-- Inspect actual candidates for every applicable visual role; reuse only
-  equivalently recorded review evidence.
-- Return a minimal compatible reference proposal with rejected alternatives and reasons.
+- Start from the written style profile and existing matrix. Resolve only missing
+  source locations; reuse the request's existing context.
+- Inspect selected originals for required roles, or reuse equivalent recorded
+  evidence. Stop searching once the required roles have suitable sources.
+- Return the minimal compatible selected set; no rejected-alternatives report
+  is needed unless a concrete conflict explains the choice.
 - Remain read-only. Do not create prompts, call the generator, or modify manifests.
 
 ## IDENTITY_CURATOR
 
-- Inspect the approved character profile, assembly, face, and all canonical body views.
+- Use the approved profile and registry; inspect the selected assembly, face,
+  and applicable body views, reusing equivalent source evidence. The registry
+  validates the complete identity set; do not visually reopen unused views.
 - Select the smallest authoritative identity subset for the requested shot.
 - Report continuity risks and missing identity evidence.
 - Remain read-only. Do not redesign the character or approve a permanent identity change.
@@ -40,6 +44,10 @@ role. Receive one already validated prompt and exact attachment list. Confirm
 the matching `EXECUTION_STARTED` transition immediately before one real call.
 Do not research, change the prompt, select references, edit infrastructure, or
 retry independently.
+
+Execute through the available built-in `image_gen` / `image_gen__imagegen`
+with the prepared prompt and physical reference paths. StoryArt supplies the
+scenario and validated inputs; no separate StoryArt generator is required.
 
 ## VISUAL_QA
 
@@ -72,9 +80,10 @@ references, change QA, call the generator, or modify infrastructure.
 
 ## Routing precedence
 
-Use `docs/EFFICIENT_WORKFLOW.md` routing: Luna Medium for ordinary image work;
-Sol Low for planning/integration and fresh objective review; Luna High for
-discovery and ordinary code implementation. Sol High requires evidence of a
+Use `docs/EFFICIENT_WORKFLOW.md` routing: Luna Low for ordinary image work,
+deterministic discovery and straightforward implementation; Luna High only for
+materially ambiguous or difficult work. Sol Low handles planning/integration
+and fresh objective review. Sol High requires evidence of a
 substantive Luna failure for either complex implementation or repair; complexity
 alone does not qualify. Astra Low remains
 exceptional, read-only escalation only. Zero workers normally, one if helpful, two only

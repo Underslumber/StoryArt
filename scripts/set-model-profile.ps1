@@ -30,17 +30,17 @@ $profileSettings = switch ($Profile) {
     '5.6' {
         @{
             RootModel = 'gpt-5.6-luna'
-            RootEffort = 'high'
+            RootEffort = 'low'
             AgentModel = 'gpt-5.6-luna'
-            AgentEffort = 'high'
+            AgentEffort = 'low'
         }
     }
     '6' {
         @{
             RootModel = 'gpt-6-luna'
-            RootEffort = 'high'
+            RootEffort = 'low'
             AgentModel = 'gpt-6-luna'
-            AgentEffort = 'high'
+            AgentEffort = 'low'
         }
     }
 }

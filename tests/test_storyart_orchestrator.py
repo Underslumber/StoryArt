@@ -37,15 +37,15 @@ class StoryArtOrchestratorTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def test_project_config_template_uses_luna_high_defaults(self):
+    def test_project_config_template_uses_luna_low_defaults(self):
         config_path = ROOT / "config" / "codex.project.example.toml"
         config_text = config_path.read_text(encoding="utf-8")
         config = tomllib.loads(config_text)
 
         self.assertEqual(config["model"], "gpt-6-luna")
-        self.assertEqual(config["model_reasoning_effort"], "high")
+        self.assertEqual(config["model_reasoning_effort"], "low")
         self.assertEqual(config["agents"]["default_subagent_model"], "gpt-6-luna")
-        self.assertEqual(config["agents"]["default_subagent_reasoning_effort"], "high")
+        self.assertEqual(config["agents"]["default_subagent_reasoning_effort"], "low")
         allowed_models = {"gpt-6-astra", "gpt-6-sol", "gpt-6-luna"}
         configured_models = {config["model"], config["agents"]["default_subagent_model"]}
         self.assertLessEqual(configured_models, allowed_models)
@@ -65,6 +65,54 @@ class StoryArtOrchestratorTests(unittest.TestCase):
             with self.subTest(path=path):
                 contract_text = " ".join(path.read_text(encoding="utf-8").split())
                 self.assertIn(required_condition, contract_text)
+
+    def test_image_routing_keeps_fast_default_across_entrypoints(self):
+        for relative in (
+            "AGENTS.example.md", "skills/storyart-orchestrator/SKILL.md",
+            "skills/storyart-orchestrator/references/roles.md",
+            "skills/storyart-orchestrator/references/handoff-contract.md",
+        ):
+            with self.subTest(path=relative):
+                text = " ".join((ROOT / relative).read_text(encoding="utf-8").split())
+                self.assertIn("Luna Low", text)
+                self.assertNotIn("Luna Medium for ordinary image work", text)
+                self.assertNotIn("Luna High for ordinary image work", text)
+
+    def test_scenario_entrypoints_name_the_builtin_execution_backend(self):
+        for relative in (
+            "AGENTS.example.md", "skills/storyart-orchestrator/SKILL.md",
+            "docs/EFFICIENT_WORKFLOW.md",
+            "skills/storyart-orchestrator/references/roles.md",
+        ):
+            with self.subTest(path=relative):
+                text = (ROOT / relative).read_text(encoding="utf-8")
+                self.assertIn("image_gen__imagegen", text)
+                self.assertIn("EXECUTION_STARTED", text)
+                if relative != "skills/storyart-orchestrator/references/roles.md":
+                    self.assertIn("availability-check step", text)
+
+    def test_routine_images_do_not_require_worker_or_full_pool_checks(self):
+        skill = (ROOT / "skills/storyart-orchestrator/SKILL.md").read_text(encoding="utf-8")
+        roles = (ROOT / "skills/storyart-orchestrator/references/roles.md").read_text(encoding="utf-8")
+        self.assertIn("With zero workers, skip orchestration init/status/handoff", skill)
+        self.assertIn("optional routing index, not a preparation gate", skill)
+        self.assertNotIn("Read the complete applicable candidate pools", roles)
+        self.assertNotIn("and all canonical body views", roles)
+        self.assertIn("Stop searching once the required roles have suitable sources", roles)
+
+    def test_profile_style_never_replaces_current_chat_chooser(self):
+        for relative in ("AGENTS.example.md", "docs/GENERATION_RULES.md",
+                         "docs/PORTABLE_GENERATION_RULES.md",
+                         "skills/storyart-orchestrator/SKILL.md"):
+            with self.subTest(path=relative):
+                text = (ROOT / relative).read_text(encoding="utf-8")
+                self.assertIn("STYLE NAME only", text)
+                self.assertIn("Стиль и референсы", text)
+                self.assertIn("ONE active request", text)
+                self.assertNotIn("Reuse an earlier image only when the user selects", text)
+        adapter = (ROOT / "tools/storyart_orchestrator.py").read_text(encoding="utf-8")
+        self.assertIn("fidelity and BODY_REFERENCE_LIBRARY still", adapter)
+        self.assertIn("Never inherit those choices from another chat or profile", adapter)
 
     def test_sol_low_is_reserved_for_planning_integration_and_review(self):
         routing_paths = (
