@@ -751,6 +751,7 @@ def command_resolve_character(args: argparse.Namespace) -> None:
                     ensure_ascii=False,
                 ),
                 "role_assets": json.dumps(role_assets, ensure_ascii=False),
+                "useful_sketches": json.dumps([asset for asset in role_assets if asset["role"] == "SKETCH"], ensure_ascii=False),
                 "asset_index": json.dumps(asset_index, ensure_ascii=False),
                 "profile_schema": str(identity.get("schema_version", "")),
                 "confirmed_profile": json.dumps(confirmed, ensure_ascii=False),
@@ -2981,6 +2982,7 @@ def validate_plan_reference(
     status = "APPROVED_CHARACTER_ASSET"
     roles: list[str] = []
     request_local_style_candidate = False
+    sketch_style_support: dict[str, object] = {}
     if is_curated_body_contour:
         status = "FINAL_CURATED_BODY_CONTOUR"
         roles = ["POSE", "BODY_CONTOUR"]
@@ -3005,12 +3007,24 @@ def validate_plan_reference(
             status = "REQUEST_LOCAL_STYLE_CANDIDATE"
     else:
         generation = registered_approved_generation(paths, file)
+        if generation and str(generation.get("status", "")).upper() == "APPROVED_SKETCH":
+            generation = None  # Sketches must pass the exact role catalog and style-only restrictions.
         if generation is None:
             character_asset = registered_approved_character_asset(paths, file)
             if character_asset is None:
                 raise StylePackError(
                     f"{label} cannot use an unregistered, rejected, staging, or non-approved generation as a positive reference: {file}"
                 )
+            if character_asset.get("asset_role") == "SKETCH":
+                if label != "STYLE":
+                    raise StylePackError(f"{label} cannot use a useful sketch as identity, anatomy, clothing, or scene ground truth: {file}")
+                roles = ["STYLE", "SKETCH"]
+                sketch_style_support = {
+                    "asset_role": "SKETCH", "character_id": character_asset["character_id"],
+                    "usage": "STYLE_SUPPORT_ONLY", "purpose": character_asset.get("purpose", ""),
+                    "reference_scope": "CURRENT_REQUEST_ONLY", "permanent_anchor": False,
+                    "canonical_identity_priority": True,
+                }
             status = "APPROVED_CHARACTER_ASSET"
         else:
             status = str(generation["status"])
@@ -3021,6 +3035,7 @@ def validate_plan_reference(
         "status": status,
         "inferred_roles": roles,
         **({"reference_scope": "CURRENT_REQUEST_ONLY", "permanent_anchor": False} if request_local_style_candidate else {}),
+        **sketch_style_support,
         **compatibility,
     }
 
@@ -3035,8 +3050,9 @@ def approved_character_role_assets(
         "APPROVED_ACCESSORY": ("accessory_references", "ACCESSORY", "03_CHARACTER_REFERENCES/04_ACCESSORIES"),
         "APPROVED_FACE_VARIANT": ("face_variant_references", "FACE_VARIANT", "03_CHARACTER_REFERENCES/05_FACE_VARIANTS"),
         "APPROVED_BODY_VARIANT": ("body_variant_references", "BODY_VARIANT", "03_CHARACTER_REFERENCES/06_BODY_VARIANTS"),
+        "APPROVED_SKETCH": ("useful_sketches", "SKETCH", "03_CHARACTER_REFERENCES/07_USEFUL_SKETCHES"),
     }
-    profile_index = {role: _character_profile_paths(profile, field) for field, role, _ in profile_fields.values()}
+    profile_index = {role: [] if role == "SKETCH" else _character_profile_paths(profile, field) for field, role, _ in profile_fields.values()}
     approved: dict[str, dict[str, str]] = {}
     diagnostics: list[dict[str, str]] = []
     manifest_rows = read_csv(paths.generation_manifest)
@@ -3196,6 +3212,9 @@ def approved_character_role_assets(
             "profile_indexed": str(file in profile_index[role]).lower(),
             "provenance": manifest.get("notes", ""),
         }
+        if role == "SKETCH":
+            approved[str(file)].update({"label": "Useful unfinished character sketch",
+                                       "purpose": manifest.get("description", ""), "usage": "STYLE_SUPPORT_ONLY"})
     stale = {
         role: sorted(str(path) for path in paths_for_role if str(path) not in approved)
         for role, paths_for_role in profile_index.items()
@@ -3203,7 +3222,7 @@ def approved_character_role_assets(
     }
     missing_index = {
         role: sorted(item["path"] for item in approved.values() if item["role"] == role and item["path"] not in {str(p) for p in profile_index[role]})
-        for role in profile_index
+        for role in profile_index if role != "SKETCH"
         if any(item["role"] == role and item["path"] not in {str(p) for p in profile_index[role]} for item in approved.values())
     }
     unsupported = sorted({
@@ -7251,6 +7270,11 @@ def command_approve_variation(args: argparse.Namespace) -> None:
     ensure_generation_library(paths)
     if not args.user_approved:
         raise StylePackError("Variation approval requires --user-approved after direct confirmation.")
+    if args.kind == "sketch":
+        if not args.description.strip():
+            raise StylePackError("Sketch approval requires --description explaining its specific usefulness.")
+        if not getattr(args, "approval_quote", "").strip():
+            raise StylePackError("Sketch approval requires a direct --approval-quote scoped to saving this useful sketch.")
     if args.fidelity not in {30, 50, 70, 90, 100}:
         raise StylePackError("Fidelity must be one of 30, 50, 70, 90, or 100.")
     image = resolve_existing_file(args.image, paths)
@@ -7269,7 +7293,7 @@ def command_approve_variation(args: argparse.Namespace) -> None:
         raise StylePackError("Variation approval cannot use a QA-passed image whose plan identifies another character.")
     folder = character_folder(paths, args.character_id)
     profile = folder / "CHARACTER_PROFILE.yaml"
-    if not (folder / "CONFIRMED_PROFILE" / "ACTIVE.json").is_file():
+    if args.kind != "sketch" and not (folder / "CONFIRMED_PROFILE" / "ACTIVE.json").is_file():
         try:
             confirm_profile_state(profile, patch={}, active_changes={}, expected_revision=0,
                                   operation_id=f"bootstrap-{args.character_id}",
@@ -7284,6 +7308,7 @@ def command_approve_variation(args: argparse.Namespace) -> None:
         "accessory": ("03_CHARACTER_REFERENCES/04_ACCESSORIES", "APPROVED_ACCESSORY"),
         "face": ("03_CHARACTER_REFERENCES/05_FACE_VARIANTS", "APPROVED_FACE_VARIANT"),
         "body": ("03_CHARACTER_REFERENCES/06_BODY_VARIANTS", "APPROVED_BODY_VARIANT"),
+        "sketch": ("03_CHARACTER_REFERENCES/07_USEFUL_SKETCHES", "APPROVED_SKETCH"),
     }
     subfolder, approved_status = destinations[args.kind]
     approval_request_id = safe_component(args.request_id, "approved")
@@ -7303,6 +7328,8 @@ def command_approve_variation(args: argparse.Namespace) -> None:
         (folder / subfolder).mkdir(parents=True, exist_ok=True)
         approved = copy_unique(image, folder / subfolder / image.name)
         source_parent, source_plan, qa_evidence, qa_binding, approval_notes = approval_provenance(source_generation, args.notes, approved)
+        if args.kind == "sketch":
+            approval_notes += f"; sketch_approval_quote={args.approval_quote.strip()}"
         new_id = append_generation(
             paths,
             request_id=approval_request_id,
@@ -8106,7 +8133,7 @@ def build_parser() -> argparse.ArgumentParser:
     variation_parser.add_argument("--image", required=True)
     variation_parser.add_argument("--character-id", required=True)
     variation_parser.add_argument("--request-id", required=True)
-    variation_parser.add_argument("--kind", choices=("variation", "scene", "wardrobe", "accessory", "face", "body"), default="variation")
+    variation_parser.add_argument("--kind", choices=("variation", "scene", "wardrobe", "accessory", "face", "body", "sketch"), default="variation")
     variation_parser.add_argument("--description", required=True)
     variation_parser.add_argument("--fidelity", type=int, default=90)
     variation_parser.add_argument("--risk-level", required=True, choices=tuple(f"D{index}" for index in range(1, 11)))

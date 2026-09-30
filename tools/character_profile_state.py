@@ -25,7 +25,7 @@ class ProfileStateError(ValueError):
     pass
 
 
-STRUCTURAL = frozenset({"schema_version", "style_name", "character_id", "name", "status", "created_at", "approved_base", "last_approved_frame", "canonical_views", "character_face_references", "character_body_references", "wardrobe_references", "accessory_references", "face_variant_references", "body_variant_references"})
+STRUCTURAL = frozenset({"schema_version", "style_name", "character_id", "name", "status", "created_at", "approved_base", "last_approved_frame", "canonical_views", "character_face_references", "character_body_references", "wardrobe_references", "accessory_references", "face_variant_references", "body_variant_references", "useful_sketches"})
 TEMPLATE_PLACEHOLDERS = frozenset({
     "Describe approved eyes, nose, lips, cheeks, jaw, and face proportions before the next generation.",
     "Describe approved height, build, torso, chest, waist, hips, limbs, and other permanent proportions before the next generation.",

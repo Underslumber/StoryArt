@@ -13,6 +13,10 @@ character_face_references: []
 character_body_references: []
 wardrobe_references: []
 accessory_references: []
+useful_sketches:
+  directory: "03_CHARACTER_REFERENCES/07_USEFUL_SKETCHES"
+  purpose: "Useful unfinished character studies: style, silhouette, clothing, or details."
+  usage: "STYLE_SUPPORT_ONLY when explicitly selected; canonical identity takes priority; never active asset defaults."
 canonical_views:
   face: "{{CHARACTER_FACE}}"
   physique_front: "{{CHARACTER_BODY_FRONT}}"
