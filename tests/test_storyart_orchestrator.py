@@ -37,24 +37,21 @@ class StoryArtOrchestratorTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def test_project_config_template_uses_luna_low_defaults(self):
+    def test_project_config_template_uses_sol_medium_root_low_workers(self):
         config_path = ROOT / "config" / "codex.project.example.toml"
         config_text = config_path.read_text(encoding="utf-8")
         config = tomllib.loads(config_text)
 
-        self.assertEqual(config["model"], "gpt-6-luna")
-        self.assertEqual(config["model_reasoning_effort"], "low")
-        self.assertEqual(config["agents"]["default_subagent_model"], "gpt-6-luna")
+        self.assertEqual(config["model"], "gpt-6.1-sol")
+        self.assertEqual(config["model_reasoning_effort"], "medium")
+        self.assertEqual(config["agents"]["default_subagent_model"], "gpt-6.1-sol")
         self.assertEqual(config["agents"]["default_subagent_reasoning_effort"], "low")
-        allowed_models = {"gpt-6-astra", "gpt-6-sol", "gpt-6-luna"}
+        allowed_models = {"gpt-6.1-sol", "gpt-5.6-luna"}
         configured_models = {config["model"], config["agents"]["default_subagent_model"]}
         self.assertLessEqual(configured_models, allowed_models)
 
     def test_sol_high_gate_is_consistent_across_routing_contracts(self):
-        required_condition = (
-            "Sol High requires evidence of a substantive Luna failure for either "
-            "complex implementation or repair; complexity alone does not qualify."
-        )
+        required_condition = "config/model_routes.json"
         paths = (
             ROOT / "docs" / "EFFICIENT_WORKFLOW.md",
             ROOT / "skills" / "storyart-orchestrator" / "SKILL.md",
@@ -74,7 +71,7 @@ class StoryArtOrchestratorTests(unittest.TestCase):
         ):
             with self.subTest(path=relative):
                 text = " ".join((ROOT / relative).read_text(encoding="utf-8").split())
-                self.assertIn("Luna Low", text)
+                self.assertIn("config/model_routes.json", text)
                 self.assertNotIn("Luna Medium for ordinary image work", text)
                 self.assertNotIn("Luna High for ordinary image work", text)
 
@@ -114,7 +111,7 @@ class StoryArtOrchestratorTests(unittest.TestCase):
         self.assertIn("fidelity and BODY_REFERENCE_LIBRARY still", adapter)
         self.assertIn("Never inherit those choices from another chat or profile", adapter)
 
-    def test_sol_low_is_reserved_for_planning_integration_and_review(self):
+    def test_routing_keeps_medium_control_and_bounded_low_workers(self):
         routing_paths = (
             ROOT / "docs" / "EFFICIENT_WORKFLOW.md",
             ROOT / "skills" / "storyart-orchestrator" / "SKILL.md",
@@ -123,11 +120,11 @@ class StoryArtOrchestratorTests(unittest.TestCase):
         )
         for path in routing_paths:
             with self.subTest(path=path):
-                self.assertNotIn("Sol Medium", path.read_text(encoding="utf-8"))
+                self.assertIn("Sol 6.1 Medium", path.read_text(encoding="utf-8"))
 
         workflow = (ROOT / "docs" / "EFFICIENT_WORKFLOW.md").read_text(encoding="utf-8")
-        self.assertIn("| Code planning/integration and independent review | Sol Low |", workflow)
-        self.assertIn("| Critical independent QA | fresh `gpt-6-sol`, Low |", workflow)
+        self.assertIn("Sol 6.1 Medium (`CALL_PLANNER` / `CODE_REVIEW` / `VISUAL_QA`)", workflow)
+        self.assertIn("| `VISUAL_QA` / critical independent QA | Registry role: fresh Sol 6.1 Medium |", workflow)
 
     def initialize(self):
         return orchestrator.initialize_state(self.state_path, self.guard_path)
@@ -273,7 +270,7 @@ class StoryArtOrchestratorTests(unittest.TestCase):
         self.assertIn("EXECUTION_GUARD.json", handoff["agent_prompt"])
         self.assertIn("Allowed writes: NONE (read-only)", handoff["agent_prompt"])
 
-    def test_escalation_orchestrator_is_due_read_only_astra_profile(self):
+    def test_escalation_orchestrator_is_due_read_only_sol_high_profile(self):
         self.initialize()
         guard_data = json.loads(self.guard_path.read_text(encoding="utf-8"))
         guard_data.update({
@@ -285,13 +282,13 @@ class StoryArtOrchestratorTests(unittest.TestCase):
             self.state_path, "ESCALATION_ORCHESTRATOR", "Return a recovery work order.",
             [str(self.guard_path)], [], [], "FRAME", "", "STYLE",
         )
-        self.assertEqual(handoff["execution_profile"]["model"], "gpt-6-astra")
-        self.assertEqual(handoff["execution_profile"]["reasoning_effort"], "low")
+        self.assertEqual(handoff["execution_profile"]["model"], "gpt-6.1-sol")
+        self.assertEqual(handoff["execution_profile"]["reasoning_effort"], "high")
         self.assertIn("do not use tools", handoff["agent_prompt"])
-        self.assertIn("Luna or Sol executor", handoff["agent_prompt"])
-        self.assertIn("Sol High requires evidence of a substantive Luna failure", handoff["agent_prompt"])
-        self.assertIn("complex implementation or repair", handoff["agent_prompt"])
-        self.assertIn("complexity alone does not qualify", handoff["agent_prompt"])
+        self.assertIn("Sol executor", handoff["agent_prompt"])
+        self.assertIn("Sol 6.1 High requires an evidenced complex fault", handoff["agent_prompt"])
+        self.assertIn("substantive repair failure", handoff["agent_prompt"])
+        self.assertNotIn("requires evidence of a substantive Luna failure", handoff["agent_prompt"])
         self.assertNotIn("Sol High only for complex", handoff["agent_prompt"])
         self.assertNotIn("Terra", handoff["agent_prompt"])
         guard_data = json.loads(self.guard_path.read_text(encoding="utf-8"))

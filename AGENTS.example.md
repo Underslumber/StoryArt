@@ -143,13 +143,24 @@ loop or change scope silently.
 
 ## Image-specific model routing
 
-The StoryArt model family is selectable with `.\scripts\set-model-profile.ps1 5.6` or `.\scripts\set-model-profile.ps1 6`; see `docs/MODEL_PROFILES.md`. For future root and agent assignments, treat the family selected in `.codex/config.toml` as authoritative and use its matching `-sol` or `-luna` model for the role described below and in referenced project instructions. This supersedes fixed GPT-6 model IDs in older role tables. Existing running sessions do not change models.
+`config/model_routes.json` is the authoritative StoryArt role registry;
+`docs/MODEL_PROFILES.md` describes activation. Apply the production profile with
+`.\scripts\set-model-profile.ps1 6.1`: root `gpt-6.1-sol` Medium, default worker
+`gpt-6.1-sol` Low. Independent review and complex call planning use Medium;
+exceptional diagnosis uses High. This project route supersedes generic model
+routing and fixed Luna/Astra assignments in older tables. Existing chats retain
+their running model; do not infer role models from the root's family.
 
-Apply the image-specific authority in `docs/EFFICIENT_WORKFLOW.md`: Luna Low
-for ordinary image work and metadata discovery; Luna High only for materially
-ambiguous source compatibility or difficult diagnosis; Sol Low for
-planning/integration and objective high-impact independent review. Normal worker count is
-zero or one, maximum two independent workers. Code-development routing stays
-separate. Valid hash/role/view/applicability-backed complete reviews may be
-reused across tasks; inspect selected originals and changed/uncovered sources.
-This preparation rule supersedes historical routine rereads, never art/QA gates.
+Root owns the full user contract, accepted choices, exact call, continued
+recovery and final acceptance. Normally use zero workers; one for useful bounded
+independent work, at most two within runtime capacity. Tools execute known
+lookups, generator calls and registration directly. Preserve QA and applicable
+independent-review gates. Reuse valid selected-source evidence and resolver
+results; re-read only changed or uncovered inputs. Never send a full transcript
+to a worker. Packet budgets do not end the user goal.
+
+Luna 6 is outside normal production routing. Sol 6.1 Low root and Luna 5.6 Low
+mechanical workers are explicit experiments, never automatic fallbacks. Use
+existing guard/provider timestamps to measure the whole request through QA and
+delivery; include failures and worker cost, separate user waits, and label
+missing telemetry unknown. No extra calibration/test art for optimization.

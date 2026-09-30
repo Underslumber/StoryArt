@@ -524,8 +524,8 @@ orchestration state directly.
   does not start calibration or pause unrelated production.
 - When the guard records a same-stage, same-layer failure that persists after
   an explicit correction addressed the first, dispatch the one-shot `ESCALATION_ORCHESTRATOR` profile
-  only while that incident is due. It is `gpt-6-astra` Low exceptional error
-  handling, read-only, and returns one bounded Luna/Sol work order. It must
+  only while that incident is due. It is registry `ESCALATION_ORCHESTRATOR` (Sol 6.1 High) exceptional error
+  handling, read-only, and returns one bounded Sol work order. It must
   not use tools, generate, test, edit, QA, approve, or spawn; root dispatches
   the recommended executor. It is never an ordinary diagnostic or per-frame role.
 - Use `style-readiness` only to surface a consent request when five unique
@@ -542,14 +542,15 @@ mandatory StoryArt stage is complete.
 
 ## Routing precedence
 
-Use `docs/EFFICIENT_WORKFLOW.md` routing: Luna Low for deterministic lookups,
-prepared CLI execution, cache reuse, and straightforward registration; Luna High
-only for materially ambiguous source compatibility, difficult planning or
-substantive QA diagnosis. Sol remains root planning/integration and fresh
-objective review; Astra Low is exceptional read-only diagnosis. Use zero workers
-normally, one when there is useful separate work, two only for independent
-preparation, and no agents for generator/archive/CLI operations. Reuse selected
-source review evidence only when hash, role, view, applicability and limitations
-match exactly. This changes preparation effort, not art/QA requirements.
-Sol High requires evidence of a substantive Luna failure for either complex
-implementation or repair; complexity alone does not qualify.
+Use `config/model_routes.json` as the role authority and
+`docs/MODEL_PROFILES.md` for activation and experiments. Sol 6.1 Medium owns the
+user contract and acceptance; bounded implementation/discovery uses Low;
+fresh independent review uses Medium; exceptional diagnosis uses High.
+Luna 6 is outside normal production routing. Sol 6.1 Low root and Luna 5.6 Low
+mechanical workers require an explicit opt-in trial. Normally zero workers,
+one when useful, at most two independent workers. No full-history forks,
+nesting, or agents merely for generator/archive/CLI operations.
+Reuse source evidence only when hash, role, view, applicability and limitations
+match; inspect changed or uncovered sources. Packet ceilings return evidence
+to root and never terminate the user's image goal. This changes orchestration,
+not artistic, identity, safety or QA requirements.

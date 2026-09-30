@@ -30,13 +30,13 @@ READ_ONLY_ROLES = {
     "ESCALATION_ORCHESTRATOR",
 }
 ROLE_DESCRIPTIONS = {
-    "STYLE_LIBRARIAN": "Inspect the complete style pack and propose minimal references.",
+    "STYLE_LIBRARIAN": "Inspect selected style sources and applicable evidence; propose minimal compatible references.",
     "IDENTITY_CURATOR": "Inspect canonical character identity and select authoritative sources.",
     "CALL_PLANNER": "Return one validated prompt and exact attachment list.",
     "GENERATOR_OPERATOR": "Execute one declared generator call without research or prompt drift.",
     "VISUAL_QA": "Independently score every required semantic QA layer.",
     "REGISTRAR": "Record and store a finalized result through existing StoryArt managers.",
-    "ESCALATION_ORCHESTRATOR": "Exceptional read-only escalation: return one bounded Luna/Sol work order from corrected repeated-failure evidence.",
+    "ESCALATION_ORCHESTRATOR": "Exceptional read-only escalation: return one bounded Sol work order from repeated stage-failure evidence.",
 }
 FORBIDDEN_INFRASTRUCTURE_ROOTS = {
     "tools",
@@ -86,6 +86,36 @@ def save_json(path: Path, data: dict[str, Any]) -> None:
         encoding="utf-8",
     )
     temporary.replace(path)
+
+
+def load_model_routes() -> dict[str, Any]:
+    """Read the project authority; experiments are never automatic fallbacks."""
+    routes = load_json(PROJECT_ROOT / "config" / "model_routes.json")
+    if routes.get("schema_version") != 1 or routes.get("default_profile") != "6.1":
+        raise OrchestratorError("Model routes require schema_version=1 and default_profile='6.1'.")
+    required_roles = READ_ONLY_ROLES | {"ROOT", "DEFAULT_WORKER", "CODE_IMPLEMENTER", "CODE_REVIEW"}
+    sections = (("roles", required_roles), ("experiments", {"ROUTINE_ROOT", "MECHANICAL_WORKER"}))
+    profiles = routes.get("profiles")
+    if not isinstance(profiles, dict) or set(profiles) != {"6.1", "5.6", "6"}:
+        raise OrchestratorError("Model routes require profiles 6.1, 5.6, and 6.")
+    settings = []
+    for name, profile in profiles.items():
+        if not isinstance(profile, dict) or set(profile) != {"root", "default_agent"}:
+            raise OrchestratorError(f"Invalid model profile: {name}")
+        settings.extend(profile.values())
+    for section, required in sections:
+        entries = routes.get(section)
+        if not isinstance(entries, dict) or set(entries) != required:
+            raise OrchestratorError(f"Invalid model routes section: {section}")
+        settings.extend(entries.values())
+    for setting in settings:
+        if (not isinstance(setting, dict) or set(setting) != {"model", "reasoning_effort"}
+                or not isinstance(setting["model"], str)
+                or not re.fullmatch(r"gpt-[a-z0-9.-]+", setting["model"])
+                or not isinstance(setting["reasoning_effort"], str)
+                or setting["reasoning_effort"] not in {"low", "medium", "high"}):
+            raise OrchestratorError("Invalid model/effort object in model routes.")
+    return routes
 
 
 def ensure_inside_project(path: Path) -> Path:
@@ -253,7 +283,9 @@ def dispatch_handoff(
 
     sequence = len(state.get("handoffs", [])) + 1
     handoff_id = f"H{sequence:03d}"
-    execution_profile: dict[str, str] = {}
+    execution_profile: dict[str, str] = dict(load_model_routes()["roles"][role])
+    if role == "ESCALATION_ORCHESTRATOR":
+        execution_profile["mode"] = "EXCEPTIONAL_ERROR_HANDLING"
     if role == "ESCALATION_ORCHESTRATOR":
         if not stage.strip() or not qa_layer.strip():
             raise OrchestratorError("ESCALATION_ORCHESTRATOR requires --stage and --qa-layer.")
@@ -281,7 +313,6 @@ def dispatch_handoff(
         finally:
             os.close(lock_fd)
             lock_path.unlink(missing_ok=True)
-        execution_profile = {"model": "gpt-6-astra", "reasoning_effort": "low", "mode": "EXCEPTIONAL_ERROR_HANDLING"}
 
     if role == "GENERATOR_OPERATOR":
         if not stage.strip():
@@ -320,7 +351,7 @@ def dispatch_handoff(
             "communicate with the user, or edit orchestration state. Return a concise result "
             "with evidence."
             + (
-                " This is a one-shot exceptional escalation only: do not use tools, generate, test, edit, QA, approve, or spawn agents. Return one evidence-based bounded work order for a Luna or Sol executor. Sol High requires evidence of a substantive Luna failure for either complex implementation or repair; complexity alone does not qualify. The root dispatches it."
+                " This is a one-shot exceptional escalation only: do not use tools, generate, test, edit, QA, approve, or spawn agents. Return one evidence-based bounded work order for a Sol executor. Sol 6.1 High requires an evidenced complex fault or substantive repair failure. The root dispatches it."
                 if role == "ESCALATION_ORCHESTRATOR" else ""
             )
         ),

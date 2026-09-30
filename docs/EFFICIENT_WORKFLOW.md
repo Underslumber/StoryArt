@@ -11,13 +11,16 @@ It cannot itself change the model of an already running session.
 
 | Work | Default assignment | Contract |
 | --- | --- | --- |
-| Ordinary image production | Luna Low for deterministic steps; Luna High only for material ambiguity | Root keeps user communication, guard transitions, choices, final decision, and evidence reconciliation. |
-| Deterministic lookups, CLI execution, cache reuse, straightforward registration | Luna Low (fastest supported) | Reuse unchanged request-scoped results; retry a lookup only after a concrete error or changed input. |
-| Bounded metadata/catalog discovery | Luna Low (fastest supported) | Receives a bounded packet and returns evidence; no user conversation or broad writes. |
-| Code planning/integration and independent review | Sol Low | Root plans and integrates; a fresh Sol Low reviews the actual diff after machine checks. |
-| Discovery, mechanics, straightforward code implementation | Luna Low (fastest supported) | Owns only explicitly named files and verification. |
-| Ambiguous compatibility, difficult planning, substantive QA diagnosis | Luna High | Escalate only the materially uncertain part; keep deterministic steps at Low. |
-| Complex implementation or repair after evidenced Luna failure | Sol High | Sol High requires evidence of a substantive Luna failure for either complex implementation or repair; complexity alone does not qualify. |
+| Ordinary image production and integration | Sol 6.1 Medium root (`ROOT`) | Root retains the full user contract, choices, execution, recovery and acceptance. |
+| Deterministic lookups, CLI execution, cache reuse, registration | Root uses project tools directly | Reuse unchanged request-scoped results; retry only after a concrete error or changed input. |
+| Bounded source discovery and ordinary code implementation | Sol 6.1 Low (`DEFAULT_WORKER`) | Optional narrow packet; no user conversation or decisions that replace the contract. |
+| Complex call planning and independent review | Sol 6.1 Medium (`CALL_PLANNER` / `CODE_REVIEW` / `VISUAL_QA`) | Only when separate work or judgement materially helps; fresh review for substantial code changes. |
+| Exceptional diagnosis | Sol 6.1 High (`ESCALATION_ORCHESTRATOR`) | Evidence of a complex fault or substantive repair failure; bounded diagnosis only. |
+
+`config/model_routes.json` is the role authority; `MODEL_PROFILES.md` explains
+activation and explicit experiments. This project route overrides generic model
+defaults. Sol 6.1 Low root and Luna 5.6 Low mechanical workers are opt-in trials,
+not automatic fallback assignments. Luna 6 is outside normal production routing.
 
 Model and effort are requested when an agent is spawned; prose and tools cannot
 switch the current model. On a clean setup, the provided configuration template
@@ -39,14 +42,10 @@ returning evidence to the root, never declaring the entire user task complete.
 Retain the overall limit of two ordinary repair loops. Reset neither the count
 nor the scope after a failed check; escalate the concrete evidence to root.
 
-The project TOML defaults are project-wide and optimized for image work, not
-a per-task scheduler. For a code/infrastructure task explicitly select Sol Low
-for the root at task creation and Luna Low for deterministic discovery and
-straightforward implementation, raising only materially difficult work to
-Luna High, then fresh Sol Low for review. Sol High requires evidence of
-a substantive Luna failure for either complex implementation or repair;
-complexity alone does not qualify. If an existing root differs,
-report that fact and use explicit worker assignments; never claim it switched.
+Project TOML defaults apply to new sessions and are not a per-task scheduler.
+Use the registry's `CODE_IMPLEMENTER` for bounded implementation, `CODE_REVIEW`
+for fresh substantial-code review, and the same root contract for integration.
+An existing chat keeps its actual model; never claim a config edit switched it.
 
 ## Image-production route
 
@@ -154,10 +153,9 @@ required semantic layers remain separately inspected and recorded.
 
 | Delegated image role | Requested model and effort | Limit |
 | --- | --- | --- |
-| `STYLE_LIBRARIAN` / `IDENTITY_CURATOR` | `gpt-6-luna`, Low; High for materially ambiguous compatibility | Bounded source discovery; root owns choices and integration |
-| `CALL_PLANNER` | `gpt-6-luna`, Low; High for difficult planning | Routine image planning; root integrates |
-| Routine `VISUAL_QA` | `gpt-6-luna`, Low; High for substantive diagnosis | Only when a separate bounded review is useful |
-| Critical independent QA | fresh `gpt-6-sol`, Low | Objective high-impact gate only |
+| `STYLE_LIBRARIAN` / `IDENTITY_CURATOR` | Registry role: Sol 6.1 Low | Optional bounded source discovery; root resolves material ambiguity |
+| `CALL_PLANNER` | Registry role: Sol 6.1 Medium | Only a complex exact call with useful independent planning |
+| `VISUAL_QA` / critical independent QA | Registry role: fresh Sol 6.1 Medium | Only when a separate bounded judgement or required independent gate is useful |
 | `GENERATOR_OPERATOR` / `REGISTRAR` | No agent; root executes sequentially | N/A |
 
 These are spawn requests, not a runtime scheduler or a way to switch the
@@ -219,9 +217,9 @@ condition.
 
 When a second failure of the same QA layer at the same stage occurs after an
 explicit correction addressed the first, the guard requires one `ESCALATION_ORCHESTRATOR` incident before a
-further attempt. It is an exceptional, read-only `gpt-6-astra` Low error handler,
+further attempt. It is an exceptional, read-only registry `ESCALATION_ORCHESTRATOR` (Sol 6.1 High) error handler,
 not a per-frame worker: it receives recorded evidence and returns one bounded
-Luna/Sol work order. It must not use tools, generate, test, edit, perform QA,
+Sol work order. It must not use tools, generate, test, edit, perform QA,
 approve, or spawn agents; the root dispatches any recommended executor. It runs
 once per corrected incident. Calibration remains a user-requested or
 user-consented proposal only.
@@ -242,18 +240,17 @@ This section supersedes historical coding-model assignments and repeated full-po
 inspection requirements only for orchestration/preparation. All art, safety,
 archive, identity, approval and semantic QA requirements remain mandatory.
 
-- Use Luna Low for deterministic lookups, CLI execution, cache reuse and
-  straightforward registration; use Luna High only for materially ambiguous
-  source compatibility, difficult planning or substantive QA diagnosis. Existing
-  sessions do not switch models merely because this document or config changes.
+- Use `config/model_routes.json` and `MODEL_PROFILES.md` for explicit role
+  assignments. Root performs deterministic operations directly; optional Low
+  workers receive bounded independent work. Existing sessions keep their model.
 - Reuse the resolver result, approved IDs and user choices while the request
   inputs remain unchanged. Retry `resolve-character` only after a concrete
   invalidation, changed input or resolver error. Ambiguous semantic classification
-  goes to the Luna High image lead; it does not select authoritative visual identity.
+  stays with the Medium root and approved registry; it does not invent visual identity.
 - Usually use zero workers; one when there is useful separate work, at most two
   for independent preparation. No nested agents, full-history forks, or agents
   merely for CLI, archive, generator calls, or individual QA-layer checkboxes.
-- Request fresh Sol Low for a new face before dependent base views, final
+- Request fresh registry `VISUAL_QA` (Sol 6.1 Medium) for a new face before dependent base views, final
   reusable-base acceptance, changed authoritative identity/style sources,
   conflicting QA requirements, or a repeated defect of the same layer. Do not
   request it automatically for every routine frame. An LLM PASS is not proof
@@ -261,14 +258,16 @@ archive, identity, approval and semantic QA requirements remain mandatory.
 - After the first failure, correct the specific cause. After the same-layer
   repeated failure, obtain one diagnosis before another authorized attempt;
   do not automatically generate a stack of prompt variants.
-- Astra Low is exceptional read-only diagnosis only. Code development remains
-  separate: Sol Low planning/integration and fresh review; Luna Low deterministic
-  discovery and straightforward implementation, Luna High for material ambiguity
-  or difficulty. Sol High requires evidence of a substantive Luna
-  failure for either complex implementation or repair; complexity alone does not
-  qualify.
+- Sol 6.1 High is exceptional read-only diagnosis only. Bounded implementation
+  uses Low; complex planning and fresh substantial-code review use Medium.
+  An evidenced complex fault or substantive repair failure qualifies for
+  diagnosis regardless of which model performed the earlier attempt.
 - Worker packets include explicit model/effort, fork_turns="none", authoritative
   input paths, acceptance and a bounded return. Never dump the complete tool
   catalog. Timing/tool discovery is optional and must not displace the task.
 - Quantified quota savings and equal visual quality require actual evidence;
   the routing policy alone proves neither.
+- Use existing guard timestamps/provider receipts for preparation, generation,
+  QA/recovery and delivery; separate user waits, include failed attempts and
+  all workers. Reuse the short locked contract through retries. Report missing
+  token/cost telemetry as unknown; do not add per-step measurement commands.

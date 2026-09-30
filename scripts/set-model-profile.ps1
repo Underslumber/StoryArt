@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true, Position = 0)]
-    [ValidateSet('5.6', '6')]
+    [Parameter(Position = 0)]
+    [ValidateSet('6.1', '5.6', '6')]
     [string]$Profile,
 
     [string]$ConfigPath
@@ -10,6 +10,46 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 
+# Explicit profile switches are opt-in; experiments are never fallback routes.
+$routesPath = Join-Path $root 'config\model_routes.json'
+$routes = [System.IO.File]::ReadAllText($routesPath) | ConvertFrom-Json
+if ($routes.schema_version -ne 1 -or $routes.default_profile -ne '6.1') {
+    throw 'Model routes require schema_version=1 and default_profile=6.1.'
+}
+function Assert-RouteKeys($Object, [string[]]$Expected, [string]$Name) {
+    if ($null -eq $Object -or $Object -isnot [pscustomobject]) {
+        throw "Invalid model routes object: $Name"
+    }
+    $actual = @($Object.PSObject.Properties.Name | Sort-Object)
+    if (($actual -join ',') -ne (($Expected | Sort-Object) -join ',')) {
+        throw "Invalid model routes keys: $Name"
+    }
+}
+Assert-RouteKeys $routes.profiles @('6.1', '5.6', '6') 'profiles'
+Assert-RouteKeys $routes.roles @('ROOT', 'DEFAULT_WORKER', 'STYLE_LIBRARIAN', 'IDENTITY_CURATOR', 'CALL_PLANNER', 'VISUAL_QA', 'ESCALATION_ORCHESTRATOR', 'CODE_IMPLEMENTER', 'CODE_REVIEW') 'roles'
+Assert-RouteKeys $routes.experiments @('ROUTINE_ROOT', 'MECHANICAL_WORKER') 'experiments'
+$routeSettings = @()
+foreach ($entry in $routes.profiles.PSObject.Properties) {
+    Assert-RouteKeys $entry.Value @('root', 'default_agent') "profiles.$($entry.Name)"
+    $routeSettings += $entry.Value.root, $entry.Value.default_agent
+}
+$routeSettings += @($routes.roles.PSObject.Properties | ForEach-Object { $_.Value })
+$routeSettings += @($routes.experiments.PSObject.Properties | ForEach-Object { $_.Value })
+foreach ($setting in $routeSettings) {
+    Assert-RouteKeys $setting @('model', 'reasoning_effort') 'model/effort'
+    if ($setting.model -isnot [string] -or $setting.model -cnotmatch '^gpt-[a-z0-9.-]+$' -or $setting.reasoning_effort -isnot [string] -or $setting.reasoning_effort -cnotin @('low', 'medium', 'high')) {
+        throw 'Invalid model/effort object in model routes.'
+    }
+}
+if ([string]::IsNullOrWhiteSpace($Profile)) { $Profile = $routes.default_profile }
+$selected = $routes.profiles.PSObject.Properties[$Profile].Value
+$profileSettings = @{
+    RootModel = $selected.root.model
+    RootEffort = $selected.root.reasoning_effort
+    AgentModel = $selected.default_agent.model
+    AgentEffort = $selected.default_agent.reasoning_effort
+}
+
 if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
     $ConfigPath = Join-Path $root '.codex\config.toml'
 }
@@ -17,35 +57,14 @@ if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
 $configPathResolved = [System.IO.Path]::GetFullPath($ConfigPath)
 $templatePath = Join-Path $root 'config\codex.project.example.toml'
 
-if (-not (Test-Path -LiteralPath $configPathResolved -PathType Leaf)) {
+$configExists = Test-Path -LiteralPath $configPathResolved -PathType Leaf
+if (-not $configExists) {
     if ($configPathResolved -ne [System.IO.Path]::GetFullPath((Join-Path $root '.codex\config.toml'))) {
         throw "Config file does not exist: $configPathResolved"
     }
-
-    New-Item -ItemType Directory -Path (Split-Path -Parent $configPathResolved) -Force | Out-Null
-    Copy-Item -LiteralPath $templatePath -Destination $configPathResolved
 }
 
-$profileSettings = switch ($Profile) {
-    '5.6' {
-        @{
-            RootModel = 'gpt-5.6-luna'
-            RootEffort = 'low'
-            AgentModel = 'gpt-5.6-luna'
-            AgentEffort = 'low'
-        }
-    }
-    '6' {
-        @{
-            RootModel = 'gpt-6-luna'
-            RootEffort = 'low'
-            AgentModel = 'gpt-6-luna'
-            AgentEffort = 'low'
-        }
-    }
-}
-
-$content = [System.IO.File]::ReadAllText($configPathResolved)
+$content = if ($configExists) { [System.IO.File]::ReadAllText($configPathResolved) } else { [System.IO.File]::ReadAllText($templatePath) }
 $replacements = @(
     @{ Pattern = '(?m)^model\s*=\s*"[^"]*"\s*$'; Value = "model = `"$($profileSettings.RootModel)`""; Name = 'root model' },
     @{ Pattern = '(?m)^model_reasoning_effort\s*=\s*"[^"]*"\s*$'; Value = "model_reasoning_effort = `"$($profileSettings.RootEffort)`""; Name = 'root reasoning effort' },
@@ -63,8 +82,14 @@ foreach ($replacement in $replacements) {
 
 $temporaryPath = "$configPathResolved.$([guid]::NewGuid().ToString('N')).tmp"
 try {
+    New-Item -ItemType Directory -Path (Split-Path -Parent $configPathResolved) -Force | Out-Null
     [System.IO.File]::WriteAllText($temporaryPath, $content, [System.Text.UTF8Encoding]::new($false))
-    Move-Item -LiteralPath $temporaryPath -Destination $configPathResolved -Force
+    if ($configExists) {
+        [System.IO.File]::Replace($temporaryPath, $configPathResolved, [NullString]::Value)
+    }
+    else {
+        [System.IO.File]::Move($temporaryPath, $configPathResolved)
+    }
 }
 finally {
     if (Test-Path -LiteralPath $temporaryPath) {
