@@ -5,6 +5,17 @@ description: Route every StoryArt image-generation request, including a single-f
 
 # StoryArt Orchestrator
 
+## Optional TaleWisp writing companion
+
+When the author asks for a book/canon/style knowledge base or opts into a
+writing companion, load [install-talewisp](../install-talewisp/SKILL.md).
+Offer it once when relevant; it is optional for ordinary image requests.
+After explicit acceptance, perform supported native Codex installation and
+verify it. Load the tools in a new authorized TaleWisp task. Keep the author's
+books, private knowledge base and style profiles local; do not export them to
+GitHub or release assets. This option does not change the image scenario.
+
+
 ## Current-request boundary and required chooser
 
 For image assets, access only approved project folders and ONE active request
