@@ -24,7 +24,8 @@ whether to create it. A current StoryArt chat cannot gain newly installed tools
 without reload. Do not claim that installation alone has loaded them.
 
 In the new task, let TaleWisp run its existing series-base workflow on supplied
-FB2: pseudonym first, source reading, nine-layer analysis, machine checks and
+books, documents, notes and accessible links: pseudonym first, complete source
+reading, nine-layer analysis, machine checks and
 independent review. Do not collect private books or style profiles into this
 repository, the plugin, GitHub or release assets. Do not start calibration.
 
