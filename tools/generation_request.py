@@ -15,9 +15,11 @@ from typing import Any
 if __package__:
     from . import style_pack_manager as manager
     from . import generation_risk_assessor as risk_assessor
+    from . import workflow_recovery
 else:
     import style_pack_manager as manager
     import generation_risk_assessor as risk_assessor
+    import workflow_recovery
 
 
 def _prepare_parser() -> argparse.ArgumentParser:
@@ -224,6 +226,26 @@ def _load_call_file(path: Path) -> tuple[dict[str, Any] | None, list[str]]:
     return raw, []
 
 
+def _bound_guard_path(raw: Any) -> Path | None:
+    """Resolve only the canonical guard for a minimally identifiable request."""
+    if not isinstance(raw, dict):
+        return None
+    request_id, style_name = raw.get("request_id"), raw.get("style_name")
+    workspace = raw.get("workspace", manager.DEFAULT_WORKSPACE)
+    if not isinstance(request_id, str) or not request_id.strip() or not isinstance(style_name, str) or not style_name.strip():
+        return None
+    if not isinstance(workspace, (str, Path)):
+        return None
+    try:
+        paths = manager.make_paths(Path(workspace), style_name)
+        folder = paths.generations / "00_PENDING" / manager.safe_component(request_id, "request")
+        candidate = folder / "EXECUTION_GUARD.json"
+        manager.assert_active_request_path(candidate)
+        return candidate if candidate.is_file() else None
+    except (OSError, ValueError, manager.StylePackError, manager.ExecutionGuardError):
+        return None
+
+
 def _parsed_manager_command(command: str, args: argparse.Namespace, stage_id: str = "") -> argparse.Namespace:
     parser = manager.build_parser()
     tokens = [command, "--style-name", args.style_name, "--workspace", str(args.workspace), "--request-id", args.request_id]
@@ -315,7 +337,10 @@ def _finalize_call(args: argparse.Namespace, call_input: dict[str, Any]) -> str:
     for spec in specs:
         risk_tokens.extend(("--reference", spec))
     risk_args = risk_module_parser.parse_args(risk_tokens)
-    risk_args.handler(risk_args)
+    try:
+        risk_args.handler(risk_args)
+    except (risk_assessor.RiskAssessmentError, OSError, json.JSONDecodeError) as exc:
+        raise risk_assessor.RiskAssessmentError(f"risk assessment failed: {exc}") from exc
 
     prepare_args = _parsed_manager_command("prepare-call", args, str(manifest.get("stage_id", stage_id)))
     prepare_args.prompt_text = prompt
@@ -387,8 +412,12 @@ def _validate_ready_stage(plan: dict[str, Any], guard: dict[str, Any], call_inpu
          and str(row.get("stage", "")).upper() == stage), default=-1,
     )
     if last_ready < 0 or not any(
-        isinstance(row, dict) and row.get("event") in {"ATTEMPT_REJECTED", "USER_CORRECTION", "STAGE_REOPENED"}
-        and str(row.get("stage", "")).upper() == stage
+        isinstance(row, dict)
+        and row.get("event") in {"ATTEMPT_REJECTED", "USER_CORRECTION", "STAGE_REOPENED", "RECOVERY_RESOLVED"}
+        and (
+            str(row.get("stage", "")).upper() == stage
+            or (row.get("event") == "RECOVERY_RESOLVED" and not row.get("stage"))
+        )
         for row in events[last_ready + 1:]
     ):
         raise manager.StylePackError(f"ALREADY_PREPARED: stage {stage} has no current correction after READY_FOR_EXECUTION.")
@@ -460,12 +489,18 @@ def main(argv: list[str] | None = None) -> int:
     cli.add_argument("--call-file", type=Path, help="Typed exact-call prompt, stage, and assessed reference ratings.")
     cli.add_argument("--finalize-only", action="store_true", help="Continue a prepared request through reference resolution, risk assessment, and READY call binding.")
     cli.add_argument("--validate-only", action="store_true", help="Validate request input contracts only; does not validate source assets or QA.")
-    options = cli.parse_args(argv)
+    try:
+        options = cli.parse_args(argv)
+    except SystemExit as exc:
+        if exc.code:
+            workflow_recovery.emit_recovery("invalid command-line arguments; see argparse diagnostics above", phase="input")
+        return int(exc.code or 0)
     try:
         _authorize_input_path(options.request_file)
         raw = json.loads(options.request_file.read_text(encoding="utf-8-sig"))
     except (OSError, UnicodeError, json.JSONDecodeError, manager.StylePackError) as exc:
         print(f"ERROR=request file: {exc}", file=sys.stderr)
+        workflow_recovery.emit_recovery(f"request file: {exc}", phase="input")
         return 2
 
     call_input = None
@@ -474,9 +509,11 @@ def main(argv: list[str] | None = None) -> int:
         if call_errors:
             for error in call_errors:
                 print(f"ERROR={error}", file=sys.stderr)
+            workflow_recovery.emit_recovery("; ".join(call_errors), phase="input", guard_path=_bound_guard_path(raw))
             return 2
     elif options.finalize_only:
         print("ERROR=--finalize-only requires --call-file", file=sys.stderr)
+        workflow_recovery.emit_recovery("--finalize-only requires --call-file", phase="input", guard_path=_bound_guard_path(raw))
         return 2
 
     parser = _prepare_parser()
@@ -486,6 +523,7 @@ def main(argv: list[str] | None = None) -> int:
     if errors:
         for error in errors:
             print(f"ERROR={error}", file=sys.stderr)
+        workflow_recovery.emit_recovery("; ".join(errors), phase="semantic" if args is not None else "input", guard_path=_bound_guard_path(raw))
         return 2
     if options.validate_only:
         print("INPUT_VALIDATION=PASS (source assets and QA not checked)")
@@ -498,8 +536,13 @@ def main(argv: list[str] | None = None) -> int:
             result = _finalize_call(args, call_input)
             print(result, end="")
         return 0
-    except (manager.StylePackError, risk_assessor.RiskAssessmentError) as exc:
+    except Exception as exc:
         print(f"ERROR={exc}", file=sys.stderr)
+        workflow_recovery.emit_recovery(
+            exc,
+            phase="risk" if isinstance(exc, risk_assessor.RiskAssessmentError) else "finalize",
+            guard_path=_bound_guard_path(raw),
+        )
         return 2
 
 

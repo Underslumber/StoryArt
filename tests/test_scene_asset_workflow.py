@@ -500,25 +500,25 @@ class OptionalPoseCommandTests(unittest.TestCase):
             selections = {"reference_policy": {"choice": "APPROVED_CHARACTER_REFERENCES"}, "character": {"choice": "CHAR_001"}}
             source_slot = {"path": str(source), "sha256": manager.sha256(source), "active_roles": ["BODY"]}
             snapshot = derived.parent / "snapshot.json"
-            snapshot.write_text(json.dumps({"request_id": "request", "execution_call": {"slots": [source_slot]}}), encoding="utf-8")
+            snapshot.write_text(json.dumps({"request_id": "request", "target_identity_compatibility": {"target": {"target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "approved profile"}}, "execution_call": {"slots": [source_slot]}}), encoding="utf-8")
             output = {"path": str(derived), "sha256": manager.sha256(derived), "plan_snapshot": str(snapshot), "plan_snapshot_sha256": manager.sha256(snapshot)}
             slot = {"path": str(derived), "sha256": manager.sha256(derived), "active_roles": ["BODY"]}
             with patch.object(manager, "character_folder", return_value=identity), patch.object(manager, "validated_stage_outputs", return_value={"STAGE": output}):
-                manager.validate_reference_policy_slots(paths, {"request_id": "request"}, {"slots": [slot]}, selections)
+                manager.validate_reference_policy_slots(paths, {"request_id": "request", "target_identity_compatibility": {"target": {"target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "approved profile"}}}, {"slots": [slot]}, selections)
                 for bad_path in (Path(folder) / "user.bin", paths.workspace / manager.BODY_LIBRARY_NAME / "body.bin"):
                     bad = {"path": str(bad_path), "sha256": "unknown", "active_roles": ["BODY"]}
                     with self.subTest(path=bad_path), self.assertRaises(manager.StylePackError):
-                        manager.validate_reference_policy_slots(paths, {"request_id": "request"}, {"slots": [source_slot, bad]}, selections)
+                        manager.validate_reference_policy_slots(paths, {"request_id": "request", "target_identity_compatibility": {"target": {"target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "approved profile"}}}, {"slots": [source_slot, bad]}, selections)
                 library_style = {"path": str(paths.workspace / manager.BODY_LIBRARY_NAME / "style.bin"), "sha256": "unknown", "active_roles": ["STYLE"]}
                 with self.assertRaises(manager.StylePackError):
-                    manager.validate_reference_policy_slots(paths, {"request_id": "request"}, {"slots": [source_slot, library_style]}, selections)
+                    manager.validate_reference_policy_slots(paths, {"request_id": "request", "target_identity_compatibility": {"target": {"target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "approved profile"}}}, {"slots": [source_slot, library_style]}, selections)
                 snapshot.write_text(json.dumps({"request_id": "request", "execution_call": {"slots": [source_slot, {"path": str(Path(folder) / "user.bin"), "sha256": "unknown", "active_roles": ["BODY"]}]}}), encoding="utf-8")
                 output["plan_snapshot_sha256"] = manager.sha256(snapshot)
                 with self.assertRaises(manager.StylePackError):
-                    manager.validate_reference_policy_slots(paths, {"request_id": "request"}, {"slots": [slot]}, selections)
+                    manager.validate_reference_policy_slots(paths, {"request_id": "request", "target_identity_compatibility": {"target": {"target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "approved profile"}}}, {"slots": [slot]}, selections)
                 snapshot.write_text("tampered", encoding="utf-8")
                 with self.assertRaises(manager.StylePackError):
-                    manager.validate_reference_policy_slots(paths, {"request_id": "request"}, {"slots": [slot]}, selections)
+                    manager.validate_reference_policy_slots(paths, {"request_id": "request", "target_identity_compatibility": {"target": {"target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "approved profile"}}}, {"slots": [slot]}, selections)
 
     def test_body_library_selection_is_request_scoped_and_not_required_on_every_stage(self):
         from tools import style_pack_manager as manager
@@ -564,6 +564,7 @@ class OptionalPoseCommandTests(unittest.TestCase):
             }
             plan = {
                 "request_id": "request",
+                "target_identity_compatibility": {"target": {"target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "approved profile"}},
                 "startup_parameter_selection": {"resolved_parameters": {"aux_body_decision": "SELECTED"}},
             }
             snapshot.write_text(json.dumps({**plan, "execution_call": {"slots": [style_slot, library_slot]}}), encoding="utf-8")

@@ -62,7 +62,7 @@ commands, searches, reads, preflight, other tool calls, commentary, or final
 response. When the user answers, continue with that exact selection without
 asking again.
 
-An explicit image request authorizes the work, but not unstated choices. Every generation request must run through the StoryArt scenario and project tools. Reuse style, reference, and character choices only when the user has already selected them in this chat. For missing choices, first show one compact numbered text mirror of the complete options as backup, then immediately invoke the structured native chooser (`request_user_input_async` in Default mode) with the identical question and options. The chooser is the primary selection surface; the numbered mirror is redundant recovery. Never say a menu appeared unless its tool call actually succeeded. If the chooser call fails or is unavailable, state that concrete failure and keep the numbered mirror available for a reply; never present the mirror as a native menu. A click in the card or an unambiguous matching numeric reply completes the choice; accept the first answer without reconfirmation. Options must map every displayed selection to exact call parameters. `PROJECT_STYLE_ONLY` means project style with no optional user or body-library references; named-character identity refs remain mandatory. User-attached references require matching source/path/hash/chat/message evidence, including QA-validated lineage for derived outputs. The user may explicitly choose generator-default style and no references. Resolve named project characters through the approved registry/profile and attach their approved assembly and applicable identity references. If identity or required assets cannot be resolved or attached, stop and report the blocker rather than generating a substitute. Leaving the scenario requires the user's direct request, a concrete warning, and confirmation after that warning. External platform limits cannot be bypassed.
+An explicit image request authorizes the work, but not unstated choices. Every generation request must run through the StoryArt scenario and project tools. Reuse style, reference, and character choices only when the user has already selected them in this chat. For missing choices, first show one compact numbered text mirror of the complete options as backup, then immediately invoke the structured native chooser (`request_user_input_async` in Default mode) with the identical question and options. The chooser is the primary selection surface; the numbered mirror is redundant recovery. Never say a menu appeared unless its tool call actually succeeded. If the chooser call fails or is unavailable, state that concrete failure and keep the numbered mirror available for a reply; never present the mirror as a native menu. A click in the card or an unambiguous matching numeric reply completes the choice; accept the first answer without reconfirmation. Options must map every displayed selection to exact call parameters. `PROJECT_STYLE_ONLY` means project style with no optional user or body-library references; named-character identity refs remain mandatory. User-attached references require matching source/path/hash/chat/message evidence, including QA-validated lineage for derived outputs. The user may explicitly choose generator-default style and no references. Resolve named project characters through the approved registry/profile and attach their approved assembly and applicable identity references. Repair internal resolution or attachment failures and continue without substituting a generic identity; ask only for genuinely missing user-only input when no safe route remains. Leaving the scenario requires the user's direct request, a concrete warning, and confirmation after that warning. External platform limits cannot be bypassed.
 
 Resolve a named character through `python tools\style_pack_manager.py resolve-character --workspace . --name "<requested name>" --json` before reporting that the approved profile is missing. This command reads approved character registries and registered identity assets only. Git-ignored generation libraries may be skipped by `rg`; do not treat a default search miss as evidence that no profile exists. Carry the returned canonical style and character ID into the project route, including common Russian case forms such as `Шанса` → `Шанс`.
 
@@ -116,9 +116,10 @@ The agent performs available project operations; the user gives the goal and dec
    missing choice. The user may choose the generator default and no references,
    but omission is never that choice. Resolve named project characters from the
    approved registry/profile and bind their identity references to the exact
-   call. Stop if identity or assets are missing; never generate a generic
-   substitute. Ask for a specifically requested absent source or mask to be
-   attached directly in chat.
+   call. Recover internal lookup or attachment failures and continue under
+   `docs/REQUEST_FIDELITY.md`; never generate a generic substitute. Ask for a
+   specifically requested source or mask only if it is genuinely absent and
+   available solely from the user.
 3. In this active StoryArt workspace, generation always enters the project
    scenario and uses its tools. Leaving the scenario requires the user's direct
    request, a concrete warning, and confirmation after that warning. Use a
@@ -137,9 +138,9 @@ The agent performs available project operations; the user gives the goal and dec
 Calibration requires an explicit user request or consent after a proposal. This
 durable current rule supersedes historical automatic-calibration trigger clauses
 in `docs/PORTABLE_GENERATION_RULES.md`; retain all applicable protocol and QA
-requirements once authorized. After two failed attempts, identify the failed
-layer and make one evidence-based recovery with the original sources; do not
-loop or change scope silently.
+requirements once authorized. For retry and completion behavior, follow
+`docs/REQUEST_FIDELITY.md`: each failure informs a changed, evidence-based next
+step; counters trigger diagnosis/escalation but do not cap the task.
 
 ## Image-specific model routing
 

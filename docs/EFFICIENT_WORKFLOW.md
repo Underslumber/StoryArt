@@ -39,8 +39,10 @@ returning evidence to the root, never declaring the entire user task complete.
 | Implementation | 12 calls, 10 active minutes, 700 words |
 | Review | 6 calls, 5 active minutes, 500 words |
 
-Retain the overall limit of two ordinary repair loops. Reset neither the count
-nor the scope after a failed check; escalate the concrete evidence to root.
+These ceilings apply to delegated work packets only. Returning a packet at its
+ceiling returns evidence to root; it never completes or caps the user's image
+task. The root continues the authorized scenario and uses repeated failures to
+change strategy or escalate diagnosis. See `REQUEST_FIDELITY.md` for completion.
 
 Project TOML defaults apply to new sessions and are not a per-task scheduler.
 Use the registry's `CODE_IMPLEMENTER` for bounded implementation, `CODE_REVIEW`
@@ -208,21 +210,34 @@ every applicable calibration protocol and QA requirement once authorized. It is
 never automatically launched because QA failed, a style is unproven, or a user
 objects. No calibration or test art is created for workflow optimization.
 
-After two failed QA attempts, preserve all mandatory stages, state the exact
-defect and failed layer, and perform one evidence-based recovery using original
-sources. Do not silently repeat a loop, widen scope, replace a required stage,
-or turn rejected output into a source. Continue through remaining mandatory
-stages when the guard permits; record a blocker only for a concrete external
-condition.
+After each QA failure, preserve the stage and exact defect, then make the next
+authorized attempt address that evidence using the original approved sources.
+Repeated failures or inconsistent layer labels trigger root-level diagnosis and
+an evidence-based change of approach; they do not create a fixed recovery count
+or task cutoff. Do not repeat an unchanged call without a reason, widen scope,
+replace a required stage, turn rejected output into a source, or infer training
+or calibration from failure. Continue all mandatory stages under
+`REQUEST_FIDELITY.md`; only a genuine external/safety boundary or missing
+user-only input with no safe authorized route can block completion.
 
-When a second failure of the same QA layer at the same stage occurs after an
-explicit correction addressed the first, the guard requires one `ESCALATION_ORCHESTRATOR` incident before a
-further attempt. It is an exceptional, read-only registry `ESCALATION_ORCHESTRATOR` (Sol 6.1 High) error handler,
+When a stage fails again, including a missing or conflicting QA label, record
+the evidence and use `ESCALATION_ORCHESTRATOR` for root diagnosis before
+choosing the next attempt. Repeat diagnosis after later failures as needed; an
+escalation never accepts the result or caps the task. It is an exceptional,
+read-only registry `ESCALATION_ORCHESTRATOR` (Sol 6.1 High) error handler,
 not a per-frame worker: it receives recorded evidence and returns one bounded
 Sol work order. It must not use tools, generate, test, edit, perform QA,
 approve, or spawn agents; the root dispatches any recommended executor. It runs
-once per corrected incident. Calibration remains a user-requested or
+once for each escalation trigger; later stage failures can trigger a new
+diagnosis. Calibration remains a user-requested or
 user-consented proposal only.
+
+An unavailable diagnostic model or delegation slot is not a terminal image
+boundary. Recover a failed dispatch where possible; otherwise the root performs
+the same evidence-based diagnosis and records its own bounded work order through
+the existing escalation checkpoint. Record the actual executor honestly; never
+claim a separate diagnostic agent was consulted when it was not. The diagnosis still must occur before
+the next attempt, and preserves the full user contract and original sources.
 
 When a style is `UNKNOWN`/unformed and uncalibrated but has at least five unique
 QA-passed outputs, `style-readiness` may propose formalization and calibration.
@@ -252,15 +267,17 @@ archive, identity, approval and semantic QA requirements remain mandatory.
   merely for CLI, archive, generator calls, or individual QA-layer checkboxes.
 - Request fresh registry `VISUAL_QA` (Sol 6.1 Medium) for a new face before dependent base views, final
   reusable-base acceptance, changed authoritative identity/style sources,
-  conflicting QA requirements, or a repeated defect of the same layer. Do not
-  request it automatically for every routine frame. An LLM PASS is not proof
-  against specific contradictory visual/user evidence.
-- After the first failure, correct the specific cause. After the same-layer
-  repeated failure, obtain one diagnosis before another authorized attempt;
-  do not automatically generate a stack of prompt variants.
+  conflicting QA requirements, or a repeated stage failure, including missing
+  or contradictory QA labels. Do not request it automatically for every
+  routine frame. An LLM PASS is not proof against specific contradictory
+  visual/user evidence.
+- After every failure, correct the evidenced cause before the next authorized
+  attempt. Diagnose repeated stage failures and missing or conflicting QA
+  labels; use each diagnosis to choose the next grounded action. Do not
+  automatically generate a stack of prompt variants.
 - Sol 6.1 High is exceptional read-only diagnosis only. Bounded implementation
-  uses Low; complex planning and fresh substantial-code review use Medium.
-  An evidenced complex fault or substantive repair failure qualifies for
+  uses Low; complex lifecycle decisions and fresh substantial-code review use
+  Medium. A substantive repair failure or recorded complex fault qualifies for
   diagnosis regardless of which model performed the earlier attempt.
 - Worker packets include explicit model/effort, fork_turns="none", authoritative
   input paths, acceptance and a bounded return. Never dump the complete tool

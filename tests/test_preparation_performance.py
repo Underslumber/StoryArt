@@ -85,7 +85,7 @@ class PreparationPerformanceTests(unittest.TestCase):
             image = pack / "01_WORK" / "FACE_CROPS" / "face.png"
             image.parent.mkdir(parents=True)
             image.write_bytes(b"placeholder")
-            paths = types.SimpleNamespace(workspace=pack.parent, pack=pack, style_name="known")
+            paths = manager.make_paths(pack.parent, "known")
             discovered = manager.DiscoveredStyle(
                 style_name="known", slug="known", pack_path=str(pack), generations_path="",
                 management="LEGACY", local_readiness="READY", web_readiness="EMPTY",
@@ -96,7 +96,8 @@ class PreparationPerformanceTests(unittest.TestCase):
                  patch.object(manager, "image_info", side_effect=AssertionError("decode should be skipped")):
                 summary = manager.build_style_context(paths, "ALL", False, False)
             with patch.object(manager, "matching_discovered_style", return_value=discovered), \
-                 patch.object(manager, "image_info", return_value=("PNG", 1, 1)):
+                 patch.object(manager, "image_info", return_value=("PNG", 1, 1)), \
+                 patch.object(manager, "style_reference_compatibility_metadata", return_value={"subject_label": "NO_SUBJECT", "subject_label_evidence": "synthetic field", "subject_label_sha256": manager.sha256(image)}):
                 detailed = manager.build_style_context(paths, "ALL", False, True)
             self.assertEqual(summary["local_files_total"], 1)
             self.assertEqual(summary["matching_files"], 1)
@@ -126,7 +127,7 @@ class PreparationPerformanceTests(unittest.TestCase):
              patch.object(manager.Path, "rglob", side_effect=AssertionError("preparation must not walk the pack")):
             context = manager._minimal_preparation_style_context(paths)
         self.assertEqual(context["style_name"], "known")
-        self.assertEqual(context["explicit_anchor_files"], ["anchor.png"])
+        self.assertEqual(context["explicit_anchor_files"], [])
         self.assertNotIn("review_pool_counts", context)
         manifest.assert_called_once_with(pack, "ANCHOR_STYLE")
 
@@ -187,7 +188,7 @@ class PreparationPerformanceTests(unittest.TestCase):
     def test_resolve_execution_call_validates_stage_outputs_once(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            paths = types.SimpleNamespace()
+            paths = manager.make_paths(root, "known")
             plan_path = root / "REFERENCE_PLAN.json"
             output = {"path": str(root / "stage.png"), "sha256": "a" * 64, "stage_id": "ONE"}
             plan = {

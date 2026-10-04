@@ -385,6 +385,8 @@ def command_apply_update(args: argparse.Namespace) -> None:
             "visible_presentation": safe_token(str(entry.get("visible_presentation", "UNKNOWN")), "UNKNOWN"),
             "anatomy_compatibility": ";".join(parse_list(entry.get("anatomy_compatibility", "UNKNOWN"))),
             "anatomy_evidence_source": str(entry.get("anatomy_evidence_source", "UNKNOWN")).strip() or "UNKNOWN",
+            "subject_label": str(entry.get("subject_label", "UNCLASSIFIED")).strip().upper() or "UNCLASSIFIED",
+            "subject_label_evidence": str(entry.get("subject_label_evidence", "UNKNOWN")).strip() or "UNKNOWN",
             "allowed_roles": ";".join(parse_list(entry["allowed_roles"])),
             "not_for_roles": ";".join(sorted(not_for)),
             "safety_status": safety,
@@ -397,7 +399,7 @@ def command_apply_update(args: argparse.Namespace) -> None:
         })
     # Append new reviewed metadata columns without rebuilding or renumbering the
     # existing library. Older rows have empty CSV cells, interpreted as UNKNOWN.
-    metadata_fields = ("visible_presentation", "anatomy_compatibility", "anatomy_evidence_source")
+    metadata_fields = ("visible_presentation", "anatomy_compatibility", "anatomy_evidence_source", "subject_label", "subject_label_evidence")
     output_fields = list(fields) + [field for field in metadata_fields if field not in fields]
     destinations = [destination for _, destination in planned]
     if len(destinations) != len(set(destinations)) or any(path.exists() for path in destinations):

@@ -76,6 +76,22 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             *( ("--user-approved",) if role == "ANCHOR_STYLE" else () ),
         )
         stored = next(line.removeprefix("FILE=") for line in result.stdout.splitlines() if line.startswith("FILE="))
+        # These fixtures are plain color fields with no depicted subjects.
+        manifest = self.style_pack / "02_LOCAL_ONLY_DO_NOT_UPLOAD" / "LOGS" / "PRELIMINARY_REFERENCE_MANIFEST.csv"
+        with manifest.open(encoding="utf-8-sig", newline="") as stream:
+            reader = csv.DictReader(stream)
+            fields = list(reader.fieldnames)
+            rows = list(reader)
+        labels = {"subject_label": "NO_SUBJECT", "subject_label_evidence": "SYNTHETIC_PLAIN_COLOR_FIELD",
+                  "subject_label_sha256": hashlib.sha256(Path(stored).read_bytes()).hexdigest(), "subject_label_status": "APPROVED"}
+        fields.extend(key for key in labels if key not in fields)
+        for row in rows:
+            if row.get("stored_relative_path") == Path(stored).relative_to(self.style_pack).as_posix():
+                row.update(labels)
+        with manifest.open("w", encoding="utf-8-sig", newline="") as stream:
+            writer = csv.DictWriter(stream, fieldnames=fields)
+            writer.writeheader()
+            writer.writerows(rows)
         return Path(stored)
 
     def _guard_path(self, request_id: str) -> Path:
@@ -340,6 +356,8 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "primary_role": "MASTER_STYLE",
             "status": "TEST",
             "generator_safe": "YES",
+            "subject_label": "NO_SUBJECT", "subject_label_evidence": "SYNTHETIC_PLAIN_COLOR_FIELD",
+            "subject_label_sha256": hashlib.sha256(candidate.read_bytes()).hexdigest(), "subject_label_status": "APPROVED",
         })
         manifest_rows.append(candidate_row)
         with reference_manifest.open("w", encoding="utf-8", newline="") as stream:
@@ -473,6 +491,8 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         candidate_row.update({
             "stored_relative_path": "01_WORK/STYLE_CROPS/MASTER_STYLE_fixture.png",
             "primary_role": "MASTER_STYLE", "status": "TEST", "generator_safe": "YES",
+            "subject_label": "NO_SUBJECT", "subject_label_evidence": "SYNTHETIC_PLAIN_COLOR_FIELD",
+            "subject_label_sha256": hashlib.sha256(candidate.read_bytes()).hexdigest(), "subject_label_status": "APPROVED",
             "user_approved": "NO",
         })
         manifest_rows.append(candidate_row)
@@ -729,11 +749,13 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         request_id = "qa-stage-provenance"
         plan_path = paths.generations / "00_PENDING" / request_id / "REFERENCE_PLAN.json"
         plan_path.parent.mkdir(parents=True, exist_ok=True)
-        plan_path.write_text(json.dumps({"request_id": request_id, "character_id": "NEW"}), encoding="utf-8")
+        plan = {"request_id": request_id, "character_id": "NEW", "target_identity_compatibility": {
+            "target": {"target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "current explicit male prompt"}}}
+        plan_path.write_text(json.dumps(plan), encoding="utf-8")
         output = self.workspace / "qa-passed-face.png"
         Image.new("RGB", (32, 32), (10, 20, 30)).save(output)
         snapshot = self.workspace / "qa-plan-snapshot.json"
-        snapshot.write_text(json.dumps({"request_id": request_id, "character_id": "NEW"}), encoding="utf-8")
+        snapshot.write_text(json.dumps(plan), encoding="utf-8")
         contract = self.workspace / "qa-contract.json"
         contract.write_text(json.dumps({"stage_id": "02_PHYSIQUE_FRONT", "plan_snapshot": str(snapshot)}), encoding="utf-8")
         with paths.generation_manifest.open("w", encoding="utf-8-sig", newline="") as manifest_file:
@@ -748,7 +770,7 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         def receipt(_row):
             return {"record_status": "STAGING", "qa_failed": [], "qa_contract": str(contract)}
         with patch("tools.style_pack_manager.generation_qa_evidence", side_effect=receipt):
-            outputs = validated_stage_outputs(paths, plan_path, {"request_id": request_id, "character_id": "NEW"})
+            outputs = validated_stage_outputs(paths, plan_path, plan)
         self.assertNotIn("01_FACE_IDENTITY", outputs)
 
     def test_newest_rejected_stage_row_blocks_older_qa_passed_output(self):
@@ -873,6 +895,81 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--stage-id", "SCENE", *self._visual_review_args(guard, attempt_id, result), *qa, succeeds=False,
         )
         self.assertIn("executed-call snapshot", tampered.stderr)
+
+    def test_record_generation_keeps_original_artifact_when_visual_qa_is_missing(self):
+        from tools import style_pack_manager as manager
+
+        request_id = "scene-artifact-before-qa"
+        guard, plan_path = self._prepare_scene(request_id)
+        call = self._resolve_and_prepare_call(request_id, guard, plan_path, "Create one synthetic observatory scene.")
+        attempt_id = self._start_call(guard, plan_path, call)
+        output = self.workspace / "unreviewed-original.png"
+        Image.new("RGB", (720, 1280), (45, 70, 95)).save(output)
+        original_hash = hashlib.sha256(output.read_bytes()).hexdigest()
+        failed = self._cli(
+            "style_pack_manager.py", "record-generation", "--workspace", self.workspace,
+            "--style-name", self.style_name, "--image", output, "--request-id", request_id,
+            "--description", "Synthetic integration scene", "--fidelity", "70", "--status", "TEST",
+            "--character-id", "NONE", "--attempt-id", attempt_id, "--reference-plan", plan_path,
+            "--visual-review-json", self.workspace / "missing-visual-review.json",
+            succeeds=False,
+        )
+        self.assertIn("visual", failed.stderr.lower())
+        state = json.loads(guard.read_text(encoding="utf-8"))
+        self.assertIn("provider_artifact", state["active_attempt"], failed.stderr + "\n" + json.dumps(state["events"][-3:]))
+        artifact = state["active_attempt"]["provider_artifact"]
+        self.assertEqual(artifact["path"], str(output.resolve()))
+        self.assertEqual(artifact["sha256"], original_hash)
+        self.assertEqual(artifact["result_status"], "NOT_CHECKED")
+        self.assertEqual(state["next_required_action"], "REVIEW_AND_REGISTER_EXISTING_ARTIFACT")
+        self.assertEqual(state["status"], "ACTIVE")
+        self.assertFalse(any(row["request_id"] == request_id for row in manager.read_csv(self.generations / "GENERATION_MANIFEST.csv")))
+
+    def test_record_generation_recovers_checkpoint_failure_without_duplicate_record(self):
+        from unittest.mock import patch
+        from tools import style_pack_manager as manager
+
+        request_id = "scene-checkpoint-retry"
+        guard, plan_path = self._prepare_scene(request_id)
+        call = self._resolve_and_prepare_call(request_id, guard, plan_path, "Create one synthetic observatory scene.")
+        attempt_id = self._start_call(guard, plan_path, call)
+        output = self.workspace / "checkpoint-original.png"
+        Image.new("RGB", (720, 1280), (41, 61, 81)).save(output)
+        qa = (
+            "--qa-attachments", "PASS", "--qa-canvas", "PASS", "--qa-stage-layer", "PASS",
+            "--qa-style", "PASS", "--qa-subject-accuracy", "PASS", "--qa-no-unrequested-characters", "PASS",
+            "--qa-focal-hierarchy", "PASS", "--qa-lighting", "PASS", "--qa-background", "PASS",
+            "--qa-composition", "PASS", "--qa-depth-and-scale", "PASS", "--qa-artifact-integrity", "PASS",
+        )
+        args = manager.build_parser().parse_args([
+            "record-generation", "--workspace", str(self.workspace), "--style-name", self.style_name,
+            "--image", str(output), "--request-id", request_id, "--description", "Synthetic checkpoint retry",
+            "--fidelity", "70", "--status", "TEST", "--character-id", "NONE",
+            "--attempt-id", attempt_id, "--reference-plan", str(plan_path),
+            *(str(part) for part in self._visual_review_args(guard, attempt_id, output)), *qa,
+        ])
+        checkpoint = manager.execution_checkpoint
+        failed_once = False
+
+        def fail_visible_once(*call_args, **kwargs):
+            nonlocal failed_once
+            if kwargs.get("event") == "VISIBLE_RESULT" and not failed_once:
+                failed_once = True
+                raise manager.ExecutionGuardError("injected one-time checkpoint failure")
+            return checkpoint(*call_args, **kwargs)
+
+        with patch.object(manager, "execution_checkpoint", side_effect=fail_visible_once):
+            with self.assertRaisesRegex(manager.StylePackError, "visible-result checkpoint failed"):
+                manager.command_record_generation(args)
+        rows = [row for row in manager.read_csv(self.generations / "GENERATION_MANIFEST.csv") if row["request_id"] == request_id]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(json.loads(guard.read_text(encoding="utf-8"))["active_attempt"]["status"], "ACTIVE")
+        manager.command_record_generation(args)
+        after = [row for row in manager.read_csv(self.generations / "GENERATION_MANIFEST.csv") if row["request_id"] == request_id]
+        self.assertEqual(after, rows)
+        state = json.loads(guard.read_text(encoding="utf-8"))
+        self.assertEqual(state["phase"], "RESULT_AVAILABLE")
+        self.assertEqual(state["available_results"][-1]["evidence"], [rows[0]["archive_file"]])
 
     def test_visible_old_revision_registers_after_correction_without_satisfying_current_revision(self):
         request_id = "scene-corrected-after-visible"
@@ -1273,7 +1370,7 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "01_FACE_IDENTITY", "02_PHYSIQUE_FRONT", "03_PHYSIQUE_SIDE",
             "04_PHYSIQUE_BACK", "05_CHARACTER_ASSEMBLY",
         )
-        guard = self._start_request(request_id, required_stages=stages)
+        guard = self._start_request(request_id)
         prep_args: list[object] = [
             "prepare-generation", "--workspace", self.workspace, "--style-name", self.style_name,
             "--request-id", request_id, "--fidelity", "70", "--confirmed-chat-id", "integration-chat",
@@ -1281,6 +1378,7 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--confirmed-message-id", "integration-message",
             "--confirmed-parameters-user-quote", "Keep 70% fidelity and decline BODY_REFERENCE_LIBRARY.",
             "--generation-purpose", "CHARACTER_BASE", "--character-id", "NEW", "--character-name", "Synthetic", "--adult-character",
+            "--target-prompt", "Synthetic is an adult male character.",
             "--orientation", "PORTRAIT", "--framing", "FULL_BODY", "--target-pose-family", "STANDING",
             "--dominant-body-source", "PROMPT_BODY_SPEC", "--body-source-coverage", "FULL_BODY",
             "--body-source-pose-family", "STANDING", "--body-height-heads", "7.2-7.5",
@@ -1301,6 +1399,8 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
 
         face_prompt = "Resolve the synthetic adult character face in the selected drawing style."
         face_call = self._resolve_and_prepare_call(request_id, guard, plan_path, face_prompt, "01_FACE_IDENTITY")
+        ready_state = json.loads(guard.read_text(encoding="utf-8"))
+        self.assertEqual([row["id"] for row in ready_state["required_stages"]], list(stages))
         face_attempt = self._start_call(guard, plan_path, face_call)
         face_output = self.workspace / "face-stage.png"
         Image.new("RGB", (512, 768), (185, 125, 112)).save(face_output)

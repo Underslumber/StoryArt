@@ -1,0 +1,17 @@
+{
+  "description": "StoryArt: continue a focused unfinished image request when the agent tries to end its turn. Requires Codex hook trust; preserves explicit stops and external boundaries.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -X utf8 tools/storyart_completion_hook.py",
+            "timeout": 10,
+            "statusMessage": "Checking StoryArt deliverable completion"
+          }
+        ]
+      }
+    ]
+  }
+}

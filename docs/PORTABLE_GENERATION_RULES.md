@@ -1,5 +1,10 @@
 # StoryArt agent instructions
 
+Strict source-sex filtering applies before preview or viewing: male pose sources only for male targets, female only for female, using explicit reviewed labels. Unknown, mixed, neutral and opposite-sex pose labels are ineligible. No soft-role exception. Apply the full pre-view rule in `docs/REQUEST_FIDELITY.md`, including the current request's restrictions on style and other roles; missing labels are registry errors, never permission to inspect.
+
+Include `docs/REQUEST_FIDELITY.md` with this template and apply it in full before every generation and acceptance. It overrides older text-only clothing and previous-frame reuse permissions. Requested clothing from character files must be physically attached; all prohibitions persist through corrections and must pass visual review against the complete user contract.
+
+
 ## User-request authority for image generation
 
 A correction to the current delivered art in the same chat continues that request via USER_CORRECTION, even after COMPLETE. Keep its folder binding and explicit style/library choices until a new request replaces it; do not show the chooser again or classify the current delivered art as unrelated history. This never authorizes access to another request folder.
@@ -33,9 +38,12 @@ to the exact call and rebuild stale plans without repeating the user's decision.
 
 The established StoryArt scenario and its existing step order are mandatory.
 Never bypass a step or substitute a generator/workflow because of a refusal,
-timeout, validator error, missing profile, or unavailable tool; report the
-concrete blocker. Exit only on the user's direct request, followed by a
-concrete warning and the user's confirmation in the same chat. Restore and
+timeout, validator error, missing profile, or unavailable tool. Recover internal
+failures through the supported project route and continue the active request;
+record a blocker only when a genuine external/safety condition or missing
+user-only input leaves no safe authorized transition. Exit the scenario only on
+the user's direct request, followed by a concrete warning and the user's
+confirmation in the same chat. Restore and
 reuse the current request's state and all same-chat choices. A clear numeric
 answer is final; apply its exact displayed mapping and fix internal validation
 errors without asking the user to repeat it. If input is missing, call
@@ -45,9 +53,9 @@ out without an answer, repeat only that sleep in intervals no longer than 60
 seconds. While waiting, do no commands, searches, reads, preflight, other tools,
 commentary, or final response. Continue the same step when the user answers.
 
-An explicit image request authorizes the requested work, but not unstated image choices. Every image request must follow the StoryArt scenario and its project tools. Before a generator call, reuse only style and reference choices the user has already made in this chat; ask and wait for any missing choice. The user may explicitly choose the generator's default style and no references. For a named project character, resolve the approved registry/profile and attach the approved assembly plus applicable identity references. An explicitly selected GENERATOR_DEFAULT style still uses the reference-bound route without project STYLE slots; the no-reference IMAGE_GENERATION_NATIVE_DEFAULT lane is only for character-free requests. If the character or required assets cannot be resolved or attached, stop and state the blocker instead of generating a substitute. Leaving the scenario requires the user's direct request, a concrete warning, and the user's confirmation after that warning. External platform limits cannot be bypassed.
+An explicit image request authorizes the requested work, but not unstated image choices. Every image request must follow the StoryArt scenario and its project tools. Before a generator call, reuse only style and reference choices the user has already made in this chat; ask and wait for any missing choice. The user may explicitly choose the generator's default style and no references. For a named project character, resolve the approved registry/profile and attach the approved assembly plus applicable identity references. An explicitly selected GENERATOR_DEFAULT style still uses the reference-bound route without project STYLE slots; the no-reference IMAGE_GENERATION_NATIVE_DEFAULT lane is only for character-free requests. If the character or required assets fail internal resolution or attachment, repair the lookup/binding and continue without generating a substitute. Leaving the scenario requires the user's direct request, a concrete warning, and the user's confirmation after that warning. External platform limits cannot be bypassed.
 
-Before reporting a named character's profile missing, run `python tools\style_pack_manager.py resolve-character --workspace . --name "<requested name>" --json`. It resolves only `APPROVED` registry rows and their registered identity assets; it does not search historical generations. Do not use a default `rg` search as proof of absence because Git-ignored generation libraries may be skipped. Carry its canonical style and character ID into the scenario; common Russian case forms such as `Шанса` resolve to `Шанс`. Report a blocker only from a resolver miss or a concrete resolver/tool error.
+Before reporting a named character's profile missing, run `python tools\style_pack_manager.py resolve-character --workspace . --name "<requested name>" --json`. It resolves only `APPROVED` registry rows and their registered identity assets; it does not search historical generations. Do not use a default `rg` search as proof of absence because Git-ignored generation libraries may be skipped. Carry its canonical style and character ID into the scenario; common Russian case forms such as `Шанса` resolve to `Шанс`. A resolver miss or tool error starts diagnosis and supported recovery under `REQUEST_FIDELITY.md`; it does not by itself justify ending the request. Ask for genuinely missing user-only input only after safe authorized recovery routes are exhausted.
 
 If the approved profile binds the character to one project style, inherit only that exact style name; fidelity and BODY_REFERENCE_LIBRARY still require the current-chat chooser. If the user explicitly asks for another style or the profile has no unique style, list actual names from `style_pack_manager.py list-styles --json` and ask with those names, never with the vague label “project style.” A native chooser must be the last user-visible action in its turn: wait for its structured answer. If it closes without an answer, treat the choice as unanswered and present it again on the next interaction.
 
@@ -83,8 +91,8 @@ exact attached path/hash plus original source path, chat id, and message id.
 Accept derived stage outputs only through QA-validated lineage back to those
 same source records. For an existing project
 character, resolve the approved registry/profile and attach its approved
-assembly plus applicable identity references; otherwise stop and report the
-blocker. Leaving the scenario requires the user's direct request, a concrete
+assembly plus applicable identity references; repair internal lookup or binding
+failures and continue without asking for renewed permission. Leaving the scenario requires the user's direct request, a concrete
 warning, and confirmation after that warning. A generator-only route is for
 direct edits of user-supplied existing images or an explicitly requested
 standalone request outside StoryArt. Report concrete missing-tool failures.
@@ -124,11 +132,12 @@ platform limits cannot be bypassed.
   in this chat. Ask and wait for any missing choice. The user may explicitly
   choose the generator default style and no references; omission is not a
   choice. For a named project character, resolve the approved registry/profile
-  and attach approved identity assets. Stop on a missing identity instead of
-  generating a generic substitute. Ask for a specifically requested absent
-  source image or mask to be attached directly in chat.
+  and attach approved identity assets. Recover internal lookup or binding
+  failures and continue; never generate a generic substitute. Ask for a
+  specifically requested absent source image or mask to be attached directly in
+  chat.
 - For new plans, record required `STYLE`, face, body, view, safe-coverage, and clothing-topology QA separately. An unchecked required layer blocks recording; any failed layer makes the output `REJECTED` regardless of other passes.
-- After a refusal, record the refusal and any provider reason. Do not run synonym loops or repeat the same call. A timeout or other uncertain outcome requires attempt reconciliation before another call. Keep refusal, unknown outcome, completed result, and delivery as distinct states. Never claim the provider was canceled automatically.
+- After a refusal, record the refusal and any provider reason. A previous block alone does not impose a project ban on retrying a permissible request, including the same call; changing the prompt or attachments is not a prerequisite. Assess the next call under current safety requirements and any known refusal reason. A missing reason alone does not require stopping. Never use retries or rewording to bypass a confirmed platform safety block. A timeout or other uncertain outcome requires attempt reconciliation before another call. Keep refusal, unknown outcome, completed result, and delivery as distinct states. Never claim the provider was canceled automatically.
 - For a canonical front 3/4 assembly, a low-risk prompt can still be input-blocked by wording, the combined reference set, or both. Assess the exact planned request and attachments; do not probe through repetitive synonym variants, and never omit a required body view. Follow `docs/CHARACTER_ASSEMBLY_3Q_REFERENCE_ROUTING.md`: a provenance-backed generator-safe multiview may preserve FRONT, SIDE, and BACK in one attachment, while an optional successful 3/4 guide is restricted to camera and clothing topology only.
 - Archive generated or edited images only when useful to the requested task or explicitly requested; never require an extra archive copy or let it delay delivery.
 - Before finishing a code change, run `python -m unittest discover -s tests -v` and compile the changed Python tools.
@@ -137,7 +146,7 @@ platform limits cannot be bypassed.
 
 - For a substantial character, scene, storyline, style-selection, generation, QA, approval, or storage request, load `skills/storyart-orchestrator/SKILL.md` after creating the task guard. Keep simple read-only questions in the primary agent.
 - For a character-free scene, use `--generation-purpose SCENE --character-id NONE` plus `--scene-kind LOCATION|PHENOMENON|ARTIFACT|MIXED` and `--scene-output-use GENERAL_ART|WALLPAPER|PROMO_POSTER`. Do not attach character assembly, face, body, pose, clothes, or auxiliary body references. A character is opt-in only through an explicit approved `CHAR_NNN`.
-- Keep `SCENE + NONE` single-pass. Never invent style-synthesis, body, composite, or other service images to fit more references; reduce the set to the five physical slots. Wallpaper QA includes crop/distance/desktop usability. Promo-poster key art reserves a copy-safe zone and receives exact typography deterministically after generation unless the user explicitly asks for generated text.
+- Use one provider call per `SCENE + NONE` attempt; this is not a cap on evidence-based corrections. Continue failures under `REQUEST_FIDELITY.md`. Never invent style-synthesis, body, composite, or other service images to fit more references; reorganize the five physical slots while preserving every mandatory role. Wallpaper QA includes crop/distance/desktop usability. Promo-poster key art reserves a copy-safe zone and receives exact typography deterministically after generation unless the user explicitly asks for generated text.
 - Keep orchestration strictly inside StoryArt. Never install its skill or generated style adapters into the global Codex skills directory. Refresh only the selected local adapter with `python tools\storyart_orchestrator.py build-style-skills --style-name "<selected STYLE>"`; adapters remain under ignored `.agents/style-skills` and never contain source images.
 - Only when actually delegating, store `ORCHESTRATION_STATE.json` beside `EXECUTION_GUARD.json`; with zero workers skip orchestration init/status/handoff. The primary agent owns user communication, guard transitions, role dispatch, and final decisions. Subagents never edit orchestration state.
 - Use only bounded roles from the project skill. Parallelize independent read-only roles only; keep call planning, generation, visual QA, and registration sequential. `GENERATOR_OPERATOR` and `REGISTRAR` are sequential responsibilities of the root, not extra agents or external executors to discover.

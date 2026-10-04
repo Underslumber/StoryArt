@@ -67,13 +67,16 @@ references, change QA, call the generator, or modify infrastructure.
 
 ## ESCALATION_ORCHESTRATOR
 
-- Available once only when the guard marks a same-stage, same-layer failure
-  that persists after an explicit correction addressed the first.
-- Requested profile is registry `ESCALATION_ORCHESTRATOR` (Sol 6.1 High), strictly as exceptional
-  top-level error handling, not routine review or a per-frame worker.
-- Consume only listed evidence and return one bounded, evidence-based Sol work order. The root alone dispatches that executor; no nesting. Sol 6.1 High
-  requires evidence of a complex fault or substantive repair failure; an
-  earlier Luna attempt is not a prerequisite.
+- Available for root diagnosis when a stage fails again, including when its QA
+  label is missing or conflicts with other evidence. Repeat diagnosis after
+  later failures as needed. The counter triggers diagnosis; it is not a task
+  stop condition or evidence of acceptance.
+- Request the registry's `ESCALATION_ORCHESTRATOR` profile (Sol 6.1 High),
+  strictly as exceptional diagnosis, not routine review or a per-frame worker.
+- Consume only listed evidence and return one bounded, evidence-based Sol work
+  order. The root alone dispatches that executor; no nesting. Diagnosis needs
+  evidence of a complex fault or substantive repair failure; an earlier Luna
+  attempt is not a prerequisite.
 - Remain read-only and do not use tools, generate, test, edit, perform QA,
   approve, or spawn agents.
 

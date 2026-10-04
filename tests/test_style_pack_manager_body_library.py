@@ -152,20 +152,20 @@ class BodyLibraryReviewTests(unittest.TestCase):
                 "allowed_roles": "AUX_BODY_BUILD", "source_character_id": "UNKNOWN",
                 "anatomy_compatibility": "FEMALE_ANATOMY", "anatomy_evidence_source": "reviewed source metadata",
             }])
-            with self.assertRaisesRegex(StylePackError, "BLOCKED"):
+            with self.assertRaisesRegex(StylePackError, "BLOCKED|REVIEW_REQUIRED"):
                 parse_aux_body_references(
                     workspace, ["BR_0001=BODY_BUILD_TARGET"], "SELECTED", "", True, False,
                     {"character_id": "NEW", "target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "explicit user request"},
                 )
 
-    def test_soft_body_reference_role_crosses_visible_presentation(self) -> None:
+    def test_soft_pose_fails_closed_without_explicit_matching_labels(self) -> None:
         decision = validate_reference_compatibility(
             {"character_id": "CHAR_009", "target_anatomy": "UNKNOWN"},
             {"source_character_id": "CHAR_004", "anatomy_compatibility": "UNKNOWN"},
             ["AUX_POSE"],
         )
-        self.assertTrue(decision["compatible"])
-        self.assertEqual(decision["status"], "ALLOWED")
+        self.assertFalse(decision["compatible"])
+        self.assertEqual(decision["status"], "REVIEW_REQUIRED")
 
     def test_selected_library_blocks_prompt_only_before_complete_relevant_review(self) -> None:
         with self.assertRaisesRegex(StylePackError, "reviewed 2 of 5"):
@@ -375,7 +375,7 @@ class BodyLibraryReviewTests(unittest.TestCase):
             with self.assertRaisesRegex(StylePackError, "unformed style-pack source"):
                 validate_plan_reference(paths, str(source), "STYLE")
 
-    def test_approved_copy_preserves_qa_provenance_for_positive_reference(self) -> None:
+    def test_approved_copy_preserves_qa_provenance_but_not_ordinary_reuse(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
             workspace = Path(folder)
             paths = StylePaths(workspace, "TEST", "TEST", workspace / "TEST_PROJECT_PACK", workspace / "TEST_GENERATIONS")
@@ -398,8 +398,9 @@ class BodyLibraryReviewTests(unittest.TestCase):
             source.with_suffix(source.suffix + ".qa-evidence.json").unlink()
             source.with_suffix(source.suffix + ".qa-contract.json").unlink()
             source.with_suffix(source.suffix + ".qa-plan.json").unlink()
-            selected = validate_plan_reference(paths, approved_row["style_file"], "STYLE")
-            self.assertEqual(selected["status"], "APPROVED_STANDALONE")
+            self.assertTrue(Path(approved_row["style_file"]).is_file())
+            with self.assertRaises(StylePackError):
+                validate_plan_reference(paths, approved_row["style_file"], "STYLE")
 
     def test_qa_snapshot_rejects_corrupted_layers_or_results(self) -> None:
         with tempfile.TemporaryDirectory() as folder:

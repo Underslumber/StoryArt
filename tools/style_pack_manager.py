@@ -44,9 +44,9 @@ except ModuleNotFoundError:  # Direct execution as python tools\style_pack_manag
     )
 
 try:
-    from tools.reference_compatibility import ANATOMY_ROLES, load_character_identity, validate_reference_compatibility
+    from tools.reference_compatibility import ANATOMY_ROLES, POSE_ROLES, load_character_identity, validate_reference_compatibility
 except ModuleNotFoundError:  # Direct execution as python tools\\style_pack_manager.py
-    from reference_compatibility import ANATOMY_ROLES, load_character_identity, validate_reference_compatibility
+    from reference_compatibility import ANATOMY_ROLES, POSE_ROLES, load_character_identity, validate_reference_compatibility
 
 try:
     from tools.character_profile_state import STRUCTURAL as PROFILE_STRUCTURAL, ProfileStateError, confirm as confirm_profile_state, require_first_publication, load_effective, text_facts, facts_block, digest as profile_digest, verify_plan_binding
@@ -59,6 +59,11 @@ try:
 except ModuleNotFoundError:  # Direct execution as python tools\\style_pack_manager.py
     from generation_risk_assessor import DEFAULT_LEXICON, RiskAssessmentError, validate_assessment
     from generation_call_contract import GenerationCallContractError, resolve_stage_slots
+
+try:
+    from tools import workflow_recovery
+except ModuleNotFoundError:  # Direct execution as python tools\style_pack_manager.py
+    import workflow_recovery
 
 
 SCRIPT_PATH = Path(__file__).resolve()
@@ -201,6 +206,10 @@ REFERENCE_FIELDS = (
     "character_id",
     "anatomy_compatibility",
     "anatomy_evidence_source",
+    "subject_label",
+    "subject_label_evidence",
+    "subject_label_sha256",
+    "subject_label_status",
     "source_filename",
     "source_sha256",
     "crop_box",
@@ -941,7 +950,7 @@ def active_style_calibration_summary(pack: Path) -> dict[str, object]:
     }
 
 
-def build_style_context(paths: StylePaths, requested_role: str, positive_only: bool, include_files: bool) -> dict[str, object]:
+def build_style_context(paths: StylePaths, requested_role: str, positive_only: bool, include_files: bool, target: dict[str, str] | None = None) -> dict[str, object]:
     discovered = matching_discovered_style(paths)
     if discovered is None:
         raise StylePackError(f"No discovered style pack matches {paths.style_name}.")
@@ -971,6 +980,11 @@ def build_style_context(paths: StylePaths, requested_role: str, positive_only: b
             continue
         if positive_only and not positive_eligible:
             continue
+        if is_image and include_files:
+            metadata = style_reference_compatibility_metadata(paths, file)
+            metadata["sha256"] = sha256(file)
+            if not validate_reference_compatibility(target or {}, metadata, [requested_role if requested_role != "ALL" else "STYLE"])["compatible"]:
+                continue
         record: dict[str, object] = {
             "relative_path": relative.as_posix(),
             "absolute_path": str(file),
@@ -988,6 +1002,14 @@ def build_style_context(paths: StylePaths, requested_role: str, positive_only: b
 
     anchor_files = manifest_role_files(pack, "ANCHOR_STYLE")
     master_files = manifest_role_files(pack, "MASTER_STYLE")
+    def permitted_style_path(value: str) -> bool:
+        file = pack / value
+        if not file.is_file():
+            return False
+        metadata = {**style_reference_compatibility_metadata(paths, file), "sha256": sha256(file)}
+        return bool(validate_reference_compatibility(target or {}, metadata, ["STYLE"])["compatible"])
+    anchor_files = [value for value in anchor_files if permitted_style_path(value)]
+    master_files = [value for value in master_files if permitted_style_path(value)]
     work_collection_counts: dict[str, int] = {}
     work_root = pack / "01_WORK"
     if work_root.is_dir():
@@ -1047,7 +1069,7 @@ def build_style_context(paths: StylePaths, requested_role: str, positive_only: b
     return context
 
 
-def _minimal_preparation_style_context(paths: StylePaths) -> dict[str, object]:
+def _minimal_preparation_style_context(paths: StylePaths, target: dict[str, str] | None = None) -> dict[str, object]:
     """Return only pack metadata needed to prepare a request.
 
     Full asset inventory and collection counts belong to the explicit
@@ -1059,6 +1081,10 @@ def _minimal_preparation_style_context(paths: StylePaths) -> dict[str, object]:
     if discovered is None:
         raise StylePackError(f"No discovered style pack matches {paths.style_name}.")
     anchors = manifest_role_files(Path(discovered.pack_path), "ANCHOR_STYLE")
+    anchors = [value for value in anchors if (Path(discovered.pack_path) / value).is_file() and
+               validate_reference_compatibility(target or {}, {
+                   **style_reference_compatibility_metadata(paths, Path(discovered.pack_path) / value),
+                   "sha256": sha256(Path(discovered.pack_path) / value)}, ["STYLE"])["compatible"]]
     return {
         "style_name": discovered.style_name,
         "pack_path": discovered.pack_path,
@@ -1070,7 +1096,8 @@ def _minimal_preparation_style_context(paths: StylePaths) -> dict[str, object]:
 
 def command_style_context(args: argparse.Namespace) -> None:
     paths = make_paths(args.workspace, args.style_name)
-    context = build_style_context(paths, args.role, args.positive_only, args.include_files)
+    target = compatibility_target(paths, args)
+    context = build_style_context(paths, args.role, args.positive_only, args.include_files, target)
     if args.json:
         print(json.dumps(context, ensure_ascii=False, indent=2))
         return
@@ -1161,6 +1188,24 @@ def _approved_profile_identity(paths: StylePaths, profile: Path, expected_id: st
     if identity.get("target_anatomy", "UNKNOWN") not in {"MALE_ANATOMY", "FEMALE_ANATOMY", "ANDROGYNOUS_ANATOMY"}:
         identity["target_anatomy"] = "UNKNOWN"
         identity["anatomy_evidence_source"] = "UNKNOWN"
+        confirmed_gender = identity.get("gender_identity", "UNKNOWN").upper()
+        if confirmed_gender in {"MAN", "MALE", "WOMAN", "FEMALE"}:
+            identity["target_anatomy"] = "MALE_ANATOMY" if confirmed_gender in {"MAN", "MALE"} else "FEMALE_ANATOMY"
+            identity["anatomy_evidence_source"] = "APPROVED_PROFILE_IDENTITY_GENDER"
+    effective_profile = load_effective(profile)["profile"]
+    locked = effective_profile.get("locked_invariants", {})
+    body_fact = str(locked.get("body_proportions", "")) if isinstance(locked, dict) else ""
+    declared_sexes = {word.upper() for word in re.findall(r"\b(?:male|female)\b", body_fact, re.IGNORECASE)}
+    if len(declared_sexes) > 1:
+        raise StylePackError("Approved body fact contains contradictory male/female labels.")
+    if declared_sexes:
+        fact_anatomy = next(iter(declared_sexes)) + "_ANATOMY"
+        if identity["target_anatomy"] not in {"UNKNOWN", fact_anatomy}:
+            raise StylePackError("Approved body fact contradicts structured subject classification.")
+        if identity["target_anatomy"] == "UNKNOWN":
+            profile_hash = hashlib.sha256(json.dumps(effective_profile, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+            identity["target_anatomy"] = fact_anatomy
+            identity["anatomy_evidence_source"] = "APPROVED_PROFILE_FACT:locked_invariants.body_proportions:PROFILE_SHA256=" + profile_hash
     identity["evidence_status"] = "APPROVED_REVIEWED_PROFILE"
     return identity
 
@@ -1232,13 +1277,13 @@ def enforce_reference_compatibility(
         "anatomy_compatibility": reference.get("anatomy_compatibility", "UNKNOWN"),
         "anatomy_evidence_source": reference.get("anatomy_evidence_source", "UNKNOWN"),
     }
-    for key in ("subject_anatomy_compatibility", "subject_anatomy_evidence_source", "framing", "coverage", "source_coverage", "shot_type"):
+    for key in ("subject_label", "subject_label_evidence", "subject_label_status", "subject_label_sha256", "sha256", "visual_qa_status", "physiology_group", "source_subject", "subject_anatomy_compatibility", "subject_anatomy_evidence_source", "framing", "coverage", "source_coverage", "shot_type"):
         if key in reference:
             metadata[key] = reference[key]
     result = validate_reference_compatibility(target, metadata, roles)
     if not result["compatible"]:
         raise StylePackError(
-            f"Reference compatibility {result['status']} for {reference.get('path', reference.get('ref_id', 'asset'))} "
+            f"Reference compatibility {result['status']} for {reference.get('ref_id', 'asset')} "
             f"as {','.join(roles)}: {result['reason']}"
         )
     return result
@@ -1294,6 +1339,10 @@ def command_body_ref_context(args: argparse.Namespace) -> None:
         if not matches(row):
             continue
         if target is not None and requested_roles:
+            row = dict(row)
+            source = library / row.get("generator_path", "")
+            if source.is_file():
+                row["sha256"] = sha256(source)
             roles = ["BODY_BUILD" if role == "AUX_BODY_BUILD" else role for role in requested_roles]
             decision = validate_reference_compatibility(target, row, roles)
             compatibility_decisions[row.get("ref_id", "")] = decision
@@ -1897,6 +1946,22 @@ def load_and_validate_risk_assessment(
     return path, report
 
 
+def stage_subject_classification(snapshot: dict[str, object], plan: dict[str, object]) -> tuple[str, str] | None:
+    """Keep the QA snapshot's subject classification immutable across stages."""
+    def pair(document: dict[str, object]) -> tuple[str, str] | None:
+        compatibility = document.get("target_identity_compatibility", {})
+        target = compatibility.get("target", {}) if isinstance(compatibility, dict) else {}
+        if not isinstance(target, dict):
+            return None
+        label = str(target.get("target_anatomy", "")).strip().upper()
+        evidence = str(target.get("anatomy_evidence_source", "") or "").strip()
+        if label not in {"MALE_ANATOMY", "FEMALE_ANATOMY"} or not evidence or evidence.upper() == "UNKNOWN":
+            return None
+        return label, evidence
+    original, current = pair(snapshot), pair(plan)
+    return original if original is not None and original == current else None
+
+
 def validated_stage_outputs(paths: StylePaths, plan_path: Path, plan: dict[str, object]) -> dict[str, dict[str, object]]:
     """Load latest QA-passed STAGING outputs for this exact request and plan."""
     latest_by_stage: dict[str, dict[str, str]] = {}
@@ -1939,16 +2004,25 @@ def validated_stage_outputs(paths: StylePaths, plan_path: Path, plan: dict[str, 
             or str(row.get("character_id", "")) != expected_character
         ):
             continue
+        classification = stage_subject_classification(snapshot, plan)
+        if classification is None:
+            continue
+        output_hash, snapshot_hash = sha256(style_file), sha256(snapshot_path)
         result[stage_id] = {
             "path": str(style_file.resolve()),
-            "sha256": sha256(style_file),
+            "sha256": output_hash,
             "request_id": request_id,
             "reference_plan": str(plan_path.resolve()),
             "stage_id": stage_id,
             "status": "STAGING",
             "qa_passed": True,
             "plan_snapshot": str(snapshot_path.resolve()),
-            "plan_snapshot_sha256": sha256(snapshot_path),
+            "plan_snapshot_sha256": snapshot_hash,
+            "subject_label": classification[0],
+            "subject_label_evidence": "QA_PLAN_SNAPSHOT_SHA256=" + snapshot_hash + ":" + classification[1],
+            "subject_label_sha256": output_hash,
+            "snapshot_subject_evidence": classification[1],
+            "source_character_id": expected_character if expected_character.upper() not in {"", "NEW", "NONE", "UNKNOWN"} else "CURRENT_REQUEST:" + request_id,
         }
     return result
 
@@ -2044,6 +2118,9 @@ def resolve_execution_call(
         "stage_output_bindings": stage_output_bindings,
         "targeted_pack_bindings": targeted_pack_bindings,
         "risk_assessment": {"path": str(risk_path), **report},
+        "identity_style_name": plan.get("identity_style_name", paths.style_name),
+        "identity_pack_path": plan.get("identity_pack_path", str(paths.pack)),
+        "character_id": plan.get("character_id"),
         "confirmed_character_profile": plan.get("confirmed_character_profile"),
         "profile_default_application": plan.get("profile_default_application"),
         "profile_default_exceptions": plan.get("profile_default_exceptions"),
@@ -2095,6 +2172,11 @@ def validate_resolved_slot_compatibility(
         "COVERAGE_FRONT": "CLOTHES",
         "COVERAGE_SIDE": "CLOTHES",
         "COVERAGE_BACK": "CLOTHES",
+        "FACE_IDENTITY_STAGE": "FACE",
+        "PHYSIQUE_FRONT_STAGE": "BODY", "PHYSIQUE_SIDE_STAGE": "BODY", "PHYSIQUE_BACK_STAGE": "BODY",
+        "TARGETED_STAGE_PACK": "BODY",
+        "FACE_FRONT_TARGETED_PACK": "BODY", "FACE_FRONT_SIDE_TARGETED_PACK": "BODY",
+        "FACE_PHYSIQUE_TARGETED_PACK": "BODY", "MULTIVIEW_TARGETED_PACK": "BODY",
     }
     roles = [role_aliases.get(role, role) for role in roles]
     selected = plan.get("selected_references", {})
@@ -2146,10 +2228,10 @@ def validate_resolved_slot_compatibility(
         if body_row is None:
             raise StylePackError(f"Attached body reference is no longer present in the reviewed manifest: {file}")
 
-    pose_only = bool(roles) and set(roles).issubset({"AUX_POSE", "POSE", "POSE_SOFT"})
+    pose_only = bool(set(roles) & POSE_ROLES)
     framing = str((body_row or {}).get("framing", "")).upper().replace("-", "_").replace(" ", "_")
     full_body = framing in {"FULL", "FULL_BODY", "FULLBODY", "FULL_LENGTH", "FULL_LENGTH_BODY"}
-    anatomy_visible = bool(set(roles) & ANATOMY_ROLES) or "AUX_OBJECT_INTERACTION" in roles or (full_body and not pose_only)
+    anatomy_visible = pose_only or bool(set(roles) & ANATOMY_ROLES) or "AUX_OBJECT_INTERACTION" in roles or full_body
     if in_body_library:
         auxiliary = plan.get("auxiliary_body_references", [])
         matching_auxiliary = next(
@@ -2178,12 +2260,12 @@ def validate_resolved_slot_compatibility(
             if str(matching_compatibility.get("status", "")).upper() != "ALLOWED":
                 raise StylePackError(f"Attached body reference has no ALLOWED per-file compatibility decision: {file}")
             if isinstance(target, dict):
-                enforce_reference_compatibility(target, {**body_row, "path": str(file)}, roles)
-        # Pose-only attachment stays exempt from target anatomy metadata, after all manifest and hash checks.
+                enforce_reference_compatibility(target, {**body_row, "path": str(file), "sha256": sha256(file)}, roles)
+        # Pose sources require matching explicit labels, including at the final call boundary.
         return
 
     if not isinstance(target, dict):
-        return
+        raise StylePackError("Attached reference has no evidence-backed target label.")
     candidates: list[dict[str, object]] = []
     selected = plan.get("selected_references", {})
     if isinstance(selected, dict):
@@ -2197,7 +2279,40 @@ def validate_resolved_slot_compatibility(
         None,
     )
     if record is None:
-        return
+        request_id = str(plan.get("request_id", ""))
+        if request_id and target.get("target_anatomy") in {"MALE_ANATOMY", "FEMALE_ANATOMY"}:
+            plan_path = paths.generations / "00_PENDING" / request_id / "REFERENCE_PLAN.json"
+            outputs = validated_stage_outputs(paths, plan_path, plan)
+            verified = {str(Path(str(value["path"])).resolve()): value for value in outputs.values()}
+            current_hash = sha256(file)
+            source_output = verified.get(str(file))
+            source_outputs = [source_output] if source_output and source_output.get("sha256") == current_hash else []
+            permitted_stage = bool(source_outputs)
+            manifest_path = slot.get("manifest_path")
+            if manifest_path:
+                manifest = json.loads(Path(str(manifest_path)).read_text(encoding="utf-8"))
+                sources = manifest.get("sources", [])
+                source_outputs = [verified.get(str(Path(str(source.get("path", ""))).resolve())) for source in sources]
+                permitted_stage = (manifest.get("request_id") == request_id and bool(sources) and
+                                   all(output and output.get("sha256") == str(source.get("sha256", "")).lower()
+                                       for output, source in zip(source_outputs, sources)))
+            permitted_stage = permitted_stage and all(
+                output and output.get("subject_label") == target.get("target_anatomy")
+                and output.get("snapshot_subject_evidence") == target.get("anatomy_evidence_source")
+                and output.get("subject_label_evidence")
+                for output in source_outputs)
+            if permitted_stage:
+                stage_target = dict(target)
+                if stage_target.get("character_id", "UNKNOWN") == "UNKNOWN":
+                    stage_target["character_id"] = "CURRENT_REQUEST:" + request_id
+                original = source_outputs[0]
+                metadata = {"subject_label": original["subject_label"], "subject_label_evidence": ";".join(str(output["subject_label_evidence"]) for output in source_outputs),
+                            "subject_label_sha256": current_hash, "sha256": current_hash,
+                            "source_character_id": original["source_character_id"],
+                            "anatomy_compatibility": original["subject_label"], "anatomy_evidence_source": original["subject_label_evidence"]}
+                enforce_reference_compatibility(stage_target, metadata, roles)
+                return
+        raise StylePackError("Attached reference has no planned source metadata record.")
     planned_roles = {
         str(role).upper()
         for reference in planned_compatibility
@@ -2209,7 +2324,20 @@ def validate_resolved_slot_compatibility(
     if planned_roles:
         roles = sorted(planned_roles)
     metadata: dict[str, object] = dict(record)
-    metadata.update(style_reference_compatibility_metadata(paths, file))
+    identity_paths = identity_paths_for_plan(paths, plan)
+    if identity_paths.slug != paths.slug and is_relative_to(file, identity_paths.generations):
+        asset = registered_approved_character_asset(identity_paths, file)
+        if not asset or str(asset.get("character_id", "")).upper() != str(plan.get("character_id", "")).upper():
+            raise StylePackError("Attached identity source no longer belongs to the qualified approved character.")
+        role = str(asset.get("asset_role", ""))
+        allowed = {"BASE": {"FACE", "BODY"}, "FACE": {"FACE"}, "BODY": {"BODY"},
+                   "WARDROBE": {"CLOTHES"}, "ACCESSORY": {"CLOTHES"},
+                   "FACE_VARIANT": {"FACE"}, "BODY_VARIANT": {"BODY"}}
+        if not set(roles).issubset(allowed.get(role, set())):
+            raise StylePackError("Identity attachment roles differ from its approved character asset role.")
+    metadata_paths = identity_paths if is_relative_to(file, identity_paths.generations) else paths
+    metadata.update(style_reference_compatibility_metadata(metadata_paths, file))
+    metadata["sha256"] = sha256(file)
     metadata["path"] = str(file)
     enforce_reference_compatibility(target, metadata, roles)
 
@@ -2236,6 +2364,9 @@ def command_resolve_call(args: argparse.Namespace) -> None:
         "request_id": request_id,
         "reference_plan": str(plan_path),
         "stage_id": stage_id,
+        "identity_style_name": plan.get("identity_style_name", paths.style_name),
+        "identity_pack_path": plan.get("identity_pack_path", str(paths.pack)),
+        "character_id": plan.get("character_id"),
         "confirmed_character_profile": plan.get("confirmed_character_profile"),
         "profile_default_application": plan.get("profile_default_application"),
         "profile_default_exceptions": plan.get("profile_default_exceptions"),
@@ -2279,7 +2410,8 @@ def validate_reference_policy_slots(paths: StylePaths, plan: dict[str, object], 
         raise StylePackError(f"Unsupported reference policy: {policy or '<empty>'}.")
     character = selections["character"]["choice"]
     slots = call.get("slots", [])
-    identity_root = character_folder(paths, character) if re.fullmatch(r"CHAR_\d+", character) else None
+    identity_paths = identity_paths_for_plan(paths, plan)
+    identity_root = character_folder(identity_paths, character) if re.fullmatch(r"CHAR_\d+", character) else None
     identity = [
         slot for slot in slots
         if identity_root and is_relative_to(Path(str(slot["path"])).resolve(), identity_root.resolve())
@@ -2328,6 +2460,7 @@ def validate_reference_policy_slots(paths: StylePaths, plan: dict[str, object], 
                 str(snapshot.get("request_id", "")) != str(plan.get("request_id", ""))
                 or str(snapshot.get("character_id", "")) != str(plan.get("character_id", ""))
                 or snapshot.get("user_reference_evidence", []) != user_evidence
+                or stage_subject_classification(snapshot, plan) is None
             ):
                 return False
             try:
@@ -3055,6 +3188,7 @@ def approved_character_role_assets(
     profile_index = {role: [] if role == "SKETCH" else _character_profile_paths(profile, field) for field, role, _ in profile_fields.values()}
     approved: dict[str, dict[str, str]] = {}
     diagnostics: list[dict[str, str]] = []
+    qa_diagnostics: list[dict[str, str]] = []
     manifest_rows = read_csv(paths.generation_manifest)
 
     registry_rows = [
@@ -3085,7 +3219,7 @@ def approved_character_role_assets(
             and base_manifest.get("status", "").upper() == "APPROVED_CHARACTER_BASE"
             and base_manifest.get("character_id", "").upper() == character_id
             and Path(base_manifest.get("style_file", "")).resolve() == base
-            and generation_has_passed_qa(base_manifest)
+            and approved_record_hash_matches_file(base_manifest, base)
         ):
             base_manifest = None
 
@@ -3136,6 +3270,7 @@ def approved_character_role_assets(
                         "reason": f"Approved profile-listed base asset could not be verified: {error}",
                     })
                     continue
+                qa_passed = generation_has_passed_qa(base_manifest)
                 approved[str(listed)] = {
                     "role": role,
                     "path": str(listed),
@@ -3145,7 +3280,11 @@ def approved_character_role_assets(
                     "sha256": asset_hash,
                     "profile_indexed": "true",
                     "provenance": base_manifest.get("notes", ""),
+                    "qa_status": "PASS" if qa_passed else "NOT_CHECKED",
                 }
+                if not qa_passed:
+                    qa_diagnostics.append({"path": str(listed), "role": role, "qa_status": "NOT_CHECKED",
+                                           "reason": "Historical QA receipt is absent or invalid; exact registry, profile, and latest manifest approval remain valid. Current file hash is recorded for this selection."})
 
     for row in manifest_rows:
         status = row.get("status", "").strip().upper()
@@ -3177,10 +3316,8 @@ def approved_character_role_assets(
             reason = "Latest record belongs to a different character."
         elif not reason and manifest and Path(manifest.get("style_file", "")).resolve() != file:
             reason = "Latest record does not bind this exact approved path."
-        elif not reason and manifest and manifest.get("qa_output_sha256", "").strip() and manifest.get("qa_output_sha256", "").casefold() != sha256(file).casefold():
+        elif not reason and manifest and not approved_record_hash_matches_file(manifest, file):
             reason = "Manifest QA output hash does not match the current approved asset file."
-        elif not reason and manifest and not generation_has_passed_qa(manifest):
-            reason = "No valid manager-approved QA receipt/provenance verifies this approved role asset."
         if reason:
             diagnostics.append({
                 "generation_id": row.get("generation_id", ""),
@@ -3202,6 +3339,11 @@ def approved_character_role_assets(
                 "reason": f"Approved asset hash verification failed: {error}",
             })
             continue
+        qa_passed = generation_has_passed_qa(manifest)
+        if role == "SKETCH" and not qa_passed:
+            diagnostics.append({"generation_id": manifest.get("generation_id", ""), "status": status,
+                                "path": str(file), "role": role, "reason": "Sketch admission requires a valid full QA receipt."})
+            continue
         approved[str(file)] = {
             "role": role,
             "path": str(file),
@@ -3211,10 +3353,14 @@ def approved_character_role_assets(
             "sha256": asset_hash,
             "profile_indexed": str(file in profile_index[role]).lower(),
             "provenance": manifest.get("notes", ""),
+            "qa_status": "PASS" if qa_passed else "NOT_CHECKED",
         }
         if role == "SKETCH":
             approved[str(file)].update({"label": "Useful unfinished character sketch",
                                        "purpose": manifest.get("description", ""), "usage": "STYLE_SUPPORT_ONLY"})
+        if not qa_passed:
+            qa_diagnostics.append({"path": str(file), "role": role, "qa_status": "NOT_CHECKED",
+                                   "reason": "Historical QA receipt is absent or invalid; exact registry, profile, and latest manifest approval remain valid. Current file hash is recorded for this selection."})
     stale = {
         role: sorted(str(path) for path in paths_for_role if str(path) not in approved)
         for role, paths_for_role in profile_index.items()
@@ -3238,6 +3384,7 @@ def approved_character_role_assets(
         "approved_records_missing_from_profile": missing_index,
         "unsupported_approved_statuses": unsupported,
         "invalid_approved_records": diagnostics,
+        "qa_diagnostics": qa_diagnostics,
     }
 
 
@@ -3266,6 +3413,7 @@ def registered_approved_character_asset(paths: StylePaths, image: Path) -> dict[
             and manifest.get("character_id", "").upper() == character_id
             and manifest.get("style_file", "")
             and Path(manifest["style_file"]).resolve() == base.resolve()
+            and approved_record_hash_matches_file(manifest, base)
         ):
             continue
 
@@ -3395,10 +3543,18 @@ def style_reference_compatibility_metadata(paths: StylePaths, file: Path) -> dic
     coverage = "UNKNOWN"
     source_coverage = "UNKNOWN"
     shot_type = "UNKNOWN"
+    labels = {key: "UNKNOWN" for key in ("subject_label", "subject_label_evidence", "subject_label_sha256", "subject_label_status", "physiology_group", "source_subject", "visual_qa_status")}
+    current_hash = sha256(file) if file.is_file() else "UNKNOWN"
+    asset = registered_approved_character_asset(paths, file)
+    if asset and asset.get("target_anatomy") in {"MALE_ANATOMY", "FEMALE_ANATOMY"} and asset.get("anatomy_evidence_source", "UNKNOWN") != "UNKNOWN":
+        labels.update({"subject_label": asset["target_anatomy"],
+                       "subject_label_evidence": "APPROVED_CHARACTER_PROFILE:" + str(asset.get("profile_path", "")) + ":" + str(asset["anatomy_evidence_source"]),
+                       "subject_label_sha256": current_hash, "subject_label_status": "APPROVED"})
     if is_relative_to(file, paths.pack) and paths.references.is_file():
         relative = file.relative_to(paths.pack).as_posix()
         for row in read_csv(paths.references):
             if row.get("stored_relative_path", "").replace("\\", "/") == relative:
+                labels.update({key: row[key] for key in labels if row.get(key) and row[key] != "UNKNOWN"})
                 if row.get("status", "").upper() in {"APPROVED", "ANCHOR"} and row.get("user_approved", "").upper() == "YES":
                     anatomy_compatibility = row.get("subject_anatomy_compatibility") or row.get("anatomy_compatibility", "UNKNOWN") or "UNKNOWN"
                     anatomy_evidence_source = row.get("subject_anatomy_evidence_source") or row.get("anatomy_evidence_source", "UNKNOWN") or "UNKNOWN"
@@ -3407,6 +3563,29 @@ def style_reference_compatibility_metadata(paths: StylePaths, file: Path) -> dic
                     source_coverage = row.get("source_coverage", "UNKNOWN") or "UNKNOWN"
                     shot_type = row.get("shot_type", "UNKNOWN") or "UNKNOWN"
                 break
+    body_library = (paths.workspace / BODY_LIBRARY_NAME).resolve()
+    if is_relative_to(file, body_library):
+        registry_path = paths.workspace / "config" / "body_reference_types.json"
+        if registry_path.is_file():
+            registry = json.loads(registry_path.read_text(encoding="utf-8"))
+            for spec in registry.get("types", {}).values():
+                manifest = (paths.workspace / spec["manifest"]).resolve()
+                if not is_relative_to(manifest, body_library) or not manifest.is_file():
+                    continue
+                for row in read_csv(manifest):
+                    path_fields = ("generator_path",) if spec.get("root") == BODY_LIBRARY_NAME else ("curated_path", "final_path")
+                    for field in path_fields:
+                        if not row.get(field):
+                            continue
+                        candidate = Path(row[field])
+                        if not candidate.is_absolute():
+                            candidate = (body_library if field == "generator_path" else paths.workspace) / candidate
+                        if candidate.resolve() == file:
+                            labels.update({key: row.get(key, "UNKNOWN") or "UNKNOWN" for key in labels})
+                            if row.get("visual_qa_status") == "PASS" and row.get("physiology_group"):
+                                labels["subject_label_sha256"] = row.get("output_sha256", "UNKNOWN")
+                            anatomy_compatibility = row.get("subject_anatomy_compatibility") or row.get("anatomy_compatibility", "UNKNOWN") or "UNKNOWN"
+                            anatomy_evidence_source = row.get("subject_anatomy_evidence_source") or row.get("anatomy_evidence_source", "UNKNOWN") or "UNKNOWN"
     return {
         "source_character_id": source_character_id,
         "anatomy_compatibility": anatomy_compatibility,
@@ -3415,6 +3594,8 @@ def style_reference_compatibility_metadata(paths: StylePaths, file: Path) -> dic
         "coverage": coverage,
         "source_coverage": source_coverage,
         "shot_type": shot_type,
+        "sha256": current_hash,
+        **labels,
     }
 
 
@@ -3502,6 +3683,12 @@ def newest_matching_generation(paths: StylePaths, image: Path) -> dict[str, str]
             if candidate_hash == target_hash:
                 return row
     return None
+
+
+def approved_record_hash_matches_file(row: dict[str, str], image: Path) -> bool:
+    """Keep any recorded output hash authoritative without requiring a QA receipt."""
+    recorded_hash = row.get("qa_output_sha256", "").strip()
+    return not recorded_hash or recorded_hash.casefold() == sha256(image).casefold()
 
 
 def generation_qa_evidence(row: dict[str, str]) -> dict[str, object] | None:
@@ -3650,9 +3837,36 @@ def style_formation_status(paths: StylePaths) -> str:
 
 
 def registered_approved_generation(paths: StylePaths, image: Path) -> dict[str, str] | None:
-    """Return only a hash-verified permanent generation suitable as a positive reference."""
+    """Return an exact approved file; report historical QA separately from approval."""
+    image = image.resolve()
+    if not image.is_file() or not is_relative_to(image, paths.generations):
+        return None
+    relative = image.relative_to(paths.generations)
+    if not relative.parts or relative.parts[0] not in {"01_APPROVED_CHARACTERS", "02_APPROVED_STANDALONE"}:
+        return None
     row = newest_matching_generation(paths, image)
-    if row and row.get("status", "").upper().startswith("APPROVED_") and generation_has_passed_qa(row):
+    status = row.get("status", "").upper() if row else ""
+    # A prior approved illustration is still historical output. Ordinary new
+    # generation source selection admits only approved character role assets.
+    allowed_statuses = {
+        "APPROVED_WARDROBE", "APPROVED_ACCESSORY",
+        "APPROVED_FACE_VARIANT", "APPROVED_BODY_VARIANT",
+    }
+    character_roles = {
+        "APPROVED_WARDROBE": "WARDROBE", "APPROVED_ACCESSORY": "ACCESSORY", "APPROVED_FACE_VARIANT": "FACE_VARIANT",
+        "APPROVED_BODY_VARIANT": "BODY_VARIANT",
+    }
+    # Canonical identity files retain the CHARACTER_ASSET planning status and
+    # role binding through registered_approved_character_asset below.
+    if status == "APPROVED_CHARACTER_BASE":
+        return None
+    if (row and status in allowed_statuses
+            and row.get("style_file") and Path(row["style_file"]).resolve() == image
+            and approved_record_hash_matches_file(row, image)):
+        if status in character_roles:
+            asset = registered_approved_character_asset(paths, image)
+            if not asset or asset.get("asset_role") != character_roles[status] or asset.get("character_id") != row.get("character_id", "").upper():
+                return None
         return row
     return None
 
@@ -3788,6 +4002,11 @@ def parse_aux_body_references(
                 "BODY_BUILD_TARGET would change an existing character's permanent proportions. "
                 "Use --allow-body-identity-change only after the user explicitly requests that change."
             )
+        source = library / row.get("generator_path", "")
+        row = {**row, "sha256": sha256(source) if source.is_file() else "UNKNOWN"}
+        decision = validate_reference_compatibility(target_identity or {}, row, sorted(required_roles))
+        if not decision["compatible"]:
+            raise StylePackError(f"{ref_id} is {decision['status']} for {mode}: {decision['reason']}")
         file = (library / row["generator_path"]).resolve()
         if not is_relative_to(file, library) or not file.is_file():
             raise StylePackError(f"Generator-safe file is missing or outside the body library: {file}")
@@ -3806,6 +4025,11 @@ def parse_aux_body_references(
             "framing": row.get("framing", ""),
             "not_for_roles": [item for item in row.get("not_for_roles", "").upper().split(";") if item],
             "source_character_id": row.get("source_character_id", "UNKNOWN") or "UNKNOWN",
+            "subject_label": row.get("subject_label", "UNKNOWN") or "UNKNOWN",
+            "subject_label_evidence": row.get("subject_label_evidence", "UNKNOWN") or "UNKNOWN",
+            "subject_label_sha256": row.get("subject_label_sha256", "UNKNOWN") or "UNKNOWN",
+            "subject_label_status": row.get("subject_label_status", "UNKNOWN") or "UNKNOWN",
+            "physiology_group": row.get("physiology_group", "UNKNOWN") or "UNKNOWN",
             "subject_anatomy_compatibility": row.get("subject_anatomy_compatibility", "") or "UNKNOWN",
             "anatomy_compatibility": row.get("anatomy_compatibility", "UNKNOWN") or "UNKNOWN",
             "subject_anatomy_evidence_source": row.get("subject_anatomy_evidence_source", "") or "UNKNOWN",
@@ -4456,8 +4680,32 @@ def build_generation_workflow(
     }
 
 
+def identity_paths_for_plan(paths: StylePaths, plan: dict[str, object]) -> StylePaths:
+    """Resolve the request-scoped identity namespace; rendering stays in paths."""
+    name = str(plan.get("identity_style_name") or paths.style_name).strip()
+    identity = make_paths(paths.workspace, name)
+    cross = identity.slug != paths.slug
+    if cross and (str(plan.get("generation_purpose", "")).upper() != "SCENE"
+                  or not re.fullmatch(r"CHAR_\d+", str(plan.get("character_id", "")))):
+        raise StylePackError("Separate identity packs are supported only for existing-character SCENE requests.")
+    recorded = plan.get("identity_pack_path")
+    if recorded and Path(str(recorded)).resolve() != identity.pack.resolve():
+        raise StylePackError("Identity pack path differs from the qualified identity style route.")
+    if cross and not recorded:
+        raise StylePackError("Cross-style identity requires its exact identity_pack_path binding.")
+    call = plan.get("execution_call")
+    if cross and isinstance(call, dict) and any(call.get(key) != plan.get(key) for key in
+            ("identity_style_name", "identity_pack_path", "character_id")):
+        raise StylePackError("Executable call differs from the qualified identity binding.")
+    return identity
+
+
 def command_prepare_generation(args: argparse.Namespace) -> None:
     paths = make_paths(args.workspace, args.style_name)
+    identity_name = str(getattr(args, "identity_style_name", "") or args.style_name).strip()
+    identity_paths = identity_paths_for_plan(paths, {"identity_style_name": identity_name,
+        "identity_pack_path": str(make_paths(args.workspace, identity_name).pack),
+        "generation_purpose": args.generation_purpose, "character_id": args.character_id.upper()})
     ensure_generation_library(paths)
     request_id = safe_component(args.request_id, "request")
     request_folder = paths.generations / "00_PENDING" / request_id
@@ -4488,14 +4736,14 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
     profile_default_application: dict[str, list[dict[str, str]]] | None = None
     profile_default_exceptions: dict[str, list[str]] | None = None
     if purpose == "SCENE" and re.fullmatch(r"CHAR_\d+", character_id):
-        confirmed_profile = effective_character_profile(paths, character_id)
+        confirmed_profile = effective_character_profile(identity_paths, character_id)
         profile_default_exceptions = {
             "explicit": [role for role, value in (("wardrobe", args.clothes_reference), ("accessory", args.accessory_reference),
                         ("face_variant", args.face_variant_reference), ("body_variant", args.body_variant_reference)) if value],
             "suppressed": [str(role).upper() for role in getattr(args, "suppress_profile_default", [])],
             "overrides": sorted(overrides),
         }
-        profile_default_application = apply_confirmed_defaults(paths, args, character_id, confirmed_profile, overrides)
+        profile_default_application = apply_confirmed_defaults(identity_paths, args, character_id, confirmed_profile, overrides)
     scene_prompt_sources = build_scene_prompt_source_contract(purpose, character_id, {
         "POSE": args.pose_reference,
         "CLOTHES": args.clothes_reference,
@@ -4535,8 +4783,8 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
             raise StylePackError(
                 "Character-bearing generation requires: " + ", ".join(missing_body_fields)
             )
-    context = _minimal_preparation_style_context(paths)
-    target_identity = compatibility_target(paths, args, character_id)
+    target_identity = compatibility_target(identity_paths, args, character_id)
+    context = _minimal_preparation_style_context(paths, target_identity)
     if is_new_character and purpose != "CHARACTER_BASE":
         raise StylePackError(
             "Every NEW character must complete CHARACTER_BASE first. Generate safety-covered front/side/back physique, face, "
@@ -4640,13 +4888,13 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
     selected_body_view = "NOT_APPLICABLE"
     existing_scene = purpose == "SCENE" and bool(re.fullmatch(r"CHAR_\d+", character_id))
     if existing_scene:
-        identity_folder = character_folder(paths, character_id)
+        identity_folder = character_folder(identity_paths, character_id)
         if not args.character_reference_evidence.strip():
             raise StylePackError("Existing-character scene requires --character-reference-evidence explaining the chosen identity subset.")
         if not args.character_assembly:
             raise StylePackError("An existing character scene requires --character-assembly from its approved base.")
-        assembly = validate_plan_reference(paths, args.character_assembly, "CHARACTER_ASSEMBLY")
-        require_approved_character_asset_role(paths, Path(str(assembly["path"])), character_id, "BASE", "CHARACTER_ASSEMBLY")
+        assembly = validate_plan_reference(identity_paths, args.character_assembly, "CHARACTER_ASSEMBLY")
+        require_approved_character_asset_role(identity_paths, Path(str(assembly["path"])), character_id, "BASE", "CHARACTER_ASSEMBLY")
         if not is_relative_to(Path(str(assembly["path"])), identity_folder):
             raise StylePackError("CHARACTER_ASSEMBLY must belong to the selected approved character folder.")
         selected["character_assembly"] = assembly
@@ -4667,8 +4915,8 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         elif character_reference_mode == "ASSEMBLY_PLUS_VIEW":
             if selected_body_view == "ASSEMBLY" or not args.body_reference:
                 raise StylePackError("ASSEMBLY_PLUS_VIEW requires one nearest front, side, or back --body-reference.")
-            body = validate_plan_reference(paths, args.body_reference, "NEAREST_CHARACTER_BODY")
-            require_approved_character_asset_role(paths, Path(str(body["path"])), character_id, "BODY", "NEAREST_CHARACTER_BODY")
+            body = validate_plan_reference(identity_paths, args.body_reference, "NEAREST_CHARACTER_BODY")
+            require_approved_character_asset_role(identity_paths, Path(str(body["path"])), character_id, "BODY", "NEAREST_CHARACTER_BODY")
             if not is_relative_to(Path(str(body["path"])), identity_folder):
                 raise StylePackError("The nearest body view must belong to the selected approved character folder.")
             selected["primary_face"] = assembly
@@ -4676,10 +4924,10 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         else:
             if selected_body_view == "ASSEMBLY" or not args.body_reference or not args.primary_face:
                 raise StylePackError("IDENTITY_STRICT requires separate approved face and nearest front/side/back body references.")
-            primary_face = validate_plan_reference(paths, args.primary_face, "CHARACTER_FACE")
-            body = validate_plan_reference(paths, args.body_reference, "NEAREST_CHARACTER_BODY")
-            require_approved_character_asset_role(paths, Path(str(primary_face["path"])), character_id, "FACE", "CHARACTER_FACE")
-            require_approved_character_asset_role(paths, Path(str(body["path"])), character_id, "BODY", "NEAREST_CHARACTER_BODY")
+            primary_face = validate_plan_reference(identity_paths, args.primary_face, "CHARACTER_FACE")
+            body = validate_plan_reference(identity_paths, args.body_reference, "NEAREST_CHARACTER_BODY")
+            require_approved_character_asset_role(identity_paths, Path(str(primary_face["path"])), character_id, "FACE", "CHARACTER_FACE")
+            require_approved_character_asset_role(identity_paths, Path(str(body["path"])), character_id, "BODY", "NEAREST_CHARACTER_BODY")
             if not is_relative_to(Path(str(primary_face["path"])), identity_folder) or not is_relative_to(Path(str(body["path"])), identity_folder):
                 raise StylePackError("Strict face and body references must belong to the selected approved character folder.")
             selected["primary_face"] = primary_face
@@ -4687,12 +4935,12 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         if args.supporting_face:
             selected["supporting_face"] = validate_plan_reference(paths, args.supporting_face, "SUPPORTING_FACE_STYLE")
         if args.expression_reference:
-            selected["expression"] = validate_plan_reference(paths, args.expression_reference, "FACE_EXPRESSION")
+            selected["expression"] = validate_plan_reference(identity_paths, args.expression_reference, "FACE_EXPRESSION")
         face_library_count = 0
     elif face_visible:
         if not args.primary_face:
             raise StylePackError("Visible face requires --primary-face.")
-        primary_face = validate_plan_reference(paths, args.primary_face, "PRIMARY_FACE")
+        primary_face = validate_plan_reference(identity_paths, args.primary_face, "PRIMARY_FACE")
         if is_new_character and "FACE" not in primary_face.get("inferred_roles", []):
             raise StylePackError("A new character's primary face must be selected from a local face-role file such as FACE_CROPS.")
         selected["primary_face"] = primary_face
@@ -4708,7 +4956,7 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         elif args.supporting_face:
             selected["supporting_face"] = validate_plan_reference(paths, args.supporting_face, "SUPPORTING_FACE")
         if args.expression_reference:
-            selected["expression"] = validate_plan_reference(paths, args.expression_reference, "FACE_EXPRESSION")
+            selected["expression"] = validate_plan_reference(identity_paths, args.expression_reference, "FACE_EXPRESSION")
 
         face_library_count = 0
     else:
@@ -4732,21 +4980,21 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         if not value:
             raise StylePackError(f"{category} requires its local reference or an explicit --override {category}.")
         selected[category.lower()] = validate_plan_reference(
-            paths,
+            identity_paths if category in {"BODY", "CLOTHES"} else paths,
             value,
             category,
             allow_curated_body_contour=character_free_scene and category == "POSE",
         )
 
-    if args.clothes_reference and is_relative_to(Path(str(selected["clothes"]["path"])), paths.generations):
-        wardrobe = registered_approved_character_asset(paths, Path(str(selected["clothes"]["path"])))
+    if args.clothes_reference and is_relative_to(Path(str(selected["clothes"]["path"])), identity_paths.generations):
+        wardrobe = registered_approved_character_asset(identity_paths, Path(str(selected["clothes"]["path"])))
         if not wardrobe or wardrobe.get("asset_role") != "WARDROBE" or wardrobe.get("character_id") != character_id:
             raise StylePackError("Generation-library CLOTHES reference must be an exact APPROVED_WARDROBE asset for the selected character.")
     if args.accessory_reference:
         selected["accessory"] = []
         for value in args.accessory_reference:
-            accessory = validate_plan_reference(paths, value, "ACCESSORY")
-            registered = registered_approved_character_asset(paths, Path(str(accessory["path"])))
+            accessory = validate_plan_reference(identity_paths, value, "ACCESSORY")
+            registered = registered_approved_character_asset(identity_paths, Path(str(accessory["path"])))
             if not registered or registered.get("asset_role") != "ACCESSORY" or registered.get("character_id") != character_id:
                 raise StylePackError("ACCESSORY references must be exact APPROVED_ACCESSORY assets for the selected character.")
             selected["accessory"].append(accessory)
@@ -4757,8 +5005,8 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         if option:
             selected[key] = []
             for value in option:
-                reference = validate_plan_reference(paths, value, category)
-                registered = registered_approved_character_asset(paths, Path(str(reference["path"])))
+                reference = validate_plan_reference(identity_paths, value, category)
+                registered = registered_approved_character_asset(identity_paths, Path(str(reference["path"])))
                 if not registered or registered.get("asset_role") != expected_role or registered.get("character_id") != character_id:
                     raise StylePackError(f"{expected_role} references must be exact approved role assets for the selected character and remain distinct from canonical identity.")
                 selected[key].append(reference)
@@ -4814,6 +5062,8 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         "created_at": iso_now(),
         "style_name": context["style_name"],
         "pack_path": context["pack_path"],
+        "identity_style_name": identity_paths.style_name,
+        "identity_pack_path": str(identity_paths.pack),
         "request_id": request_id,
         "fidelity": args.fidelity,
         "style_fidelity_confirmation": {
@@ -5334,7 +5584,8 @@ def evaluate_generation_qa(
     workflow = plan["generation_workflow"]
     required = ["ATTACHMENTS", "CANVAS", "STAGE_LAYER"]
     required.extend(("ANATOMY_REVIEW", "VISIBLE_DEFECTS", "PROMPT_ADHERENCE"))
-    stage_id = "SINGLE_PASS"
+    exact_call = plan.get("execution_call", {})
+    stage_id = str(exact_call.get("stage_id") or "SINGLE_PASS").upper() if isinstance(exact_call, dict) else "SINGLE_PASS"
     if workflow["mode"] == "MULTI_STAGE":
         stage_id = args.stage_id.upper()
         stages = workflow["stages"]
@@ -6131,6 +6382,7 @@ def append_generation(
     aspect_ratio: str = "",
     typography_mode: str = "",
     notes: str = "",
+    reserved_generation_id: str = "",
 ) -> str:
     risk_level = risk_level.upper()
     if not RISK_LABEL_RE.fullmatch(risk_level):
@@ -6140,7 +6392,9 @@ def append_generation(
         raise StylePackError("Description risk marker conflicts with --risk-level.")
     marked_description = description if existing_marker else f"{description.rstrip()} [{risk_level}]"
     rows = read_csv(paths.generation_manifest)
-    new_id = generation_id(rows)
+    new_id = reserved_generation_id or generation_id(rows)
+    if any(row.get("generation_id") == new_id for row in rows):
+        raise StylePackError("Reserved generation ID already exists; reconcile its exact record.")
     rows.append(
         {
             "generation_id": new_id,
@@ -6368,6 +6622,180 @@ def qa_manifest_digests(style_file: Path, evidence_path: Path) -> dict[str, str]
     }
 
 
+AUTHOR_CONTRACT_AUTHORIZATION = "Да, исправить учёт приёмки и передать на CANON_QA"
+AGENT_CONTAINMENT_CLAUSE = "leave all three figures completely inside the canvas with generous side margins"
+
+
+def validate_author_contract_acceptance(paths: StylePaths, state: dict[str, object], report: dict[str, object]) -> dict[str, object]:
+    """Reassess one agent-added framing requirement; never override execution QA."""
+    request_id = str(state.get("request_id", ""))
+    root = paths.generations / "00_PENDING" / request_id
+    if report.get("schema_version") != 1 or report.get("request_id") != request_id:
+        raise StylePackError("Author-contract acceptance belongs to another request or schema.")
+    attempts = state.get("attempts", [])
+    attempt = attempts[-1] if attempts else {}
+    if (state.get("request_purpose") != "SCENE" or state.get("active_attempt")
+            or any(a.get("status") in {"ACTIVE", "UNKNOWN"} for a in attempts)
+            or attempt.get("status") != "REJECTED" or attempt.get("result_status") != "REJECTED"
+            or report.get("attempt_id") != attempt.get("attempt_id")
+            or int(attempt.get("task_revision", -1)) != int(state.get("task_revision", 0))):
+        raise StylePackError("Acceptance requires the latest reconciled rejected SCENE artifact at the current revision.")
+    rows = [row for row in read_csv(paths.generation_manifest) if row.get("generation_id") == report.get("source_generation")]
+    if len(rows) != 1:
+        raise StylePackError("Acceptance requires one exact registered source generation.")
+    source = rows[0]
+    if source.get("status") != "REJECTED" or source.get("request_id") != request_id:
+        raise StylePackError("Source must remain the current request's immutable REJECTED record.")
+    output = Path(str(attempt.get("provider_artifact", {}).get("path", ""))).resolve()
+    assert_active_request_path(output)
+    if not is_relative_to(output, root.resolve()) or not output.is_file():
+        raise StylePackError("Accepted artifact must be the exact current-request provider output.")
+    output_hash = sha256(output)
+    if report.get("output_sha256") != output_hash or source.get("qa_output_sha256") != output_hash or attempt.get("provider_artifact", {}).get("sha256") != output_hash:
+        raise StylePackError("Accepted output hash differs from the registered executed artifact.")
+    source_file = Path(source.get("style_file", ""))
+    assert_active_request_path(source_file)
+    if not is_relative_to(source_file.resolve(), root.resolve()) or not source_file.is_file() or sha256(source_file) != output_hash:
+        raise StylePackError("Original rejected artifact changed or disappeared.")
+    technical_path = Path(source.get("qa_evidence", ""))
+    assert_active_request_path(technical_path)
+    if not is_relative_to(technical_path.resolve(), root.resolve()) or not technical_path.is_file():
+        raise StylePackError("Technical QA must be inside the current request.")
+    technical_hash = sha256(technical_path)
+    if report.get("technical_qa_sha256") != technical_hash or source.get("qa_receipt_sha256") != technical_hash:
+        raise StylePackError("Immutable technical QA receipt hash mismatch.")
+    technical = json.loads(technical_path.read_text(encoding="utf-8"))
+    contract_path = Path(str(technical.get("qa_contract", "")))
+    assert_active_request_path(contract_path)
+    if not is_relative_to(contract_path.resolve(), root.resolve()) or sha256(contract_path) != source.get("qa_contract_sha256") or technical.get("qa_contract_sha256") != sha256(contract_path):
+        raise StylePackError("Immutable technical QA contract changed.")
+    contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    plan_path = Path(str(contract.get("plan_snapshot", "")))
+    assert_active_request_path(plan_path)
+    if not is_relative_to(plan_path.resolve(), root.resolve()) or sha256(plan_path) != source.get("qa_plan_sha256") or contract.get("plan_content_sha256") != sha256(plan_path):
+        raise StylePackError("Immutable executed plan changed.")
+    if attempt.get("execution_snapshot", {}).get("reference_plan_snapshot_sha256") != sha256(plan_path):
+        raise StylePackError("Source technical QA does not match the executed attempt plan.")
+    qa = contract.get("qa_results", {})
+    failed = {key for key, value in qa.items() if value == "FAIL"}
+    allowed = {"CANVAS", "COMPOSITION", "PROMPT_ADHERENCE"}
+    if not failed or not failed.issubset(allowed) or "PROMPT_ADHERENCE" not in failed or any(v not in {"PASS", "FAIL"} for v in qa.values()):
+        raise StylePackError("Only agent-added containment failures are eligible; actual style/identity/anatomy defects cannot be waived.")
+    required = {"ANATOMY_REVIEW", "VISIBLE_DEFECTS", "STYLE", "ATTACHMENTS", "FACE_GEOMETRY", "BODY_PROPORTIONS", "BODY_SILHOUETTE", "CLOTHING", "SUBJECT_ACCURACY", "POSE_CONTACTS", "OBJECTS_AND_ACTION"}
+    if not required.issubset(qa) or any(qa[key] != "PASS" for key in required):
+        raise StylePackError("Actual identity/style/anatomy and scene requirements must independently PASS.")
+    visual = technical.get("visual_review", {})
+    if visual != contract.get("visual_review") or technical.get("output_sha256") != output_hash or visual.get("attempt_id") != attempt.get("attempt_id") or visual.get("output_sha256") != output_hash:
+        raise StylePackError("Technical visual review is not bound to the executed artifact.")
+    failed_clauses = [row.get("constraint") for row in visual.get("prompt_adherence", {}).get("constraints", []) if row.get("status") == "FAIL"]
+    if failed_clauses != [AGENT_CONTAINMENT_CLAUSE] or report.get("waived_agent_clause") != AGENT_CONTAINMENT_CLAUSE:
+        raise StylePackError("Exactly the known agent-added containment clause may be excluded from author acceptance.")
+    if report.get("user_authorization_quote") != AUTHOR_CONTRACT_AUTHORIZATION or report.get("author_approval", "NOT_GIVEN") != "NOT_GIVEN":
+        raise StylePackError("Acceptance needs the explicit scope-correction authorization; author approval remains NOT_GIVEN.")
+    correction = report.get("scope_correction", {})
+    if correction.get("origin") != "AGENT_ADDED" or not str(correction.get("evidence", "")).strip():
+        raise StylePackError("Scope correction must explicitly identify the agent-added requirement and evidence.")
+    user = report.get("user_contract", {})
+    user_path = (root / "USER_CONTRACT.md").resolve()
+    if Path(str(user.get("path", ""))).resolve() != user_path or user.get("sha256") != sha256(user_path):
+        raise StylePackError("Full current USER_CONTRACT binding mismatch.")
+    text = user_path.read_text(encoding="utf-8")
+    if AGENT_CONTAINMENT_CLAUSE in text:
+        raise StylePackError("An actual author constraint cannot be waived.")
+    criteria = {"identity", "body_anatomy", "wardrobe", "earrings", "style", "weapons", "hero_focus", "rengrot", "hammer_contact", "electricity", "barrier", "kennes", "location", "prohibitions", "causality", "composition_freedom"}
+    author_visual = report.get("author_visual", {})
+    if author_visual.get("status") != "PASS" or not str(author_visual.get("author", "")).strip():
+        raise StylePackError("Independent author-contract visual review must PASS with an identified reviewer.")
+    review_path = Path(str(author_visual.get("independent_review_path", ""))).resolve()
+    assert_active_request_path(review_path)
+    if not is_relative_to(review_path, root.resolve()) or not review_path.is_file() or sha256(review_path) != author_visual.get("independent_review_sha256"):
+        raise StylePackError("Independent visual evidence is missing, foreign, or changed.")
+    layers = author_visual.get("layers", {})
+    if set(layers) != set(qa) or any(not isinstance(v, dict) or v.get("status") != "PASS" or not str(v.get("evidence", "")).strip() for v in layers.values()):
+        raise StylePackError("Every author-contract visual layer requires independent PASS and evidence.")
+    findings = author_visual.get("criteria", [])
+    if author_visual.get("full_user_contract_assessed") is not True or not isinstance(findings, list) or len(findings) != len(criteria) or {row.get("id") for row in findings} != criteria or any(row.get("status") != "PASS" or not str(row.get("evidence", "")).strip() for row in findings):
+        raise StylePackError("The full author contract requires all 16 visible locks assessed independently; metadata and pending canon QA are not visual claims.")
+    return {"source": source, "output": str(output), "output_sha256": output_hash,
+            "technical_qa_path": str(technical_path), "technical_qa_sha256": technical_hash,
+            "attempt_id": str(attempt["attempt_id"]), "task_revision": int(state.get("task_revision", 0)),
+            "technical_failures": sorted(failed)}
+
+
+def validate_registered_author_acceptance(paths: StylePaths, state: dict[str, object], receipt_path: Path) -> dict[str, object]:
+    assert_active_request_path(receipt_path)
+    root = (paths.generations / "00_PENDING" / str(state.get("request_id", ""))).resolve()
+    if not is_relative_to(receipt_path.resolve(), root):
+        raise StylePackError("Acceptance receipt belongs to another request.")
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    if receipt.get("record_status") != "TEST" or receipt.get("author_approval") != "NOT_GIVEN" or receipt.get("execution_conformance") != "FAIL" or receipt.get("author_contract_visual") != "PASS":
+        raise StylePackError("Acceptance receipt must preserve technical FAIL and author approval NOT_GIVEN.")
+    binding = validate_author_contract_acceptance(paths, state, receipt.get("acceptance", {}))
+    rows = [row for row in read_csv(paths.generation_manifest) if row.get("generation_id") == receipt.get("generation_id")]
+    if len(rows) != 1:
+        raise StylePackError("Acceptance receipt lacks one exact registered TEST record.")
+    row = rows[0]
+    if (row.get("status") != "TEST" or row.get("parent_generation") != binding["source"]["generation_id"]
+            or row.get("request_id") != state.get("request_id") or row.get("character_id") != binding["source"].get("character_id")
+            or Path(row.get("qa_evidence", "")).resolve() != receipt_path.resolve()
+            or row.get("qa_receipt_sha256") != sha256(receipt_path)
+            or row.get("qa_output_sha256") != binding["output_sha256"]
+            or Path(row.get("style_file", "")).resolve() != Path(binding["output"]).resolve()):
+        raise StylePackError("Acceptance TEST lineage or receipt hash mismatch.")
+    return {**binding, "generation_id": receipt["generation_id"], "receipt_path": str(receipt_path.resolve()), "receipt_sha256": sha256(receipt_path)}
+
+
+def command_accept_author_contract(args: argparse.Namespace) -> None:
+    paths = make_paths(args.workspace, args.style_name)
+    root = paths.generations / "00_PENDING" / safe_component(args.request_id, "request")
+    guard_path = root / "EXECUTION_GUARD.json"
+    state = load_execution_guard(guard_path)
+    if state.get("status") != "ACTIVE" or state.get("recovery"):
+        raise StylePackError("Resume/recover the current request before author-contract acceptance.")
+    input_path = Path(args.acceptance_json).resolve()
+    assert_active_request_path(input_path)
+    if not is_relative_to(input_path, root.resolve()):
+        raise StylePackError("Acceptance input must belong to the current request.")
+    report = json.loads(input_path.read_text(encoding="utf-8"))
+    if report.get("source_generation") != args.source_generation or state.get("request_id") != args.request_id:
+        raise StylePackError("Source generation/request arguments differ from the acceptance input.")
+    binding = validate_author_contract_acceptance(paths, state, report)
+    source = binding["source"]
+    receipt_path = root / f"AUTHOR_ACCEPTANCE_{safe_component(args.source_generation, 'source')}.json"
+    if receipt_path.exists():
+        existing = json.loads(receipt_path.read_text(encoding="utf-8"))
+        if (existing.get("acceptance") != report or existing.get("record_status") != "TEST"
+                or existing.get("author_approval") != "NOT_GIVEN" or existing.get("execution_conformance") != "FAIL"
+                or existing.get("author_contract_visual") != "PASS" or existing.get("parent_generation") != args.source_generation
+                or existing.get("output_sha256") != binding["output_sha256"] or not existing.get("generation_id")):
+            raise StylePackError("Existing acceptance is immutable; input differs.")
+        new_id = existing["generation_id"]
+    else:
+        new_id = generation_id(read_csv(paths.generation_manifest))
+        receipt = {"schema_version": 1, "generation_id": new_id, "record_status": "TEST", "created_at": iso_now(),
+                   "parent_generation": args.source_generation, "output_sha256": binding["output_sha256"],
+                   "execution_conformance": "FAIL", "author_contract_visual": "PASS", "author_approval": "NOT_GIVEN",
+                   "canon_qa": "PENDING", "acceptance": report}
+        receipt_path.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    rows = read_csv(paths.generation_manifest)
+    if not any(row.get("generation_id") == new_id for row in rows):
+        if any(Path(row.get("qa_evidence", "")).resolve() == receipt_path.resolve() for row in rows):
+            raise StylePackError("Acceptance receipt already belongs to a different generation; reconcile before retry.")
+        actual = append_generation(paths, request_id=args.request_id, character_id=source["character_id"], status="TEST",
+            fidelity=int(source["fidelity"]), risk_level=source["risk_level"], description="Author-contract acceptance; immutable execution conformance remains FAIL",
+            source_image=Path(binding["output"]), archive_file=Path(source["archive_file"]), style_file=Path(binding["output"]),
+            parent_generation=args.source_generation, reference_plan=source["reference_plan"], qa_evidence=str(receipt_path),
+            qa_output_sha256=binding["output_sha256"], qa_receipt_sha256=sha256(receipt_path),
+            notes=f"[AUTHOR_CONTRACT_ACCEPTANCE] [EXECUTION_CONFORMANCE=FAIL] [AUTHOR_APPROVAL=NOT_GIVEN] [ATTEMPT_ID={binding['attempt_id']}] [IDENTITY_STYLE={report.get('identity_style_name', 'SOURCE_PLAN')}]",
+            scene_kind=source.get("scene_kind", ""), output_use=source.get("output_use", ""), aspect_ratio=source.get("aspect_ratio", ""), typography_mode=source.get("typography_mode", ""), reserved_generation_id=new_id)
+        if actual != new_id:
+            raise StylePackError("Acceptance registration ID changed; recover the receipt/manifest binding.")
+    validate_registered_author_acceptance(paths, state, receipt_path)
+    execution_checkpoint(guard_path, event="AUTHOR_CONTRACT_ACCEPTED", summary="Existing rejected artifact accepted against current author contract as TEST; original execution FAIL preserved.", evidence=[str(receipt_path)])
+    print(f"GENERATION_ID={new_id}")
+    print(f"ACCEPTANCE_RECEIPT={receipt_path}")
+
+
 def command_record_generation(args: argparse.Namespace) -> None:
     paths = make_paths(args.workspace, args.style_name)
     ensure_generation_library(paths)
@@ -6448,7 +6876,9 @@ def command_record_generation(args: argparse.Namespace) -> None:
         reconciled_available = (
             guard_state.get("phase") == "ATTEMPT_AVAILABLE"
             and guard_state.get("status") == "ACTIVE"
-            and guard_state.get("next_required_action") == "NEXT_SAFE_EXECUTION_OR_COMPLETE"
+            and guard_state.get("next_required_action") in {
+                "NEXT_SAFE_EXECUTION_OR_COMPLETE", "REVIEW_AND_REGISTER_EXISTING_ARTIFACT"
+            }
             and isinstance(available_result, dict)
             and available_result.get("late") is True
             and matching_attempt.get("reconciliation", {}).get("outcome") == "AVAILABLE"
@@ -6541,6 +6971,19 @@ def command_record_generation(args: argparse.Namespace) -> None:
             raise StylePackError(
                 f"Generated image at {output_reference} cannot be registered because it does not match the provider artifact bound to the executed-call snapshot."
             )
+    if attempt_status == "ACTIVE":
+        try:
+            execution_checkpoint(
+                execution_guard_path,
+                event="ARTIFACT_RECEIVED",
+                summary="Provider output available; visual review and QA remain pending.",
+                attempt_id=args.attempt_id,
+                evidence=[str(image.resolve())],
+            )
+        except ExecutionGuardError as error:
+            raise StylePackError(
+                f"Generated image at {output_reference} could not be bound to its active attempt before QA: {error}"
+            ) from error
     registration_plan_arg = args.reference_plan
     if args.reference_plan and isinstance(snapshot_binding, dict):
         requested_plan_path = Path(args.reference_plan).expanduser()
@@ -6605,6 +7048,8 @@ def command_record_generation(args: argparse.Namespace) -> None:
         # exact executed stage above is bound to this request, attempt and plan.
         # Use that stage for QA; never reinterpret SCENE/SINGLE_PASS globally.
         args.stage_id = executed_stage if workflow_mode == "MULTI_STAGE" else ""
+        if getattr(args, "identity_style_name", "") and style_slug(args.identity_style_name) != style_slug(str(plan.get("identity_style_name", paths.style_name))):
+            raise StylePackError("Registration identity style differs from the executed plan.")
         if str(args.character_id).upper() != str(plan.get("character_id", "")).upper():
             raise StylePackError(f"Generated image at {output_reference} cannot be registered because --character-id does not match the prepared plan.")
         binding = active_attempt.get("reference_binding", {})
@@ -6685,14 +7130,34 @@ def command_record_generation(args: argparse.Namespace) -> None:
     ) if paths.generation_manifest.is_file() else None
     if prior_record:
         prior_file = Path(prior_record.get("style_file", ""))
+        prior_archive = Path(prior_record.get("archive_file", "")).resolve()
         if (
             not prior_file.is_file()
             or sha256(prior_file) != sha256(image)
+            or not is_relative_to(prior_archive, paths.workspace / "GENERATION_RESULTS")
+            or not prior_archive.is_file()
+            or sha256(prior_archive) != sha256(image)
             or prior_record.get("reference_plan") != str(reference_plan_path.resolve())
             or prior_record.get("status", "").upper() not in {status, "REJECTED"}
             or f"[STAGE_ID={stage_id}]" not in prior_record.get("notes", "")
+            or prior_record.get("character_id", "").upper() != args.character_id.upper()
+            or generation_qa_evidence(prior_record) is None
         ):
             raise StylePackError("This available attempt already has a different or unverifiable generation record.")
+        if not already_visible:
+            try:
+                prior_workflow = plan.get("generation_workflow", {}) if isinstance(plan, dict) else {}
+                prior_multistage = isinstance(prior_workflow, dict) and prior_workflow.get("mode") == "MULTI_STAGE"
+                execution_checkpoint(
+                    execution_guard_path,
+                    event="VISIBLE_RESULT",
+                    summary=f"Previously recorded image {prior_record.get('generation_id', '')} is available with status {prior_record.get('status', '')}.",
+                    attempt_id=args.attempt_id,
+                    result_status=prior_record["status"],
+                    evidence=[str(prior_file if prior_multistage else prior_archive)],
+                )
+            except ExecutionGuardError as error:
+                raise StylePackError(f"Generation was recorded, but visible-result checkpoint still needs recovery: {error}") from error
         print(f"GENERATION_ID={prior_record.get('generation_id', '')}")
         print(f"ARCHIVE_FILE={prior_record.get('archive_file', '')}")
         print(f"STYLE_FILE={prior_file}")
@@ -6731,7 +7196,8 @@ def command_record_generation(args: argparse.Namespace) -> None:
             qa_note += f" [LIMB_QA={limb_qa_evidence}]"
             if anthropometric_violations:
                 qa_note += f" [ANTHROPOMETRIC_VIOLATIONS={' | '.join(anthropometric_violations)}]"
-    combined_notes = " ".join(part for part in (args.notes.strip(), qa_note) if part)
+    identity_note = (f"[IDENTITY_STYLE={plan.get('identity_style_name', paths.style_name)}] [IDENTITY_CHARACTER={plan.get('character_id', args.character_id)}]" if plan else "")
+    combined_notes = " ".join(part for part in (args.notes.strip(), qa_note, identity_note) if part)
     if plan:
         # The receipt records both successful and rejected visual review so a
         # correction can use the exact findings. Only a clean receipt can
@@ -6772,13 +7238,15 @@ def command_record_generation(args: argparse.Namespace) -> None:
     )
     if not already_visible:
         try:
+            generation_workflow = plan.get("generation_workflow", {}) if isinstance(plan, dict) else {}
+            multistage_result = isinstance(generation_workflow, dict) and generation_workflow.get("mode") == "MULTI_STAGE"
             execution_checkpoint(
                 execution_guard_path,
                 event="VISIBLE_RESULT",
                 summary=f"Generated image {new_id} was archived and recorded with status {status}.",
                 attempt_id=args.attempt_id,
                 result_status=status,
-                evidence=[str(archive_file)],
+                evidence=[str(style_file if multistage_result else archive_file)],
             )
         except ExecutionGuardError as error:
             raise StylePackError(f"Generation was recorded, but visible-result checkpoint failed: {error}") from error
@@ -6980,9 +7448,18 @@ def apply_confirmed_defaults(paths: StylePaths, args: argparse.Namespace, charac
         raise StylePackError("Unknown profile default suppression: " + ", ".join(sorted(unknown)))
     active = confirmed["active_assets"]
     applied: dict[str, list[dict[str, str]]] = {role: [] for role in ("wardrobe", "accessory", "face_variant", "body_variant")}
-    if not args.clothes_reference and "WARDROBE" not in suppressed and "CLOTHES" not in overrides and active["wardrobe"]:
-        args.clothes_reference = active["wardrobe"][0]["path"]
-        applied["wardrobe"] = list(active["wardrobe"])
+    if not args.clothes_reference and "WARDROBE" not in suppressed and "CLOTHES" not in overrides:
+        wardrobe = list(active["wardrobe"])
+        if not wardrobe:
+            profile_path = Path(str(confirmed["profile_path"]))
+            catalog, _ = approved_character_role_assets(paths, character_id, profile_path)
+            wardrobe = [row for row in catalog if row["role"] == "WARDROBE"]
+        if len(wardrobe) == 1:
+            args.clothes_reference = wardrobe[0]["path"]
+            applied["wardrobe"] = wardrobe
+        elif len(wardrobe) > 1:
+            raise StylePackError("Multiple approved wardrobes are available; select one explicitly for this scene: "
+                                 + ", ".join(row["path"] for row in wardrobe))
     for field, role, key, override_role in (("accessory_reference", "ACCESSORY", "accessory", "ACCESSORY"),
                                             ("face_variant_reference", "FACE_VARIANT", "face_variant", "FACE"),
                                             ("body_variant_reference", "BODY_VARIANT", "body_variant", "BODY")):
@@ -7009,6 +7486,7 @@ def apply_confirmed_defaults(paths: StylePaths, args: argparse.Namespace, charac
 def assert_profile_plan_current(paths: StylePaths, plan: dict[str, object]) -> None:
     if str(plan.get("generation_purpose", "")).upper() != "SCENE" or not re.fullmatch(r"CHAR_\d+", str(plan.get("character_id", ""))):
         return
+    paths = identity_paths_for_plan(paths, plan)
     character_id = str(plan["character_id"])
     profile_path = character_folder(paths, character_id) / "CHARACTER_PROFILE.yaml"
     try:
@@ -7610,7 +8088,8 @@ def command_validate(args: argparse.Namespace) -> None:
 
 
 def add_common_style_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--style-name", required=True, help="User-facing style name; creates <STYLE>_PROJECT_PACK.")
+    parser.add_argument("--style-name", required=True, help="Render style; creates <STYLE>_PROJECT_PACK.")
+    parser.add_argument("--identity-style-name", default="", help="Request-scoped approved identity pack for an existing-character SCENE; defaults to render style.")
     parser.add_argument(
         "--workspace",
         type=Path,
@@ -7671,6 +8150,10 @@ def build_parser() -> argparse.ArgumentParser:
     context_parser.add_argument("--include-files", action="store_true", help="Include every matching absolute file path and inferred status.")
     context_parser.add_argument("--positive-only", action="store_true", help="List only images currently eligible as positive candidates.")
     context_parser.add_argument("--json", action="store_true", help="Return machine-readable JSON for agent reference selection.")
+    context_parser.add_argument("--character-id", default="NONE")
+    context_parser.add_argument("--character-profile", default="")
+    context_parser.add_argument("--target-prompt", default="")
+    context_parser.add_argument("--target-name", default="")
     context_parser.set_defaults(handler=command_style_context)
 
     readiness_parser = subparsers.add_parser(
@@ -8112,6 +8595,13 @@ def build_parser() -> argparse.ArgumentParser:
     record_parser.add_argument("--notes", default="")
     record_parser.set_defaults(handler=command_record_generation)
 
+    acceptance_parser = subparsers.add_parser("accept-author-contract", help="Accept only an existing scene's agent-added containment correction; preserve technical rejection.")
+    add_common_style_arguments(acceptance_parser)
+    acceptance_parser.add_argument("--request-id", required=True)
+    acceptance_parser.add_argument("--source-generation", required=True)
+    acceptance_parser.add_argument("--acceptance-json", required=True)
+    acceptance_parser.set_defaults(handler=command_accept_author_contract)
+
     character_parser = subparsers.add_parser("approve-character", help="Create a permanent character folder after direct approval.")
     add_common_style_arguments(character_parser)
     character_parser.add_argument("--request-id", required=True)
@@ -8180,14 +8670,39 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def recovery_guard_for_args(args: argparse.Namespace) -> Path | None:
+    """Find only the existing guard owned by this exact parsed request."""
+    request = str(getattr(args, "request_id", "") or "").strip()
+    style_name = str(getattr(args, "style_name", "") or "").strip()
+    if not request or not style_name:
+        return None
+    try:
+        request_id = safe_component(request, "request")
+        if request_id != request:
+            return None
+        paths = make_paths(args.workspace, style_name)
+        guard_path = paths.generations / "00_PENDING" / request_id / "EXECUTION_GUARD.json"
+        if not guard_path.is_file():
+            return None
+        state = load_execution_guard(guard_path)
+        return guard_path if state.get("request_id") == request_id else None
+    except (StylePackError, ExecutionGuardError, OSError, ValueError):
+        return None
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     try:
         args.handler(args)
         return 0
-    except (StylePackError, ProfileStateError) as error:
+    except (StylePackError, ProfileStateError, ExecutionGuardError, OSError, ValueError, csv.Error) as error:
         print(f"ERROR={error}", file=sys.stderr)
+        workflow_recovery.emit_recovery(
+            error,
+            phase="registration" if args.command == "record-generation" else "request",
+            guard_path=recovery_guard_for_args(args),
+        )
         return 2
 
 

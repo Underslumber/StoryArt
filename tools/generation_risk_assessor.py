@@ -11,6 +11,20 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+try:
+    from . import workflow_recovery
+except ImportError:
+    try:
+        from tools import workflow_recovery
+    except ImportError:
+        import importlib.util
+        _recovery_path = Path(__file__).resolve().with_name("workflow_recovery.py")
+        _recovery_spec = importlib.util.spec_from_file_location("workflow_recovery", _recovery_path)
+        if _recovery_spec is None or _recovery_spec.loader is None:
+            raise
+        workflow_recovery = importlib.util.module_from_spec(_recovery_spec)
+        _recovery_spec.loader.exec_module(workflow_recovery)
+
 
 WORKSPACE = Path(__file__).resolve().parents[1]
 DEFAULT_LEXICON = WORKSPACE / "config" / "generation_risk_lexicon.json"
@@ -431,12 +445,18 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
-    args = build_parser().parse_args()
+    try:
+        args = build_parser().parse_args()
+    except SystemExit as error:
+        if error.code:
+            workflow_recovery.emit_recovery("invalid risk-assessment command-line arguments; see argparse diagnostics above", phase="risk")
+        return int(error.code or 0)
     try:
         args.handler(args)
         return 0
     except (RiskAssessmentError, OSError, json.JSONDecodeError) as error:
         print(f"ERROR={error}", file=sys.stderr)
+        workflow_recovery.emit_recovery(error, phase="risk")
         return 2
 
 

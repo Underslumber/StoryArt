@@ -27,6 +27,10 @@ DEFAULT_MAX_EXECUTION_MINUTES = 20
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff"}
 SWIMWEAR_RUNGS = ("EXTREME_MICRO", "BIKINI", "TWO_PIECE")
 SWIMWEAR_TOPOLOGIES = (*SWIMWEAR_RUNGS, "SPORT_TOP", "ONE_PIECE", "SHORTS", "OTHER", "CUSTOM")
+CHARACTER_BASE_STAGES = (
+    "01_FACE_IDENTITY", "02_PHYSIQUE_FRONT", "03_PHYSIQUE_SIDE",
+    "04_PHYSIQUE_BACK", "05_CHARACTER_ASSEMBLY",
+)
 AUXILIARY_GENERATION_MARKERS = (
     "staging_only",
     "mannequin",
@@ -97,6 +101,22 @@ def _chat_binding_path(thread_id: str) -> Path:
     return _chat_request_root() / "chats" / f"{_binding_key(thread_id)}.json"
 
 
+def _focus_binding_path(thread_id: str) -> Path:
+    return _chat_request_root() / "focus" / f"{_binding_key(thread_id)}.json"
+
+
+def _write_execution_focus(thread_id: str, path: Path, task_kind: str) -> None:
+    atomic_write_json(
+        _focus_binding_path(thread_id),
+        {
+            "thread_id": thread_id,
+            "task_kind": task_kind,
+            "guard_path": str(path.resolve()),
+            "updated_at": iso_time(utc_now()),
+        },
+    )
+
+
 def _read_binding(path: Path) -> dict[str, object] | None:
     if not path.is_file():
         return None
@@ -121,6 +141,7 @@ def _bind_guard_to_current_chat(path: Path, task_kind: str) -> str | None:
             raise GuardError("FOREIGN_REQUEST: this request folder is bound to another chat.")
         if existing is None:
             atomic_write_json(guard_binding, {"thread_id": "GENERAL", "guard_path": resolved, "task_kind": "GENERAL"})
+        _write_execution_focus(thread_id, path, "GENERAL")
         return None
     chat_binding = _chat_binding_path(thread_id)
     existing_guard = _read_binding(guard_binding)
@@ -138,6 +159,7 @@ def _bind_guard_to_current_chat(path: Path, task_kind: str) -> str | None:
         atomic_write_json(chat_binding, {"thread_id": thread_id, "active_folder": resolved, "request_status": "ACTIVE"})
     if existing_guard is None:
         atomic_write_json(guard_binding, {"thread_id": thread_id, "active_folder": resolved, "task_kind": task_kind})
+    _write_execution_focus(thread_id, path, task_kind)
     return thread_id
 
 
@@ -371,6 +393,44 @@ def pending_required_stages(state: dict[str, object]) -> list[str]:
 def normalize_stage_key(stage: str | None) -> str:
     value = str(stage or "").strip().casefold()
     return re.sub(r"^\d+_", "", value)
+
+
+def reconcile_plan_required_stages(state: dict[str, object], plan: dict[str, object]) -> None:
+    """Bring a base guard in line with its validated executable plan."""
+    purpose = str(plan.get("generation_purpose", "")).strip().upper()
+    previous_purpose = str(state.get("request_purpose", "")).strip().upper()
+    if previous_purpose and previous_purpose != purpose:
+        raise GuardActionRequired(
+            "The request purpose changed after readiness; repair the guard and executable plan before continuing."
+        )
+    if purpose != "CHARACTER_BASE":
+        state["request_purpose"] = purpose
+        return
+    workflow = plan.get("generation_workflow")
+    planned_stages = workflow.get("stages") if isinstance(workflow, dict) else None
+    planned_ids = [str(row.get("stage_id", "")) for row in planned_stages] if (
+        isinstance(planned_stages, list) and all(isinstance(row, dict) for row in planned_stages)
+    ) else []
+    if (
+        not isinstance(workflow, dict) or workflow.get("mode") != "MULTI_STAGE"
+        or planned_ids != list(CHARACTER_BASE_STAGES)
+    ):
+        raise GuardActionRequired(
+            "CHARACTER_BASE executable plan must contain the five canonical face, front, side, back and assembly stages; repair the plan before execution."
+        )
+    existing = required_stage_entries(state)
+    if any(not isinstance(row, dict) for row in existing):
+        raise GuardActionRequired("CHARACTER_BASE guard has malformed stage entries; repair the guard before continuing.")
+    by_id = {str(row.get("id", "")): row for row in existing}
+    if len(by_id) != len(existing) or any(stage_id not in CHARACTER_BASE_STAGES for stage_id in by_id):
+        raise GuardActionRequired(
+            "CHARACTER_BASE guard has duplicate or unexpected stages; reconcile it with the five stages in the executable plan."
+        )
+    state["required_stages"] = [
+        by_id.get(stage_id, {"id": stage_id, "status": "PENDING", "completed_at": None, "evidence": []})
+        for stage_id in CHARACTER_BASE_STAGES
+    ]
+    state["request_purpose"] = purpose
 
 
 def find_required_stage(state: dict[str, object], stage: str | None) -> dict[str, object]:
@@ -1004,7 +1064,7 @@ def validate_reference_plan(
                     style_name = str(plan.get("style_name", "")).strip()
                     if not pack_path.is_dir() or not style_name:
                         raise GuardError("Cannot resolve the approved character registry for the locked identity.")
-                    character_paths = manager.make_paths(pack_path.parent, style_name)
+                    character_paths = manager.identity_paths_for_plan(manager.make_paths(pack_path.parent, style_name), plan)
                     identity_rows = [
                         row for row in manager.read_csv(character_paths.character_registry)
                         if str(row.get("character_id", "")).strip().upper() == character_id
@@ -1028,7 +1088,7 @@ def validate_reference_plan(
                 if not pack_path.is_dir() or not style_name:
                     raise GuardError("Cannot resolve the approved character identity folder for readiness.")
                 approved_identity_root = manager.character_folder(
-                    manager.make_paths(pack_path.parent, style_name), character_id
+                    manager.identity_paths_for_plan(manager.make_paths(pack_path.parent, style_name), plan), character_id
                 ).resolve()
                 if not Path(assembly_path).expanduser().resolve().is_relative_to(approved_identity_root):
                     raise GuardError("The selected CHARACTER_ASSEMBLY is outside the named character's approved identity folder.")
@@ -1060,8 +1120,8 @@ def validate_reference_plan(
                 style_name = str(plan.get("style_name", "")).strip()
                 if not style_name:
                     raise GuardError("Named scene has no approved style registry route.")
-                character_paths = manager.make_paths(pack_path.parent, style_name)
-                if character_paths.pack.resolve() != pack_path:
+                character_paths = manager.identity_paths_for_plan(manager.make_paths(pack_path.parent, style_name), plan)
+                if manager.make_paths(pack_path.parent, style_name).pack.resolve() != pack_path:
                     raise GuardError("Named scene pack path differs from its approved style registry route.")
                 rows = [row for row in manager.read_csv(character_paths.character_registry)
                         if str(row.get("character_id", "")).upper() == character_id
@@ -1255,9 +1315,21 @@ def validate_reference_plan(
     return binding
 def swimwear_failures(state: dict[str, object], stage: str) -> set[str]:
     stage_key = normalize_stage_key(stage)
+    events = list(state.get("events", []))
+    # Reopening a completed physique stage starts a new rung epoch, but its
+    # prior rejection history remains intact for audit and repeated-failure
+    # escalation.
+    reopen_index = max(
+        (
+            index for index, event in enumerate(events)
+            if event.get("event") == "STAGE_REOPENED"
+            and normalize_stage_key(str(event.get("stage", ""))) == stage_key
+        ),
+        default=-1,
+    )
     return {
         str(event.get("swimwear_rung", "")).upper()
-        for event in state.get("events", [])
+        for event in events[reopen_index + 1 :]
         if event.get("event") == "ATTEMPT_REJECTED"
         and normalize_stage_key(str(event.get("stage", ""))) == stage_key
         and bool(event.get("rung_routes_exhausted"))
@@ -1268,40 +1340,49 @@ def swimwear_failures(state: dict[str, object], stage: str) -> set[str]:
 def escalation_incident_key(
     state: dict[str, object], stage: str, qa_layer: str, *, include_current_rejection: bool = False
 ) -> str | None:
-    """Identify a repeated failure separated by the latest explicit correction."""
+    """Identify repeated stage failure since the latest correction/diagnosis.
+
+    QA labels are descriptive evidence and can legitimately change between
+    reviews. They therefore do not define incident identity. Two failures
+    trigger the first diagnosis; after a correction or diagnosis, one further
+    failed strategy triggers the next diagnosis.
+    """
     events = list(state.get("events", []))
-    if not stage.strip() or not qa_layer.strip():
+    if not stage.strip():
         return None
     def matches(row: dict[str, object]) -> bool:
         return (
             row.get("event") == "ATTEMPT_REJECTED"
             and normalize_stage_key(str(row.get("stage", ""))) == normalize_stage_key(stage)
-            and str(row.get("qa_layer", "")).casefold() == qa_layer.casefold()
         )
-    correction_index = next(
+    stage_key = normalize_stage_key(stage)
+    reset_index = next(
         (
-            index
-            for index in range(len(events) - 1, -1, -1)
-            if events[index].get("event") == "USER_CORRECTION"
-            and normalize_stage_key(str(events[index].get("corrects_stage", ""))) == normalize_stage_key(stage)
-            and str(events[index].get("corrects_qa_layer", "")).casefold() == qa_layer.casefold()
-            and events[index].get("corrects_attempt_at")
+            index for index in range(len(events) - 1, -1, -1)
+            if (
+                events[index].get("event") == "USER_CORRECTION"
+                and normalize_stage_key(str(events[index].get("corrects_stage", ""))) == stage_key
+                and events[index].get("corrects_attempt_at")
+            )
+            or (
+                events[index].get("event") == "ESCALATION_ORCHESTRATOR_RECORDED"
+                and normalize_stage_key(str(events[index].get("stage", ""))) == stage_key
+            )
         ),
         -1,
     )
-    if correction_index < 0:
+    rejection_indices = [index for index in range(reset_index + 1, len(events)) if matches(events[index])]
+    rejections_since_reset = len(rejection_indices)
+    threshold = 1 if reset_index >= 0 else 2
+    if rejections_since_reset + int(include_current_rejection) < threshold:
         return None
-    before_correction = [row for row in events[:correction_index] if matches(row)]
-    if not any(str(row.get("at", "")) == str(events[correction_index]["corrects_attempt_at"]) for row in before_correction):
-        return None
-    after_correction = [
-        row for row in events[correction_index + 1 :]
-        if matches(row)
-    ]
-    if not before_correction or len(after_correction) + int(include_current_rejection) < 1:
-        return None
-    correction_at = str(events[correction_index].get("at", ""))
-    return f"{correction_at}|{normalize_stage_key(stage)}|{qa_layer.casefold()}"
+    if include_current_rejection:
+        rejection_index = len(events)
+    else:
+        rejection_index = rejection_indices[-1] if rejection_indices else -1
+    # The failed strategy itself identifies the incident; a later failure
+    # after the recorded diagnosis therefore creates a fresh incident.
+    return f"{rejection_index}|{stage_key}"
 
 
 def validate_swimwear_execution_start(
@@ -1364,6 +1445,100 @@ def validate_stage_evidence(state: dict[str, object], evidence: Sequence[str]) -
     return evidence_paths
 
 
+def verified_author_acceptance(state: dict[str, object]) -> dict[str, object] | None:
+    """Acceptance is a new receipt, never a mutation or fabricated provider attempt."""
+    binding = state.get("author_contract_acceptance")
+    if not isinstance(binding, dict):
+        return None
+    try:
+        try:
+            from tools import style_pack_manager as manager
+        except ImportError:
+            import style_pack_manager as manager
+        receipt_path = Path(str(binding.get("receipt_path", ""))).resolve()
+        assert_active_request_path(receipt_path)
+        if not receipt_path.is_file() or file_sha256(receipt_path) != binding.get("receipt_sha256"):
+            raise GuardError("Author acceptance receipt is missing or changed.")
+        pack_name = str(binding.get("style_name", ""))
+        workspace = Path(str(binding.get("workspace", "")))
+        checked = manager.validate_registered_author_acceptance(manager.make_paths(workspace, pack_name), state, receipt_path)
+        if any(checked.get(key) != binding.get(key) for key in ("generation_id", "attempt_id", "output_sha256", "task_revision")):
+            raise GuardError("Author acceptance lineage changed.")
+        return checked
+    except (OSError, ValueError, RuntimeError, KeyError) as error:
+        raise GuardError(f"Author-contract acceptance verification failed: {error}") from error
+
+
+def validate_stage_attempt_binding(
+    state: dict[str, object], stage: str, evidence_paths: Sequence[str]
+) -> dict[str, object]:
+    """Bind an image stage to its current executed, accepted provider result."""
+    accepted = verified_author_acceptance(state)
+    if accepted:
+        attempt = state["attempts"][-1]
+        if normalize_stage_key(str(attempt.get("stage", ""))) != normalize_stage_key(stage) and not (str(stage).upper() == "SCENE" and str(attempt.get("stage", "")).upper() == "SINGLE_PASS"):
+            raise GuardError("Author acceptance cannot complete another image stage.")
+        normalized = [str(Path(item).resolve()) for item in evidence_paths]
+        if normalized != [accepted["output"]]:
+            raise GuardError("Author acceptance stage requires the exact original provider output.")
+        return {"acceptance_generation_id": accepted["generation_id"], "attempt_id": accepted["attempt_id"],
+                "task_revision": accepted["task_revision"], "result_status": "AUTHOR_CONTRACT_TEST",
+                "artifact_path": accepted["output"], "stage_evidence_path": accepted["output"],
+                "artifact_sha256": accepted["output_sha256"]}
+    stage_key = normalize_stage_key(stage)
+    revision = int(state.get("task_revision", 0))
+    candidates = [
+        row for row in state.get("attempts", [])
+        if normalize_stage_key(str(row.get("stage", ""))) == stage_key
+    ]
+    attempt = candidates[-1] if candidates else None
+    if (
+        not isinstance(attempt, dict)
+        or int(attempt.get("task_revision", -1)) != revision
+        or attempt.get("status") not in {"RESULT_AVAILABLE", "DELIVERED"}
+        or attempt.get("result_status") not in {"STAGING", "TEST"}
+    ):
+        raise GuardError(
+            f"Image stage {stage} requires its own current-revision accepted STAGING or TEST execution result."
+        )
+    artifact = attempt.get("provider_artifact")
+    result_evidence = attempt.get("result_evidence", [])
+    if not isinstance(artifact, dict) or not isinstance(result_evidence, list) or not result_evidence:
+        raise GuardError(f"Image stage {stage} has no registered provider artifact binding.")
+    artifact_path = str(Path(str(artifact.get("path", ""))).expanduser().resolve())
+    artifact_hash = str(artifact.get("sha256", "")).lower()
+    registered_paths = [str(Path(str(item)).expanduser().resolve()) for item in result_evidence]
+    if (
+        artifact.get("result_status") != attempt.get("result_status")
+        or len(registered_paths) != 1
+        or not artifact_hash
+        or not Path(artifact_path).is_file()
+        or file_sha256(Path(artifact_path)) != artifact_hash
+        or not Path(registered_paths[0]).is_file()
+        or file_sha256(Path(registered_paths[0])) != artifact_hash
+    ):
+        raise GuardError(f"Image stage {stage} provider artifact binding is stale or inconsistent; recover registration.")
+    normalized_evidence = [str(Path(item).resolve()) for item in evidence_paths]
+    if (
+        len(normalized_evidence) != 1
+        or normalized_evidence != registered_paths
+        or not Path(normalized_evidence[0]).is_file()
+        or file_sha256(Path(normalized_evidence[0])) != artifact_hash
+        or file_sha256(Path(artifact_path)) != artifact_hash
+    ):
+        raise GuardError(
+            f"Image stage {stage} evidence must be one registered artifact with the exact executed provider artifact hash."
+        )
+    return {
+        "attempt_id": str(attempt.get("attempt_id", "")),
+        "task_revision": revision,
+        "result_status": str(attempt.get("result_status", "")),
+            "artifact_path": artifact_path,
+            "stage_evidence_path": normalized_evidence[0],
+        "artifact_sha256": artifact_hash,
+    }
+
+
 def cycle_elapsed_seconds(state: dict[str, object], now: datetime) -> float:
     started = parse_time(str(state["cycle_started_at"]))
     elapsed = max(0.0, (now - started).total_seconds())
@@ -1391,7 +1566,7 @@ def append_event(state: dict[str, object], event: str, summary: str, now: dateti
 
 
 def evaluate_limits(state: dict[str, object], now: datetime) -> str | None:
-    if state.get("status") in {"BLOCKED", "COMPLETE"} or state.get("waiting_since"):
+    if state.get("status") in {"BLOCKED", "COMPLETE", "STOPPED", "CANCELLED", "WAITING_FOR_USER"} or state.get("waiting_since"):
         return None
     budgets = state["budgets"]
     execution_started_at = state.get("execution_started_at")
@@ -1409,19 +1584,23 @@ def evaluate_limits(state: dict[str, object], now: datetime) -> str | None:
 
 
 def persist_watchdog_state(path: Path, state: dict[str, object], reason: str, now: datetime) -> None:
-    """Record a stalled cycle without turning the watchdog into a task cutoff."""
+    """Record a nonterminal watchdog without erasing the executable phase."""
     if state.get("watchdog_reason") != reason:
         append_event(state, "WATCHDOG_TRIGGERED", reason, now)
-    state["status"] = "ACTIVE"
-    state["phase"] = "WATCHDOG"
-    state["next_required_action"] = (
-        "CHECK_EXECUTION_OR_VISIBLE_RESULT_OR_BLOCKER"
-        if state.get("execution_started_at")
-        else "READY_FOR_EXECUTION_OR_EXECUTION_STARTED_OR_BLOCKER"
-    )
+    if state.get("status") == "ACTION_REQUIRED":
+        # Migrate legacy internal cutoff records back into an executable,
+        # nonterminal watchdog state.
+        state["status"] = "ACTIVE"
+        state["phase"] = "WATCHDOG"
+        state["next_required_action"] = "READY_FOR_EXECUTION_OR_EXECUTION_STARTED_OR_BLOCKER"
+        state.pop("action_required_reason", None)
+    elif state.get("phase") == "PREFLIGHT":
+        state["phase"] = "WATCHDOG"
+        state["next_required_action"] = (
+            "READY_FOR_EXECUTION_OR_EXECUTION_STARTED_OR_BLOCKER"
+        )
     state["watchdog_reason"] = reason
     state["watchdog_triggered_at"] = iso_time(now)
-    state.pop("action_required_reason", None)
     atomic_write_json(path, state)
 
 
@@ -1530,6 +1709,198 @@ def validate_current_stage_output_authority(
             )
 
 
+def completion_block_reason(state: dict[str, object]) -> str | None:
+    """Return why the locked task is not complete, without trusting status text."""
+    if state.get("recovery"):
+        return "Finish the recorded repair before claiming completion."
+    if state.get("status") == "BLOCKED":
+        return "An external, safety, or user-input boundary is unresolved; resolve it before completion."
+    if state.get("status") in {"WAITING_FOR_USER", "STOPPED", "CANCELLED"} or state.get("waiting_since"):
+        return "A waiting, stopped, or cancelled task cannot complete until the user resumes it."
+    if state.get("active_attempt") or any(a.get("status") in {"ACTIVE", "UNKNOWN"} for a in state.get("attempts", [])):
+        return "Task completion requires no active or UNKNOWN attempt; reconcile it first."
+    executed_base = any(
+        isinstance(row, dict) and isinstance(row.get("execution_snapshot"), dict)
+        and row["execution_snapshot"].get("request_purpose") == "CHARACTER_BASE"
+        for row in state.get("attempts", [])
+    )
+    if state.get("request_purpose") == "CHARACTER_BASE" or executed_base:
+        entries = required_stage_entries(state)
+        actual_ids = [str(row.get("id", "")) for row in entries if isinstance(row, dict)]
+        if len(actual_ids) != len(entries) or actual_ids != list(CHARACTER_BASE_STAGES):
+            missing = [stage_id for stage_id in CHARACTER_BASE_STAGES if stage_id not in actual_ids]
+            return (
+                "CHARACTER_BASE guard is missing or misordering the five required stages"
+                + (f": {', '.join(missing)}" if missing else "")
+                + "; reconcile it with the executed plan and continue the incomplete stages."
+            )
+    pending = pending_required_stages(state)
+    if pending:
+        return "Task completion is forbidden while required stages remain pending: " + ", ".join(pending)
+    if is_project_image_generation(state):
+        for entry in required_stage_entries(state):
+            if entry.get("status") != "COMPLETED":
+                continue
+            stage_evidence = entry.get("evidence", [])
+            if not stage_evidence:
+                return f"Completed image stage {entry.get('id')} has no current image evidence; review and register its actual result."
+            hashes = entry.get("evidence_sha256", {})
+            binding = entry.get("accepted_attempt_binding")
+            if not isinstance(binding, dict):
+                return f"Completed image stage {entry.get('id')} has no accepted executed-result binding; review and register its stage result."
+            if binding.get("acceptance_generation_id"):
+                try:
+                    accepted = verified_author_acceptance(state)
+                    expected = validate_stage_attempt_binding(state, str(entry.get("id", "")), stage_evidence)
+                    if not accepted or binding != expected or int(entry.get("completed_task_revision", -1)) != int(state.get("task_revision", 0)):
+                        return "Completed author-acceptance stage binding changed."
+                except GuardError as error:
+                    return str(error)
+                continue
+            bound_attempt = next(
+                (row for row in state.get("attempts", []) if row.get("attempt_id") == binding.get("attempt_id")),
+                None,
+            )
+            bound_index = next(
+                (index for index, row in enumerate(state.get("attempts", []))
+                 if row.get("attempt_id") == binding.get("attempt_id")),
+                -1,
+            )
+            superseded = any(
+                normalize_stage_key(str(row.get("stage", ""))) == normalize_stage_key(str(entry.get("id", "")))
+                and index > bound_index
+                for index, row in enumerate(state.get("attempts", []))
+            )
+            if (
+                not isinstance(bound_attempt, dict)
+                or int(binding.get("task_revision", -1)) != int(entry.get("completed_task_revision", -2))
+                or int(bound_attempt.get("task_revision", -1)) != int(binding.get("task_revision", -2))
+                or normalize_stage_key(str(bound_attempt.get("stage", ""))) != normalize_stage_key(str(entry.get("id", "")))
+                or bound_attempt.get("result_status") != binding.get("result_status")
+                or bound_attempt.get("result_status") not in {"STAGING", "TEST"}
+                or superseded
+            ):
+                return f"Completed image stage {entry.get('id')} is not bound to an accepted current-revision attempt; continue the stage."
+            artifact_path = str(Path(str(binding.get("artifact_path", ""))).expanduser().resolve())
+            artifact_hash = str(binding.get("artifact_sha256", "")).lower()
+            if (
+                len(stage_evidence) != 1
+                or str(Path(str(stage_evidence[0])).expanduser().resolve()) != str(
+                    Path(str(binding.get("stage_evidence_path", ""))).expanduser().resolve()
+                )
+                or not artifact_hash
+                or not Path(artifact_path).is_file()
+                or file_sha256(Path(artifact_path)) != artifact_hash
+                or not Path(str(binding.get("stage_evidence_path", ""))).is_file()
+                or file_sha256(Path(str(binding.get("stage_evidence_path", "")))) != artifact_hash
+            ):
+                return f"Completed stage evidence no longer matches its accepted executed result for {entry.get('id')}; review or continue."
+            for raw_path in stage_evidence:
+                evidence_path = Path(str(raw_path)).expanduser()
+                if not evidence_path.is_file():
+                    return f"Completed stage evidence is missing for {entry.get('id')}; recover the result or continue the request."
+                expected = str(hashes.get(str(raw_path), "")).lower() if isinstance(hashes, dict) else ""
+                if expected and file_sha256(evidence_path) != expected:
+                    return f"Completed stage evidence changed after review for {entry.get('id')}; review the current result or continue."
+    if is_project_image_generation(state) and state.get("author_contract_acceptance"):
+        try:
+            accepted = verified_author_acceptance(state)
+        except GuardError as error:
+            return str(error)
+        delivery = state.get("author_contract_delivery", {})
+        if not accepted or delivery.get("generation_id") != accepted["generation_id"] or not delivery.get("delivery_evidence") or delivery.get("receipt_sha256") != accepted["receipt_sha256"]:
+            return "Author-contract TEST acceptance requires its own RESULT_DELIVERED receipt."
+        return None
+    if is_project_image_generation(state):
+        latest = next(
+            (row for row in state.get("attempts", []) if row.get("attempt_id") == state.get("latest_delivered_attempt_id")),
+            None,
+        )
+        most_recent = state.get("attempts", [])[-1] if state.get("attempts") else None
+        if not latest or not most_recent or latest.get("attempt_id") != most_recent.get("attempt_id"):
+            return "Image completion requires the latest attempt to be the currently delivered TEST result."
+        if int(latest.get("task_revision", -1)) != int(state.get("task_revision", 0)):
+            return "The delivered result belongs to an earlier task revision; produce and deliver the corrected result."
+        if (
+            state.get("latest_delivered_result_status") != "TEST"
+            or not state.get("delivered_result_at")
+            or latest.get("status") != "DELIVERED"
+        ):
+            return "Image completion requires an available, QA-passed TEST result and RESULT_DELIVERED receipt."
+        artifact = latest.get("provider_artifact")
+        if not isinstance(artifact, dict):
+            return "Image completion requires the original delivered artifact binding."
+        artifact_path = Path(str(artifact.get("path", ""))).expanduser()
+        if not artifact_path.is_file():
+            return "The delivered image artifact is missing; recover the exact result or continue the request."
+        if file_sha256(artifact_path) != str(artifact.get("sha256", "")).lower():
+            return "The delivered image artifact changed after review; re-review the current result or continue the request."
+    return None
+
+
+def continuation_guidance(state: dict[str, object]) -> dict[str, object]:
+    """Expose an advisory next action so callers continue instead of guessing."""
+    reason = completion_block_reason(state)
+    can_complete = reason is None
+    if can_complete:
+        action = "COMPLETE_NOW"
+    elif state.get("status") == "BLOCKED":
+        action = "RESOLVE_EXTERNAL_BOUNDARY"
+    elif state.get("status") in {"STOPPED", "CANCELLED"}:
+        action = "USER_STOPPED"
+    elif state.get("status") == "WAITING_FOR_USER" or state.get("waiting_since"):
+        action = "WAIT_FOR_USER"
+    elif any(row.get("status") == "UNKNOWN" for row in state.get("attempts", [])):
+        action = "RECONCILE_ATTEMPT"
+    elif state.get("active_attempt"):
+        active = state.get("active_attempt")
+        action = "REVIEW_AND_REGISTER_RESULT" if isinstance(active, dict) and active.get("provider_artifact") else "CHECK_EXECUTION"
+    elif state.get("recovery"):
+        action = "RECOVER_AND_CONTINUE"
+    elif state.get("author_contract_acceptance"):
+        action = "DELIVER_RESULT_OR_COMPLETE_ACCEPTED_STAGES"
+    elif state.get("next_required_action") == "ESCALATION_ORCHESTRATOR_REQUIRED":
+        action = "ESCALATE_AND_REPLAN"
+    elif state.get("next_required_action") in {"REVIEW_AND_REGISTER_EXISTING_ARTIFACT", "REVIEW_AND_DELIVER_EXISTING_RESULT"}:
+        action = "REVIEW_AND_REGISTER_RESULT"
+    elif state.get("attempts") and state["attempts"][-1].get("status") == "RESULT_AVAILABLE":
+        latest_result = state["attempts"][-1]
+        is_current_revision = int(latest_result.get("task_revision", -1)) == int(state.get("task_revision", 0))
+        if latest_result.get("result_status") == "TEST" and is_current_revision:
+            action = "DELIVER_RESULT"
+        elif latest_result.get("result_status") == "STAGING" and is_current_revision:
+            action = "REGISTER_STAGE_RESULT"
+        else:
+            action = "CONTINUE_GENERATION"
+    elif pending_required_stages(state):
+        action = "CONTINUE_STAGES" if state.get("delivered_result_at") else "CONTINUE_GENERATION"
+    else:
+        action = "CONTINUE_GENERATION"
+    return {"action": action, "can_complete": can_complete, "reason": reason or "All locked deliverables are complete."}
+
+
+def completion_continuation(state: dict[str, object]) -> dict[str, object]:
+    """Public read-only alias used by the completion hook and status clients."""
+    return continuation_guidance(state)
+
+
+def execution_focus_binding(thread_id: str) -> dict[str, object] | None:
+    """Read only the exact chat focus record; never search request folders."""
+    if not thread_id.strip():
+        return None
+    value = _read_binding(_focus_binding_path(thread_id))
+    if value is None:
+        return None
+    if value.get("thread_id") != thread_id or value.get("task_kind") not in {
+        "GENERAL", "IMAGE_GENERATION", "IMAGE_GENERATION_NATIVE_DEFAULT", "IMAGE_EDIT"
+    }:
+        raise GuardError("Execution focus binding is invalid.")
+    guard_path = Path(str(value.get("guard_path", ""))).resolve()
+    if guard_path.name != "EXECUTION_GUARD.json":
+        raise GuardError("Execution focus binding has no canonical guard_path.")
+    return value
+
+
 def checkpoint(
     path: Path,
     *,
@@ -1545,6 +1916,7 @@ def checkpoint(
     invariant_change_evidence: str = "",
     hard_blocker: bool = False,
     safe_routes_exhausted: bool = False,
+    blocker_kind: str = "INTERNAL",
     user_decision_essential: bool = False,
     swimwear_rung: str | None = None,
     observed_topology: str | None = None,
@@ -1576,7 +1948,108 @@ def checkpoint(
     applied_invariant_changes: dict[str, dict[str, str | None]] = {}
     correction_binding: dict[str, str] = {}
 
-    if event == "WAITING_FOR_USER":
+    if event == "AUTHOR_CONTRACT_ACCEPTED":
+        if state.get("status") != "ACTIVE" or state.get("recovery") or len(evidence) != 1:
+            raise GuardError("Author-contract acceptance requires an active repaired request and one registered receipt.")
+        receipt_path = Path(evidence[0]).resolve()
+        assert_active_request_path(receipt_path)
+        if receipt_path.parent != path.resolve().parent:
+            raise GuardError("Author acceptance must be in this exact guard request folder.")
+        try:
+            try:
+                from tools import style_pack_manager as manager
+            except ImportError:
+                import style_pack_manager as manager
+            latest = state.get("attempts", [])[-1]
+            snapshot_path = Path(str(latest.get("execution_snapshot", {}).get("reference_plan_snapshot_path", "")))
+            plan = json.loads(snapshot_path.read_text(encoding="utf-8"))
+            render_name = str(plan.get("style_name", ""))
+            workspace = Path(str(plan.get("pack_path", ""))).resolve().parent
+            checked = manager.validate_registered_author_acceptance(manager.make_paths(workspace, render_name), state, receipt_path)
+        except (OSError, ValueError, RuntimeError, KeyError, IndexError) as error:
+            raise GuardError(f"Author acceptance is not a verified registered TEST receipt: {error}") from error
+        state["author_contract_acceptance"] = {key: checked[key] for key in
+            ("generation_id", "attempt_id", "output_sha256", "task_revision", "receipt_path", "receipt_sha256")}
+        state["author_contract_acceptance"].update({"style_name": render_name, "workspace": str(workspace)})
+        state["phase"] = "AUTHOR_CONTRACT_ACCEPTED"
+        state["next_required_action"] = "CANON_QA_AND_DELIVERY"
+    elif event == "ARTIFACT_RECEIVED":
+        if state.get("status") in {"COMPLETE", "STOPPED", "CANCELLED", "WAITING_FOR_USER", "BLOCKED"}:
+            raise GuardError("Reconcile the stopped or unknown provider operation before attaching its artifact.")
+        if not attempt_id or not state.get("active_attempt"):
+            raise GuardError("ARTIFACT_RECEIVED requires the current execution attempt.")
+        active = _matching_attempt(state, attempt_id)
+        if active.get("status") != "ACTIVE" or state["active_attempt"].get("attempt_id") != attempt_id:
+            raise GuardError("Artifact does not belong to the active attempt.")
+        if len(evidence) != 1:
+            raise GuardError("ARTIFACT_RECEIVED requires exactly one original output path.")
+        artifact = Path(evidence[0]).resolve()
+        assert_active_request_path(artifact)
+        if not artifact.is_file() or artifact.suffix.lower() not in IMAGE_EXTENSIONS:
+            raise GuardError("Provider artifact must be an existing image file.")
+        receipt = {"path": str(artifact), "sha256": file_sha256(artifact),
+                   "result_status": "NOT_CHECKED", "available_at": iso_time(moment)}
+        previous = active.get("provider_artifact")
+        if previous and (previous.get("path") != receipt["path"] or previous.get("sha256") != receipt["sha256"]):
+            raise GuardError("Do not replace the received provider artifact with different bytes.")
+        active["provider_artifact"] = previous or receipt
+        if isinstance(active.get("execution_snapshot"), dict):
+            active["execution_snapshot"]["provider_artifact"] = dict(active["provider_artifact"])
+        state["active_attempt"] = dict(active)
+        state["status"] = "ACTIVE"
+        state["next_required_action"] = "REVIEW_AND_REGISTER_EXISTING_ARTIFACT"
+    elif event in {"RECOVERY_REQUIRED", "RECOVERY_RESOLVED"}:
+        if state.get("status") in {"COMPLETE", "STOPPED", "CANCELLED", "WAITING_FOR_USER"} or state.get("waiting_since"):
+            raise GuardError("Recovery must respect completion, user stop, cancellation, and pending user input.")
+        if state.get("status") == "BLOCKED" and state.get("blocker_kind") in {"EXTERNAL", "SAFETY", "USER_INPUT"}:
+            raise GuardError("Resolve the documented external boundary before resuming this request.")
+        if event == "RECOVERY_REQUIRED":
+            if "recovery" not in state:
+                state["recovery"] = {
+                    "resume_phase": state.get("phase"),
+                    "resume_action": state.get("next_required_action"),
+                    "started_at": iso_time(moment),
+                }
+            state["recovery"]["issue"] = summary.strip()
+            state["status"] = "ACTIVE"
+            outstanding = state.get("active_attempt") or any(a.get("status") == "UNKNOWN" for a in state.get("attempts", []))
+            # Never clear provider handles or turn an unknown execution into a retry.
+            if outstanding:
+                state["next_required_action"] = (
+                    "REVIEW_AND_REGISTER_EXISTING_ARTIFACT"
+                    if isinstance(state.get("active_attempt"), dict) and state["active_attempt"].get("provider_artifact")
+                    else "CHECK_EXECUTION_OR_RECONCILE_ATTEMPT"
+                )
+            elif state.get("attempts") and state["attempts"][-1].get("status") in {"RESULT_AVAILABLE", "DELIVERED"}:
+                # Registration may be retried on exactly this result. Preserve
+                # phase AND reconciliation action so the retry validator can
+                # identify that result; recovery does not authorize a new call.
+                pass
+            else:
+                state["phase"] = "RECOVERY"
+                state["next_required_action"] = "RECOVER_AND_CONTINUE"
+            state.pop("blocker", None)
+            state.pop("blocker_kind", None)
+        else:
+            if not isinstance(state.get("recovery"), dict):
+                raise GuardError("RECOVERY_RESOLVED requires a recorded recovery issue.")
+            if not evidence or not any(str(item).strip() for item in evidence):
+                raise GuardError("Record the actual repair evidence before resolving recovery.")
+            if state.get("active_attempt") or any(a.get("status") == "UNKNOWN" for a in state.get("attempts", [])):
+                raise GuardActionRequired("Reconcile the existing provider attempt before resolving recovery; do not generate again.")
+            recovery = state.pop("recovery")
+            state["status"] = "ACTIVE"
+            latest = state.get("attempts", [])[-1] if state.get("attempts") else None
+            if latest and latest.get("status") in {"RESULT_AVAILABLE", "DELIVERED"}:
+                if state.get("phase") == "RECOVERY":
+                    state["phase"] = recovery.get("resume_phase", "RESULT_AVAILABLE")
+                    state["next_required_action"] = recovery.get("resume_action", "REVIEW_AND_DELIVER_EXISTING_RESULT")
+            else:
+                state["phase"] = "PREFLIGHT"
+                state["next_required_action"] = "PREFLIGHT_OR_EXECUTION"
+                state.pop("ready_binding", None)
+            state["last_recovery"] = {**recovery, "resolved_at": iso_time(moment), "evidence": list(evidence)}
+    elif event == "WAITING_FOR_USER":
         if state.get("status") in {"BLOCKED", "COMPLETE", "STOPPED", "CANCELLED"}:
             raise GuardError(f"Cannot enter WAITING_FOR_USER from status {state.get('status')}.")
         if state.get("active_attempt"):
@@ -1638,6 +2111,11 @@ def checkpoint(
                 reference_plan, stage, execution_call, str(state.get("request_id", "")),
                 str(state.get("locked_invariants", {}).get("character", "")),
             )
+            try:
+                plan_metadata = json.loads(Path(reference_plan).read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as error:
+                raise GuardError(f"Cannot reconcile executable plan stages: {error}") from error
+            reconcile_plan_required_stages(state, plan_metadata)
             state["ready_binding"] = binding
         elif state.get("task_kind") == "IMAGE_GENERATION_NATIVE_DEFAULT":
             state["ready_binding"] = validate_native_default_call(
@@ -1810,6 +2288,7 @@ def checkpoint(
                 raise GuardError(f"Cannot snapshot the executed REFERENCE_PLAN: {error}") from error
             if not isinstance(plan_snapshot, dict) or not isinstance(execution_call, dict):
                 raise GuardError("Executed-call snapshot requires the validated plan and exact execution call.")
+            reconcile_plan_required_stages(state, plan_snapshot)
             call_json = json.dumps(execution_call, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
             call_stage = str(execution_call.get("stage_id", "")).strip()
             purpose = str(plan_snapshot.get("generation_purpose", "")).strip().upper()
@@ -1902,12 +2381,32 @@ def checkpoint(
             active["result_available_at"] = iso_time(moment)
         # Keep the exact provider artifact attached to the executed-call snapshot.
         # Registration can then retry against this artifact without reopening generation.
-        active["provider_artifact"] = {
-            "path": evidence_paths[0] if evidence_paths else "",
-            "sha256": file_sha256(Path(evidence_paths[0])) if evidence_paths else "",
-            "result_status": status_value,
-            "available_at": iso_time(moment),
-        }
+        registered_artifact_hash = file_sha256(Path(evidence_paths[0])) if evidence_paths else ""
+        previous_artifact = active.get("provider_artifact")
+        if isinstance(previous_artifact, dict):
+            previous_path = Path(str(previous_artifact.get("path", ""))).expanduser()
+            previous_hash = str(previous_artifact.get("sha256", "")).lower()
+            if (
+                not previous_path.is_file()
+                or not previous_hash
+                or file_sha256(previous_path) != previous_hash
+                or registered_artifact_hash != previous_hash
+            ):
+                raise GuardError("VISIBLE_RESULT registration does not match the original ARTIFACT_RECEIVED path/hash.")
+            active["provider_artifact"] = {
+                **previous_artifact,
+                "result_status": status_value,
+                "available_at": iso_time(moment),
+                "registered_evidence": evidence_paths,
+            }
+        else:
+            active["provider_artifact"] = {
+                "path": evidence_paths[0] if evidence_paths else "",
+                "sha256": registered_artifact_hash,
+                "result_status": status_value,
+                "available_at": iso_time(moment),
+                "registered_evidence": evidence_paths,
+            }
         snapshot = active.get("execution_snapshot")
         if isinstance(snapshot, dict):
             snapshot["provider_artifact"] = dict(active["provider_artifact"])
@@ -1933,21 +2432,33 @@ def checkpoint(
         state.pop("watchdog_reason", None)
         state.pop("watchdog_triggered_at", None)
     elif event == "RESULT_DELIVERED":
-        result = _matching_attempt(state, str(attempt_id or ""))
-        if result.get("status") != "RESULT_AVAILABLE" or result.get("result_status") != "TEST":
-            raise GuardError("RESULT_DELIVERED requires an available TEST result; STAGING and REJECTED cannot be delivered as final.")
-        if int(result.get("task_revision", -1)) != int(state.get("task_revision", 0)):
-            raise GuardError("A result from an earlier task revision cannot satisfy current delivery.")
-        if not delivery_evidence or any(not str(item).strip() for item in delivery_evidence):
-            raise GuardError("RESULT_DELIVERED requires a UI message/link receipt as --delivery-evidence.")
-        result["status"] = "DELIVERED"
-        result["delivered_at"] = iso_time(moment)
-        result["delivery_evidence"] = [str(item).strip() for item in delivery_evidence]
-        state["delivered_result_at"] = iso_time(moment)
-        state["latest_delivered_result_status"] = result.get("result_status")
-        state["latest_delivered_attempt_id"] = result["attempt_id"]
-        state["phase"] = "RESULT_DELIVERED"
-        state["next_required_action"] = "NEXT_EXECUTION_OR_COMPLETE_OR_BLOCKER"
+        accepted = verified_author_acceptance(state)
+        if accepted:
+            if attempt_id and attempt_id != accepted["attempt_id"]:
+                raise GuardError("Delivery attempt differs from accepted original artifact.")
+            if not delivery_evidence or any(not str(item).strip() for item in delivery_evidence):
+                raise GuardError("Author acceptance delivery requires a UI message/link receipt.")
+            state["author_contract_delivery"] = {"generation_id": accepted["generation_id"], "receipt_sha256": accepted["receipt_sha256"],
+                "delivery_evidence": [str(item).strip() for item in delivery_evidence], "delivered_at": iso_time(moment)}
+            state["delivered_result_at"] = iso_time(moment)
+            state["phase"] = "RESULT_DELIVERED"
+            state["next_required_action"] = "NEXT_EXECUTION_OR_COMPLETE_OR_BLOCKER"
+        else:
+            result = _matching_attempt(state, str(attempt_id or ""))
+            if result.get("status") != "RESULT_AVAILABLE" or result.get("result_status") != "TEST":
+                raise GuardError("RESULT_DELIVERED requires an available TEST result; STAGING and REJECTED cannot be delivered as final.")
+            if int(result.get("task_revision", -1)) != int(state.get("task_revision", 0)):
+                raise GuardError("A result from an earlier task revision cannot satisfy current delivery.")
+            if not delivery_evidence or any(not str(item).strip() for item in delivery_evidence):
+                raise GuardError("RESULT_DELIVERED requires a UI message/link receipt as --delivery-evidence.")
+            result["status"] = "DELIVERED"
+            result["delivered_at"] = iso_time(moment)
+            result["delivery_evidence"] = [str(item).strip() for item in delivery_evidence]
+            state["delivered_result_at"] = iso_time(moment)
+            state["latest_delivered_result_status"] = result.get("result_status")
+            state["latest_delivered_attempt_id"] = result["attempt_id"]
+            state["phase"] = "RESULT_DELIVERED"
+            state["next_required_action"] = "NEXT_EXECUTION_OR_COMPLETE_OR_BLOCKER"
     elif event == "ATTEMPT_UNKNOWN":
         active = _matching_attempt(state, str(attempt_id or ""))
         if active.get("status") != "ACTIVE":
@@ -1987,7 +2498,7 @@ def checkpoint(
             resolved_paths = []
         attempt["reconciliation"] = {"outcome": resolved, "evidence": reconciliation_evidence.strip(), "at": iso_time(moment)}
         attempt["status"] = "UNKNOWN" if resolved == "UNKNOWN" else resolved
-        state["status"] = "STOPPED" if resolved == "UNKNOWN" or was_stopped else "ACTIVE"
+        state["status"] = "STOPPED" if was_stopped else "ACTIVE"
         state["phase"] = "ATTEMPT_UNKNOWN" if resolved == "UNKNOWN" else (f"ATTEMPT_{resolved}" if not was_stopped else "STOPPED")
         state["next_required_action"] = "RECONCILE_UNKNOWN_ATTEMPT" if resolved == "UNKNOWN" else ("USER_RESUMED" if was_stopped else "NEXT_SAFE_EXECUTION_OR_COMPLETE")
         if resolved == "AVAILABLE":
@@ -2031,6 +2542,15 @@ def checkpoint(
         if state.get("status") in {"BLOCKED", "COMPLETE", "WAITING_FOR_USER", "STOPPED", "CANCELLED"}:
             raise GuardError(f"Cannot reject an attempt from status {state.get('status')}.")
         rejected_attempt = _matching_attempt(state, str(attempt_id or ""))
+        attempt_stage = str(rejected_attempt.get("stage", "")).strip()
+        if not stage or not stage.strip():
+            stage = attempt_stage
+        elif (
+            attempt_stage
+            and normalize_stage_key(attempt_stage) != "single_pass"
+            and normalize_stage_key(stage) != normalize_stage_key(attempt_stage)
+        ):
+            raise GuardError("ATTEMPT_REJECTED stage does not match the rejected execution attempt.")
         if rejected_attempt.get("status") not in {"ACTIVE", "RESULT_AVAILABLE"}:
             raise GuardError("ATTEMPT_REJECTED requires the active attempt or its available result.")
         current = state.get("active_attempt") or {}
@@ -2049,8 +2569,6 @@ def checkpoint(
         rejected_attempt["status"] = "REJECTED"
         rejected_attempt["rejection_summary"] = summary.strip()
         state["active_attempt"] = None
-        if stage:
-            find_required_stage(state, stage)
         if active_swimwear_attempt:
             expected_stage = str(active_swimwear_attempt.get("stage", ""))
             expected_rung = str(active_swimwear_attempt.get("swimwear_rung", ""))
@@ -2066,9 +2584,8 @@ def checkpoint(
         state["cycle_paused_seconds"] = 0
         state["preflight_actions_in_cycle"] = 0
         state["status"] = "ACTIVE"
-        # The current rejection is appended after this transition. It is the
-        # second failure only when an earlier same-layer failure was addressed
-        # through the latest explicit correction.
+        # The current rejection is appended after this transition; stage-level
+        # diagnosis counts it against corrections or prior diagnosis events.
         incident = escalation_incident_key(
             state, str(stage or ""), qa_layer, include_current_rejection=True
         )
@@ -2105,6 +2622,23 @@ def checkpoint(
             raise GuardActionRequired("Resolve the active or UNKNOWN operation before applying a correction.")
         if any(a.get("status") == "UNKNOWN" for a in state.get("attempts", [])):
             raise GuardActionRequired("Reconcile every UNKNOWN operation before applying a correction.")
+        if not stage and is_project_image_generation(state):
+            completed_stages = [
+                str(row.get("id", "")) for row in required_stage_entries(state)
+                if row.get("status") == "COMPLETED"
+            ]
+            if len(required_stage_entries(state)) > 1 and completed_stages:
+                raise GuardError(
+                    "USER_CORRECTION must identify the affected completed stage(s) from the existing user request "
+                    f"and retry the checkpoint with --stage; no stages were changed. Completed: {', '.join(completed_stages)}."
+                )
+        if not stage:
+            latest_rejection = next(
+                (row for row in reversed(state.get("events", [])) if row.get("event") == "ATTEMPT_REJECTED"),
+                None,
+            )
+            if latest_rejection:
+                stage = str(latest_rejection.get("stage", "")).strip() or None
         locked = state.get("locked_invariants", {})
         impact = str(correction_impact or "").upper()
         if locked:
@@ -2137,18 +2671,16 @@ def checkpoint(
                     applied_invariant_changes[name] = {"from": current.get(name), "to": value}
                 current.update(requested_invariant_changes)
                 state["locked_invariants"] = current
-        # Only an explicit stage/layer correction tied to a preceding matching
-        # rejection may satisfy the repeated-failure escalation gate. Generic,
-        # unrelated, ambiguous, or pre-failure corrections remain valid task
-        # history but cannot unlock the Astra route.
-        if stage and qa_layer.strip():
+        # Bind an explicit correction to the latest same-stage rejection for
+        # audit context. Escalation is stage-failure-based and does not depend
+        # on a correction being present.
+        if stage:
             prior_rejection = next(
                 (
                     row
                     for row in reversed(state.get("events", []))
                     if row.get("event") == "ATTEMPT_REJECTED"
                     and normalize_stage_key(str(row.get("stage", ""))) == normalize_stage_key(stage)
-                    and str(row.get("qa_layer", "")).casefold() == qa_layer.casefold()
                 ),
                 None,
             )
@@ -2156,7 +2688,7 @@ def checkpoint(
                 correction_binding = {
                     "corrects_attempt_at": str(prior_rejection.get("at", "")),
                     "corrects_stage": str(stage),
-                    "corrects_qa_layer": qa_layer.strip().upper(),
+                    "corrects_qa_layer": qa_layer.strip().upper() or str(prior_rejection.get("qa_layer", "")).upper(),
                 }
         waiting_since = state.get("waiting_since")
         if waiting_since:
@@ -2174,6 +2706,28 @@ def checkpoint(
         state["latest_delivered_result_status"] = None
         state["delivered_result_at"] = None
         state["task_revision"] = int(state.get("task_revision", 0)) + 1
+        correction_stage = stage
+        if not correction_stage:
+            image_stages = required_stage_entries(state)
+            if is_project_image_generation(state) and len(image_stages) == 1:
+                correction_stage = str(image_stages[0].get("id", "")) or None
+        if correction_stage:
+            corrected_stage = next(
+                (item for item in required_stage_entries(state)
+                 if normalize_stage_key(str(item.get("id", ""))) == normalize_stage_key(correction_stage)),
+                None,
+            )
+            if corrected_stage and corrected_stage.get("status") == "COMPLETED":
+                corrected_stage["status"] = "PENDING"
+                corrected_stage["completed_at"] = None
+                corrected_stage["evidence"] = []
+                corrected_stage.pop("evidence_sha256", None)
+                corrected_stage.pop("accepted_attempt_binding", None)
+                append_event(
+                    state, "STAGE_REOPENED",
+                    f"USER_CORRECTION reopened affected stage {corrected_stage.get('id')}.",
+                    moment, stage=str(corrected_stage.get("id")), cause="USER_CORRECTION",
+                )
     elif event == "STAGE_COMPLETED":
         if state.get("status") in {"BLOCKED", "COMPLETE", "WAITING_FOR_USER", "STOPPED", "CANCELLED"} or state.get("waiting_since"):
             raise GuardError(f"Cannot complete a required stage from status {state.get('status')}; explicitly resume first.")
@@ -2183,6 +2737,10 @@ def checkpoint(
         if entry.get("status") == "COMPLETED":
             raise GuardError(f"Required stage is already completed: {entry.get('id')}")
         evidence_paths = validate_stage_evidence(state, evidence)
+        stage_attempt_binding = (
+            validate_stage_attempt_binding(state, str(entry.get("id", "")), evidence_paths)
+            if is_project_image_generation(state) else None
+        )
         if is_physique_stage(str(entry.get("id"))):
             active_swimwear_attempt = state.get("active_swimwear_attempt")
             if not isinstance(active_swimwear_attempt, dict):
@@ -2203,6 +2761,14 @@ def checkpoint(
         entry["status"] = "COMPLETED"
         entry["completed_at"] = iso_time(moment)
         entry["evidence"] = evidence_paths
+        entry["evidence_sha256"] = {
+            evidence_path: file_sha256(Path(evidence_path))
+            for evidence_path in evidence_paths
+            if Path(evidence_path).is_file()
+        }
+        if stage_attempt_binding is not None:
+            entry["accepted_attempt_binding"] = stage_attempt_binding
+            entry["completed_task_revision"] = int(state.get("task_revision", 0))
         state["status"] = "ACTIVE"
         state["phase"] = "STAGE_COMPLETED"
         state["next_required_action"] = (
@@ -2219,23 +2785,24 @@ def checkpoint(
         entry["status"] = "PENDING"
         entry["completed_at"] = None
         entry["evidence"] = []
+        entry.pop("evidence_sha256", None)
+        entry.pop("accepted_attempt_binding", None)
+        entry.pop("completed_task_revision", None)
         if is_physique_stage(str(entry.get("id"))):
             state.pop("active_swimwear_attempt", None)
-            events = [
-                row for row in state.get("events", [])
-                if not (
-                    row.get("event") == "ATTEMPT_REJECTED"
-                    and normalize_stage_key(str(row.get("stage", ""))) == normalize_stage_key(str(entry.get("id", "")))
-                    and row.get("swimwear_rung")
-                )
-            ]
-            state["events"] = events
         state["status"] = "ACTIVE"
         state["phase"] = "CORRECTION"
         state["next_required_action"] = "NEXT_EXECUTION_OR_BLOCKER"
     elif event == "BLOCKER":
+        kind = blocker_kind.upper()
+        if kind not in {"INTERNAL", "EXTERNAL", "SAFETY", "USER_INPUT"}:
+            raise GuardError("Unknown blocker kind.")
+        if kind == "INTERNAL":
+            return checkpoint(path, event="RECOVERY_REQUIRED", summary=summary, evidence=evidence, now=moment)
         if state.get("active_attempt") or any(a.get("status") == "UNKNOWN" for a in state.get("attempts", [])):
             raise GuardActionRequired("Record STOP/timeout and reconcile the active operation before declaring a blocker.")
+        if not (hard_blocker and safe_routes_exhausted and evidence):
+            raise GuardError("External boundaries require --hard-blocker, --safe-routes-exhausted and concrete --evidence; internal issues use RECOVERY_REQUIRED.")
         pending = pending_required_stages(state)
         if is_project_image_generation(state) and pending:
             if not (hard_blocker and safe_routes_exhausted):
@@ -2249,30 +2816,15 @@ def checkpoint(
         state["phase"] = "BLOCKED"
         state["next_required_action"] = "USER_DECISION"
         state["blocker"] = summary.strip()
+        state["blocker_kind"] = kind
     elif event == "COMPLETE":
-        if state.get("status") in {"WAITING_FOR_USER", "STOPPED", "CANCELLED"} or state.get("waiting_since"):
-            raise GuardError("A waiting, stopped, or cancelled task cannot complete.")
-        if state.get("active_attempt") or any(a.get("status") == "UNKNOWN" for a in state.get("attempts", [])):
-            raise GuardActionRequired("Task completion requires no active or UNKNOWN attempt; reconcile it first.")
-        pending = pending_required_stages(state)
-        if pending:
-            raise GuardActionRequired(
-                "Task completion is forbidden while required stages remain pending: " + ", ".join(pending)
-            )
-        if is_project_image_generation(state):
-            latest = next((row for row in state.get("attempts", []) if row.get("attempt_id") == state.get("latest_delivered_attempt_id")), None)
-            most_recent = state.get("attempts", [])[-1] if state.get("attempts") else None
-            if not latest or not most_recent or latest.get("attempt_id") != most_recent.get("attempt_id"):
-                raise GuardError("Image completion requires the latest attempt to be the currently delivered TEST result.")
-            if latest and int(latest.get("task_revision", -1)) != int(state.get("task_revision", 0)):
-                raise GuardError("The delivered result belongs to an earlier task revision; produce and deliver the corrected result.")
-            if (
-                state.get("latest_delivered_result_status") != "TEST"
-                or not state.get("delivered_result_at")
-                or not latest
-                or latest.get("status") != "DELIVERED"
-            ):
-                raise GuardError("Image completion requires an available, QA-passed TEST result and RESULT_DELIVERED receipt.")
+        completion_error = completion_block_reason(state)
+        if completion_error:
+            if state.get("recovery") or state.get("active_attempt") or any(
+                a.get("status") == "UNKNOWN" for a in state.get("attempts", [])
+            ) or pending_required_stages(state):
+                raise GuardActionRequired(completion_error)
+            raise GuardError(completion_error)
         state["status"] = "COMPLETE"
         state["phase"] = "COMPLETE"
         state["next_required_action"] = "NONE"
@@ -2313,6 +2865,7 @@ def checkpoint(
     if event == "BLOCKER":
         event_details["hard_blocker"] = hard_blocker
         event_details["safe_routes_exhausted"] = safe_routes_exhausted
+        event_details["blocker_kind"] = blocker_kind.upper()
     if event == "WAITING_FOR_USER":
         event_details["user_decision_essential"] = user_decision_essential
         event_details["safe_routes_exhausted"] = safe_routes_exhausted
@@ -2344,6 +2897,12 @@ def checkpoint(
             # while COMPLETE; corrections reactivate the same single folder.
             current_binding["request_status"] = state["status"]
             atomic_write_json(chat_binding, current_binding)
+    if (
+        event in {"USER_RESUMED", "USER_CORRECTION", "EXECUTION_STARTED"}
+        and state.get("owner_chat_id")
+        and is_project_image_generation(state)
+    ):
+        _write_execution_focus(str(state["owner_chat_id"]), path, str(state["task_kind"]))
     if event == "PREFLIGHT":
         reason = evaluate_limits(state, moment)
         if reason:
@@ -2361,6 +2920,7 @@ def guard_status(path: Path, now: datetime | None = None) -> dict[str, object]:
     reason = evaluate_limits(state, moment)
     if reason:
         persist_watchdog_state(path, state, reason, moment)
+    state["continuation"] = continuation_guidance(state)
     return state
 
 
@@ -2432,7 +2992,7 @@ def make_parser() -> argparse.ArgumentParser:
             "READY_FOR_EXECUTION", "CALL_VALIDATED", "EXECUTION_STARTED", "VISIBLE_RESULT", "RESULT_DELIVERED",
             "ATTEMPT_REJECTED", "ATTEMPT_REFUSED", "ATTEMPT_UNKNOWN", "ATTEMPT_RECONCILED", "STOP", "CANCEL",
             "ESCALATION_ORCHESTRATOR_RECORDED", "USER_CORRECTION", "STAGE_COMPLETED", "STAGE_REOPENED",
-            "BLOCKER", "COMPLETE",
+            "BLOCKER", "COMPLETE", "RECOVERY_REQUIRED", "RECOVERY_RESOLVED", "ARTIFACT_RECEIVED", "AUTHOR_CONTRACT_ACCEPTED",
         ),
     )
     check.add_argument("--summary", required=True)
@@ -2446,7 +3006,7 @@ def make_parser() -> argparse.ArgumentParser:
     check.add_argument("--execution-call", help="JSON file containing this exact resolved call's prompt and slots; otherwise use REFERENCE_PLAN.execution_call.")
     check.add_argument("--evidence", action="append", default=[])
     check.add_argument("--stage", help="Required-stage id for STAGE_COMPLETED or STAGE_REOPENED.")
-    check.add_argument("--qa-layer", default="", help="Failed QA layer; required to trigger corrected repeated-failure escalation.")
+    check.add_argument("--qa-layer", default="", help="Optional descriptive QA layer; escalation is tracked by required stage, not this label.")
     check.add_argument("--user-approved-scope-change", action="store_true")
     check.add_argument("--correction-impact", choices=("PRESERVE", "CHANGE", "AMBIGUOUS"))
     check.add_argument(
@@ -2468,6 +3028,8 @@ def make_parser() -> argparse.ArgumentParser:
         help="Exact user quote that explicitly authorizes the invariant change.",
     )
     check.add_argument("--hard-blocker", action="store_true")
+    check.add_argument("--blocker-kind", choices=("INTERNAL", "EXTERNAL", "SAFETY", "USER_INPUT"), default="INTERNAL",
+                       help="Internal failures continue via recovery; only evidenced external boundaries may become BLOCKED.")
     check.add_argument("--safe-routes-exhausted", action="store_true")
     check.add_argument("--user-decision-essential", action="store_true")
     check.add_argument("--swimwear-rung", choices=(*SWIMWEAR_RUNGS, "CUSTOM"))
@@ -2505,6 +3067,10 @@ def make_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    if __package__:
+        from . import workflow_recovery
+    else:
+        import workflow_recovery
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     if hasattr(sys.stderr, "reconfigure"):
@@ -2555,6 +3121,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 user_approved_invariant_change=args.user_approved_invariant_change,
                 invariant_change_evidence=args.invariant_change_evidence,
                 hard_blocker=args.hard_blocker,
+                blocker_kind=args.blocker_kind,
                 safe_routes_exhausted=args.safe_routes_exhausted,
                 user_decision_essential=args.user_decision_essential,
                 swimwear_rung=args.swimwear_rung,
@@ -2581,9 +3148,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2 if state.get("status") == "ACTION_REQUIRED" else 0
     except GuardActionRequired as error:
         print(f"ACTION_REQUIRED={error}", file=sys.stderr)
+        workflow_recovery.emit_recovery(error, phase="request")
         return 2
-    except GuardError as error:
+    except (GuardError, OSError, ValueError) as error:
         print(f"GUARD_ERROR={error}", file=sys.stderr)
+        workflow_recovery.emit_recovery(error, phase="request")
         return 1
 
 

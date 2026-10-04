@@ -219,7 +219,7 @@ class CharacterAssetCatalogTests(unittest.TestCase):
         self.assertIn("missing", diagnostic["reason"].lower())
         self.assertIsNone(manager.registered_approved_character_asset(self.paths, self.wardrobe))
 
-    def test_role_rows_without_valid_qa_receipt_are_diagnosed_and_excluded(self):
+    def test_role_rows_without_valid_qa_receipt_keep_approval_and_report_qa_truth(self):
         self._generation("qa-less", self.wardrobe, "APPROVED_WARDROBE", with_qa=False)
         self._generation("bad-receipt", self.accessory, "APPROVED_ACCESSORY")
         rows = manager.read_csv(self.paths.generation_manifest)
@@ -229,10 +229,11 @@ class CharacterAssetCatalogTests(unittest.TestCase):
         accessory_row["qa_receipt_sha256"] = "0" * 64
         manager.write_csv(self.paths.generation_manifest, manager.GENERATION_FIELDS, rows)
         assets, index = manager.approved_character_role_assets(self.paths, "CHAR_001", self.profile)
-        self.assertEqual(assets, [])
-        reasons = {Path(item["path"]).name: item["reason"] for item in index["invalid_approved_records"]}
-        self.assertIn("QA receipt", reasons["suit.png"])
-        self.assertIn("QA receipt", reasons["glasses.png"])
+        self.assertEqual({Path(item["path"]).name for item in assets}, {"suit.png", "glasses.png"})
+        self.assertTrue(all(item["qa_status"] == "NOT_CHECKED" for item in assets))
+        self.assertEqual({Path(item["path"]).name for item in index["qa_diagnostics"]}, {"suit.png", "glasses.png"})
+        self.assertEqual(index["invalid_approved_records"], [])
+        self.assertFalse(manager.generation_has_passed_qa(rows[1]))
 
     def test_role_row_output_hash_mismatch_after_registration_is_diagnostic(self):
         self._generation("mutated-after-approval", self.wardrobe, "APPROVED_WARDROBE")

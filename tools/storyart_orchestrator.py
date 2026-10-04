@@ -251,69 +251,47 @@ def validate_writer_paths(
                 )
 
 
-def dispatch_handoff(
+def _acquire_escalation_lock(lock_path: Path) -> int:
+    """Acquire a kernel-held cross-platform lock that releases on process exit."""
+    descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR)
+    try:
+        if os.fstat(descriptor).st_size == 0:
+            os.write(descriptor, b"\0")
+            os.fsync(descriptor)
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        if os.name == "nt":
+            import msvcrt
+
+            msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return descriptor
+    except OSError as exc:
+        os.close(descriptor)
+        raise OrchestratorError("ESCALATION_ORCHESTRATOR incident is already being consumed by a live process.") from exc
+
+
+def _release_escalation_lock(lock_path: Path, descriptor: int) -> None:
+    del lock_path  # Persistent lock file is harmless; the OS lock is descriptor-bound.
+    os.close(descriptor)
+
+
+def _persist_handoff(
     state_path: Path,
+    state: dict[str, Any],
     role: str,
     objective: str,
-    input_paths: list[str],
-    write_paths: list[str],
-    dependency_ids: list[str],
     stage: str,
     output_contract: str,
-    qa_layer: str = "",
+    qa_layer: str,
+    dependency_ids: list[str],
+    normalized_inputs: list[Path],
+    normalized_writes: list[Path],
+    handoff_id: str,
+    execution_profile: dict[str, str],
 ) -> dict[str, Any]:
-    state = load_state(state_path)
-    if role not in ROLE_DESCRIPTIONS:
-        raise OrchestratorError(f"Unknown role: {role}")
-    if role in WRITER_ROLES:
-        raise OrchestratorError(
-            f"{role} is a root-only production responsibility and cannot be dispatched."
-        )
-    if not objective.strip():
-        raise OrchestratorError("A bounded handoff objective is required.")
-    validate_dependencies(state, dependency_ids)
-
-    normalized_inputs = [normalize_project_path(item) for item in input_paths]
-    for path in normalized_inputs:
-        if not path.exists():
-            raise OrchestratorError(f"Handoff input does not exist: {path}")
-    normalized_writes = [normalize_project_path(item) for item in write_paths]
-    request_root = normalize_project_path(str(state["request_root"]))
-    validate_writer_paths(role, request_root, normalized_writes)
-
-    sequence = len(state.get("handoffs", [])) + 1
-    handoff_id = f"H{sequence:03d}"
-    execution_profile: dict[str, str] = dict(load_model_routes()["roles"][role])
-    if role == "ESCALATION_ORCHESTRATOR":
-        execution_profile["mode"] = "EXCEPTIONAL_ERROR_HANDLING"
-    if role == "ESCALATION_ORCHESTRATOR":
-        if not stage.strip() or not qa_layer.strip():
-            raise OrchestratorError("ESCALATION_ORCHESTRATOR requires --stage and --qa-layer.")
-        guard_path = normalize_project_path(str(state["guard_path"]))
-        lock_path = guard_path.with_suffix(guard_path.suffix + ".escalation.lock")
-        try:
-            lock_fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError as exc:
-            raise OrchestratorError("ESCALATION_ORCHESTRATOR incident is already being consumed.") from exc
-        try:
-            guard = load_json(guard_path)
-            incident = next(
-                (
-                    item for item in guard.get("escalation_incidents", [])
-                    if item.get("status") == "REQUIRED"
-                    and str(item.get("stage", "")).casefold() == stage.casefold()
-                    and str(item.get("qa_layer", "")).casefold() == qa_layer.casefold()
-                ),
-                None,
-            )
-            if guard.get("next_required_action") != "ESCALATION_ORCHESTRATOR_REQUIRED" or incident is None:
-                raise OrchestratorError("ESCALATION_ORCHESTRATOR is available only for the guard's due corrected repeated-failure incident.")
-            incident.update({"status": "CONSUMED", "consumed_at": utc_now(), "handoff_id": handoff_id})
-            save_json(guard_path, guard)
-        finally:
-            os.close(lock_fd)
-            lock_path.unlink(missing_ok=True)
-
     if role == "GENERATOR_OPERATOR":
         if not stage.strip():
             raise OrchestratorError("GENERATOR_OPERATOR requires --stage.")
@@ -360,18 +338,131 @@ def dispatch_handoff(
     handoff_path = handoff_dir / f"{handoff_id}_{role.lower()}.json"
     save_json(handoff_path, handoff)
 
-    state["handoffs"].append(
-        {
+    existing_summary = next(
+        (item for item in state.get("handoffs", []) if item.get("handoff_id") == handoff_id),
+        None,
+    )
+    if existing_summary is None:
+        state["handoffs"].append({
             "handoff_id": handoff_id,
             "role": role,
             "stage": stage.strip(),
             "status": "PENDING",
             "path": relative_project_path(handoff_path),
-        }
-    )
+        })
     state["updated_at"] = utc_now()
     save_json(state_path, state)
     return handoff
+
+
+def dispatch_handoff(
+    state_path: Path,
+    role: str,
+    objective: str,
+    input_paths: list[str],
+    write_paths: list[str],
+    dependency_ids: list[str],
+    stage: str,
+    output_contract: str,
+    qa_layer: str = "",
+) -> dict[str, Any]:
+    state = load_state(state_path)
+    if role not in ROLE_DESCRIPTIONS:
+        raise OrchestratorError(f"Unknown role: {role}")
+    if role in WRITER_ROLES:
+        raise OrchestratorError(
+            f"{role} is a root-only production responsibility and cannot be dispatched."
+        )
+    if not objective.strip():
+        raise OrchestratorError("A bounded handoff objective is required.")
+    validate_dependencies(state, dependency_ids)
+
+    normalized_inputs = [normalize_project_path(item) for item in input_paths]
+    for path in normalized_inputs:
+        if not path.exists():
+            raise OrchestratorError(f"Handoff input does not exist: {path}")
+    normalized_writes = [normalize_project_path(item) for item in write_paths]
+    request_root = normalize_project_path(str(state["request_root"]))
+    validate_writer_paths(role, request_root, normalized_writes)
+
+    sequence = len(state.get("handoffs", [])) + 1
+    handoff_id = f"H{sequence:03d}"
+    # Validate the entire authority before acquiring a lock or consuming an incident.
+    execution_profile: dict[str, str] = dict(load_model_routes()["roles"][role])
+    if role == "ESCALATION_ORCHESTRATOR":
+        execution_profile["mode"] = "EXCEPTIONAL_ERROR_HANDLING"
+    lock_fd: int | None = None
+    lock_path: Path | None = None
+    if role == "ESCALATION_ORCHESTRATOR":
+        if not stage.strip():
+            raise OrchestratorError("ESCALATION_ORCHESTRATOR requires --stage.")
+        guard_path = normalize_project_path(str(state["guard_path"]))
+        lock_path = guard_path.with_suffix(guard_path.suffix + ".escalation.lock")
+        try:
+            lock_fd = _acquire_escalation_lock(lock_path)
+        except OrchestratorError:
+            raise
+        except OSError as exc:
+            raise OrchestratorError(f"Cannot acquire escalation dispatch lock: {exc}") from exc
+        try:
+            guard = load_json(guard_path)
+            incident = next(
+                (
+                    item for item in guard.get("escalation_incidents", [])
+                    if item.get("status") in {"REQUIRED", "CONSUMED"}
+                    and str(item.get("stage", "")).casefold() == stage.casefold()
+                ),
+                None,
+            )
+            if guard.get("next_required_action") != "ESCALATION_ORCHESTRATOR_REQUIRED" or incident is None:
+                raise OrchestratorError("ESCALATION_ORCHESTRATOR is available only for the guard's due repeated-stage-failure incident.")
+            existing_id = str(incident.get("handoff_id", "")).strip()
+            if incident.get("status") == "CONSUMED" and existing_id:
+                # Recover an interrupted dispatch idempotently. A file written
+                # before the orchestration summary is committed is reused as
+                # is; if the process died before writing it, rebuild the same
+                # reserved handoff id below.
+                existing_path = state_path.parent / "ORCHESTRATION_HANDOFFS" / f"{existing_id}_{role.lower()}.json"
+                if existing_path.is_file():
+                    handoff = load_json(existing_path)
+                    summary = next(
+                        (item for item in state.get("handoffs", []) if item.get("handoff_id") == existing_id),
+                        None,
+                    )
+                    if summary is None:
+                        state.setdefault("handoffs", []).append({
+                            "handoff_id": existing_id,
+                            "role": role,
+                            "stage": stage.strip(),
+                            "status": str(handoff.get("status", "PENDING")),
+                            "path": relative_project_path(existing_path),
+                        })
+                        state["updated_at"] = utc_now()
+                        save_json(state_path, state)
+                    _release_escalation_lock(lock_path, lock_fd)
+                    lock_fd = None
+                    return handoff
+                handoff_id = existing_id
+            if incident.get("status") == "REQUIRED":
+                incident.update({"status": "CONSUMED", "consumed_at": utc_now(), "handoff_id": handoff_id})
+                save_json(guard_path, guard)
+            elif not existing_id:
+                incident.update({"handoff_id": handoff_id, "consumed_at": incident.get("consumed_at") or utc_now()})
+                save_json(guard_path, guard)
+        except Exception:
+            _release_escalation_lock(lock_path, lock_fd)
+            lock_fd = None
+            raise
+
+    try:
+        return _persist_handoff(
+            state_path, state, role, objective, stage, output_contract, qa_layer,
+            dependency_ids, normalized_inputs, normalized_writes, handoff_id,
+            execution_profile,
+        )
+    finally:
+        if lock_fd is not None and lock_path is not None:
+            _release_escalation_lock(lock_path, lock_fd)
 
 
 def complete_handoff(
@@ -473,6 +564,12 @@ description: Provide project-local routing context for the ready StoryArt style 
 
 # {style_name} style adapter
 
+Apply `docs/REQUEST_FIDELITY.md` from the project root. Internal metadata or
+QA-paperwork failures redirect to RECOVERY_REQUIRED and continued repair, not
+terminal task blocking. Approved source eligibility does not require a historic
+QA receipt. Retain any applicable found wardrobe; absent undeclared clothing is
+optional. Review actual output against the full user contract before acceptance.
+
 Treat `{pack_name}` as the complete local visual source of truth and
 `{generations_name}` as its generated-work sibling.
 
@@ -495,6 +592,18 @@ for a concrete external/platform/safety blocker or a missing user-only decision
 when no safe authorized next step remains; never switch workflows to bypass it.
 Leaving the scenario requires the user's direct request, a concrete warning,
 and the user's confirmation after the warning in the same chat.
+
+## Completion continuity
+
+Internal time, preparation-action, retry, or QA-failure counts are never a
+terminal task limit. A rejected image remains a failed attempt: revise the
+strategy against the original approved sources, never use a rejected generated
+scene as an anchor, and do not invent a PASS. Before ending a turn, read the
+active guard's machine-readable `continuation` and follow it until the requested
+deliverable is actually accepted and delivered, the user explicitly stops, or
+an evidenced external, safety, or user-input boundary leaves no safe route.
+`COMPLETE_NOW` is advisory only after guard validation succeeds; it does not
+replace visual QA or the delivery receipt.
 
 Reuse this style when the approved character profile binds the requested
 character to `{style_name}` or when the user selected `{style_name}` in this
@@ -751,6 +860,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    if __package__:
+        from . import workflow_recovery
+    else:
+        import workflow_recovery
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
@@ -788,8 +901,9 @@ def main(argv: list[str] | None = None) -> int:
         else:
             parser.error(f"Unknown command: {args.command}")
             return 2
-    except OrchestratorError as exc:
+    except (OrchestratorError, OSError, ValueError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
+        workflow_recovery.emit_recovery(exc, phase="request")
         return 1
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0

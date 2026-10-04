@@ -1,6 +1,8 @@
 import importlib.util
 import json
 import tempfile
+import subprocess
+import sys
 import tomllib
 import unittest
 from pathlib import Path
@@ -293,13 +295,13 @@ class StoryArtOrchestratorTests(unittest.TestCase):
         self.assertNotIn("Terra", handoff["agent_prompt"])
         guard_data = json.loads(self.guard_path.read_text(encoding="utf-8"))
         self.assertEqual(guard_data["escalation_incidents"][0]["status"], "CONSUMED")
-        with self.assertRaisesRegex(orchestrator.OrchestratorError, "due corrected"):
-            orchestrator.dispatch_handoff(
-                self.state_path, "ESCALATION_ORCHESTRATOR", "Duplicate work order.",
-                [str(self.guard_path)], [], [], "FRAME", "", "STYLE",
-            )
+        duplicate = orchestrator.dispatch_handoff(
+            self.state_path, "ESCALATION_ORCHESTRATOR", "Duplicate work order.",
+            [str(self.guard_path)], [], [], "FRAME", "", "STYLE",
+        )
+        self.assertEqual(duplicate["handoff_id"], handoff["handoff_id"])
 
-    def test_consumed_escalation_never_reopens_after_interruption(self):
+    def test_consumed_escalation_resumes_idempotently_after_interruption(self):
         self.initialize()
         guard_data = json.loads(self.guard_path.read_text(encoding="utf-8"))
         guard_data.update({
@@ -307,11 +309,11 @@ class StoryArtOrchestratorTests(unittest.TestCase):
             "escalation_incidents": [{"key": "x", "stage": "FRAME", "qa_layer": "STYLE", "status": "CONSUMED"}],
         })
         self.guard_path.write_text(json.dumps(guard_data), encoding="utf-8")
-        with self.assertRaisesRegex(orchestrator.OrchestratorError, "due corrected"):
-            orchestrator.dispatch_handoff(
-                self.state_path, "ESCALATION_ORCHESTRATOR", "Restart interrupted work order.",
-                [str(self.guard_path)], [], [], "FRAME", "", "STYLE",
-            )
+        handoff = orchestrator.dispatch_handoff(
+            self.state_path, "ESCALATION_ORCHESTRATOR", "Restart interrupted work order.",
+            [str(self.guard_path)], [], [], "FRAME", "", "STYLE",
+        )
+        self.assertEqual(handoff["handoff_id"], "H001")
 
     def test_concurrent_escalation_dispatch_is_denied_by_consumption_lock(self):
         self.initialize()
@@ -322,15 +324,42 @@ class StoryArtOrchestratorTests(unittest.TestCase):
         })
         self.guard_path.write_text(json.dumps(guard_data), encoding="utf-8")
         lock_path = self.guard_path.with_suffix(self.guard_path.suffix + ".escalation.lock")
-        lock_path.write_text("locked", encoding="utf-8")
+        lock_fd = orchestrator._acquire_escalation_lock(lock_path)
         try:
-            with self.assertRaisesRegex(orchestrator.OrchestratorError, "already being consumed"):
+            with self.assertRaisesRegex(orchestrator.OrchestratorError, "live process"):
                 orchestrator.dispatch_handoff(
                     self.state_path, "ESCALATION_ORCHESTRATOR", "Concurrent work order.",
                     [str(self.guard_path)], [], [], "FRAME", "", "STYLE",
                 )
         finally:
-            lock_path.unlink(missing_ok=True)
+            orchestrator._release_escalation_lock(lock_path, lock_fd)
+
+    def test_operating_system_releases_dispatch_lock_after_owner_process_dies(self):
+        self.initialize()
+        lock_path = self.guard_path.with_suffix(self.guard_path.suffix + ".escalation.lock")
+        script = (
+            "from pathlib import Path; import sys,time; "
+            "from tools.storyart_orchestrator import _acquire_escalation_lock; "
+            "_acquire_escalation_lock(Path(sys.argv[1])); print('LOCKED', flush=True); time.sleep(30)"
+        )
+        child = subprocess.Popen(
+            [sys.executable, "-c", script, str(lock_path)],
+            cwd=orchestrator.PROJECT_ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            self.assertEqual(child.stdout.readline().strip(), "LOCKED")
+        finally:
+            child.terminate()
+            child.wait(timeout=10)
+            if child.stdout:
+                child.stdout.close()
+            if child.stderr:
+                child.stderr.close()
+        descriptor = orchestrator._acquire_escalation_lock(lock_path)
+        orchestrator._release_escalation_lock(lock_path, descriptor)
 
     def test_escalation_orchestrator_rejects_non_due_or_write_handoff(self):
         self.initialize()
@@ -365,6 +394,10 @@ class StoryArtOrchestratorTests(unittest.TestCase):
         self.assertTrue((skill_root / "references" / "style.json").is_file())
         self.assertEqual(index["styles"][0]["local_readiness"], "READY")
         self.assertTrue(index["styles"][0]["can_generate"])
+        skill_text = (skill_root / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("Internal time, preparation-action, retry, or QA-failure counts are never a", skill_text)
+        self.assertIn("original approved sources", skill_text)
+        self.assertIn("machine-readable `continuation`", skill_text)
 
     def test_style_skill_validation_rejects_images(self):
         output = self.request_root / "style-skills"

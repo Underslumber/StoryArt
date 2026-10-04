@@ -22,6 +22,78 @@ SOFT_ROLES = {
     "LIGHTING", "COMPOSITION",
 }
 ANATOMY_VALUES = {"MALE_ANATOMY", "FEMALE_ANATOMY", "ANDROGYNOUS_ANATOMY"}
+POSE_ROLES = {"POSE", "POSE_SOFT", "AUX_POSE", "ART_POSE_SOFT", "POSE_STUDY", "STAGING_ONLY"}
+NO_SUBJECT_ROLES = {"STYLE", "STYLE_SOFT", "BACKGROUND", "BACKGROUND_STYLE", "CAMERA", "CAMERA_ONLY", "AUX_CAMERA", "LIGHTING", "COMPOSITION", "ART_CAMERA_SOFT"}
+
+
+def explicit_subject_label(reference: dict[str, Any]) -> str:
+    """Use explicit registry classification only; ambiguous labels fail closed."""
+    labels: set[str] = set()
+    aliases = {"MALE": "MALE_ANATOMY", "FEMALE": "FEMALE_ANATOMY",
+               "MALE_ANATOMY": "MALE_ANATOMY", "FEMALE_ANATOMY": "FEMALE_ANATOMY", "NO_SUBJECT": "NO_SUBJECT"}
+    if _clean(reference.get("subject_label_status")).upper() in {"QUARANTINED", "SOURCE_MISSING", "STALE", "HASH_MISMATCH"}:
+        return UNKNOWN
+    bound_hash = _clean(reference.get("subject_label_sha256"))
+    if (reference.get("path") or reference.get("sha256")) and bound_hash == UNKNOWN:
+        return UNKNOWN
+    if bound_hash != UNKNOWN and bound_hash.lower() != _clean(reference.get("sha256")).lower():
+        return UNKNOWN
+    for key in ("subject_label", "physiology_group", "source_subject"):
+        value = _clean(reference.get(key)).upper()
+        if value == UNKNOWN:
+            continue
+        if value not in aliases:
+            return UNKNOWN
+        evidence = reference.get("subject_label_evidence") if key != "physiology_group" else (
+            "REVIEWED_CONTOUR" if reference.get("visual_qa_status") == "PASS" else None)
+        if _clean(evidence) == UNKNOWN:
+            return UNKNOWN
+        labels.add(aliases[value])
+    compatibility = _values(reference.get("subject_anatomy_compatibility")) | _values(reference.get("anatomy_compatibility"))
+    reviewed = any(_clean(reference.get(key)) != UNKNOWN for key in (
+        "subject_anatomy_evidence_source", "anatomy_evidence_source", "evidence_source"))
+    if compatibility and reviewed:
+        if len(compatibility) != 1 or not compatibility.issubset(set(aliases.values())):
+            return UNKNOWN
+        labels.update(compatibility)
+    return next(iter(labels)) if len(labels) == 1 else UNKNOWN
+
+
+def strict_subject_decision(target: dict[str, Any], reference: dict[str, Any], *, pose: bool = False, role: str = "") -> tuple[str, str] | None:
+    target_label = _clean(target.get("target_anatomy")).upper()
+    if _clean(reference.get("subject_label_status")).upper() in {"QUARANTINED", "SOURCE_MISSING", "STALE", "HASH_MISMATCH"}:
+        return "REVIEW_REQUIRED", "Source label is quarantined or missing."
+    bound_hash = _clean(reference.get("subject_label_sha256"))
+    if (reference.get("path") or reference.get("sha256")) and bound_hash == UNKNOWN:
+        return "REVIEW_REQUIRED", "File-backed subject classification requires a reviewed source hash."
+    if bound_hash != UNKNOWN and bound_hash.lower() != _clean(reference.get("sha256")).lower():
+        return "REVIEW_REQUIRED", "Reviewed subject label is not bound to current source bytes."
+    source_label = explicit_subject_label(reference)
+    if source_label == "NO_SUBJECT" and role in NO_SUBJECT_ROLES:
+        return "ALLOWED", "Reviewed source explicitly contains no subject."
+    if source_label == "NO_SUBJECT":
+        return "BLOCKED", "NO_SUBJECT cannot supply identity, anatomy, clothing or pose."
+    if source_label in {"MALE_ANATOMY", "FEMALE_ANATOMY"} and (
+        target_label not in {"MALE_ANATOMY", "FEMALE_ANATOMY"} or _clean(target.get("anatomy_evidence_source")) == UNKNOWN
+    ):
+        return "REVIEW_REQUIRED", "Human references require an explicit evidence-backed target subject label."
+    raw_labels = {_clean(reference.get(key)).upper() for key in ("subject_label", "physiology_group", "source_subject")}
+    opposite = "FEMALE" if target_label == "MALE_ANATOMY" else "MALE"
+    if target_label in {"MALE_ANATOMY", "FEMALE_ANATOMY"} and raw_labels & {opposite, opposite + "_ANATOMY", "MIXED"}:
+        return "BLOCKED", "Explicit source subject label excludes the target."
+    if target_label in {"MALE_ANATOMY", "FEMALE_ANATOMY"} and source_label != UNKNOWN and source_label != target_label:
+        return "BLOCKED", "Explicit source subject label excludes the target."
+    if not pose and source_label == UNKNOWN:
+        return "REVIEW_REQUIRED", "Reference requires a reviewed matching subject label or reviewed NO_SUBJECT before viewing."
+    if pose:
+        if target_label not in {"MALE_ANATOMY", "FEMALE_ANATOMY"}:
+            return "REVIEW_REQUIRED", "Pose requires an explicit male or female target label."
+        if _clean(target.get("anatomy_evidence_source")) == UNKNOWN:
+            return "REVIEW_REQUIRED", "Pose target label requires evidence."
+        if source_label == UNKNOWN:
+            return "REVIEW_REQUIRED", "Pose requires a unique explicit matching male or female source label; unknown, neutral and mixed sources are ineligible."
+        return "ALLOWED", "Explicit pose subject label matches the target."
+    return None
 
 
 def _is_full_body_reference(reference: dict[str, Any]) -> bool:
@@ -176,6 +248,15 @@ def validate_reference_compatibility(
     if not role_set:
         decisions.append(("REVIEW_REQUIRED", "Role is missing or has no compatibility policy."))
     for role in sorted(role_set):
+        if role == "FACE" and target_id != UNKNOWN and ref_character != UNKNOWN and target_id != ref_character:
+            decisions.append(("BLOCKED", "Face identity references must belong to the canonical target character."))
+            continue
+        strict = strict_subject_decision(identity, reference, pose=role in POSE_ROLES, role=role)
+        if strict is not None:
+            decisions.append(strict)
+            if role in POSE_ROLES:
+                forbidden = ["Do not transfer identity or permanent anatomy from pose sources."]
+            continue
         if role in ANATOMY_ROLES:
             if target_id != UNKNOWN and source_character == target_id:
                 decisions.append(("ALLOWED", "Reference is the same canonical character's approved body source."))
@@ -213,7 +294,7 @@ def validate_reference_compatibility(
                     decisions.append(("ALLOWED", "Reviewed subject-anatomy compatibility explicitly matches the target."))
                 forbidden = ["Do not transfer gender identity, visible presentation, or anatomy beyond the reviewed interaction geometry."]
                 continue
-            decisions.append(("ALLOWED", "Soft reference role can cross visible presentation."))
+            decisions.append(("ALLOWED", "Reviewed subject classification is compatible; transfer only the declared role."))
             forbidden = ["Do not transfer gender identity, visible presentation, or anatomy."]
         else:
             decisions.append(("REVIEW_REQUIRED", f"Role has no compatibility policy: {role}."))

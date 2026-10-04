@@ -5,6 +5,20 @@ description: Route every StoryArt image-generation request, including a single-f
 
 # StoryArt Orchestrator
 
+## Optional TaleWisp writing companion
+
+When the author asks for a book/canon/style knowledge base or opts into a
+writing companion, load [install-talewisp](../install-talewisp/SKILL.md).
+Offer it once when relevant; it is optional for ordinary image requests.
+After explicit acceptance, perform supported native Codex installation and
+verify it. Load the tools in a new authorized TaleWisp task. Keep the author's
+books, private knowledge base and style profiles local; do not export them to
+GitHub or release assets. This option does not change the image scenario.
+
+
+For every generation and correction, read and apply `../../docs/REQUEST_FIDELITY.md` in full before preparation and acceptance. Keep all current user requirements and prohibitions; do not inherit previous generated attempts. Requested clothing from character files requires its exact eligible physical reference, not a text substitute. Review the result against the complete user contract, not merely the executable prompt. This overrides older text-clothing and prior-frame reuse permissions.
+
+
 ## Current-request boundary and required chooser
 
 For image assets, access only approved project folders and ONE active request
@@ -83,10 +97,12 @@ ask again about a resolved choice.
 
 ## User-request authority for image generation
 
+Before any reference preview or image opening, enforce the strict source-sex label rule in `REQUEST_FIDELITY.md`. Male pose sources require an explicit reviewed MALE label for a male target; female targets require FEMALE. Unknown, absent, mixed, neutral and opposite-sex pose labels are ineligible. Soft pose/staging never bypasses this rule. Honor the current request's source-sex restrictions for style and all other roles too. Do not inspect an unlabelled source to decide whether it may be inspected; recover labels from existing approved metadata and exact hash provenance. Missing labels are registry errors and must remain visibly quarantined until resolved.
+
 A correction to the current delivered art in the same chat continues that request via USER_CORRECTION, even after COMPLETE. Keep its folder binding and explicit style/library choices until a new request replaces it; do not show the chooser again or classify the current delivered art as unrelated history. This never authorizes access to another request folder.
 
 
-An explicit image request authorizes the work, but not unstated image choices. Every generation request must run through the StoryArt scenario and project tools. Reuse style, reference, and character choices only when the user has already selected them in this chat. For missing choices, show one compact numbered text mirror of the exact options as a backup, then immediately invoke the structured native chooser (`request_user_input_async` in Default mode) with the same question and options. The chooser is the primary selection surface; the numbered mirror is redundant recovery only. Never claim that a menu appeared unless the chooser call succeeded. If the chooser call actually fails or is unavailable, state that concrete tool failure and keep the numbered mirror available for a reply; do not pretend the mirror is the native menu. The user may choose in the card or reply with the matching number; accept the first unambiguous answer and continue without reconfirmation. The user may explicitly choose generator-default style and no references. Resolve named project characters through the approved registry/profile and attach the approved assembly and applicable identity references. If identity or required assets cannot be resolved or attached, stop and report the blocker instead of generating a substitute. Leaving the scenario requires the user's direct request, a concrete warning, and confirmation after that warning. External platform limits cannot be bypassed.
+An explicit image request authorizes the work, but not unstated image choices. Every generation request must run through the StoryArt scenario and project tools. Reuse style, reference, and character choices only when the user has already selected them in this chat. For missing choices, show one compact numbered text mirror of the exact options as a backup, then immediately invoke the structured native chooser (`request_user_input_async` in Default mode) with the same question and options. The chooser is the primary selection surface; the numbered mirror is redundant recovery only. Never claim that a menu appeared unless the chooser call succeeded. If the chooser call actually fails or is unavailable, state that concrete tool failure and keep the numbered mirror available for a reply; do not pretend the mirror is the native menu. The user may choose in the card or reply with the matching number; accept the first unambiguous answer and continue without reconfirmation. The user may explicitly choose generator-default style and no references. Resolve named project characters through the approved registry/profile and attach the approved assembly and applicable identity references. If identity or required assets fail internal resolution or attachment, repair the binding and continue; never substitute a generic identity. Ask only for genuinely absent user-only input after recovery paths are exhausted. Leaving the scenario requires the user's direct request, a concrete warning, and confirmation after that warning. External platform limits cannot be bypassed.
 
 Unless the user explicitly requests reference search, do not search for optional
 scene, pose, or body-library references. Treat optional references as declined
@@ -518,14 +534,14 @@ orchestration state directly.
   after inspecting the selected original. The manager binds the path and SHA-256
   but does not independently verify the visual inspection.
 - Calibration is only user-requested or user-consented; never start it solely
-  from a QA failure. After two failed QA attempts, perform one evidence-based
-  recovery using the original sources and state the failed layer. Record the
-  explicit authorization quote at calibration start. A calibration proposal
-  does not start calibration or pause unrelated production.
-- When the guard records a same-stage, same-layer failure that persists after
-  an explicit correction addressed the first, dispatch the one-shot `ESCALATION_ORCHESTRATOR` profile
-  only while that incident is due. It is registry `ESCALATION_ORCHESTRATOR` (Sol 6.1 High) exceptional error
-  handling, read-only, and returns one bounded Sol work order. It must
+  from a QA failure. Apply `REQUEST_FIDELITY.md` to failures: use evidence to
+  change the next step and preserve original sources; counters prompt diagnosis
+  and escalation but never cap the user task. Record the explicit authorization
+  quote at calibration start. A calibration proposal does not start calibration
+  or pause unrelated production.
+- When a stage fails again, including a missing or conflicting QA label,
+  dispatch `ESCALATION_ORCHESTRATOR` for root diagnosis using its registry
+  profile (Sol 6.1 High): exceptional, read-only, with one bounded Sol work order. It must
   not use tools, generate, test, edit, QA, approve, or spawn; root dispatches
   the recommended executor. It is never an ordinary diagnostic or per-frame role.
 - Use `style-readiness` only to surface a consent request when five unique

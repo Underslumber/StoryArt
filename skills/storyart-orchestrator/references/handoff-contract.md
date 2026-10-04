@@ -58,9 +58,9 @@ missing path, or unsupported verbal-only claim cannot satisfy completion.
 
 Use `REJECTED` for a completed assessment that rejects a candidate or output.
 Use `BLOCKED` only for a concrete condition the assigned role cannot resolve.
-On budget exhaustion, return the collected evidence to root and do not claim the
-whole task is complete. The root retains the two-repair-loop limit and decides
-whether a recovery is justified.
+On packet budget exhaustion, return the collected evidence to root and do not
+claim the whole task is complete. The packet ceiling is not a cap on the user's
+task; root follows `REQUEST_FIDELITY.md` and continues or escalates diagnosis.
 
 ## Routing precedence
 

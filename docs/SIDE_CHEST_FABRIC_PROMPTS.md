@@ -40,6 +40,6 @@ Use these outcome constraints with each single formulation:
 No conventional triangle cup, no broad lateral side panel, no fabric under the armpit, no sports-bra expansion, no lifted or flattened chest, no changed chest projection, and no anatomy or silhouette drift.
 ```
 
-Do not use the already blocked/degraded formulations: `entire lateral half clear`, clock semicircle `12-3-6`, `outside garment` quadrant wording, radial sectors, strong-foreshortening front patches, or a sternum boundary combined with both outer quadrants explicitly empty.
+Previously blocked/degraded formulations include: `entire lateral half clear`, clock semicircle `12-3-6`, `outside garment` quadrant wording, radial sectors, strong-foreshortening front patches, or a sternum boundary combined with both outer quadrants explicitly empty. These observations are diagnostic evidence, not a project ban on retrying a permissible request. Apply the retry and safety requirements in `REQUEST_FIDELITY.md`.
 
 If a fresh generation still expands the panel, perform one isolated same-stage edit that changes only colored garment pixels, uses `SIDE_LINE_ONLY_WORKING.png` as hard `CLOTHING_TOPOLOGY`, and pixel-locks the body's external contour. Reject the edit if chest projection or any other anatomy changes.

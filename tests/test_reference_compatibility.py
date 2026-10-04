@@ -69,7 +69,7 @@ class ReferenceCompatibilityTests(unittest.TestCase):
         self.assertEqual(result["status"], "REVIEW_REQUIRED")
         self.assertFalse(result["compatible"])
 
-    def test_reviewed_male_reference_is_allowed_and_pose_only_cross_sex_remains_allowed(self):
+    def test_reviewed_male_reference_is_allowed_and_unknown_pose_is_blocked(self):
         result = validate_reference_compatibility(
             self.target,
             {"subject_anatomy_compatibility": "MALE_ANATOMY", "subject_anatomy_evidence_source": "review", "framing": "FULL_BODY"},
@@ -77,10 +77,10 @@ class ReferenceCompatibilityTests(unittest.TestCase):
         )
         self.assertEqual(result["status"], "ALLOWED")
         pose = validate_reference_compatibility(self.target, {"framing": "FULL_BODY"}, ["AUX_POSE"])
-        self.assertEqual(pose["status"], "ALLOWED")
+        self.assertEqual(pose["status"], "REVIEW_REQUIRED")
 
     def test_compatibility_wrapper_preserves_full_framing_for_soft_role_anatomy_gate(self):
-        with self.assertRaisesRegex(style_pack_manager.StylePackError, "BLOCKED"):
+        with self.assertRaisesRegex(style_pack_manager.StylePackError, "BLOCKED|REVIEW_REQUIRED"):
             style_pack_manager.enforce_reference_compatibility(
                 self.target,
                 {
@@ -92,18 +92,17 @@ class ReferenceCompatibilityTests(unittest.TestCase):
                 ["CLOTHES"],
             )
 
-        pose = style_pack_manager.enforce_reference_compatibility(
-            self.target, {"path": "pose-reference.png", "framing": "FULL"}, ["AUX_POSE"]
-        )
-        self.assertEqual(pose["status"], "ALLOWED")
+        with self.assertRaisesRegex(style_pack_manager.StylePackError, "REVIEW_REQUIRED"):
+            style_pack_manager.enforce_reference_compatibility(
+                self.target, {"path": "pose-reference.png", "framing": "FULL"}, ["AUX_POSE"]
+            )
 
-    def test_soft_pose_style_and_background_can_cross_presentation(self):
-        for role in ("POSE_SOFT", "STYLE", "BACKGROUND"):
+    def test_style_and_background_require_reviewed_subject_labels(self):
+        for role in ("STYLE", "BACKGROUND"):
             result = validate_reference_compatibility(
                 self.target, {"visible_presentation": "FEMININE"}, [role]
             )
-            self.assertEqual(result["status"], "ALLOWED")
-            self.assertTrue(result["forbidden_transfers"])
+            self.assertEqual(result["status"], "REVIEW_REQUIRED")
 
     def test_missing_metadata_stays_unknown_and_does_not_replace_reference(self):
         missing = Path(self.temp.name) / "unknown.yaml"
@@ -119,13 +118,13 @@ class ReferenceCompatibilityTests(unittest.TestCase):
         )
         self.assertEqual(result["status"], "BLOCKED")
 
-    def test_canonical_character_body_remains_allowed(self):
+    def test_character_id_alone_cannot_supply_body_subject_label(self):
         result = validate_reference_compatibility(
-            {"character_id": "CHAR_001", "target_anatomy": "UNKNOWN"},
+            {"character_id": "CHAR_001", "target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "approved canonical profile"},
             {"source_character_id": "CHAR_001"},
             ["BODY"],
         )
-        self.assertEqual(result["status"], "ALLOWED")
+        self.assertEqual(result["status"], "REVIEW_REQUIRED")
 
     def test_mixed_roles_cannot_bypass_a_foreign_face_identity(self):
         result = validate_reference_compatibility(
@@ -304,7 +303,7 @@ class ReferenceCompatibilityTests(unittest.TestCase):
                 "slots": [{"path": str(image), "sha256": style_pack_manager.sha256(image), "active_roles": ["CLOTHES"], "slot": 1}],
             },
         }
-        with self.assertRaisesRegex(style_pack_manager.StylePackError, "BLOCKED"):
+        with self.assertRaisesRegex(style_pack_manager.StylePackError, "BLOCKED|REVIEW_REQUIRED"):
             style_pack_manager.resolve_call_slots(paths, root / "REFERENCE_PLAN.json", plan, "SINGLE_PASS")
 
     def test_final_resolve_call_uses_planned_semantic_role_for_primary_face(self):
@@ -332,7 +331,7 @@ class ReferenceCompatibilityTests(unittest.TestCase):
                 "slots": [{"path": str(image), "sha256": style_pack_manager.sha256(image), "active_roles": ["PRIMARY_FACE"], "slot": 1}],
             },
         }
-        with patch("tools.style_pack_manager.canonical_source_character_id", return_value="CHAR_001"):
+        with patch("tools.style_pack_manager.registered_approved_character_asset", return_value={"character_id": "CHAR_001", "asset_role": "FACE", "target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "approved profile", "profile_path": "approved-profile.yaml"}):
             slots = style_pack_manager.resolve_call_slots(paths, root / "REFERENCE_PLAN.json", plan, "SINGLE_PASS")
         self.assertEqual(slots[0]["active_roles"], ["PRIMARY_FACE"])
 
@@ -348,6 +347,7 @@ class ReferenceCompatibilityTests(unittest.TestCase):
             "ref_id": "BR_0001", "generator_path": "generator/reference.png", "generator_safe": "YES",
             "allowed_roles": role, "framing": "FULL_BODY", "anatomy_compatibility": "MALE_ANATOMY",
             "anatomy_evidence_source": "reviewed reference",
+            "subject_label_sha256": style_pack_manager.sha256(image),
         }
         with manifest.open("w", encoding="utf-8-sig", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=list(row))
@@ -383,10 +383,10 @@ class ReferenceCompatibilityTests(unittest.TestCase):
         with self.assertRaisesRegex(style_pack_manager.StylePackError, "per-file compatibility record"):
             style_pack_manager.resolve_call_slots(paths, root / "REFERENCE_PLAN.json", plan, "SINGLE_PASS")
 
-    def test_resolve_call_preserves_body_library_pose_only_cross_sex_attachment(self):
+    def test_resolve_call_requires_pose_target_label(self):
         root, image, paths, plan = self._body_library_call_fixture(role="AUX_POSE", with_target=False)
-        slots = style_pack_manager.resolve_call_slots(paths, root / "REFERENCE_PLAN.json", plan, "SINGLE_PASS")
-        self.assertEqual(slots[0]["path"], str(image.resolve()))
+        with self.assertRaisesRegex(style_pack_manager.StylePackError, "evidence-backed target"):
+            style_pack_manager.resolve_call_slots(paths, root / "REFERENCE_PLAN.json", plan, "SINGLE_PASS")
 
     def test_pose_only_body_reference_revalidates_manifest_safety_and_hashes(self):
         root, image, paths, plan = self._body_library_call_fixture(role="AUX_POSE", with_target=False)
@@ -426,7 +426,7 @@ class ReferenceCompatibilityTests(unittest.TestCase):
     def test_execution_started_rechecks_current_body_library_manifest(self):
         from tools import task_execution_guard as guard
 
-        def ready_fixture(*, role="AUX_POSE", anatomy="", mutate=None):
+        def ready_fixture(*, role="AUX_POSE", anatomy="MALE_ANATOMY", mutate=None):
             root = Path(self.temp.name) / f"start-{role}-{anatomy or 'pose'}-{mutate or 'valid'}"
             workspace = root / "workspace"
             paths = style_pack_manager.make_paths(workspace, "STYLE")
@@ -439,6 +439,7 @@ class ReferenceCompatibilityTests(unittest.TestCase):
                 "ref_id": "BR_0001", "generator_path": "generator/reference.png", "generator_safe": "YES",
                 "allowed_roles": role, "framing": "FULL_BODY", "anatomy_compatibility": anatomy,
                 "anatomy_evidence_source": "reviewed reference" if anatomy else "",
+                "subject_label_sha256": style_pack_manager.sha256(image),
             }
             def write_manifest():
                 with manifest.open("w", encoding="utf-8-sig", newline="") as handle:

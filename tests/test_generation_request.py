@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from tools import generation_request as request
+from tools import task_execution_guard
 
 
 def _parser():
@@ -342,6 +343,114 @@ def test_finalize_only_allows_ready_plan_at_valid_next_stage_transition(monkeypa
     assert "STATUS=READY_FOR_GENERATION" in capsys.readouterr().out
 
 
+def test_recovered_ready_stage_can_finalize_same_stage_without_repreparing(tmp_path, monkeypatch, capsys):
+    folder = tmp_path / "S_GENERATIONS" / "00_PENDING" / "req"
+    folder.mkdir(parents=True)
+    request_file = tmp_path / "request.json"
+    call_file = tmp_path / "call.json"
+    request_file.write_text(json.dumps({"request_id": "req", "style_name": "S", "fidelity": 90}), encoding="utf-8")
+    call_file.write_text(json.dumps({"prompt_text": "corrected prompt", "stage_id": "STAGE_1", "reference_ratings": []}), encoding="utf-8")
+    (folder / "REFERENCE_PLAN.json").write_text(json.dumps({
+        "gate_status": "READY_FOR_GENERATION",
+        "execution_call": {"stage_id": "STAGE_1", "prompt": {"text": "previous bound prompt"}},
+        "generation_workflow": {"mode": "MULTI_STAGE", "stages": [{"stage_id": "STAGE_1"}]},
+    }), encoding="utf-8")
+    (folder / "EXECUTION_GUARD.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(request.manager, "make_paths", lambda workspace, style: Namespace(generations=tmp_path / "S_GENERATIONS"))
+    monkeypatch.setattr(request.manager, "safe_component", lambda value, fallback: value)
+    monkeypatch.setattr(request.manager, "assert_active_request_path", lambda path: None)
+    monkeypatch.setattr(request.manager, "load_execution_guard", lambda path: {
+        "status": "ACTIVE", "next_required_action": "PREFLIGHT_OR_EXECUTION", "waiting_since": None,
+        "active_attempt": None, "attempts": [],
+        "required_stages": [{"id": "STAGE_1", "status": "PENDING"}],
+        "events": [
+            {"event": "READY_FOR_EXECUTION", "stage": "STAGE_1"},
+            {"event": "RECOVERY_REQUIRED", "summary": "bad call input"},
+            {"event": "RECOVERY_RESOLVED", "summary": "input repaired", "evidence": ["corrected call file"]},
+        ],
+    })
+    monkeypatch.setattr(request, "_semantic_errors", lambda args: [])
+    preparations = []
+    finalized = []
+    monkeypatch.setattr(request.manager, "command_prepare_generation", lambda args: preparations.append(args))
+    monkeypatch.setattr(request, "_finalize_call", lambda args, call: finalized.append(call) or "EXECUTION_CALL={\"stage_id\":\"STAGE_1\"}\nSTATUS=READY_FOR_GENERATION\n")
+
+    assert request.main(["--request-file", str(request_file), "--call-file", str(call_file), "--finalize-only"]) == 0
+    assert preparations == []
+    assert finalized == [{"prompt_text": "corrected prompt", "stage_id": "STAGE_1", "reference_ratings": []}]
+    assert "STATUS=READY_FOR_GENERATION" in capsys.readouterr().out
+
+
+def test_failed_finalize_recovery_resolution_then_same_stage_finalize(tmp_path, monkeypatch, capsys):
+    folder = tmp_path / "S_GENERATIONS" / "00_PENDING" / "req"
+    folder.mkdir(parents=True)
+    request_file = tmp_path / "request.json"
+    call_file = tmp_path / "call.json"
+    request_file.write_text(json.dumps({"request_id": "req", "style_name": "S", "workspace": str(tmp_path), "fidelity": 90}), encoding="utf-8")
+    call_file.write_text(json.dumps({"prompt_text": "corrected prompt", "stage_id": "STAGE_1", "reference_ratings": []}), encoding="utf-8")
+    (folder / "REFERENCE_PLAN.json").write_text(json.dumps({
+        "gate_status": "READY_FOR_GENERATION", "execution_call": {"stage_id": "STAGE_1"},
+        "generation_workflow": {"mode": "MULTI_STAGE", "stages": [{"stage_id": "STAGE_1"}]},
+    }), encoding="utf-8")
+    guard_path = folder / "EXECUTION_GUARD.json"
+    guard_path.write_text("{}", encoding="utf-8")
+    guard = {
+        "request_id": "req", "status": "ACTIVE", "next_required_action": "PREFLIGHT_OR_EXECUTION",
+        "waiting_since": None, "active_attempt": None, "attempts": [],
+        "required_stages": [{"id": "STAGE_1", "status": "PENDING"}],
+        "events": [
+            {"event": "READY_FOR_EXECUTION", "stage": "STAGE_1"},
+            {"event": "USER_CORRECTION", "stage": "STAGE_1"},
+        ],
+    }
+    monkeypatch.setattr(request.manager, "make_paths", lambda workspace, style: Namespace(generations=tmp_path / "S_GENERATIONS"))
+    monkeypatch.setattr(request.manager, "safe_component", lambda value, fallback: value)
+    monkeypatch.setattr(request.manager, "assert_active_request_path", lambda path: None)
+    monkeypatch.setattr(request.manager, "load_execution_guard", lambda path: guard)
+    monkeypatch.setattr(task_execution_guard, "load_guard", lambda path: guard)
+
+    def checkpoint(path, *, event, summary, **kwargs):
+        guard["events"].append({"event": event, "summary": summary})
+        if event == "RECOVERY_REQUIRED":
+            guard["status"] = "ACTIVE"
+            guard["phase"] = "RECOVERY"
+            guard["next_required_action"] = "RECOVER_AND_CONTINUE"
+        else:
+            guard["status"] = "ACTIVE"
+            guard["phase"] = "PREFLIGHT"
+            guard["next_required_action"] = "PREFLIGHT_OR_EXECUTION"
+        return guard
+
+    monkeypatch.setattr(task_execution_guard, "checkpoint", checkpoint)
+    monkeypatch.setattr(request, "_semantic_errors", lambda args: [])
+    preparations = []
+    finalize_calls = []
+
+    def finalize(_args, call):
+        finalize_calls.append(call)
+        if len(finalize_calls) == 1:
+            raise request.manager.StylePackError("reference changed during finalization")
+        return "EXECUTION_CALL={\"stage_id\":\"STAGE_1\"}\nSTATUS=READY_FOR_GENERATION\n"
+
+    monkeypatch.setattr(request.manager, "command_prepare_generation", lambda args: preparations.append(args))
+    monkeypatch.setattr(request, "_finalize_call", finalize)
+    invocation = ["--request-file", str(request_file), "--call-file", str(call_file), "--finalize-only"]
+
+    assert request.main(invocation) == 2
+    first = capsys.readouterr()
+    assert "RECOVERY_REQUIRED" in first.err
+    assert guard["next_required_action"] == "RECOVER_AND_CONTINUE"
+    # Simulate the repair being evidenced and recorded through the guard API.
+    checkpoint(guard_path, event="RECOVERY_RESOLVED", summary="corrected exact call input", evidence=["same-stage call corrected"])
+    assert guard["next_required_action"] == "PREFLIGHT_OR_EXECUTION"
+
+    assert request.main(invocation) == 0
+    second = capsys.readouterr()
+    assert "STATUS=READY_FOR_GENERATION" in second.out
+    assert preparations == []
+    assert len(finalize_calls) == 2
+
+
 @pytest.mark.parametrize("attempt_state", ["active", "unknown"])
 def test_finalize_only_blocks_ready_plan_with_active_or_unknown_attempt(monkeypatch, capsys, attempt_state):
     documents = {
@@ -426,6 +535,22 @@ def test_same_stage_requires_current_applicable_correction(correction_after_read
     else:
         with pytest.raises(request.manager.StylePackError, match="no current correction"):
             request._validate_ready_stage(plan, guard, {"stage_id": "STAGE_1"})
+
+
+def test_recovery_resolution_after_ready_authorizes_same_stage_rebuild():
+    plan = {
+        "generation_workflow": {"mode": "MULTI_STAGE", "stages": [{"stage_id": "STAGE_1"}]},
+        "execution_call": {"stage_id": "STAGE_1"},
+    }
+    guard = {
+        "required_stages": [{"id": "STAGE_1", "status": "PENDING"}],
+        "events": [
+            {"event": "READY_FOR_EXECUTION", "stage": "STAGE_1"},
+            {"event": "RECOVERY_REQUIRED", "summary": "call validation input error"},
+            {"event": "RECOVERY_RESOLVED", "summary": "call input repaired", "evidence": ["same request call file corrected"]},
+        ],
+    }
+    request._validate_ready_stage(plan, guard, {"stage_id": "STAGE_1"})
 
 
 def test_actual_risk_writer_uses_fresh_file_and_late_rejection_preserves_old_risk(tmp_path, monkeypatch):

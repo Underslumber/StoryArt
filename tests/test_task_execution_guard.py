@@ -332,6 +332,15 @@ class TaskExecutionGuardTests(unittest.TestCase):
             summary="Start the exact ready fixture call.", now=BASE_TIME,
         )
 
+    def stage_result_fixture(self, path: Path, stage: str, image: Path, *, final: bool = False):
+        image.write_bytes(f"registered-{stage}".encode("utf-8"))
+        started = self.strict_start(path, stage=stage)
+        return _raw_checkpoint(
+            path, event="VISIBLE_RESULT", attempt_id=started["active_attempt"]["attempt_id"],
+            result_status="TEST" if final else "STAGING", evidence=[str(image)],
+            summary=f"Registered QA-passed result for {stage}.", now=BASE_TIME,
+        )
+
     def test_image_edit_direct_chat_lifecycle_needs_no_plan_or_local_files(self):
         with tempfile.TemporaryDirectory() as folder:
             path, _ = self.make_guard(folder, task_kind="IMAGE_EDIT")
@@ -727,6 +736,35 @@ class TaskExecutionGuardTests(unittest.TestCase):
             resumed = _raw_checkpoint(path, event="USER_RESUMED", summary="Explicitly resume after reconciliation.", now=BASE_TIME)
             self.assertEqual(resumed["status"], "ACTIVE")
 
+    def test_unknown_reconciliation_preserves_active_task_and_explicit_stop(self):
+        for explicit_stop in (False, True):
+            with self.subTest(explicit_stop=explicit_stop), tempfile.TemporaryDirectory() as folder:
+                path, _ = self.make_guard(folder)
+                started = self.strict_start(path)
+                attempt_id = started["active_attempt"]["attempt_id"]
+                _raw_checkpoint(path, event="STOP" if explicit_stop else "ATTEMPT_UNKNOWN",
+                                attempt_id=attempt_id, summary="User stop." if explicit_stop else "Provider timeout.", now=BASE_TIME)
+                for _ in range(2):
+                    current = _raw_checkpoint(path, event="ATTEMPT_RECONCILED", attempt_id=attempt_id,
+                                              outcome="UNKNOWN", reconciliation_evidence="Provider status remains unresolved.",
+                                              summary="Reconcile without guessing the outcome.", now=BASE_TIME)
+                    self.assertEqual(current["status"], "STOPPED" if explicit_stop else "ACTIVE")
+                    self.assertEqual(current["next_required_action"], "RECONCILE_UNKNOWN_ATTEMPT")
+                    self.assertEqual(guard.completion_continuation(current)["action"],
+                                     "USER_STOPPED" if explicit_stop else "RECONCILE_ATTEMPT")
+                for event in ("READY_FOR_EXECUTION", "EXECUTION_STARTED", "COMPLETE"):
+                    with self.assertRaises(guard.GuardError):
+                        _raw_checkpoint(path, event=event, summary="Do not duplicate an unknown operation.", now=BASE_TIME)
+                image = Path(folder) / "late.png"
+                image.write_bytes(b"fixture provider result")
+                recovered = _raw_checkpoint(path, event="ATTEMPT_RECONCILED", attempt_id=attempt_id,
+                                            outcome="AVAILABLE", result_status="STAGING", evidence=[str(image)],
+                                            reconciliation_evidence="Provider confirms output is available.",
+                                            summary="Recover the completed provider output.", now=BASE_TIME)
+                self.assertEqual(recovered["status"], "STOPPED" if explicit_stop else "ACTIVE")
+                self.assertEqual(recovered["next_required_action"],
+                                 "USER_RESUMED" if explicit_stop else "NEXT_SAFE_EXECUTION_OR_COMPLETE")
+
     def test_refusal_is_distinct_from_qa_rejection(self):
         with tempfile.TemporaryDirectory() as folder:
             path, _ = self.make_guard(folder)
@@ -908,6 +946,47 @@ class TaskExecutionGuardTests(unittest.TestCase):
             _, state = self.make_guard(folder, required_stages=["FACE", "FRONT", "SIDE", "BACK", "ASSEMBLY"])
             self.assertEqual(guard.pending_required_stages(state), ["FACE", "FRONT", "SIDE", "BACK", "ASSEMBLY"])
 
+    def test_character_base_plan_reconciles_incomplete_guard_without_losing_completed_stage(self):
+        with tempfile.TemporaryDirectory() as folder:
+            _, state = self.make_guard(folder, required_stages=["01_FACE_IDENTITY"])
+            state["required_stages"][0]["status"] = "COMPLETED"
+            plan = {
+                "generation_purpose": "CHARACTER_BASE",
+                "generation_workflow": {
+                    "mode": "MULTI_STAGE",
+                    "stages": [{"stage_id": stage_id} for stage_id in guard.CHARACTER_BASE_STAGES],
+                },
+            }
+            guard.reconcile_plan_required_stages(state, plan)
+            self.assertEqual([row["id"] for row in state["required_stages"]], list(guard.CHARACTER_BASE_STAGES))
+            self.assertEqual(state["required_stages"][0]["status"], "COMPLETED")
+            self.assertEqual([row["status"] for row in state["required_stages"][1:]], ["PENDING"] * 4)
+
+    def test_character_base_executed_snapshot_cannot_complete_with_missing_stages(self):
+        for configured in ([], ["01_FACE_IDENTITY"]):
+            with self.subTest(configured=configured), tempfile.TemporaryDirectory() as folder:
+                path, _ = self.make_guard(folder)
+                image = Path(folder) / "single.png"
+                self.stage_result_fixture(path, "SINGLE_PASS", image, final=True)
+                current = guard.load_guard(path)
+                final_attempt = current["attempts"][-1]
+                _raw_checkpoint(
+                    path, event="RESULT_DELIVERED", attempt_id=final_attempt["attempt_id"],
+                    delivery_evidence=["fixture delivery receipt"],
+                    summary="The one available image was delivered.", now=BASE_TIME,
+                )
+                current = guard.load_guard(path)
+                current["request_purpose"] = "CHARACTER_BASE"
+                current["attempts"][-1]["execution_snapshot"]["request_purpose"] = "CHARACTER_BASE"
+                current["required_stages"] = [
+                    {"id": stage_id, "status": "COMPLETED", "completed_at": guard.iso_time(BASE_TIME), "evidence": [str(image)]}
+                    for stage_id in configured
+                ]
+                guard.atomic_write_json(path, current)
+                with self.assertRaisesRegex(guard.GuardError, "CHARACTER_BASE guard is missing"):
+                    _raw_checkpoint(path, event="COMPLETE", summary="Claim the partial base as complete.", now=BASE_TIME)
+                self.assertEqual(guard.load_guard(path)["status"], "ACTIVE")
+
     def test_action_budget_stops_more_preflight_without_ending_task(self):
         with tempfile.TemporaryDirectory() as folder:
             path, _ = self.make_guard(folder, max_preflight_actions=2)
@@ -996,11 +1075,12 @@ class TaskExecutionGuardTests(unittest.TestCase):
             )
             watched = guard.guard_status(path, now=BASE_TIME + timedelta(minutes=11))
             self.assertEqual(watched["status"], "ACTIVE")
-            self.assertEqual(watched["phase"], "WATCHDOG")
+            self.assertEqual(watched["phase"], "EXECUTION")
             self.assertEqual(
                 watched["next_required_action"],
-                "CHECK_EXECUTION_OR_VISIBLE_RESULT_OR_BLOCKER",
+                "VISIBLE_RESULT_OR_BLOCKER",
             )
+            self.assertEqual(watched["continuation"]["action"], "CHECK_EXECUTION")
 
             image = Path(folder) / "late-result.png"
             image.write_bytes(b"png-placeholder")
@@ -1081,7 +1161,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
                 now=BASE_TIME + timedelta(minutes=1),
             )
             self.assertEqual(state["status"], "ACTIVE")
-            self.assertEqual(state["phase"], "PREFLIGHT")
+            self.assertEqual(state["phase"], "RECOVERY")
             self.assertNotIn("blocker", state)
 
     def test_image_result_requires_real_file_after_execution(self):
@@ -1157,16 +1237,8 @@ class TaskExecutionGuardTests(unittest.TestCase):
     def test_complete_rejects_pending_required_stages(self):
         with tempfile.TemporaryDirectory() as folder:
             path, _ = self.make_guard(folder, required_stages=["FACE", "BACK", "ASSEMBLY"])
-            self.checkpoint_fixture(path, event="EXECUTION_STARTED", summary="Generate face.", now=BASE_TIME)
             image = Path(folder) / "face.png"
-            image.write_bytes(b"png-placeholder")
-            self.checkpoint_fixture(
-                path,
-                event="VISIBLE_RESULT",
-                summary="Face produced.",
-                evidence=[str(image)],
-                now=BASE_TIME,
-            )
+            self.stage_result_fixture(path, "FACE", image)
             self.checkpoint_fixture(
                 path,
                 event="STAGE_COMPLETED",
@@ -1185,17 +1257,9 @@ class TaskExecutionGuardTests(unittest.TestCase):
             path, _ = self.make_guard(folder, required_stages=["BACK", "ASSEMBLY"])
             outputs = []
             for stage in ("BACK", "ASSEMBLY"):
-                self.checkpoint_fixture(path, event="EXECUTION_STARTED", summary=f"Generate {stage}.", now=BASE_TIME)
                 image = Path(folder) / f"{stage.lower()}.png"
-                image.write_bytes(b"png-placeholder")
                 outputs.append(image)
-                self.checkpoint_fixture(
-                    path,
-                    event="VISIBLE_RESULT",
-                    summary=f"{stage} produced.",
-                    evidence=[str(image)],
-                    now=BASE_TIME,
-                )
+                self.stage_result_fixture(path, stage, image, final=stage == "ASSEMBLY")
                 self.checkpoint_fixture(
                     path,
                     event="STAGE_COMPLETED",
@@ -1217,7 +1281,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             path, _ = self.make_guard(folder, required_stages=["SIDE", "BACK"])
             image = Path(folder) / "side.png"
-            image.write_bytes(b"png-placeholder")
+            self.stage_result_fixture(path, "SIDE", image)
             self.checkpoint_fixture(
                 path,
                 event="STAGE_COMPLETED",
@@ -1229,6 +1293,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
             state = self.checkpoint_fixture(
                 path,
                 event="USER_CORRECTION",
+                stage="BACK",
                 summary="Keep SIDE and continue the original kit.",
                 now=BASE_TIME,
             )
@@ -1318,19 +1383,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
             face.write_bytes(b"face-placeholder")
             assembly.write_bytes(b"assembly-placeholder")
             for stage, image in (("FACE", face), ("ASSEMBLY", assembly)):
-                self.checkpoint_fixture(
-                    path,
-                    event="EXECUTION_STARTED",
-                    summary=f"Generate {stage}.",
-                    now=BASE_TIME,
-                )
-                self.checkpoint_fixture(
-                    path,
-                    event="VISIBLE_RESULT",
-                    summary=f"{stage} produced.",
-                    evidence=[str(image)],
-                    now=BASE_TIME,
-                )
+                self.stage_result_fixture(path, stage, image, final=stage == "ASSEMBLY")
                 self.checkpoint_fixture(
                     path,
                     event="STAGE_COMPLETED",
@@ -1350,22 +1403,116 @@ class TaskExecutionGuardTests(unittest.TestCase):
             corrected = self.checkpoint_fixture(
                 path,
                 event="USER_CORRECTION",
+                stage="ASSEMBLY",
                 summary="User found drift in the final assembly.",
                 now=BASE_TIME,
             )
             self.assertEqual(corrected["status"], "ACTIVE")
             self.assertEqual(corrected["phase"], "CORRECTION")
 
-            reopened = self.checkpoint_fixture(
-                path,
-                event="STAGE_REOPENED",
-                stage="ASSEMBLY",
-                summary="Reopen only the corrected final assembly.",
-                now=BASE_TIME,
-            )
-            self.assertEqual(guard.pending_required_stages(reopened), ["ASSEMBLY"])
-            face_stage = next(item for item in reopened["required_stages"] if item["id"] == "FACE")
+            self.assertEqual(guard.pending_required_stages(corrected), ["ASSEMBLY"])
+            self.assertEqual(corrected["events"][-2]["event"], "STAGE_REOPENED")
+            face_stage = next(item for item in corrected["required_stages"] if item["id"] == "FACE")
             self.assertEqual(face_stage["status"], "COMPLETED")
+
+    def test_unrelated_image_cannot_complete_stage_and_latest_rejection_supersedes_pass(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, _ = self.make_guard(folder, required_stages=["FACE"])
+            accepted = Path(folder) / "face-registered.png"
+            unrelated = Path(folder) / "unrelated.png"
+            self.stage_result_fixture(path, "FACE", accepted)
+            unrelated.write_bytes(b"another image")
+            with self.assertRaisesRegex(guard.GuardError, "exact executed provider artifact hash"):
+                self.checkpoint_fixture(
+                    path, event="STAGE_COMPLETED", stage="FACE", evidence=[str(unrelated)],
+                    summary="An unrelated image cannot close FACE.", now=BASE_TIME,
+                )
+            self.checkpoint_fixture(
+                path, event="STAGE_COMPLETED", stage="FACE", evidence=[str(accepted)],
+                summary="Register the accepted FACE stage result.", now=BASE_TIME,
+            )
+            self.checkpoint_fixture(
+                path, event="STAGE_REOPENED", stage="FACE",
+                summary="Reopen FACE to evaluate a later strategy.", now=BASE_TIME,
+            )
+            started = self.strict_start(path, stage="FACE")
+            rejected = Path(folder) / "new-rejected-face.png"
+            rejected.write_bytes(b"rejected revision")
+            self.checkpoint_fixture(
+                path, event="VISIBLE_RESULT", attempt_id=started["active_attempt"]["attempt_id"],
+                result_status="REJECTED", evidence=[str(rejected)], summary="Latest FACE attempt rejected.", now=BASE_TIME,
+            )
+            self.checkpoint_fixture(
+                path, event="ATTEMPT_REJECTED", attempt_id=started["active_attempt"]["attempt_id"],
+                stage="FACE", summary="Reject the later FACE strategy.", now=BASE_TIME,
+            )
+            with self.assertRaisesRegex(guard.GuardError, "accepted STAGING or TEST execution result"):
+                self.checkpoint_fixture(
+                    path, event="STAGE_COMPLETED", stage="FACE", evidence=[str(accepted)],
+                    summary="The older FACE pass cannot replace the latest rejection.", now=BASE_TIME,
+                )
+            reason = guard.completion_block_reason(guard.load_guard(path))
+            self.assertIsNotNone(reason)
+
+    def test_corrected_face_reopens_only_face_and_back_result_cannot_close_it(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, _ = self.make_guard(folder, required_stages=["FACE", "BACK"])
+            face = Path(folder) / "face.png"
+            back = Path(folder) / "back.png"
+            self.stage_result_fixture(path, "FACE", face)
+            self.checkpoint_fixture(
+                path, event="STAGE_COMPLETED", stage="FACE", evidence=[str(face)],
+                summary="Register FACE.", now=BASE_TIME,
+            )
+            self.stage_result_fixture(path, "BACK", back, final=True)
+            self.checkpoint_fixture(
+                path, event="STAGE_COMPLETED", stage="BACK", evidence=[str(back)],
+                summary="Register BACK.", now=BASE_TIME,
+            )
+            corrected = self.checkpoint_fixture(
+                path, event="USER_CORRECTION", stage="FACE",
+                summary="Correct the delivered FACE while preserving BACK.", now=BASE_TIME,
+            )
+            self.assertEqual(guard.pending_required_stages(corrected), ["FACE"])
+            self.assertEqual(next(row for row in corrected["required_stages"] if row["id"] == "BACK")["status"], "COMPLETED")
+            newer_back = Path(folder) / "newer-back.png"
+            self.stage_result_fixture(path, "BACK", newer_back, final=True)
+            with self.assertRaisesRegex(guard.GuardError, "Image stage FACE requires its own"):
+                self.checkpoint_fixture(
+                    path, event="STAGE_COMPLETED", stage="FACE", evidence=[str(newer_back)],
+                    summary="A newer BACK image cannot satisfy corrected FACE.", now=BASE_TIME,
+                )
+
+    def test_stage_less_multistage_correction_requires_internal_repair(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, _ = self.make_guard(folder, required_stages=["FACE", "ASSEMBLY"])
+            face = Path(folder) / "face.png"
+            assembly = Path(folder) / "assembly.png"
+            for stage, image in (("FACE", face), ("ASSEMBLY", assembly)):
+                self.stage_result_fixture(path, stage, image, final=stage == "ASSEMBLY")
+                self.checkpoint_fixture(
+                    path, event="STAGE_COMPLETED", stage=stage, evidence=[str(image)],
+                    summary=f"Register {stage}.", now=BASE_TIME,
+                )
+            before = guard.load_guard(path)
+            with self.assertRaisesRegex(guard.GuardError, "identify the affected completed stage"):
+                self.checkpoint_fixture(
+                    path, event="USER_CORRECTION",
+                    summary="Correct one component based on the existing user request.", now=BASE_TIME,
+                )
+            after = guard.load_guard(path)
+            self.assertEqual(after["task_revision"], before["task_revision"])
+            self.assertEqual(guard.pending_required_stages(after), [])
+            # An old rejection cannot infer the target of a later correction.
+            before["events"].append({"event": "ATTEMPT_REJECTED", "stage": "FACE", "at": "2026-01-01T00:00:00+00:00"})
+            guard.atomic_write_json(path, before)
+            with self.assertRaisesRegex(guard.GuardError, "identify the affected completed stage"):
+                self.checkpoint_fixture(
+                    path, event="USER_CORRECTION", summary="Correct assembly per current user instruction.", now=BASE_TIME,
+                )
+            after = guard.load_guard(path)
+            self.assertEqual(after["task_revision"], before["task_revision"])
+            self.assertEqual(guard.pending_required_stages(after), [])
 
     def test_rejected_attempt_keeps_multistage_task_active(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -1403,7 +1550,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
             )
             self.assertEqual(state["next_required_action"], "NEXT_SAFE_EXECUTION")
 
-    def test_unbound_or_unrelated_correction_does_not_trigger_escalation(self):
+    def test_stage_correction_triggers_escalation_even_when_qa_layer_changes(self):
         with tempfile.TemporaryDirectory() as folder:
             path, _ = self.make_guard(folder, required_stages=["FRONT"])
             self.checkpoint_fixture(path, event="USER_CORRECTION", stage="FRONT", qa_layer="FACE_GEOMETRY", summary="Correction before any failure.", now=BASE_TIME)
@@ -1412,7 +1559,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
             self.checkpoint_fixture(path, event="USER_CORRECTION", stage="FRONT", qa_layer="BODY_PROPORTIONS", summary="Unrelated correction.", now=BASE_TIME)
             self.checkpoint_fixture(path, event="EXECUTION_STARTED", stage="FRONT", summary="Retry FRONT.", now=BASE_TIME)
             state = self.checkpoint_fixture(path, event="ATTEMPT_REJECTED", stage="FRONT", qa_layer="FACE_GEOMETRY", summary="Second face failure.", now=BASE_TIME)
-            self.assertEqual(state["next_required_action"], "NEXT_SAFE_EXECUTION")
+            self.assertEqual(state["next_required_action"], "ESCALATION_ORCHESTRATOR_REQUIRED")
 
     def test_physique_swimwear_ladder_starts_at_extreme_micro(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -1538,15 +1685,11 @@ class TaskExecutionGuardTests(unittest.TestCase):
     def test_ordinary_rejection_cannot_become_terminal_blocker(self):
         with tempfile.TemporaryDirectory() as folder:
             path, _ = self.make_guard(folder, required_stages=["FRONT", "SIDE"])
-            with self.assertRaises(guard.GuardActionRequired) as raised:
-                self.checkpoint_fixture(
-                    path,
-                    event="BLOCKER",
-                    summary="One reference set was rejected.",
-                    now=BASE_TIME,
-                )
-            self.assertIn("ATTEMPT_REJECTED", str(raised.exception))
-            self.assertEqual(guard.load_guard(path)["status"], "ACTIVE")
+            state = self.checkpoint_fixture(
+                path, event="BLOCKER", summary="One reference set was rejected.", now=BASE_TIME,
+            )
+            self.assertEqual(state["status"], "ACTIVE")
+            self.assertEqual(state["next_required_action"], "RECOVER_AND_CONTINUE")
 
     def test_hard_blocker_requires_exhausted_safe_routes(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -1555,6 +1698,8 @@ class TaskExecutionGuardTests(unittest.TestCase):
                 path,
                 event="BLOCKER",
                 summary="The external generator is unavailable and every approved safe route is exhausted.",
+                blocker_kind="EXTERNAL",
+                evidence=["Provider returned unavailable; no active operation exists."],
                 hard_blocker=True,
                 safe_routes_exhausted=True,
                 now=BASE_TIME,
@@ -1601,7 +1746,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             path, _ = self.make_guard(folder, required_stages=["SIDE"])
             image = Path(folder) / "side.png"
-            image.write_bytes(b"png-placeholder")
+            self.stage_result_fixture(path, "SIDE", image)
             self.checkpoint_fixture(
                 path,
                 event="STAGE_COMPLETED",
@@ -1611,14 +1756,11 @@ class TaskExecutionGuardTests(unittest.TestCase):
                 now=BASE_TIME,
             )
             state = self.checkpoint_fixture(
-                path,
-                event="STAGE_REOPENED",
-                stage="SIDE",
-                summary="User requested a correction to SIDE.",
-                now=BASE_TIME,
+                path, event="USER_CORRECTION", stage="SIDE",
+                summary="User requested a correction to SIDE.", now=BASE_TIME,
             )
             self.assertEqual(guard.pending_required_stages(state), ["SIDE"])
-            self.assertEqual(state["events"][-1]["stage"], "SIDE")
+            self.assertEqual(state["events"][-2]["stage"], "SIDE")
 
 
 class ChatOwnershipTests(unittest.TestCase):

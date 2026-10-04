@@ -6,8 +6,14 @@ import argparse
 import csv
 import json
 import re
+import hashlib
 from pathlib import Path
 from typing import Any
+
+try:
+    from tools.reference_compatibility import explicit_subject_label, validate_reference_compatibility
+except ModuleNotFoundError:
+    from reference_compatibility import explicit_subject_label, validate_reference_compatibility
 
 
 WORKSPACE = Path(__file__).resolve().parents[1]
@@ -87,6 +93,32 @@ def count_manifest_rows(path: Path) -> int:
         return sum(1 for _ in csv.DictReader(stream))
 
 
+def reference_context(type_id: str, target: dict[str, Any], workspace: Path,
+                      registry: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Filter metadata before returning any source, preview or contact-sheet path."""
+    registry = registry or load_registry()
+    spec = registry["types"][type_id]
+    with (workspace / spec["manifest"]).open("r", encoding="utf-8-sig", newline="") as stream:
+        rows = list(csv.DictReader(stream))
+    selected = []
+    for row in rows:
+        value = row.get("generator_path") or row.get("curated_path") or row.get("final_path")
+        if not value:
+            continue
+        source = Path(value)
+        if not source.is_absolute():
+            source = (workspace / spec["root"] if row.get("generator_path") else workspace) / source
+        if not source.is_file():
+            continue
+        metadata = {**row, "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}
+        if row.get("visual_qa_status") == "PASS" and row.get("physiology_group"):
+            metadata["subject_label_sha256"] = row.get("output_sha256", "UNKNOWN")
+        if validate_reference_compatibility(target, metadata, ["POSE_SOFT"])["compatible"]:
+            selected.append(row)
+    return {"type": type_id, "status": "READY" if selected else "NO_COMPATIBLE_REFERENCES",
+            "references": selected, "filtered_count": len(rows) - len(selected)}
+
+
 def validate_registry(registry: dict[str, Any], workspace: Path) -> dict[str, Any]:
     results = []
     for type_id, spec in registry["types"].items():
@@ -96,14 +128,32 @@ def validate_registry(registry: dict[str, Any], workspace: Path) -> dict[str, An
             raise BodyReferenceTypeError(f"{type_id} root is missing: {root}")
         if not manifest.is_file():
             raise BodyReferenceTypeError(f"{type_id} manifest is missing: {manifest}")
+        with manifest.open("r", encoding="utf-8-sig", newline="") as stream:
+            rows = list(csv.DictReader(stream))
+        labeled = 0
+        for row in rows:
+            value = row.get("generator_path") or row.get("curated_path") or row.get("final_path")
+            if not value:
+                continue
+            source = Path(value)
+            if not source.is_absolute():
+                source = (workspace / spec["root"] if row.get("generator_path") else workspace) / source
+            if not source.is_file():
+                continue
+            metadata = {**row, "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}
+            if row.get("visual_qa_status") == "PASS" and row.get("physiology_group"):
+                metadata["subject_label_sha256"] = row.get("output_sha256", "UNKNOWN")
+            labeled += explicit_subject_label(metadata) != "UNKNOWN"
         results.append({
             "type": type_id,
             "root": str(root),
             "manifest": str(manifest),
             "manifest_rows": count_manifest_rows(manifest),
-            "status": "READY",
+            "explicitly_labeled_rows": labeled,
+            "unclassified_rows": len(rows) - labeled,
+            "status": "READY" if labeled == len(rows) else "QUARANTINED_REFERENCES",
         })
-    return {"status": "VALID", "types": results}
+    return {"status": "VALID" if all(row["status"] == "READY" for row in results) else "QUARANTINED_REFERENCES", "types": results}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -118,6 +168,11 @@ def build_parser() -> argparse.ArgumentParser:
     resolve_parser.add_argument("--json", action="store_true")
     validate_parser = subparsers.add_parser("validate")
     validate_parser.add_argument("--json", action="store_true")
+    context_parser = subparsers.add_parser("context")
+    context_parser.add_argument("--type", choices=["NATURAL", "SKETCH", "OLCHAS"], required=True)
+    context_parser.add_argument("--target-anatomy", choices=["MALE_ANATOMY", "FEMALE_ANATOMY"], required=True)
+    context_parser.add_argument("--target-evidence", required=True)
+    context_parser.add_argument("--json", action="store_true")
     return parser
 
 
@@ -128,12 +183,17 @@ def main() -> int:
         result = {"types": registry["types"], "combination_policy": registry["combination_policy"]}
     elif args.command == "resolve":
         result = resolve_types(args.text, registry)
+    elif args.command == "context":
+        result = reference_context(args.type, {"target_anatomy": args.target_anatomy,
+                                  "anatomy_evidence_source": args.target_evidence}, args.workspace, registry)
     else:
         result = validate_registry(registry, args.workspace.resolve())
     if getattr(args, "json", False):
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
-        if args.command == "resolve":
+        if args.command == "context":
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        elif args.command == "resolve":
             print(f"STATUS={result['status']}")
             print("BODY_REFERENCE_TYPES=" + ",".join(result["selected_types"]))
             print("BODY_GEOMETRY_AUTHORITY=" + result["permanent_body_geometry_authority"])

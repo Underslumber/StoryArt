@@ -34,7 +34,7 @@ if (-not (Test-Path -LiteralPath $python)) {
     throw "Virtual-environment Python was not created: $python"
 }
 
-& $python -m pip install -r (Join-Path $root 'requirements.txt')
+& $python -m pip install -r (Join-Path $root 'requirements-dev.txt')
 Assert-NativeSuccess 'Installing Python requirements'
 
 $projectConfigTemplate = Join-Path $root 'config\codex.project.example.toml'
@@ -53,8 +53,14 @@ if (-not (Test-Path -LiteralPath $localAgents)) {
     Copy-Item -LiteralPath (Join-Path $root 'AGENTS.example.md') -Destination $localAgents
 }
 
-& $python -m unittest discover -s (Join-Path $root 'tests') -v
-Assert-NativeSuccess 'Running unit tests'
+$testFiles = @(Get-ChildItem -LiteralPath (Join-Path $root 'tests') -File -Filter 'test_*.py' | Sort-Object Name | ForEach-Object { $_.FullName })
+if ($testFiles.Count -eq 0) {
+    throw 'No project tests were found.'
+}
+# Pytest runs both unittest classes and pytest function tests. Pass test files
+# explicitly so unrelated scratch directories are not part of collection.
+& $python -m pytest @testFiles -q
+Assert-NativeSuccess 'Running all project tests'
 & $python (Join-Path $root 'tools\style_pack_manager.py') list-styles --json
 Assert-NativeSuccess 'Listing styles'
 
