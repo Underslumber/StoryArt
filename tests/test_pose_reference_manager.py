@@ -221,3 +221,21 @@ def read_manifest(path):
     with path.open(encoding="utf-8-sig", newline="") as f:
         return list(csv.DictReader(f))
 
+
+
+def test_every_shipped_group_has_russian_name_family_and_size():
+    from tools.pose_reference_manager import localize_group
+    root = Path(__file__).resolve().parents[1]
+    groups = json.loads((root / "reference_packs/POSE_ATLAS/metadata/POSE_GROUPS.json").read_text(encoding="utf-8"))["groups"]
+    for group in groups:
+        filled = localize_group({k: group[k] for k in ("group_id", "category_ja", "system")})
+        assert filled.get("pose_name_ru") and filled.get("category_ru"), group["group_id"]
+        assert filled.get("pose_family") in {"STANDING", "SEATED", "LYING", "KNEELING", "CROUCHING", "OTHER"}
+        assert filled.get("group_size") in {"SOLO_FULL_BODY", "SOLO_UPPER_BODY", "DUO"}
+
+
+def test_existing_russian_names_are_not_overwritten():
+    from tools.pose_reference_manager import localize_group
+    group = localize_group({"group_id": "ANHAO_1_unknown_P001_c779b04e", "pose_name_ru": "Своё имя", "category_ja": "立ち", "system": "2人絡み"})
+    assert group["pose_name_ru"] == "Своё имя"
+    assert group["group_size"] == "DUO"

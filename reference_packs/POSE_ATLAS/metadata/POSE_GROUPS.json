@@ -18,9 +18,9 @@
       "pose_name_zh": "S形站姿・胯部侧顶",
       "category_ja": "立ち",
       "category_zh": "站姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "S-образная стойка, бедро в сторону",
+      "category_ru": "Стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -147,7 +147,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P002_e13946d7",
@@ -159,9 +160,9 @@
       "pose_name_zh": "背部后仰・双手撩发",
       "category_ja": "立ち",
       "category_zh": "站姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Прогиб спины назад, руки поднимают волосы",
+      "category_ru": "Стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -288,7 +289,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P003_25c0bf56",
@@ -300,9 +302,9 @@
       "pose_name_zh": "顶胯回眸",
       "category_ja": "立ち",
       "category_zh": "站姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Бедро в сторону, взгляд через плечо",
+      "category_ru": "Стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -429,7 +431,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P004_868c56b0",
@@ -441,9 +444,9 @@
       "pose_name_zh": "前倾・手扶膝",
       "category_ja": "立ち",
       "category_zh": "站姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Наклон вперёд, руки на коленях",
+      "category_ru": "Стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -570,7 +573,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P005_96049ff2",
@@ -582,9 +586,9 @@
       "pose_name_zh": "站立・抱单膝至胸・背部后仰",
       "category_ja": "立ち",
       "category_zh": "站姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Стоя, одно колено прижато к груди, прогиб назад",
+      "category_ru": "Стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -711,7 +715,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P006_c8613c4f",
@@ -723,9 +728,9 @@
       "pose_name_zh": "手扶墙顶胯（站立后入待位）",
       "category_ja": "立ち",
       "category_zh": "站姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Руки на стене, бедро отведено назад",
+      "category_ru": "Стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -852,7 +857,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P007_64b12581",
@@ -864,9 +870,9 @@
       "pose_name_zh": "背向回望・强调臀部",
       "category_ja": "立ち",
       "category_zh": "站姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Спиной, взгляд через плечо, акцент на ягодицах",
+      "category_ru": "Стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -993,7 +999,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P008_bb5105fc",
@@ -1005,9 +1012,9 @@
       "pose_name_zh": "站立・单腿抬至肩高握踝（I字）",
       "category_ja": "立ち",
       "category_zh": "站姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Стоя, нога поднята до плеча, рука держит лодыжку (I-силуэт)",
+      "category_ru": "Стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -1134,7 +1141,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P009_d6807cdd",
@@ -1146,9 +1154,9 @@
       "pose_name_zh": "似沐浴中撩发",
       "category_ja": "立ち",
       "category_zh": "站姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Поднимает волосы, как в душе",
+      "category_ru": "Стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -1275,7 +1283,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P010_e4dce069",
@@ -1287,9 +1296,9 @@
       "pose_name_zh": "站立挤胸",
       "category_ja": "立ち",
       "category_zh": "站姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Стоя, грудь сведена руками",
+      "category_ru": "Стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -1416,7 +1425,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P011_eb221baf",
@@ -1428,9 +1438,9 @@
       "pose_name_zh": "双臂上举伸展・扭转腰身",
       "category_ja": "立ち",
       "category_zh": "站姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Руки вверх, потягивание, скрутка талии",
+      "category_ru": "Стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -1557,7 +1567,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P012_80e13bae",
@@ -1569,9 +1580,9 @@
       "pose_name_zh": "站立V字（单腿侧高抬）",
       "category_ja": "立ち",
       "category_zh": "站姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Стоя, V-силуэт: нога высоко в сторону",
+      "category_ru": "Стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -1698,7 +1709,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P013_4c6c7c4e",
@@ -1710,9 +1722,9 @@
       "pose_name_zh": "双手背后・挺胸",
       "category_ja": "立ち",
       "category_zh": "站姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Руки за спиной, грудь вперёд",
+      "category_ru": "Стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -1839,7 +1851,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P014_980509ae",
@@ -1851,9 +1864,9 @@
       "pose_name_zh": "站立前屈翘臀・双手触地",
       "category_ja": "立ち",
       "category_zh": "站姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Стоя, глубокий наклон, ягодицы вверх, руки на полу",
+      "category_ru": "Стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -1980,7 +1993,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P015_96e82924",
@@ -1992,9 +2006,9 @@
       "pose_name_zh": "双手扶腰・单膝内收后仰",
       "category_ja": "立ち",
       "category_zh": "站姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Руки на талии, колено внутрь, прогиб назад",
+      "category_ru": "Стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -2121,7 +2135,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P016_9c399304",
@@ -2133,9 +2148,9 @@
       "pose_name_zh": "侧坐・单手支撑・身体柔弯",
       "category_ja": "座り",
       "category_zh": "坐姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя боком, опора на руку, плавный изгиб",
+      "category_ru": "Сидя",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -2262,7 +2277,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P017_4ca375bb",
@@ -2274,9 +2290,9 @@
       "pose_name_zh": "正坐・挺胸后仰",
       "category_ja": "座り",
       "category_zh": "坐姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя на пятках, грудь вперёд, прогиб назад",
+      "category_ru": "Сидя",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -2403,7 +2419,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P018_13136021",
@@ -2415,9 +2432,9 @@
       "pose_name_zh": "M字开腿（坐位・双手后撑）",
       "category_ja": "座り",
       "category_zh": "坐姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя, ноги разведены M-силуэтом, опора на руки сзади",
+      "category_ru": "Сидя",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -2522,7 +2539,8 @@
       ],
       "status": "PARTIAL",
       "source_view_count": 4,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P019_ed809939",
@@ -2534,9 +2552,9 @@
       "pose_name_zh": "M字开腿（坐位・双手扶膝）",
       "category_ja": "座り",
       "category_zh": "坐姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя, ноги разведены M-силуэтом, руки на коленях",
+      "category_ru": "Сидя",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -2663,7 +2681,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P020_cae4d434",
@@ -2675,9 +2694,9 @@
       "pose_name_zh": "大幅V字开腿・双手后撑",
       "category_ja": "座り",
       "category_zh": "坐姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя, широкий V-развод ног, опора на руки сзади",
+      "category_ru": "Сидя",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -2804,7 +2823,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P021_4227c7a2",
@@ -2816,9 +2836,9 @@
       "pose_name_zh": "坐姿・单腿高抬・手握脚踝",
       "category_ja": "座り",
       "category_zh": "坐姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя, нога высоко поднята, рука держит лодыжку",
+      "category_ru": "Сидя",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -2945,7 +2965,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P022_039dcbbe",
@@ -2957,9 +2978,9 @@
       "pose_name_zh": "M字开腿（双肘支撑后仰）",
       "category_ja": "座り",
       "category_zh": "坐姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Ноги разведены M-силуэтом, опора на локти, отклонение назад",
+      "category_ru": "Сидя",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -3086,7 +3107,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P023_6d440574",
@@ -3098,9 +3120,9 @@
       "pose_name_zh": "伸腿・侧肘支撑坐",
       "category_ja": "座り",
       "category_zh": "坐姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя с вытянутыми ногами, опора на локоть сбоку",
+      "category_ru": "Сидя",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -3227,7 +3249,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P024_69967d92",
@@ -3239,9 +3262,9 @@
       "pose_name_zh": "坐姿・抱腿打开",
       "category_ja": "座り",
       "category_zh": "坐姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя, обхватив ноги, колени раскрыты",
+      "category_ru": "Сидя",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -3368,7 +3391,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P025_32393690",
@@ -3380,9 +3404,9 @@
       "pose_name_zh": "抱单膝坐・背部后仰",
       "category_ja": "座り",
       "category_zh": "坐姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя, обхватив одно колено, прогиб назад",
+      "category_ru": "Сидя",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -3509,7 +3533,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P026_0d7b07ae",
@@ -3521,9 +3546,9 @@
       "pose_name_zh": "侧坐・撩发",
       "category_ja": "座り",
       "category_zh": "坐姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя боком, поднимает волосы",
+      "category_ru": "Сидя",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -3650,7 +3675,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P027_4ba9f500",
@@ -3662,9 +3688,9 @@
       "pose_name_zh": "鸭子坐・双手前撑挤胸",
       "category_ja": "座り",
       "category_zh": "坐姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя «уткой», руки впереди сводят грудь",
+      "category_ru": "Сидя",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -3791,7 +3817,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P028_5a95e829",
@@ -3803,9 +3830,9 @@
       "pose_name_zh": "单膝立起・双手后撑",
       "category_ja": "座り",
       "category_zh": "坐姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Одно колено поднято, опора на руки сзади",
+      "category_ru": "Сидя",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -3932,7 +3959,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P029_b536907a",
@@ -3944,9 +3972,9 @@
       "pose_name_zh": "坐姿・单腿大幅外开（单M字）",
       "category_ja": "座り",
       "category_zh": "坐姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя, одна нога широко отведена (полу-M)",
+      "category_ru": "Сидя",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -4073,7 +4101,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P030_b0ce6efd",
@@ -4085,9 +4114,9 @@
       "pose_name_zh": "抱膝坐・双膝微开",
       "category_ja": "座り",
       "category_zh": "坐姿",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя, обхватив колени, колени слегка раскрыты",
+      "category_ru": "Сидя",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -4214,7 +4243,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P031_b2d34458",
@@ -4226,9 +4256,9 @@
       "pose_name_zh": "跪立・上体后仰・双手抱后脑",
       "category_ja": "膝立ち・四つん這い",
       "category_zh": "跪立・四肢着地",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На коленях, корпус отклонён назад, руки за головой",
+      "category_ru": "На коленях и на четвереньках",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -4355,7 +4385,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P032_471ba656",
@@ -4367,9 +4398,9 @@
       "pose_name_zh": "四肢着地・挺背目视前方",
       "category_ja": "膝立ち・四つん這い",
       "category_zh": "跪立・四肢着地",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На четвереньках, спина прогнута, взгляд вперёд",
+      "category_ru": "На коленях и на четвереньках",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -4496,7 +4527,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P033_099d46f5",
@@ -4508,9 +4540,9 @@
       "pose_name_zh": "双膝大幅外开的跪立・压胯下沉",
       "category_ja": "膝立ち・四つん這い",
       "category_zh": "跪立・四肢着地",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На коленях, колени широко разведены, таз опущен",
+      "category_ru": "На коленях и на четвереньках",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -4637,7 +4669,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P034_30cd1945",
@@ -4649,9 +4682,9 @@
       "pose_name_zh": "正坐・撩发",
       "category_ja": "膝立ち・四つん這い",
       "category_zh": "跪立・四肢着地",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя на пятках, поднимает волосы",
+      "category_ru": "На коленях и на четвереньках",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -4778,7 +4811,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P035_aa815240",
@@ -4790,9 +4824,9 @@
       "pose_name_zh": "单膝跪・手放大腿",
       "category_ja": "膝立ち・四つん這い",
       "category_zh": "跪立・四肢着地",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На одном колене, рука на бедре",
+      "category_ru": "На коленях и на четвереньках",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -4919,7 +4953,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P036_9b86b4d8",
@@ -4931,9 +4966,9 @@
       "pose_name_zh": "骑乘风・开膝双手前撑・沉胯",
       "category_ja": "膝立ち・四つん這い",
       "category_zh": "跪立・四肢着地",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Верхом, колени раскрыты, руки впереди, таз опущен",
+      "category_ru": "На коленях и на четвереньках",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -5060,7 +5095,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P037_1e9836f0",
@@ -5072,9 +5108,9 @@
       "pose_name_zh": "骑乘风・开膝沉胯・撩发",
       "category_ja": "膝立ち・四つん這い",
       "category_zh": "跪立・四肢着地",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Верхом, колени раскрыты, таз опущен, поднимает волосы",
+      "category_ru": "На коленях и на четвереньках",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -5201,7 +5237,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P038_a99af5de",
@@ -5213,9 +5250,9 @@
       "pose_name_zh": "跪立大幅后仰・双手握脚跟",
       "category_ja": "膝立ち・四つん這い",
       "category_zh": "跪立・四肢着地",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На коленях, сильный прогиб назад, руки держат пятки",
+      "category_ru": "На коленях и на четвереньках",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -5342,7 +5379,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P039_561697ac",
@@ -5354,9 +5392,9 @@
       "pose_name_zh": "跪立・扭腰・单臂上举",
       "category_ja": "膝立ち・四つん這い",
       "category_zh": "跪立・四肢着地",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На коленях, скрутка талии, одна рука вверх",
+      "category_ru": "На коленях и на четвереньках",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -5483,7 +5521,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P040_ca620478",
@@ -5495,9 +5534,9 @@
       "pose_name_zh": "猫式（胸贴地翘臀・侧面）",
       "category_ja": "膝立ち・四つん這い",
       "category_zh": "跪立・四肢着地",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Поза кошки: грудь к полу, ягодицы вверх (сбоку)",
+      "category_ru": "На коленях и на четвереньках",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -5624,7 +5663,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P041_051b8e35",
@@ -5636,9 +5676,9 @@
       "pose_name_zh": "四肢着地・单腿后高抬",
       "category_ja": "膝立ち・四つん這い",
       "category_zh": "跪立・四肢着地",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На четвереньках, одна нога высоко назад",
+      "category_ru": "На коленях и на четвереньках",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -5765,7 +5805,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P042_e9c0bc69",
@@ -5777,9 +5818,9 @@
       "pose_name_zh": "开膝正坐・双手前撑（撒娇请求式）",
       "category_ja": "膝立ち・四つん這い",
       "category_zh": "跪立・四肢着地",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя на пятках, колени раскрыты, руки впереди (поза просьбы)",
+      "category_ru": "На коленях и на четвереньках",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -5906,7 +5947,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P043_35c8baac",
@@ -5918,9 +5960,9 @@
       "pose_name_zh": "跪立・向前顶胯",
       "category_ja": "膝立ち・四つん這い",
       "category_zh": "跪立・四肢着地",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На коленях, таз подан вперёд",
+      "category_ru": "На коленях и на четвереньках",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -6047,7 +6089,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P044_b25ba5c0",
@@ -6059,9 +6102,9 @@
       "pose_name_zh": "跪立・侧向支撑・身体柔弯",
       "category_ja": "膝立ち・四つん這い",
       "category_zh": "跪立・四肢着地",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На коленях, опора сбоку, плавный изгиб",
+      "category_ru": "На коленях и на четвереньках",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -6188,7 +6231,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P045_0fa39795",
@@ -6200,9 +6244,9 @@
       "pose_name_zh": "跪立・单手伸向脚跟・挺身后仰",
       "category_ja": "膝立ち・四つん這い",
       "category_zh": "跪立・四肢着地",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На коленях, рука тянется к пятке, прогиб назад",
+      "category_ru": "На коленях и на четвереньках",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -6329,7 +6373,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P046_8cda2186",
@@ -6341,9 +6386,9 @@
       "pose_name_zh": "侧卧・强调腰线・单腿弯曲",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на боку, акцент на талии, одна нога согнута",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -6470,7 +6515,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P047_eb1297ec",
@@ -6482,9 +6528,9 @@
       "pose_name_zh": "俯卧托腮・双腿上抬",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на животе, подбородок на руках, ноги подняты",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -6611,7 +6657,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P048_77aa0f81",
@@ -6623,9 +6670,9 @@
       "pose_name_zh": "俯卧撑起上身大幅后仰",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на животе, корпус приподнят, сильный прогиб назад",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -6752,7 +6799,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P049_4c17039a",
@@ -6764,9 +6812,9 @@
       "pose_name_zh": "仰卧・抬背・单腿高抬",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на спине, спина приподнята, нога высоко",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -6893,7 +6941,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P050_9cfcf7e5",
@@ -6905,9 +6954,9 @@
       "pose_name_zh": "仰卧・双膝并拢侧倒",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на спине, сведённые колени завалены набок",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -7034,7 +7083,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P051_4df7a5ea",
@@ -7046,9 +7096,9 @@
       "pose_name_zh": "俯卧肘撑・双腿伸直微开",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на животе на локтях, ноги прямые, слегка разведены",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -7175,7 +7225,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P052_775a2f0c",
@@ -7187,9 +7238,9 @@
       "pose_name_zh": "侧卧・手臂过头・描S形曲线",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на боку, руки над головой, S-изгиб",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -7316,7 +7367,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P053_e4f9fa58",
@@ -7328,9 +7380,9 @@
       "pose_name_zh": "床上侧卧邀约姿势",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на боку на кровати, приглашающая поза",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -7457,7 +7509,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P054_98090887",
@@ -7469,9 +7522,9 @@
       "pose_name_zh": "俯卧翘臀",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на животе, ягодицы приподняты",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -7598,7 +7651,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P055_68af64a9",
@@ -7610,9 +7664,9 @@
       "pose_name_zh": "仰卧V字开腿（双腿抬起）",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на спине, ноги подняты и разведены V-силуэтом",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -7739,7 +7793,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P056_31793443",
@@ -7751,9 +7806,9 @@
       "pose_name_zh": "仰卧・挺背后仰・双臂过头",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на спине, прогиб, руки над головой",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -7880,7 +7935,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P057_cd83894c",
@@ -7892,9 +7948,9 @@
       "pose_name_zh": "俯卧回望・单膝侧屈",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на животе, взгляд через плечо, колено согнуто в сторону",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -8021,7 +8077,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P058_b9dec243",
@@ -8033,9 +8090,9 @@
       "pose_name_zh": "侧卧・上腿高抬握踝",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на боку, верхняя нога высоко, рука держит лодыжку",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -8162,7 +8219,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P059_650cab57",
@@ -8174,9 +8232,9 @@
       "pose_name_zh": "仰卧・双膝立起・单臂过头",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на спине, колени подняты, одна рука над головой",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -8303,7 +8361,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P060_42299f97",
@@ -8315,9 +8374,9 @@
       "pose_name_zh": "俯卧蛙腿（双膝外展）",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на животе, колени разведены «лягушкой»",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -8444,7 +8503,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P061_511d5167",
@@ -8456,9 +8516,9 @@
       "pose_name_zh": "背向侧卧・臀部线条",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на боку спиной к зрителю, линия ягодиц",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -8585,7 +8645,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P062_8757e878",
@@ -8597,9 +8658,9 @@
       "pose_name_zh": "仰卧・双膝抱至胸前",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на спине, колени прижаты к груди",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -8726,7 +8787,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P063_909e9967",
@@ -8738,9 +8800,9 @@
       "pose_name_zh": "俯卧托腮・单腿上抬",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на животе, подбородок на руках, одна нога поднята",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -8867,7 +8929,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P064_248712e3",
@@ -8879,9 +8942,9 @@
       "pose_name_zh": "仰卧・单膝外展打开",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на спине, одно колено отведено в сторону",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -9008,7 +9071,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P065_98722d9f",
@@ -9020,9 +9084,9 @@
       "pose_name_zh": "肘撑起上身・单膝立起",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Опора на локти, корпус приподнят, одно колено поднято",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -9149,7 +9213,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P066_cc79ac22",
@@ -9161,9 +9226,9 @@
       "pose_name_zh": "桥式高抬胯・双膝打开",
       "category_ja": "特殊",
       "category_zh": "特殊",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Мостик с высоко поднятым тазом, колени раскрыты",
+      "category_ru": "Акробатика и растяжка",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -9290,7 +9355,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P067_13e5294c",
@@ -9302,9 +9368,9 @@
       "pose_name_zh": "团身仰翻（侧面・抱大腿）",
       "category_ja": "特殊",
       "category_zh": "特殊",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Группировка назад, сбоку, руки обхватывают бёдра",
+      "category_ru": "Акробатика и растяжка",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -9431,7 +9497,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P068_3fe1b2ce",
@@ -9443,9 +9510,9 @@
       "pose_name_zh": "团身仰翻（侧面・双腿伸向头前）",
       "category_ja": "特殊",
       "category_zh": "特殊",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Группировка назад, сбоку, ноги вытянуты за голову",
+      "category_ru": "Акробатика и растяжка",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -9572,7 +9639,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P069_f957147a",
@@ -9584,9 +9652,9 @@
       "pose_name_zh": "团身仰翻（侧面・双膝落于头侧地面）",
       "category_ja": "特殊",
       "category_zh": "特殊",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Группировка назад, сбоку, колени у головы на полу",
+      "category_ru": "Акробатика и растяжка",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -9713,7 +9781,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P070_c4bd1d98",
@@ -9725,9 +9794,9 @@
       "pose_name_zh": "蹲姿开腿（混混蹲）",
       "category_ja": "特殊",
       "category_zh": "特殊",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Присед с разведёнными ногами («гопник»)",
+      "category_ru": "Акробатика и растяжка",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -9854,7 +9923,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P071_d3f4f68a",
@@ -9866,9 +9936,9 @@
       "pose_name_zh": "踮脚蹲姿开腿・双手触地",
       "category_ja": "特殊",
       "category_zh": "特殊",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Присед на носках, ноги разведены, руки на полу",
+      "category_ru": "Акробатика и растяжка",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -9995,7 +10065,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P072_6e982c73",
@@ -10007,9 +10078,9 @@
       "pose_name_zh": "桥式（四肢支撑）",
       "category_ja": "特殊",
       "category_zh": "特殊",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Мостик на руках и ногах",
+      "category_ru": "Акробатика и растяжка",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -10136,7 +10207,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P073_d27e6019",
@@ -10148,9 +10220,9 @@
       "pose_name_zh": "站立劈叉（前屈单腿高抬后举）",
       "category_ja": "特殊",
       "category_zh": "特殊",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Стоя, шпагат с наклоном: нога высоко назад",
+      "category_ru": "Акробатика и растяжка",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -10277,7 +10349,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P074_a8dd6373",
@@ -10289,9 +10362,9 @@
       "pose_name_zh": "前后劈叉・上体后仰",
       "category_ja": "特殊",
       "category_zh": "特殊",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Продольный шпагат, корпус отклонён назад",
+      "category_ru": "Акробатика и растяжка",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -10418,7 +10491,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P075_19f868ac",
@@ -10430,9 +10504,9 @@
       "pose_name_zh": "左右开腿（全开横叉）・上体抬起",
       "category_ja": "特殊",
       "category_zh": "特殊",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Поперечный шпагат, корпус приподнят",
+      "category_ru": "Акробатика и растяжка",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -10559,7 +10633,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P076_d7d762c2",
@@ -10571,9 +10646,9 @@
       "pose_name_zh": "肩倒立・双腿V字打开",
       "category_ja": "特殊",
       "category_zh": "特殊",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Стойка на лопатках, ноги разведены V-силуэтом",
+      "category_ru": "Акробатика и растяжка",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -10700,7 +10775,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P077_8fdd5f3b",
@@ -10712,9 +10788,9 @@
       "pose_name_zh": "跪立・向后仰・双手触地",
       "category_ja": "特殊",
       "category_zh": "特殊",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На коленях, отклонение назад, руки на полу",
+      "category_ru": "Акробатика и растяжка",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -10841,7 +10917,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P078_c432f0c8",
@@ -10853,9 +10930,9 @@
       "pose_name_zh": "蹲姿开腿・双手抱头后",
       "category_ja": "特殊",
       "category_zh": "特殊",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Присед с разведёнными ногами, руки за головой",
+      "category_ru": "Акробатика и растяжка",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -10982,7 +11059,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P079_bcacbcf1",
@@ -10994,9 +11072,9 @@
       "pose_name_zh": "单腿桥式（抬胯・单腿朝天）",
       "category_ja": "特殊",
       "category_zh": "特殊",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Мостик на одной ноге, другая вверх",
+      "category_ru": "Акробатика и растяжка",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -11123,7 +11201,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P080_1709d45a",
@@ -11135,9 +11214,9 @@
       "pose_name_zh": "反向四肢着地（桌面式）・向上顶胯",
       "category_ja": "特殊",
       "category_zh": "特殊",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Обратный стол на руках и ногах, таз вверх",
+      "category_ru": "Акробатика и растяжка",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -11264,7 +11343,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P001_1b2d162f",
@@ -11405,7 +11485,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P002_6b81defe",
@@ -11546,7 +11627,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P003_229c85fa",
@@ -11687,7 +11769,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P004_185db9ff",
@@ -11828,7 +11911,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P005_17a97826",
@@ -11969,7 +12053,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P006_e56f36c0",
@@ -12110,7 +12195,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P007_77b4ff3a",
@@ -12251,7 +12337,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P008_8638c834",
@@ -12392,7 +12479,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P009_0e3b1d99",
@@ -12533,7 +12621,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P010_5e379676",
@@ -12674,7 +12763,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P011_32e6b257",
@@ -12815,7 +12905,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P012_1d3cd7cd",
@@ -12956,7 +13047,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P013_94bf4e4b",
@@ -13097,7 +13189,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P014_1cc932f1",
@@ -13238,7 +13331,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P015_420c60f8",
@@ -13379,7 +13473,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P016_7ac3ea6d",
@@ -13520,7 +13615,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P017_f42b7be5",
@@ -13661,7 +13757,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P018_c9a823fb",
@@ -13802,7 +13899,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P019_5345bfec",
@@ -13943,7 +14041,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P020_e2a66b19",
@@ -14084,7 +14183,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P021_ddcdf92a",
@@ -14225,7 +14325,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P022_3f407234",
@@ -14366,7 +14467,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P024_5d34006c",
@@ -14507,7 +14609,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P025_32b1a0e0",
@@ -14648,7 +14751,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P026_5d03a07d",
@@ -14789,7 +14893,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P027_b48f5b08",
@@ -14930,7 +15035,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P029_52449c0c",
@@ -15071,7 +15177,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P030_05021354",
@@ -15212,7 +15319,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P031_9c70b853",
@@ -15353,7 +15461,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P032_cd2fcd56",
@@ -15494,7 +15603,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P033_93366826",
@@ -15635,7 +15745,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P034_780e9fd1",
@@ -15776,7 +15887,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P035_0a3171f1",
@@ -15917,7 +16029,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P036_b157d741",
@@ -16058,7 +16171,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P037_958f3630",
@@ -16199,7 +16313,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P038_1d6e18d4",
@@ -16340,7 +16455,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P039_37247772",
@@ -16481,7 +16597,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P040_98f27b12",
@@ -16622,7 +16739,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P041_d73919de",
@@ -16763,7 +16881,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P042_9d72d6c8",
@@ -16904,7 +17023,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P043_c2891eca",
@@ -17045,7 +17165,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P044_b00c27c3",
@@ -17186,7 +17307,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P045_7ad942e5",
@@ -17327,7 +17449,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P046_1279e873",
@@ -17468,7 +17591,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P047_ac94657d",
@@ -17609,7 +17733,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P048_53ac6302",
@@ -17750,7 +17875,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P049_7fad047e",
@@ -17891,7 +18017,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P050_4ed7b8ad",
@@ -18032,7 +18159,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P051_e83a5770",
@@ -18173,7 +18301,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P052_a4098169",
@@ -18314,7 +18443,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P054_aeb182a7",
@@ -18455,7 +18585,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P056_ecb9ce7a",
@@ -18596,7 +18727,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P057_1556f68d",
@@ -18737,7 +18869,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P058_bd14ff9a",
@@ -18878,7 +19011,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P059_d39d7ed6",
@@ -19019,7 +19153,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P061_00d9d46f",
@@ -19160,7 +19295,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P062_24a5db49",
@@ -19301,7 +19437,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P063_efa5983d",
@@ -19442,7 +19579,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P064_bc569e47",
@@ -19583,7 +19721,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P065_92f28428",
@@ -19724,7 +19863,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P066_1ed9d490",
@@ -19865,7 +20005,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P067_893c7fd3",
@@ -20006,7 +20147,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P068_0f4ffcc1",
@@ -20147,7 +20289,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P069_6ea89e01",
@@ -20288,7 +20431,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P070_0893d370",
@@ -20429,7 +20573,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P071_e9b998dd",
@@ -20570,7 +20715,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P072_f95327ba",
@@ -20711,7 +20857,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P073_6aa2605b",
@@ -20852,7 +20999,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P074_35226d50",
@@ -20993,7 +21141,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P075_5e657db9",
@@ -21134,7 +21283,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P077_bf2512d1",
@@ -21275,7 +21425,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P078_8082e209",
@@ -21416,7 +21567,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P079_1be3ba40",
@@ -21557,7 +21709,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_FULL_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P001_3d33d5e0",
@@ -21698,7 +21851,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P002_f24c1849",
@@ -21839,7 +21993,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P003_3cb7c405",
@@ -21980,7 +22135,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P004_bbf8c75a",
@@ -22121,7 +22277,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P005_d40cd753",
@@ -22262,7 +22419,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P006_29abd327",
@@ -22403,7 +22561,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P007_dc6cf3b2",
@@ -22544,7 +22703,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P008_99ab7834",
@@ -22685,7 +22845,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P009_e76cd3ef",
@@ -22826,7 +22987,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P010_04b35c62",
@@ -22967,7 +23129,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P011_01edc5f4",
@@ -23108,7 +23271,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P012_0964a1e3",
@@ -23249,7 +23413,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P013_5d9c783a",
@@ -23390,7 +23555,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P014_3b209df7",
@@ -23531,7 +23697,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P015_848b291a",
@@ -23672,7 +23839,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P016_43801bfe",
@@ -23813,7 +23981,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P017_a5bf3126",
@@ -23954,7 +24123,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P018_49610e42",
@@ -24095,7 +24265,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P019_cce283ba",
@@ -24236,7 +24407,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P020_3d771d91",
@@ -24377,7 +24549,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P021_a6fd978a",
@@ -24518,7 +24691,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P022_a50dbd95",
@@ -24659,7 +24833,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P023_a7ad7a25",
@@ -24800,7 +24975,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P024_6b26958e",
@@ -24941,7 +25117,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P025_0fdefdce",
@@ -25082,7 +25259,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P026_fd6d94c5",
@@ -25094,9 +25272,9 @@
       "pose_name_zh": "双手比心贴脸（前倾挤胸）",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сердечко у лица, наклон вперёд, грудь сведена",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -25223,7 +25401,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P027_ca080870",
@@ -25235,9 +25414,9 @@
       "pose_name_zh": "雏人形式（双手扶膝）",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Поза куклы хина: руки на коленях",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -25364,7 +25543,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P028_7991bba7",
@@ -25376,9 +25556,9 @@
       "pose_name_zh": "手肘挤胸・扭转腰身",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Локти сводят грудь, скрутка талии",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -25505,7 +25685,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P029_c7036c30",
@@ -25517,9 +25698,9 @@
       "pose_name_zh": "耸肩挤胸（双手下方交叠）",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Плечи подняты, руки сложены внизу, грудь сведена",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -25646,7 +25827,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P030_708d9314",
@@ -25658,9 +25840,9 @@
       "pose_name_zh": "双臂于胸下交叉托起",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Руки скрещены под грудью, приподнимают её",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -25787,7 +25969,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P031_a5e9a8a7",
@@ -25799,9 +25982,9 @@
       "pose_name_zh": "双手自下托起",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Руки поддерживают грудь снизу",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -25928,7 +26111,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P032_7b39c00a",
@@ -25940,9 +26124,9 @@
       "pose_name_zh": "胸伏桌面",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Грудь лежит на столе",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -26069,7 +26253,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P033_1d25a45c",
@@ -26081,9 +26266,9 @@
       "pose_name_zh": "前臂竖立・从两侧夹紧",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Предплечья вертикально, сжимают с боков",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -26210,7 +26395,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P034_2180581b",
@@ -26222,9 +26408,9 @@
       "pose_name_zh": "单臂托起胸部",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Одна рука поддерживает грудь",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -26351,7 +26537,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P035_1942e9d1",
@@ -26363,9 +26550,9 @@
       "pose_name_zh": "俯视构图・双手放锁骨",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Вид сверху, руки на ключицах",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -26492,7 +26679,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P036_7aa7f69d",
@@ -26504,9 +26692,9 @@
       "pose_name_zh": "双手掐腰挺胸",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Руки на талии, грудь вперёд",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -26633,7 +26821,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P037_3af82ed5",
@@ -26645,9 +26834,9 @@
       "pose_name_zh": "双手从两侧挤胸",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Руки сводят грудь с боков",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -26774,7 +26963,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P038_ff038d34",
@@ -26786,9 +26976,9 @@
       "pose_name_zh": "双手背后交握・挺胸",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Руки сцеплены за спиной, грудь вперёд",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -26915,7 +27105,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P039_4b6a9618",
@@ -26927,9 +27118,9 @@
       "pose_name_zh": "跪立・双手前撑・身体前压",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На коленях, руки впереди на полу, корпус подан вперёд",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -27056,7 +27247,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P040_5e795f25",
@@ -27068,9 +27260,9 @@
       "pose_name_zh": "单肘撑膝托腮",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Локоть на колене, подбородок на руке",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -27197,7 +27389,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P041_ffeda544",
@@ -27209,9 +27402,9 @@
       "pose_name_zh": "双臂抱胸",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Руки скрещены на груди",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -27338,7 +27531,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P042_7c478fa5",
@@ -27350,9 +27544,9 @@
       "pose_name_zh": "单手挤胸・单手抚发",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Одна рука сводит грудь, другая в волосах",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -27479,7 +27673,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P043_230134d6",
@@ -27491,9 +27686,9 @@
       "pose_name_zh": "单肩下沉・身体前倾",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Одно плечо опущено, наклон вперёд",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -27620,7 +27815,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P044_b8466e18",
@@ -27632,9 +27828,9 @@
       "pose_name_zh": "俯卧肘撑挤胸",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на животе на локтях, грудь сведена",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -27761,7 +27957,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P045_c71da6c3",
@@ -27773,9 +27970,9 @@
       "pose_name_zh": "后仰・双臂夹紧",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Прогиб назад, руки прижаты к бокам",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -27902,7 +28099,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P046_6d62b287",
@@ -27914,9 +28112,9 @@
       "pose_name_zh": "单臂绕腰・一手抚颈",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Одна рука вокруг талии, другая у шеи",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -28043,7 +28241,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P047_d444917d",
@@ -28055,9 +28254,9 @@
       "pose_name_zh": "双手置上胸向内挤",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Руки на верхней части груди сводят её",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -28184,7 +28383,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P048_1c7ad7de",
@@ -28196,9 +28396,9 @@
       "pose_name_zh": "手背托腮前倾",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Тыльная сторона ладони под подбородком, наклон вперёд",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -28325,7 +28525,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P049_56255cb7",
@@ -28337,9 +28538,9 @@
       "pose_name_zh": "四肢着地俯视（胸口视角）",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На четвереньках, вид сверху (ракурс на грудь)",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -28466,7 +28667,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P050_a90d49b3",
@@ -28478,9 +28680,9 @@
       "pose_name_zh": "双臂环抱托胸",
       "category_ja": "胸寄せ・谷間強調系",
       "category_zh": "挤胸・强调事业线系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Руки обхватывают и поддерживают грудь",
+      "category_ru": "Акцент на груди",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -28607,7 +28809,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P051_1ef0fa57",
@@ -28619,9 +28822,9 @@
       "pose_name_zh": "双手捧胸",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Ладони держат грудь",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -28748,7 +28951,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P052_f4d8c88d",
@@ -28760,9 +28964,9 @@
       "pose_name_zh": "双手揉胸",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Ладони сжимают грудь",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -28889,7 +29093,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P053_f741aad6",
@@ -28901,9 +29106,9 @@
       "pose_name_zh": "手掌遮掩（双手遮蔽）",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Ладони прикрывают (обе руки)",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -29030,7 +29235,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P054_c754c211",
@@ -29042,9 +29248,9 @@
       "pose_name_zh": "单手遮掩・一手扶腰",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Одна рука прикрывает, другая на талии",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -29171,7 +29377,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P055_dcf4bea0",
@@ -29183,9 +29390,9 @@
       "pose_name_zh": "单手揉胸・单手撩发",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Одна рука сжимает грудь, другая в волосах",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -29312,7 +29519,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P056_91b7b8ad",
@@ -29324,9 +29532,9 @@
       "pose_name_zh": "褪下肩带动作",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Спускает бретельку",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -29453,7 +29661,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P057_60f2c8d1",
@@ -29465,9 +29674,9 @@
       "pose_name_zh": "双手撩发大幅后仰",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Руки поднимают волосы, сильный прогиб назад",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -29594,7 +29803,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P058_f3c8b44d",
@@ -29606,9 +29816,9 @@
       "pose_name_zh": "双手抱头・展露腋下",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Руки за головой, открытые подмышки",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -29735,7 +29945,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P059_04175e27",
@@ -29747,9 +29958,9 @@
       "pose_name_zh": "手指沿胸下缘滑动",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Пальцы скользят под грудью",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -29876,7 +30087,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P060_16bf42c0",
@@ -29888,9 +30100,9 @@
       "pose_name_zh": "手指抵唇＋单手抚胸",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Палец у губ, рука на груди",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -30017,7 +30229,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P061_a442a4e0",
@@ -30029,9 +30242,9 @@
       "pose_name_zh": "指尖遮掩胸前",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Кончики пальцев прикрывают грудь",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -30158,7 +30371,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P062_54fb560d",
@@ -30170,9 +30384,9 @@
       "pose_name_zh": "单手抚胸・单手抚腹",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Одна рука на груди, другая на животе",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -30299,7 +30513,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P063_f4c0324d",
@@ -30311,9 +30526,9 @@
       "pose_name_zh": "双手后撑・挺胸突出",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Опора на руки сзади, грудь подана вперёд",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -30440,7 +30655,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P064_7e659a2a",
@@ -30452,9 +30668,9 @@
       "pose_name_zh": "俯卧单手托胸",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на животе, одна рука поддерживает грудь",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -30581,7 +30797,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P065_aa03c125",
@@ -30593,9 +30810,9 @@
       "pose_name_zh": "四肢着地・挺背后仰仰望",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На четвереньках, прогиб, взгляд вверх",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -30722,7 +30939,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P066_b361cf51",
@@ -30734,9 +30952,9 @@
       "pose_name_zh": "四肢着地・单手抚胸",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На четвереньках, одна рука на груди",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -30863,7 +31081,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P067_80ed805c",
@@ -30875,9 +31094,9 @@
       "pose_name_zh": "豹式伸展（正面）",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Потягивание «пантеры» (спереди)",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -31004,7 +31223,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P068_d7046e41",
@@ -31016,9 +31236,9 @@
       "pose_name_zh": "跪立后仰・手触脚跟",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На коленях, прогиб назад, руки у пяток",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -31145,7 +31365,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P069_2eb83a30",
@@ -31157,9 +31378,9 @@
       "pose_name_zh": "跪立・双手抱后脑",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На коленях, руки на затылке",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -31286,7 +31507,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P070_34be4106",
@@ -31298,9 +31520,9 @@
       "pose_name_zh": "手指含于唇边",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Палец у губ",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -31427,7 +31649,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P071_41896ee4",
@@ -31439,9 +31662,9 @@
       "pose_name_zh": "抓握颈侧后仰",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Рука на шее сбоку, отклонение назад",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -31568,7 +31791,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P072_210334c5",
@@ -31580,9 +31804,9 @@
       "pose_name_zh": "双手向内挤并挺出",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Руки сводят грудь, подавая вперёд",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -31709,7 +31933,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P073_c033b097",
@@ -31721,9 +31946,9 @@
       "pose_name_zh": "侧卧・抱胸",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на боку, обнимает грудь",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -31850,7 +32075,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P074_cf0a9d3f",
@@ -31862,9 +32088,9 @@
       "pose_name_zh": "仰卧・双手抚胸",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на спине, руки на груди",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -31991,7 +32217,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P075_16ca984e",
@@ -32003,9 +32230,9 @@
       "pose_name_zh": "仰卧・双臂上举挺身",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на спине, руки вверх, прогиб",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -32132,7 +32359,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P076_107a2454",
@@ -32144,9 +32372,9 @@
       "pose_name_zh": "前倾・手放大腿内侧",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Наклон вперёд, рука на внутренней стороне бедра",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -32273,7 +32501,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P077_c0aa37b3",
@@ -32285,9 +32514,9 @@
       "pose_name_zh": "背后解挂钩动作",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Расстёгивает застёжку за спиной",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -32414,7 +32643,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P078_a3a58fbf",
@@ -32426,9 +32656,9 @@
       "pose_name_zh": "单手遮掩・另一手托起",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Одна рука прикрывает, другая поддерживает",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -32555,7 +32785,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P079_1527735a",
@@ -32567,9 +32798,9 @@
       "pose_name_zh": "手探入胸前沟壑",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Рука скользит в ложбинку",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -32696,7 +32927,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_1_unknown_P080_6c4cfb0f",
@@ -32708,9 +32940,9 @@
       "pose_name_zh": "俯视视角・双手抚胸・上目线",
       "category_ja": "セクシー・露骨寄り系",
       "category_zh": "性感・大胆系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Вид сверху, руки на груди, взгляд вверх",
+      "category_ru": "Откровенные",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -32837,7 +33069,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "SOLO_UPPER_BODY"
     },
     {
       "group_id": "ANHAO_2_unknown_P001_2af36733",
@@ -32849,9 +33082,9 @@
       "pose_name_zh": "面对面・抱起单膝",
       "category_ja": "立位",
       "category_zh": "立位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лицом к лицу стоя, одно колено поднято партнёром",
+      "category_ru": "Пара: стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -32978,7 +33211,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P002_b573da6e",
@@ -32990,9 +33224,9 @@
       "pose_name_zh": "双腿之间俯卧依偎",
       "category_ja": "顔寄せ系",
       "category_zh": "贴脸系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на животе между ног партнёра",
+      "category_ru": "Пара: лица близко",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -33119,7 +33353,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P003_f709a5ac",
@@ -33131,9 +33366,9 @@
       "pose_name_zh": "抬起脚踝・V字打开",
       "category_ja": "正常位",
       "category_zh": "正常位（传教士）",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на спине, лодыжки подняты, ноги V-силуэтом",
+      "category_ru": "Пара: лёжа на спине",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -33260,7 +33495,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P004_b690ce8a",
@@ -33272,9 +33508,9 @@
       "pose_name_zh": "双腿搭肩俯身压上",
       "category_ja": "正常位",
       "category_zh": "正常位（传教士）",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Ноги на плечах партнёра, партнёр сверху",
+      "category_ru": "Пара: лёжа на спине",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -33401,7 +33637,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P005_747fcdf9",
@@ -33413,9 +33650,9 @@
       "pose_name_zh": "抬高腰身・面庞贴近",
       "category_ja": "顔寄せ系",
       "category_zh": "贴脸系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Таз приподнят, лица близко",
+      "category_ru": "Пара: лица близко",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -33542,7 +33779,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P006_2757361e",
@@ -33554,9 +33792,9 @@
       "pose_name_zh": "倒抱交错",
       "category_ja": "顔寄せ系",
       "category_zh": "贴脸系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Перекрёстное объятие вверх ногами",
+      "category_ru": "Пара: лица близко",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -33683,7 +33921,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P007_d02c0674",
@@ -33695,9 +33934,9 @@
       "pose_name_zh": "手扶膝前倾站立",
       "category_ja": "後背位",
       "category_zh": "后入位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Стоя с наклоном, руки на коленях, партнёр сзади",
+      "category_ru": "Пара: партнёр сзади",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -33824,7 +34063,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P008_5dc88322",
@@ -33836,9 +34076,9 @@
       "pose_name_zh": "双腿交缠・双手相拉",
       "category_ja": "座位",
       "category_zh": "坐位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя, ноги переплетены, держатся за руки",
+      "category_ru": "Пара: сидя",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -33965,7 +34205,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P009_fd3176de",
@@ -33977,9 +34218,9 @@
       "pose_name_zh": "自背后环抱・令其坐于膝上",
       "category_ja": "背面座位",
       "category_zh": "背向坐位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Партнёр обнимает сзади, сидя у него на коленях",
+      "category_ru": "Пара: сидя спиной к партнёру",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -34106,7 +34347,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P010_0b3687ee",
@@ -34118,9 +34360,9 @@
       "pose_name_zh": "侧坐于膝上被拥",
       "category_ja": "背面座位",
       "category_zh": "背向坐位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя боком на коленях партнёра в объятиях",
+      "category_ru": "Пара: сидя спиной к партнёру",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -34247,7 +34489,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P011_f46eb131",
@@ -34259,9 +34502,9 @@
       "pose_name_zh": "伸腿交叠",
       "category_ja": "正常位",
       "category_zh": "正常位（传教士）",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Ноги закинуты, опора на колени партнёра сзади",
+      "category_ru": "Пара: лёжа на спине",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -34388,7 +34631,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P013_250fa05d",
@@ -34400,9 +34644,9 @@
       "pose_name_zh": "前方四肢着地・后方跪立",
       "category_ja": "後背位",
       "category_zh": "后入位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Ноги вытянуты и переплетены",
+      "category_ru": "Пара: партнёр сзади",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -34529,7 +34773,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P014_3162de30",
@@ -34541,9 +34786,9 @@
       "pose_name_zh": "手撑地面・双腿被抱",
       "category_ja": "後背位",
       "category_zh": "后入位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На четвереньках, партнёр сзади на коленях",
+      "category_ru": "Пара: партнёр сзади",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -34670,7 +34915,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P015_eee89187",
@@ -34682,9 +34928,9 @@
       "pose_name_zh": "双腿之间四肢着地",
       "category_ja": "顔寄せ系",
       "category_zh": "贴脸系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Опора руками на пол, ноги поддерживает партнёр",
+      "category_ru": "Пара: лица близко",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -34811,7 +35057,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P016_5702561b",
@@ -34823,9 +35070,9 @@
       "pose_name_zh": "双腿搭放・倚靠膝上",
       "category_ja": "背面座位",
       "category_zh": "背向坐位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На четвереньках между ног партнёра",
+      "category_ru": "Пара: сидя спиной к партнёру",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -34952,7 +35199,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P017_7fc7a61a",
@@ -34964,9 +35212,9 @@
       "pose_name_zh": "双腿缠腰相拥",
       "category_ja": "正常位",
       "category_zh": "正常位（传教士）",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Ноги обвивают талию, объятие",
+      "category_ru": "Пара: лёжа на спине",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -35093,7 +35341,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P018_e011298f",
@@ -35105,9 +35354,9 @@
       "pose_name_zh": "背向・坐于腰上",
       "category_ja": "騎乗位",
       "category_zh": "骑乘位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя верхом спиной к партнёру",
+      "category_ru": "Пара: сверху",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -35234,7 +35483,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P019_46d5420e",
@@ -35246,9 +35496,9 @@
       "pose_name_zh": "背向・蹲于膝上",
       "category_ja": "背面座位",
       "category_zh": "背向坐位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя на корточках на коленях партнёра спиной к нему",
+      "category_ru": "Пара: сидя спиной к партнёру",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -35375,7 +35625,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P020_7592cd5b",
@@ -35387,9 +35638,9 @@
       "pose_name_zh": "侧身・单腿搭肩",
       "category_ja": "側位",
       "category_zh": "侧卧位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На боку, одна нога на плече партнёра",
+      "category_ru": "Пара: на боку",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -35516,7 +35767,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P021_ac965c02",
@@ -35528,9 +35780,9 @@
       "pose_name_zh": "上方叠压・双腿伸展",
       "category_ja": "騎乗位",
       "category_zh": "骑乘位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа сверху на партнёре, ноги вытянуты",
+      "category_ru": "Пара: сверху",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -35657,7 +35909,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P022_2c888982",
@@ -35669,9 +35922,9 @@
       "pose_name_zh": "双腕过头交叠・抱膝",
       "category_ja": "正常位",
       "category_zh": "正常位（传教士）",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Запястья скрещены над головой, партнёр держит колени",
+      "category_ru": "Пара: лёжа на спине",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -35798,7 +36051,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P023_95f064df",
@@ -35810,9 +36064,9 @@
       "pose_name_zh": "面对面・坐于腰上",
       "category_ja": "騎乗位",
       "category_zh": "骑乘位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя верхом лицом к партнёру",
+      "category_ru": "Пара: сверху",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -35939,7 +36193,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P024_45b94085",
@@ -35951,9 +36206,9 @@
       "pose_name_zh": "仰卧・以膝撑起腰身",
       "category_ja": "正常位",
       "category_zh": "正常位（传教士）",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на спине, таз приподнят на коленях партнёра",
+      "category_ru": "Пара: лёжа на спине",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -36080,7 +36335,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P025_18412b21",
@@ -36092,9 +36348,9 @@
       "pose_name_zh": "膝上・身体前倾",
       "category_ja": "背面座位",
       "category_zh": "背向坐位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя на коленях партнёра спиной, наклон вперёд",
+      "category_ru": "Пара: сидя спиной к партнёру",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -36221,7 +36477,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P026_dc85be71",
@@ -36233,9 +36490,9 @@
       "pose_name_zh": "仰卧・腰部被高高抱起",
       "category_ja": "正常位",
       "category_zh": "正常位（传教士）",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на спине, таз высоко поднят партнёром",
+      "category_ru": "Пара: лёжа на спине",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -36362,7 +36619,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P030_c0bbf1ec",
@@ -36374,9 +36632,9 @@
       "pose_name_zh": "双臂前伸・腰部被扶",
       "category_ja": "立位",
       "category_zh": "立位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Стоя, руки вытянуты вперёд, партнёр держит за талию",
+      "category_ru": "Пара: стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -36503,7 +36761,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P031_d555825f",
@@ -36515,9 +36774,9 @@
       "pose_name_zh": "倚靠立起之膝而坐",
       "category_ja": "騎乗位",
       "category_zh": "骑乘位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя, опираясь на поднятые колени партнёра",
+      "category_ru": "Пара: сверху",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -36644,7 +36903,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P032_3beafddd",
@@ -36656,9 +36916,9 @@
       "pose_name_zh": "上方叠压交错",
       "category_ja": "顔寄せ系",
       "category_zh": "贴脸系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа сверху перекрёстно",
+      "category_ru": "Пара: лица близко",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -36785,7 +37045,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P034_415392b5",
@@ -36797,9 +37058,9 @@
       "pose_name_zh": "跨跪于脸部上方",
       "category_ja": "顔寄せ系",
       "category_zh": "贴脸系",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Стоя на коленях над лицом партнёра",
+      "category_ru": "Пара: лица близко",
+      "pose_family": "OTHER",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -36926,7 +37187,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P036_a27c4272",
@@ -36938,9 +37200,9 @@
       "pose_name_zh": "双手后撑・双腿缠绕",
       "category_ja": "座位",
       "category_zh": "坐位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Опора на руки сзади, ноги переплетены",
+      "category_ru": "Пара: сидя",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -37067,7 +37329,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P037_36e80827",
@@ -37079,9 +37342,9 @@
       "pose_name_zh": "抱紧抬起之单腿",
       "category_ja": "騎乗位",
       "category_zh": "骑乘位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Партнёр прижимает к себе поднятую ногу",
+      "category_ru": "Пара: сверху",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -37208,7 +37471,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P040_b27312f3",
@@ -37220,9 +37484,9 @@
       "pose_name_zh": "俯身覆上・亲吻胸前",
       "category_ja": "正常位",
       "category_zh": "正常位（传教士）",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Партнёр сверху, поцелуй в грудь",
+      "category_ru": "Пара: лёжа на спине",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -37349,7 +37613,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P041_adab1fde",
@@ -37361,9 +37626,9 @@
       "pose_name_zh": "胸贴地・抬胯",
       "category_ja": "後背位",
       "category_zh": "后入位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Грудью к полу, таз приподнят, партнёр сзади",
+      "category_ru": "Пара: партнёр сзади",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -37490,7 +37755,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P042_12dc1700",
@@ -37502,9 +37768,9 @@
       "pose_name_zh": "盘腿相拥",
       "category_ja": "対面座位",
       "category_zh": "面对面坐位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя со скрещёнными ногами в объятии",
+      "category_ru": "Пара: сидя лицом к лицу",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -37631,7 +37897,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P043_4ab6e673",
@@ -37643,9 +37910,9 @@
       "pose_name_zh": "膝盖拉至肩・手握脚踝",
       "category_ja": "正常位",
       "category_zh": "正常位（传教士）",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Колени подтянуты к плечам, партнёр держит лодыжки",
+      "category_ru": "Пара: лёжа на спине",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -37772,7 +38039,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P044_f29c2c13",
@@ -37784,9 +38052,9 @@
       "pose_name_zh": "越过背后・手抚胸前",
       "category_ja": "背面座位",
       "category_zh": "背向坐位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Партнёр сзади, рука на груди",
+      "category_ru": "Пара: сидя спиной к партнёру",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -37913,7 +38181,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P045_02203914",
@@ -37925,9 +38194,9 @@
       "pose_name_zh": "深度前屈・双手触地",
       "category_ja": "後背位",
       "category_zh": "后入位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Глубокий наклон, руки на полу, партнёр сзади",
+      "category_ru": "Пара: партнёр сзади",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -38054,7 +38323,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P046_eb90e10a",
@@ -38066,9 +38336,9 @@
       "pose_name_zh": "双腿前伸而坐",
       "category_ja": "騎乗位",
       "category_zh": "骑乘位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя верхом, ноги вытянуты вперёд",
+      "category_ru": "Пара: сверху",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -38195,7 +38465,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P047_3154dda7",
@@ -38207,9 +38478,9 @@
       "pose_name_zh": "双腿交叉・单腿搭肩",
       "category_ja": "側位",
       "category_zh": "侧卧位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На боку, ноги скрещены, одна на плече партнёра",
+      "category_ru": "Пара: на боку",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -38336,7 +38607,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P048_31f8f001",
@@ -38348,9 +38620,9 @@
       "pose_name_zh": "俯卧抬起单腿",
       "category_ja": "後背位",
       "category_zh": "后入位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Лёжа на животе, одна нога поднята, партнёр сзади",
+      "category_ru": "Пара: партнёр сзади",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -38477,7 +38749,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P049_d07e5dcc",
@@ -38489,9 +38762,9 @@
       "pose_name_zh": "相拥・双腿交缠",
       "category_ja": "立位密着",
       "category_zh": "立位贴身",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Объятие стоя, ноги переплетены",
+      "category_ru": "Пара: стоя близко",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -38618,7 +38891,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P050_e5f688e5",
@@ -38630,9 +38904,9 @@
       "pose_name_zh": "伸展身体・单腿后举",
       "category_ja": "立位密着",
       "category_zh": "立位贴身",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Стоя в объятии, тянется, одна нога назад",
+      "category_ru": "Пара: стоя близко",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -38759,7 +39033,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P051_a24c6535",
@@ -38771,9 +39046,9 @@
       "pose_name_zh": "耳边低语・手触脸颊",
       "category_ja": "立位密着",
       "category_zh": "立位贴身",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Шёпот на ухо, рука у щеки",
+      "category_ru": "Пара: стоя близко",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -38900,7 +39175,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P052_8fdcdf8e",
@@ -38912,9 +39188,9 @@
       "pose_name_zh": "双手腕举过头・被按住",
       "category_ja": "立位",
       "category_zh": "立位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Запястья подняты над головой и прижаты",
+      "category_ru": "Пара: стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -39041,7 +39317,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P053_fb2c11dd",
@@ -39053,9 +39330,9 @@
       "pose_name_zh": "自背后环抱胸前",
       "category_ja": "立位",
       "category_zh": "立位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Партнёр обнимает сзади за грудь",
+      "category_ru": "Пара: стоя",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -39182,7 +39459,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P054_30f8c25b",
@@ -39194,9 +39472,9 @@
       "pose_name_zh": "被横抱・背部后仰",
       "category_ja": "立位密着",
       "category_zh": "立位贴身",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На руках у партнёра, прогиб назад",
+      "category_ru": "Пара: стоя близко",
+      "pose_family": "STANDING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -39323,7 +39601,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P055_a1e75565",
@@ -39335,9 +39614,9 @@
       "pose_name_zh": "侧坐・单腿高抬伸直",
       "category_ja": "座位密着",
       "category_zh": "坐位贴身",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Сидя боком в объятии, нога высоко вытянута",
+      "category_ru": "Пара: сидя близко",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -39464,7 +39743,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P056_fe3929d4",
@@ -39476,9 +39756,9 @@
       "pose_name_zh": "肘撑・从旁俯视",
       "category_ja": "側位",
       "category_zh": "侧卧位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Партнёр на локте смотрит сбоку сверху",
+      "category_ru": "Пара: на боку",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -39605,7 +39885,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P057_c2b88812",
@@ -39617,9 +39898,9 @@
       "pose_name_zh": "搭腿同眠",
       "category_ja": "寝そべり",
       "category_zh": "趴卧",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Спят рядом, нога закинута на партнёра",
+      "category_ru": "Лёжа",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -39746,7 +40027,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P058_97b257bc",
@@ -39758,9 +40040,9 @@
       "pose_name_zh": "双腿之间托腮",
       "category_ja": "密着",
       "category_zh": "贴身",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Подбородок на руке между ног партнёра",
+      "category_ru": "Пара: близко",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -39887,7 +40169,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P059_f3413b22",
@@ -39899,9 +40182,9 @@
       "pose_name_zh": "抱住膝弯・大幅打开",
       "category_ja": "正常位",
       "category_zh": "正常位（传教士）",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Партнёр держит под коленями, ноги широко",
+      "category_ru": "Пара: лёжа на спине",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -40028,7 +40311,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P060_d81ec396",
@@ -40040,9 +40324,9 @@
       "pose_name_zh": "双膝抱至胸前",
       "category_ja": "正常位",
       "category_zh": "正常位（传教士）",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Колени прижаты к груди, партнёр сверху",
+      "category_ru": "Пара: лёжа на спине",
+      "pose_family": "LYING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -40169,7 +40453,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P061_f38d1a36",
@@ -40181,9 +40466,9 @@
       "pose_name_zh": "前倾弯腰・自后方扶腰",
       "category_ja": "後背位",
       "category_zh": "后入位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Наклон вперёд, партнёр сзади держит за талию",
+      "category_ru": "Пара: партнёр сзади",
+      "pose_family": "KNEELING",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -40310,7 +40595,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P062_8c4f3a53",
@@ -40322,9 +40608,9 @@
       "pose_name_zh": "膝上・双腿绕腰",
       "category_ja": "対面座位",
       "category_zh": "面对面坐位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "На коленях партнёра, ноги обвивают талию",
+      "category_ru": "Пара: сидя лицом к лицу",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -40451,7 +40737,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     },
     {
       "group_id": "ANHAO_2_unknown_P063_11f3c05b",
@@ -40463,9 +40750,9 @@
       "pose_name_zh": "背靠・双膝大幅打开",
       "category_ja": "背面座位",
       "category_zh": "背向坐位",
-      "pose_name_ru": "",
-      "category_ru": "",
-      "pose_family": "",
+      "pose_name_ru": "Спиной к партнёру, колени широко разведены",
+      "category_ru": "Пара: сидя спиной к партнёру",
+      "pose_family": "SEATED",
       "multiview_relation": "SOURCE_GROUP_APPROXIMATE",
       "source_angles": [
         "front",
@@ -40592,7 +40879,8 @@
       ],
       "status": "FULL",
       "source_view_count": 5,
-      "selection_policy": "ALL_SOURCE_IMAGES"
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "group_size": "DUO"
     }
   ],
   "selection_policy": "ALL_SOURCE_IMAGES",

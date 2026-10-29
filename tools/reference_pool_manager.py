@@ -68,12 +68,12 @@ def categorize(pool, r):
 def records(pool: str):
  c=cfg()[pool]; base=(ROOT/c["root"]).resolve(); kind=c["adapter"]
  if kind=="pose_atlas":
-  from tools.pose_reference_manager import reference_context
+  from tools.pose_reference_manager import localize_group, reference_context
   data=read_json(base/"POSE_GROUPS.json"); out=[]
-  for g in data["groups"]:
+  for g in map(localize_group,data["groups"]):
    for v in g["views"]:
     display=" · ".join(str(x) for x in (g.get("system"),g.get("pose_number"),g.get("pose_name_ru") or g.get("pose_name_ja")) if x)
-    out.append({"id":v["source_id"],"title":g.get("pose_name_ru") or g.get("pose_name_ja",""),"group_display":display,"angle":v.get("angle",""),"tags":[g.get("category_ru",""),g.get("pose_family","")],"subject_label":v.get("subject_label","UNKNOWN"),"subject_label_status":v.get("subject_label_status","UNKNOWN"),"sha256":v.get("sha256",""),"relative_path":v.get("relative_path",v.get("reference_path","")),"group_id":g["group_id"],"source_id":v["source_id"],"role":"","review_state":v.get("visual_qa_status","NOT_CHECKED"),"provenance":{"source_id":v["source_id"],"group_id":g["group_id"],"review_notes":v.get("review_notes",""),"review_evidence":v.get("review_evidence","")}})
+    out.append({"id":v["source_id"],"title":g.get("pose_name_ru") or g.get("pose_name_ja",""),"group_display":display,"angle":v.get("angle",""),"tags":[g.get("category_ru",""),g.get("pose_family",""),g.get("group_size","")],"subject_label":v.get("subject_label","UNKNOWN"),"subject_label_status":v.get("subject_label_status","UNKNOWN"),"sha256":v.get("sha256",""),"relative_path":v.get("relative_path",v.get("reference_path","")),"group_id":g["group_id"],"source_id":v["source_id"],"role":"","review_state":v.get("visual_qa_status","NOT_CHECKED"),"provenance":{"source_id":v["source_id"],"group_id":g["group_id"],"review_notes":v.get("review_notes",""),"review_evidence":v.get("review_evidence","")}})
   for r in out: r["categories"]=categorize(pool,r)
   return base,out
  if kind=="pinterest":

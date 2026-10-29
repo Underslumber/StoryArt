@@ -37,6 +37,29 @@ class PoseReferenceError(ValueError):
     pass
 
 
+RU_NAMES_PATH = Path(__file__).resolve().parents[1] / "config" / "pose_atlas_ru.json"
+_ru_names: dict[str, Any] | None = None
+
+
+def localize_group(group: dict[str, Any]) -> dict[str, Any]:
+    """Fill empty Russian names, pose family and group size from config/pose_atlas_ru.json."""
+    global _ru_names
+    if _ru_names is None:
+        _ru_names = json.loads(RU_NAMES_PATH.read_text(encoding="utf-8")) if RU_NAMES_PATH.is_file() else {}
+    category = _ru_names.get("categories", {}).get(str(group.get("category_ja", "")), {})
+    system = _ru_names.get("systems", {}).get(str(group.get("system", "")), {})
+    defaults = {
+        "pose_name_ru": _ru_names.get("groups", {}).get(str(group.get("group_id", "")), ""),
+        "category_ru": category.get("ru", ""),
+        "pose_family": category.get("pose_family", ""),
+        "group_size": system.get("group_size", ""),
+    }
+    for key, value in defaults.items():
+        if value and not group.get(key):
+            group[key] = value
+    return group
+
+
 def digest(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -266,7 +289,12 @@ def import_atlas(args: argparse.Namespace) -> dict[str, Any]:
         group["available_angles"] = sorted({v["angle"] for v in group["views"] if v["generator_eligible"] and v["angle"] != "unknown"})
         group["status"] = "UNAVAILABLE" if not group["available_angles"] else "FULL" if set(group["available_angles"]) == set(EXPECTED_ANGLES) else "PARTIAL"
         group["source_view_count"] = len(group["views"])
-        groups.append(group)
+        groups.append(localize_group(group))
+    by_group = {group["group_id"]: group for group in groups}
+    for row in manifest:
+        group = by_group.get(row["group_id"], {})
+        for key in ("pose_name_ru", "category_ru", "pose_family"):
+            row[key] = row[key] or group.get(key, "")
     library.mkdir(parents=True, exist_ok=True)
     commit = source_commit(rows)
     (library / "POSE_GROUPS.json").write_text(json.dumps({"schema_version": 1, "source_count": len(rows),
@@ -364,6 +392,8 @@ def reference_context(library_root: Path | str, target_anatomy: str = "ANY", que
     target = target_anatomy.upper()
     library = Path(library_root).resolve()
     data = json_read(library / "POSE_GROUPS.json")
+    for group in data.get("groups", []):
+        localize_group(group)
     all_source_images = str(data.get("selection_policy", "")).upper() == ALL_SOURCE_IMAGES
     valid_targets = {"MALE_ANATOMY", "FEMALE_ANATOMY", "ANY"} if all_source_images else {"MALE_ANATOMY", "FEMALE_ANATOMY"}
     if target not in valid_targets:
