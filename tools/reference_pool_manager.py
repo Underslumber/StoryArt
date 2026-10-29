@@ -225,10 +225,12 @@ def select(pool,ident,role,subject=""):
  p=safe(base,r["relative_path"])
  if not p.is_file() or sha(p)!=r["sha256"]: raise PoolError("candidate source hash is stale or file missing")
  if pool=="POSE_ATLAS":
-  from tools.pose_reference_manager import reference_context
-  fresh=reference_context(base)
+  from tools.pose_reference_manager import PoseReferenceError, reference_context
+  anatomy={"MALE":"MALE_ANATOMY","FEMALE":"FEMALE_ANATOMY"}.get(subject.upper(),"ANY")
+  try: fresh=reference_context(base,anatomy,source_id=ident)
+  except PoseReferenceError as e: raise PoolError(f"atlas source not selectable: {e}") from e
   v=[v for g in fresh["groups"] for v in g["views"] if v["source_id"]==ident]
-  if len(v)!=1: raise PoolError("atlas source not selectable under ALL_SOURCE_IMAGES")
+  if len(v)!=1: raise PoolError("atlas source not selectable")
  if pool=="DRAWING_GUIDES":
   from tools.external_reference_catalog import build_catalog, select_candidates, select_positive_candidates
   catalog=build_catalog(base)

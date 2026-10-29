@@ -68,3 +68,20 @@ def test_confirmed_human_selection_cannot_export_quarantined_path(monkeypatch,tm
     monkeypatch.setattr(rpm,'read_json',lambda p:{'records':[source]})
     with pytest.raises(rpm.PoolError):
         rpm.select('PINTEREST_SKETCH','q','HUMAN_POSE_SOFT','MALE')
+
+def test_atlas_select_checks_the_requested_source_for_the_given_subject(monkeypatch, tmp_path):
+    from tools import pose_reference_manager as prm
+    f=tmp_path/"a.png"; f.write_bytes(b"atlas")
+    row={"id":"v1","sha256":rpm.sha(f),"relative_path":"a.png","provenance":{}}
+    monkeypatch.setattr(rpm,"cfg",lambda:{"POSE_ATLAS":{"root":".","roles":["POSE_SOFT"],"adapter":"x"}})
+    monkeypatch.setattr(rpm,"records",lambda p:(tmp_path,[row]))
+    calls=[]
+    def fake_context(base, anatomy="ANY", source_id="", **kwargs):
+        calls.append((anatomy, source_id))
+        if anatomy=="ANY": raise prm.PoseReferenceError("target_anatomy must be MALE_ANATOMY or FEMALE_ANATOMY.")
+        return {"groups":[{"views":[{"source_id":source_id}]}]}
+    monkeypatch.setattr(prm,"reference_context",fake_context)
+    assert rpm.select("POSE_ATLAS","v1","POSE_SOFT","MALE")["generation_eligible"] is False
+    assert calls==[("MALE_ANATOMY","v1")]
+    with pytest.raises(rpm.PoolError, match="not selectable"):
+        rpm.select("POSE_ATLAS","v1","POSE_SOFT")
