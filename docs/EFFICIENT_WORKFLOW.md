@@ -13,14 +13,14 @@ It cannot itself change the model of an already running session.
 | --- | --- | --- |
 | Ordinary image production and integration | Sol 6.1 Medium root (`ROOT`) | Root retains the full user contract, choices, execution, recovery and acceptance. |
 | Deterministic lookups, CLI execution, cache reuse, registration | Root uses project tools directly | Reuse unchanged request-scoped results; retry only after a concrete error or changed input. |
-| Bounded source discovery and ordinary code implementation | Sol 6.1 Low (`DEFAULT_WORKER`) | Optional narrow packet; no user conversation or decisions that replace the contract. |
-| Complex call planning and independent review | Sol 6.1 Medium (`CALL_PLANNER` / `CODE_REVIEW` / `VISUAL_QA`) | Only when separate work or judgement materially helps; fresh review for substantial code changes. |
-| Exceptional diagnosis | Sol 6.1 High (`ESCALATION_ORCHESTRATOR`) | Evidence of a complex fault or substantive repair failure; bounded diagnosis only. |
+| Source discovery, implementation, call planning and result checks | Luna 6 High | `default`, `worker` or `explorer`; narrow packet without transcript. |
+| Mandatory independent review after machine checks | Sol 6.1 Medium | `sol_review` with recorded SOL_GATE; substantial code changes. |
+| Diagnosis after evidenced Luna failure | Sol 6.1 High | `sol_escalation` with recorded SOL_GATE; bounded diagnosis only. |
 
 `config/model_routes.json` is the role authority; `MODEL_PROFILES.md` explains
-activation and explicit experiments. This project route overrides generic model
-defaults. Sol 6.1 Low root and Luna 5.6 Low mechanical workers are opt-in trials,
-not automatic fallback assignments. Luna 6 is outside normal production routing.
+activation. The user routing correction of 2026-10-13 governs ordinary workers.
+Root retains its selected model; already running agents retain theirs.
+Specialized Web roles retain their own explicitly authorized contracts.
 
 Model and effort are requested when an agent is spawned; prose and tools cannot
 switch the current model. On a clean setup, the provided configuration template
@@ -50,6 +50,12 @@ for fresh substantial-code review, and the same root contract for integration.
 An existing chat keeps its actual model; never claim a config edit switched it.
 
 ## Image-production route
+
+Explicit ChatGPT Web image requests use the project-local `web_image` agent
+under `skills/storyart-web-image/SKILL.md`. This is the user-selected exception
+to root-only execution below: root prepares the exact call and complete final
+specification, dispatches the sealed WEB_IMAGE packet and retains all QA and
+completion. The normal built-in path and other model roles are unchanged.
 
 ### Minimal execution path
 
@@ -96,6 +102,30 @@ reason to rediscover information already resolved for the unchanged request.
    do not reopen the entire image once per checklist label. Batch deterministic
    registration and guard updates after evidence is ready. Deliver promptly;
    optional archiving and reporting must not delay the visible result.
+
+For an approved character scene, select the smallest unique set that covers
+the required roles. `ASSEMBLY_PLUS_FACE` keeps the approved assembly as the
+sole BODY reference and adds a separate approved face only when face detail
+needs it. Scene complexity alone does not establish that a second body view is
+needed; add a front, side, or back view only when the target camera projection
+or silhouette evidence is not covered by the assembly. Use `IDENTITY_STRICT`
+when its separate face and body-view evidence is actually required. `AUTO`
+retains its existing behavior.
+
+The planner must select the explicit minimal mode rather than rely on
+`AUTO` to make the attachment decision. Start with STYLE and one approved
+assembly that covers the target body projection; add the approved close FACE
+with `ASSEMBLY_PLUS_FACE` when facial detail requires it. Keep all canonical
+views in storage, but do not attach them merely because they exist. Before
+adding a second BODY, record the concrete uncovered camera, silhouette or
+proportion requirement and what the additional view supplies. Similar images
+with no unique contribution are omitted; perceptual similarity alone never
+authorizes dropping a required role, clothing source or identity source.
+
+The Pelun controlled test established feasibility for this near-front scene:
+removing FRONT while retaining STYLE, assembly and FACE produced a coherent
+candidate. This single unseeded test is not a universal quality guarantee.
+Every scene still requires its own source coverage and visual acceptance.
 
 Fresh byte checks at a later execution boundary remain necessary. Repeating
 the same scan or hash within one unchanged validation operation does not add
@@ -155,9 +185,9 @@ required semantic layers remain separately inspected and recorded.
 
 | Delegated image role | Requested model and effort | Limit |
 | --- | --- | --- |
-| `STYLE_LIBRARIAN` / `IDENTITY_CURATOR` | Registry role: Sol 6.1 Low | Optional bounded source discovery; root resolves material ambiguity |
-| `CALL_PLANNER` | Registry role: Sol 6.1 Medium | Only a complex exact call with useful independent planning |
-| `VISUAL_QA` / critical independent QA | Registry role: fresh Sol 6.1 Medium | Only when a separate bounded judgement or required independent gate is useful |
+| `STYLE_LIBRARIAN` / `IDENTITY_CURATOR` | Registry role: Luna 6 High | Optional bounded source discovery; root resolves material ambiguity |
+| `CALL_PLANNER` | Registry role: Luna 6 High | Bounded exact-call planning |
+| `VISUAL_QA` / result checks | Registry role: Luna 6 High | Root retains final visual acceptance |
 | `GENERATOR_OPERATOR` / `REGISTRAR` | No agent; root executes sequentially | N/A |
 
 These are spawn requests, not a runtime scheduler or a way to switch the

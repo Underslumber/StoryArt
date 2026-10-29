@@ -24,6 +24,15 @@ SCHEMA_VERSION = 1
 DEFAULT_MAX_MINUTES_WITHOUT_EXECUTION = 20
 DEFAULT_MAX_PREFLIGHT_ACTIONS = 12
 DEFAULT_MAX_EXECUTION_MINUTES = 20
+REPLACEMENT_AUTHORIZATION_QUESTION = (
+    "\\u0414\\u043b\\u044f \\u0441\\u0442\\u0430\\u0440\\u043e\\u0433\\u043e \\u0437\\u0430\\u043f\\u0443\\u0441\\u043a\\u0430 \\u043d\\u0435\\u0442 \\u0434\\u043e\\u0441\\u0442\\u043e\\u0432\\u0435\\u0440\\u043d\\u043e\\u0439 \\u043a\\u0432\\u0438\\u0442\\u0430\\u043d\\u0446\\u0438\\u0438: \\u043e\\u043d \\u043e\\u0441\\u0442\\u0430\\u0451\\u0442\\u0441\\u044f UNKNOWN, \\u0438 \\u0431\\u0435\\u0437\\u043e\\u043f\\u0430\\u0441\\u043d\\u043e \\u043f\\u0440\\u043e\\u0434\\u043e\\u043b\\u0436\\u0438\\u0442\\u044c \\u0435\\u0433\\u043e \\u043d\\u0435\\u0432\\u043e\\u0437\\u043c\\u043e\\u0436\\u043d\\u043e. "
+    "\\u0420\\u0430\\u0437\\u0440\\u0435\\u0448\\u0430\\u0435\\u0448\\u044c \\u043f\\u043e\\u0441\\u043b\\u0435 \\u043f\\u0440\\u043e\\u0432\\u0435\\u0440\\u043a\\u0438 \\u0438\\u0441\\u043f\\u0440\\u0430\\u0432\\u043b\\u0435\\u043d\\u0438\\u044f \\u043d\\u0430\\u0447\\u0430\\u0442\\u044c \\u043d\\u043e\\u0432\\u0443\\u044e \\u043f\\u043e\\u043f\\u044b\\u0442\\u043a\\u0443, \\u0441\\u043e\\u0445\\u0440\\u0430\\u043d\\u0438\\u0432 \\u0441\\u0442\\u0430\\u0440\\u0443\\u044e \\u0431\\u0435\\u0437 \\u0438\\u0437\\u043c\\u0435\\u043d\\u0435\\u043d\\u0438\\u0439? "
+    "\\u0415\\u0441\\u0442\\u044c \\u043d\\u0435\\u0431\\u043e\\u043b\\u044c\\u0448\\u043e\\u0439 \\u0440\\u0438\\u0441\\u043a, \\u0447\\u0442\\u043e \\u0438\\u0441\\u0445\\u043e\\u0434\\u043d\\u044b\\u0439 \\u043f\\u0440\\u043e\\u043c\\u043f\\u0442 \\u0432\\u0441\\u0451 \\u0436\\u0435 \\u0431\\u044b\\u043b \\u043e\\u0442\\u043f\\u0440\\u0430\\u0432\\u043b\\u0435\\u043d; \\u043f\\u043e\\u0432\\u0442\\u043e\\u0440 \\u0431\\u0443\\u0434\\u0435\\u0442 \\u0442\\u043e\\u043b\\u044c\\u043a\\u043e \\u043f\\u043e \\u0442\\u0432\\u043e\\u0435\\u043c\\u0443 \\u044f\\u0432\\u043d\\u043e\\u043c\\u0443 \\u0440\\u0430\\u0437\\u0440\\u0435\\u0448\\u0435\\u043d\\u0438\\u044e."
+)
+REPLACEMENT_AUTHORIZATION_ANSWER = "\\u0420\\u0430\\u0437\\u0440\\u0435\\u0448\\u0430\\u044e \\u043d\\u043e\\u0432\\u0443\\u044e \\u043f\\u043e\\u043f\\u044b\\u0442\\u043a\\u0443 \\u043f\\u043e\\u0441\\u043b\\u0435 \\u0438\\u0441\\u043f\\u0440\\u0430\\u0432\\u043b\\u0435\\u043d\\u0438\\u044f"
+REPLACEMENT_AUTHORIZATION_QUESTION = REPLACEMENT_AUTHORIZATION_QUESTION.encode("ascii").decode("unicode_escape")
+REPLACEMENT_AUTHORIZATION_ANSWER = REPLACEMENT_AUTHORIZATION_ANSWER.encode("ascii").decode("unicode_escape")
+REPLACEMENT_AUTHORIZATION_SOURCE = "Direct user structured reply in current chat"
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff"}
 SWIMWEAR_RUNGS = ("EXTREME_MICRO", "BIKINI", "TWO_PIECE")
 SWIMWEAR_TOPOLOGIES = (*SWIMWEAR_RUNGS, "SPORT_TOP", "ONE_PIECE", "SHORTS", "OTHER", "CUSTOM")
@@ -422,14 +431,31 @@ def reconcile_plan_required_stages(state: dict[str, object], plan: dict[str, obj
     if any(not isinstance(row, dict) for row in existing):
         raise GuardActionRequired("CHARACTER_BASE guard has malformed stage entries; repair the guard before continuing.")
     by_id = {str(row.get("id", "")): row for row in existing}
-    if len(by_id) != len(existing) or any(stage_id not in CHARACTER_BASE_STAGES for stage_id in by_id):
+    if len(by_id) != len(existing) or any(not stage_id for stage_id in by_id):
         raise GuardActionRequired(
-            "CHARACTER_BASE guard has duplicate or unexpected stages; reconcile it with the five stages in the executable plan."
+            "CHARACTER_BASE guard has duplicate or empty stage entries; reconcile it with the executable plan."
         )
     state["required_stages"] = [
-        by_id.get(stage_id, {"id": stage_id, "status": "PENDING", "completed_at": None, "evidence": []})
-        for stage_id in CHARACTER_BASE_STAGES
+        *[by_id[stage_id] for stage_id in by_id if stage_id not in CHARACTER_BASE_STAGES],
+        *[by_id.get(stage_id, {"id": stage_id, "status": "PENDING", "completed_at": None, "evidence": []})
+          for stage_id in CHARACTER_BASE_STAGES],
     ]
+    contract = plan.get("character_base_contract")
+    if not isinstance(contract, dict) or contract.get("age_group") not in {"ADULT", "CHILD"}:
+        raise GuardActionRequired("CHARACTER_BASE plan has no explicit age-group contract.")
+    if contract.get("age_group") == "CHILD":
+        anatomy = str(contract.get("subject_anatomy", "")).upper()
+        expected_garment = (
+            "opaque age-appropriate T-shirt and shorts" if anatomy == "MALE_ANATOMY"
+            else "opaque age-appropriate T-shirt and skirt" if anatomy == "FEMALE_ANATOMY" else ""
+        )
+        if (contract.get("adult_swimwear_ladder") is not False
+                or contract.get("adult_anthropometry") is not False
+                or contract.get("coverage_policy") != "OPAQUE_AGE_APPROPRIATE_CLOSED_COVERAGE"
+                or not expected_garment
+                or contract.get("required_garment") != expected_garment):
+            raise GuardActionRequired("CHILD CHARACTER_BASE contract is incomplete or conflicts with closed age-appropriate coverage.")
+    state["character_base_contract"] = contract
     state["request_purpose"] = purpose
 
 
@@ -1025,6 +1051,73 @@ def validate_reference_plan(
     recorded_call = plan.get("execution_call")
     if not isinstance(recorded_call, dict) or recorded_call != execution_call:
         raise GuardError("The materialized execution_call must exactly match the call saved in REFERENCE_PLAN.")
+    face_purpose = plan.get("new_face_reference_purpose")
+    if face_purpose is not None:
+        if not isinstance(face_purpose, dict) or face_purpose.get("mode") not in {"STYLE_SEED", "USER_IDENTITY_INTENT"}:
+            raise GuardError("REFERENCE_PLAN has an unsupported new_face_reference_purpose binding.")
+        if execution_call.get("new_face_reference_purpose") != face_purpose:
+            raise GuardError("Exact execution_call face purpose differs from REFERENCE_PLAN.")
+        call_risk = execution_call.get("risk_assessment")
+        plan_risk = plan.get("risk_assessment")
+        if (not isinstance(call_risk, dict) or call_risk.get("new_face_reference_purpose") != face_purpose
+                or not isinstance(plan_risk, dict) or plan_risk.get("new_face_reference_purpose") != face_purpose):
+            raise GuardError("Exact-call risk bindings do not preserve new face-source purpose and provenance.")
+        if face_purpose.get("mode") == "USER_IDENTITY_INTENT":
+            if (plan.get("generation_purpose") != "CHARACTER_BASE" or str(plan.get("character_id", "")).upper() != "NEW"
+                    or face_purpose.get("scope") != "NEW_CHARACTER_BASE"
+                    or not str(face_purpose.get("evidence", "")).strip()
+                    or face_purpose.get("semantic_role") != "FACE"):
+                raise GuardError("USER_IDENTITY_INTENT is valid only with current author evidence on a NEW CHARACTER_BASE.")
+            selected = plan.get("selected_references")
+            if not isinstance(selected, dict):
+                raise GuardError("USER_IDENTITY_INTENT requires selected face source records.")
+            style_values = selected.get("style", [])
+            style_values = style_values if isinstance(style_values, list) else [style_values]
+            style_paths = {str(Path(str(item.get("path", ""))).resolve()).casefold() for item in style_values if isinstance(item, dict)}
+            bound_sources = face_purpose.get("sources")
+            if not isinstance(bound_sources, list) or len(bound_sources) != 2:
+                raise GuardError("USER_IDENTITY_INTENT requires exactly two face source path/hash bindings.")
+            expected_keys = {"primary_face": "PRIMARY_FACE", "supporting_face": "SUPPORTING_FACE"}
+            seen: set[str] = set()
+            seen_source_paths: set[str] = set()
+            seen_source_hashes: set[str] = set()
+            for source in bound_sources:
+                if not isinstance(source, dict):
+                    raise GuardError("USER_IDENTITY_INTENT source bindings must be objects.")
+                key = str(source.get("selection_key", ""))
+                if key not in expected_keys or source.get("physical_slot_role") != expected_keys[key] or source.get("semantic_role") != "FACE" or key in seen:
+                    raise GuardError("USER_IDENTITY_INTENT source role mapping is invalid or duplicated.")
+                seen.add(key)
+                values = selected.get(key)
+                values = values if isinstance(values, list) else [values]
+                if len(values) != 1 or not isinstance(values[0], dict):
+                    raise GuardError(f"USER_IDENTITY_INTENT is missing its selected {key} record.")
+                selected_source = values[0]
+                path = Path(str(source.get("path", ""))).resolve()
+                digest = str(source.get("sha256", "")).lower()
+                normalized_path = str(path).casefold()
+                if normalized_path in seen_source_paths:
+                    raise GuardError("USER_IDENTITY_INTENT requires two distinct absolute FACE source paths.")
+                if digest in seen_source_hashes:
+                    raise GuardError("USER_IDENTITY_INTENT requires two distinct FACE source SHA-256 hashes.")
+                seen_source_paths.add(normalized_path)
+                seen_source_hashes.add(digest)
+                if (Path(str(selected_source.get("path", ""))).resolve() != path
+                        or str(selected_source.get("sha256", "")).lower() != digest
+                        or not re.fullmatch(r"[0-9a-f]{64}", digest)
+                        or not path.is_file() or file_sha256(path) != digest
+                        or source.get("subject_label") not in {"MALE", "FEMALE"}
+                        or source.get("subject_label_sha256") != digest
+                        or selected_source.get("subject_label") != source.get("subject_label")
+                        or selected_source.get("subject_label_status") != "REVIEWED"
+                        or selected_source.get("subject_label_sha256") != digest
+                        or selected_source.get("face_reference_purpose") != "USER_IDENTITY_INTENT"
+                        or selected_source.get("face_reference_purpose_scope") != "NEW_CHARACTER_BASE"
+                        or str(source.get("purpose_evidence", "")).strip() != str(face_purpose.get("evidence", "")).strip()
+                        or str(path).casefold() in style_paths):
+                    raise GuardError(f"USER_IDENTITY_INTENT {key} path, hash, label, or independent STYLE binding differs.")
+            if seen != set(expected_keys):
+                raise GuardError("USER_IDENTITY_INTENT lacks both PRIMARY_FACE and SUPPORTING_FACE bindings.")
     recorded_selections = plan.get("user_selections")
     if isinstance(recorded_selections, dict) and recorded_selections != execution_call.get("user_selections"):
         raise GuardError("REFERENCE_PLAN user_selections differ from the exact execution_call selections.")
@@ -1392,12 +1485,31 @@ def validate_swimwear_execution_start(
     swimwear_rung: str | None,
     user_swimwear_override: bool,
     user_override_evidence: str,
+    plan: dict[str, object] | None = None,
+    execution_call: dict[str, object] | None = None,
 ) -> dict[str, object] | None:
     if not is_physique_stage(stage):
         return None
     entry = find_required_stage(state, stage)
     if entry.get("status") == "COMPLETED":
         raise GuardError(f"Cannot start another physique attempt for completed stage {entry.get('id')}.")
+    contract = state.get("character_base_contract", {})
+    if isinstance(contract, dict) and contract.get("age_group") == "CHILD":
+        if swimwear_rung or user_swimwear_override:
+            raise GuardError("Child physique stages forbid adult swimwear rungs and all user topology overrides.")
+        plan_contract = plan.get("character_base_contract") if isinstance(plan, dict) else None
+        if plan_contract != contract:
+            raise GuardError("Child age/coverage contract differs between guard and executable plan.")
+        prompt = execution_call.get("prompt", {}) if isinstance(execution_call, dict) else {}
+        prompt_text = str(prompt.get("text", "")).casefold() if isinstance(prompt, dict) else ""
+        required = str(contract.get("required_garment", "")).casefold()
+        normalized = " ".join(prompt_text.replace("-", " ").split())
+        if not required or " ".join(required.replace("-", " ").split()) not in normalized:
+            raise GuardError("Child execution prompt omits the exact required T-shirt and lower garment.")
+        forbidden = ("swimsuit", "swim shorts", "swimwear", "bikini", "one piece", "thong", "micro", "lingerie", "underwear", "nude", "naked", "transparent", "see through", "exposed torso")
+        if any(term in normalized for term in forbidden):
+            raise GuardError("Child physique execution prompt contains adult or exposed-topology wording.")
+        return None
     rung = str(swimwear_rung or "").upper()
     if user_swimwear_override:
         if not user_override_evidence.strip():
@@ -1487,10 +1599,36 @@ def validate_stage_attempt_binding(
                 "artifact_sha256": accepted["output_sha256"]}
     stage_key = normalize_stage_key(stage)
     revision = int(state.get("task_revision", 0))
-    candidates = [
-        row for row in state.get("attempts", [])
-        if normalize_stage_key(str(row.get("stage", ""))) == stage_key
-    ]
+    def matches_stage(row: dict[str, object]) -> bool:
+        if normalize_stage_key(str(row.get("stage", ""))) == stage_key:
+            return True
+        if (state.get("task_kind") != "IMAGE_GENERATION_NATIVE_DEFAULT"
+                or str(stage).strip().upper() != "SCENE"
+                or row.get("stage") != "SINGLE_PASS"):
+            return False
+        snapshot = row.get("execution_snapshot")
+        binding = row.get("reference_binding")
+        if not isinstance(snapshot, dict) or not isinstance(binding, dict):
+            return False
+        call = snapshot.get("execution_call")
+        if not isinstance(call, dict) or call.get("stage_id") != "SCENE":
+            return False
+        call_hash = hashlib.sha256(json.dumps(call, ensure_ascii=False, sort_keys=True,
+                                             separators=(",", ":")).encode("utf-8")).hexdigest()
+        return (
+            isinstance(state.get("task_revision"), int) and not isinstance(state.get("task_revision"), bool)
+            and isinstance(row.get("task_revision"), int) and not isinstance(row.get("task_revision"), bool)
+            and isinstance(snapshot.get("task_revision"), int) and not isinstance(snapshot.get("task_revision"), bool)
+            and row["task_revision"] == snapshot["task_revision"] == revision
+            and snapshot.get("request_id") == call.get("request_id") == binding.get("request_id") == state.get("request_id")
+            and bool(state.get("request_id")) and snapshot.get("attempt_id") == row.get("attempt_id")
+            and snapshot.get("stage") == snapshot.get("guard_stage") == snapshot.get("execution_stage") == "SINGLE_PASS"
+            and snapshot.get("reference_binding") == binding
+            and snapshot.get("execution_call_sha256") == binding.get("execution_call_sha256") == call_hash
+            and snapshot.get("prompt_sha256") == binding.get("prompt_sha256") == (call.get("prompt") or {}).get("text_sha256")
+        )
+
+    candidates = [row for row in state.get("attempts", []) if matches_stage(row)]
     attempt = candidates[-1] if candidates else None
     if (
         not isinstance(attempt, dict)
@@ -1757,28 +1895,15 @@ def completion_block_reason(state: dict[str, object]) -> str | None:
                 except GuardError as error:
                     return str(error)
                 continue
-            bound_attempt = next(
-                (row for row in state.get("attempts", []) if row.get("attempt_id") == binding.get("attempt_id")),
-                None,
-            )
-            bound_index = next(
-                (index for index, row in enumerate(state.get("attempts", []))
-                 if row.get("attempt_id") == binding.get("attempt_id")),
-                -1,
-            )
-            superseded = any(
-                normalize_stage_key(str(row.get("stage", ""))) == normalize_stage_key(str(entry.get("id", "")))
-                and index > bound_index
-                for index, row in enumerate(state.get("attempts", []))
-            )
+            try:
+                expected_binding = validate_stage_attempt_binding(
+                    state, str(entry.get("id", "")), stage_evidence
+                )
+            except GuardError as error:
+                return str(error)
             if (
-                not isinstance(bound_attempt, dict)
+                binding != expected_binding
                 or int(binding.get("task_revision", -1)) != int(entry.get("completed_task_revision", -2))
-                or int(bound_attempt.get("task_revision", -1)) != int(binding.get("task_revision", -2))
-                or normalize_stage_key(str(bound_attempt.get("stage", ""))) != normalize_stage_key(str(entry.get("id", "")))
-                or bound_attempt.get("result_status") != binding.get("result_status")
-                or bound_attempt.get("result_status") not in {"STAGING", "TEST"}
-                or superseded
             ):
                 return f"Completed image stage {entry.get('id')} is not bound to an accepted current-revision attempt; continue the stage."
             artifact_path = str(Path(str(binding.get("artifact_path", ""))).expanduser().resolve())
@@ -1908,6 +2033,7 @@ def checkpoint(
     summary: str,
     evidence: Sequence[str] = (),
     stage: str | None = None,
+    add_required_stages: Sequence[str] = (),
     user_approved_scope_change: bool = False,
     correction_impact: str | None = None,
     invariant_assertions: Sequence[str] = (),
@@ -2170,8 +2296,33 @@ def checkpoint(
                 "Scope expansion is forbidden inside the active task without explicit user approval. "
                 "Report the blocker instead of editing project infrastructure."
             )
+        if add_required_stages:
+            if state.get("active_attempt") or any(
+                row.get("status") in {"ACTIVE", "UNKNOWN"}
+                for row in state.get("attempts", []) if isinstance(row, dict)
+            ):
+                raise GuardError("Cannot add required stages while an execution attempt is active or UNKNOWN.")
+            normalized_new: list[str] = []
+            seen_new: set[str] = set()
+            for raw_stage in add_required_stages:
+                value = str(raw_stage).strip()
+                key = normalize_stage_key(value)
+                if not value or not key or key in seen_new:
+                    raise GuardError("Added required stages must be nonempty and unique.")
+                seen_new.add(key)
+                normalized_new.append(value)
+            existing_keys = {normalize_stage_key(str(row.get("id", ""))) for row in required_stage_entries(state)}
+            if existing_keys.intersection(seen_new):
+                raise GuardError("Added required stage duplicates an existing required stage.")
+            state["required_stages"] = [
+                *required_stage_entries(state),
+                *[{"id": value, "status": "PENDING", "completed_at": None, "evidence": []} for value in normalized_new],
+            ]
+            changes_added = normalized_new
+        else:
+            changes_added = []
         changes = list(state.get("scope_changes", []))
-        changes.append({"at": iso_time(moment), "summary": summary.strip()})
+        changes.append({"at": iso_time(moment), "summary": summary.strip(), "added_required_stages": changes_added})
         requested_invariant_changes = parse_invariant_assignments(
             invariant_changes,
             label="invariant change",
@@ -2274,7 +2425,23 @@ def checkpoint(
         new_attempt_id = str(attempt_id or uuid.uuid4())
         if any(row.get("attempt_id") == new_attempt_id for row in state.get("attempts", [])):
             raise GuardError("Duplicate attempt_id is forbidden.")
+        replacement_authorization = state.get("replacement_authorization")
+        if isinstance(replacement_authorization, dict) and not replacement_authorization.get("consumed"):
+            auth_path = Path(str(replacement_authorization.get("path", "")))
+            try:
+                auth_raw = auth_path.read_bytes()
+                auth_record = json.loads(auth_raw.decode("utf-8"))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise GuardError(f"Replacement authorization changed before execution: {error}") from error
+            if (hashlib.sha256(auth_raw).hexdigest() != replacement_authorization.get("sha256")
+                    or auth_record.get("request_id") != state.get("request_id")
+                    or auth_record.get("attempt_id") != replacement_authorization.get("attempt_id")
+                    or auth_record.get("question") != REPLACEMENT_AUTHORIZATION_QUESTION
+                    or auth_record.get("answer") != REPLACEMENT_AUTHORIZATION_ANSWER
+                    or auth_record.get("source") != REPLACEMENT_AUTHORIZATION_SOURCE):
+                raise GuardError("Replacement authorization binding changed; execution is not authorized.")
         execution_snapshot_fields: dict[str, object] = {}
+        plan_snapshot: dict[str, object] | None = None
         if state.get("task_kind") == "IMAGE_GENERATION":
             if not reference_plan:
                 raise GuardError("Image execution snapshot requires the exact REFERENCE_PLAN path.")
@@ -2318,6 +2485,8 @@ def checkpoint(
             swimwear_rung=swimwear_rung,
             user_swimwear_override=user_swimwear_override,
             user_override_evidence=user_override_evidence,
+            plan=plan_snapshot if isinstance(plan_snapshot, dict) else None,
+            execution_call=execution_call if isinstance(execution_call, dict) else None,
         )
         if active_swimwear_attempt:
             state["active_swimwear_attempt"] = active_swimwear_attempt
@@ -2344,6 +2513,9 @@ def checkpoint(
         if provider_operation_receipt.strip():
             record["provider_operation_receipt"] = provider_operation_receipt.strip()
         state["attempts"] = [*state.get("attempts", []), record]
+        if isinstance(replacement_authorization, dict) and not replacement_authorization.get("consumed"):
+            replacement_authorization["consumed"] = True
+            replacement_authorization["consumed_by_attempt_id"] = new_attempt_id
         state["active_attempt"] = record
         state.pop("ready_binding", None)
         state["status"] = "ACTIVE"
@@ -2525,6 +2697,52 @@ def checkpoint(
             state["active_attempt"] = None
         elif resolved in {"REFUSED", "CANCELLED"}:
             state["active_attempt"] = None
+    elif event == "USER_AUTHORIZED_REPLACEMENT":
+        if state.get("task_kind") != "IMAGE_GENERATION_NATIVE_DEFAULT":
+            raise GuardError("USER_AUTHORIZED_REPLACEMENT is limited to a native-default image request.")
+        if state.get("active_attempt") or state.get("replacement_authorization"):
+            raise GuardError("A replacement authorization is single-use and requires no active attempt.")
+        unknown = [row for row in state.get("attempts", []) if row.get("status") == "UNKNOWN"]
+        if len(unknown) != 1 or not attempt_id or unknown[0].get("attempt_id") != attempt_id:
+            raise GuardError("Replacement authorization must target the exact sole UNKNOWN attempt.")
+        if len(evidence) != 1:
+            raise GuardError("Replacement authorization requires one structured user authorization receipt.")
+        authorization_path = Path(evidence[0]).expanduser().resolve()
+        request_folder = Path(path).expanduser().resolve().parent
+        if authorization_path.parent != request_folder or not authorization_path.is_file():
+            raise GuardError("Authorization receipt must be an existing file in this exact request folder.")
+        try:
+            authorization_raw = authorization_path.read_bytes()
+            authorization = json.loads(authorization_raw.decode("utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise GuardError(f"Structured replacement authorization is unreadable: {error}") from error
+        if (not isinstance(authorization, dict)
+                or set(authorization) != {"request_id", "attempt_id", "question", "answer", "source"}
+                or authorization.get("request_id") != state.get("request_id")
+                or authorization.get("attempt_id") != attempt_id
+                or authorization.get("question") != REPLACEMENT_AUTHORIZATION_QUESTION
+                or authorization.get("answer") != REPLACEMENT_AUTHORIZATION_ANSWER
+                or authorization.get("source") != REPLACEMENT_AUTHORIZATION_SOURCE):
+            raise GuardError("Authorization receipt does not prove the user's explicit replacement decision.")
+        authorization_binding = {
+            "path": str(authorization_path),
+            "sha256": hashlib.sha256(authorization_raw).hexdigest(),
+            "request_id": str(state["request_id"]),
+            "attempt_id": attempt_id,
+            "answer": authorization["answer"],
+        }
+        unknown_attempt = _matching_attempt(state, attempt_id, allow_unknown=True)
+        unknown_attempt["status"] = "ABANDONED_UNKNOWN"
+        unknown_attempt["outcome"] = "NOT_KNOWN"
+        unknown_attempt["abandoned_at"] = iso_time(moment)
+        unknown_attempt["replacement_authorization"] = dict(authorization_binding)
+        state["replacement_authorization"] = {**authorization_binding, "consumed": False}
+        state["active_attempt"] = None
+        state["status"] = "ACTIVE"
+        state["phase"] = "PREFLIGHT"
+        state["next_required_action"] = "PREFLIGHT_OR_EXECUTION"
+        state["execution_started_at"] = None
+        state.pop("ready_binding", None)
     elif event == "ATTEMPT_REFUSED":
         active = _matching_attempt(state, str(attempt_id or ""))
         current = state.get("active_attempt") or {}
@@ -2743,21 +2961,28 @@ def checkpoint(
         )
         if is_physique_stage(str(entry.get("id"))):
             active_swimwear_attempt = state.get("active_swimwear_attempt")
-            if not isinstance(active_swimwear_attempt, dict):
-                raise GuardError("Physique stage completion requires a tracked swimwear execution attempt.")
-            expected_rung = str(active_swimwear_attempt.get("swimwear_rung", ""))
-            rung = str(swimwear_rung or "").upper()
-            observed = str(observed_topology or "").upper()
-            if rung != expected_rung:
-                raise GuardError(f"Physique completion must use the active swimwear rung {expected_rung}.")
-            if observed not in SWIMWEAR_TOPOLOGIES:
-                raise GuardError("Physique completion requires --observed-topology from the controlled topology list.")
-            if observed != rung:
-                raise GuardError(
-                    f"Clothing topology hard gate failed: requested {rung}, observed {observed}. "
-                    "Record ATTEMPT_REJECTED instead; the image cannot complete the physique stage."
-                )
-            state.pop("active_swimwear_attempt", None)
+            child_contract = state.get("character_base_contract", {})
+            if isinstance(child_contract, dict) and child_contract.get("age_group") == "CHILD":
+                if active_swimwear_attempt or swimwear_rung or observed_topology:
+                    raise GuardError("Child physique completion forbids adult swimwear ladder and topology receipts.")
+                if not isinstance(stage_attempt_binding, dict):
+                    raise GuardError("Child physique completion requires its exact accepted execution-call binding.")
+            else:
+                if not isinstance(active_swimwear_attempt, dict):
+                    raise GuardError("Physique stage completion requires a tracked swimwear execution attempt.")
+                expected_rung = str(active_swimwear_attempt.get("swimwear_rung", ""))
+                rung = str(swimwear_rung or "").upper()
+                observed = str(observed_topology or "").upper()
+                if rung != expected_rung:
+                    raise GuardError(f"Physique completion must use the active swimwear rung {expected_rung}.")
+                if observed not in SWIMWEAR_TOPOLOGIES:
+                    raise GuardError("Physique completion requires --observed-topology from the controlled topology list.")
+                if observed != rung:
+                    raise GuardError(
+                        f"Clothing topology hard gate failed: requested {rung}, observed {observed}. "
+                        "Record ATTEMPT_REJECTED instead; the image cannot complete the physique stage."
+                    )
+                state.pop("active_swimwear_attempt", None)
         entry["status"] = "COMPLETED"
         entry["completed_at"] = iso_time(moment)
         entry["evidence"] = evidence_paths
@@ -2879,10 +3104,13 @@ def checkpoint(
         event_details["result_status"] = str(result_status or "AVAILABLE").upper()
     if event == "RESULT_DELIVERED":
         event_details["delivery_evidence"] = list(delivery_evidence)
-    if event in {"ATTEMPT_UNKNOWN", "ATTEMPT_RECONCILED", "ATTEMPT_REFUSED", "STOP", "CANCEL"}:
+    if event in {"ATTEMPT_UNKNOWN", "ATTEMPT_RECONCILED", "ATTEMPT_REFUSED", "STOP", "CANCEL", "USER_AUTHORIZED_REPLACEMENT"}:
         event_details["outcome"] = outcome or event
         if reconciliation_evidence:
             event_details["reconciliation_evidence"] = reconciliation_evidence.strip()
+    if event == "USER_AUTHORIZED_REPLACEMENT":
+        event_details["outcome"] = "NOT_KNOWN"
+        event_details["authorization_sha256"] = state["replacement_authorization"]["sha256"]
     if event == "ATTEMPT_REJECTED":
         event_details["attempt_id"] = str(attempt_id)
         event_details["outcome"] = "QA_REJECTED"
@@ -2990,7 +3218,7 @@ def make_parser() -> argparse.ArgumentParser:
         choices=(
             "PREFLIGHT", "WAITING_FOR_USER", "USER_RESUMED", "SCOPE_CHANGE",
             "READY_FOR_EXECUTION", "CALL_VALIDATED", "EXECUTION_STARTED", "VISIBLE_RESULT", "RESULT_DELIVERED",
-            "ATTEMPT_REJECTED", "ATTEMPT_REFUSED", "ATTEMPT_UNKNOWN", "ATTEMPT_RECONCILED", "STOP", "CANCEL",
+            "ATTEMPT_REJECTED", "ATTEMPT_REFUSED", "ATTEMPT_UNKNOWN", "ATTEMPT_RECONCILED", "USER_AUTHORIZED_REPLACEMENT", "STOP", "CANCEL",
             "ESCALATION_ORCHESTRATOR_RECORDED", "USER_CORRECTION", "STAGE_COMPLETED", "STAGE_REOPENED",
             "BLOCKER", "COMPLETE", "RECOVERY_REQUIRED", "RECOVERY_RESOLVED", "ARTIFACT_RECEIVED", "AUTHOR_CONTRACT_ACCEPTED",
         ),
@@ -3006,6 +3234,7 @@ def make_parser() -> argparse.ArgumentParser:
     check.add_argument("--execution-call", help="JSON file containing this exact resolved call's prompt and slots; otherwise use REFERENCE_PLAN.execution_call.")
     check.add_argument("--evidence", action="append", default=[])
     check.add_argument("--stage", help="Required-stage id for STAGE_COMPLETED or STAGE_REOPENED.")
+    check.add_argument("--add-required-stage", action="append", default=[], help="Add a mandatory deliverable stage during an explicitly user-approved SCOPE_CHANGE; cannot run while an attempt is ACTIVE or UNKNOWN.")
     check.add_argument("--qa-layer", default="", help="Optional descriptive QA layer; escalation is tracked by required stage, not this label.")
     check.add_argument("--user-approved-scope-change", action="store_true")
     check.add_argument("--correction-impact", choices=("PRESERVE", "CHANGE", "AMBIGUOUS"))
@@ -3114,6 +3343,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 summary=args.summary,
                 evidence=args.evidence,
                 stage=args.stage,
+                add_required_stages=args.add_required_stage,
                 user_approved_scope_change=args.user_approved_scope_change,
                 correction_impact=args.correction_impact,
                 invariant_assertions=args.invariant_assert,

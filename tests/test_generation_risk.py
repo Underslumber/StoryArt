@@ -29,21 +29,39 @@ LEXICON = risk.load_lexicon(ROOT / "config" / "generation_risk_lexicon.json")
 
 
 class PromptRiskTests(unittest.TestCase):
-    def test_multistage_named_character_can_follow_approved_identity_without_style_slot(self):
+    def test_multistage_named_character_requires_assembly_capacity_without_unrequested_face_stage(self):
         assembly = {
             "path": "approved/CHAR_001/assembly.png", "sha256": "a" * 64,
             "active_roles": ["CHARACTER_ASSEMBLY"],
         }
+        with self.assertRaisesRegex(manager.StylePackError, "above limit 1"):
+            manager.build_multistage_attachment_plan(
+                {"character_assembly": assembly}, [], limit=1, purpose="SCENE",
+            )
         stages = manager.build_multistage_attachment_plan(
-            {"character_assembly": assembly}, [], limit=1, purpose="SCENE",
+            {"character_assembly": assembly}, [], limit=2, purpose="SCENE",
         )
+        self.assertNotIn("01_FACE_IDENTITY", {stage["stage_id"] for stage in stages})
         body = next(stage for stage in stages if stage["stage_id"] == "02_BODY_POSE")
         composite = next(stage for stage in stages if stage["stage_id"] == "04_CHARACTER_COMPOSITE")
         final = next(stage for stage in stages if stage["stage_id"] == "05_FINAL_SCENE")
-        self.assertTrue(any("CHARACTER_ASSEMBLY" in slot["active_roles"] for slot in body["slots"]))
+        for stage in (body, composite, final):
+            self.assertTrue(any("CHARACTER_ASSEMBLY" in slot["active_roles"] for slot in stage["slots"]))
         self.assertFalse(any(set(slot["active_roles"]) & {"STYLE", "STYLE_SOFT"} for stage in stages for slot in stage["slots"]))
         self.assertIn("<STAGE_OUTPUT:02_BODY_POSE>", {slot["path"] for slot in composite["slots"]})
         self.assertIn("<STAGE_OUTPUT:04_CHARACTER_COMPOSITE>", {slot["path"] for slot in final["slots"]})
+
+    def test_multistage_face_stage_physically_carries_canonical_assembly(self):
+        assembly = {"path": "approved/CHAR_001/assembly.png", "sha256": "a" * 64,
+                    "active_roles": ["CHARACTER_ASSEMBLY"]}
+        face = {"path": "approved/CHAR_001/face.png", "sha256": "b" * 64,
+                "active_roles": ["PRIMARY_FACE"]}
+        stages = manager.build_multistage_attachment_plan(
+            {"character_assembly": assembly, "primary_face": face}, [], limit=3, purpose="SCENE",
+        )
+        face_stage = next(stage for stage in stages if stage["stage_id"] == "01_FACE_IDENTITY")
+        self.assertEqual({"CHARACTER_ASSEMBLY", "PRIMARY_FACE"},
+                         {role for slot in face_stage["slots"] for role in slot["active_roles"]})
 
     def test_safe_prompt_is_d1(self):
         result = risk.evaluate_prompt(

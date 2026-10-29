@@ -178,7 +178,7 @@ def _load_call_file(path: Path) -> tuple[dict[str, Any] | None, list[str]]:
         return None, [f"call file: {exc}"]
     if not isinstance(raw, dict):
         return None, ["call file must be a JSON object"]
-    allowed = {"prompt_text", "prompt_text_file", "stage_id", "reference_ratings"}
+    allowed = {"prompt_text", "prompt_text_file", "stage_id", "reference_ratings", "user_reference_evidence"}
     errors = [f"call file unknown field: {key!r}" for key in raw if key not in allowed]
     if bool(raw.get("prompt_text")) == bool(raw.get("prompt_text_file")):
         errors.append("call file must provide exactly one non-empty prompt_text or prompt_text_file")
@@ -191,6 +191,9 @@ def _load_call_file(path: Path) -> tuple[dict[str, Any] | None, list[str]]:
     if not isinstance(ratings, list):
         errors.append("call file reference_ratings must be a JSON array")
         ratings = []
+    evidence = raw.get("user_reference_evidence", [])
+    if not isinstance(evidence, list) or any(not isinstance(row, dict) for row in evidence):
+        errors.append("call file user_reference_evidence must be an array of objects")
     rating_fields = {"path", "active_roles", "content_and_reference_risk", "use_impact", "reason_ru"}
     for index, rating in enumerate(ratings):
         if not isinstance(rating, dict):
@@ -309,6 +312,20 @@ def _risk_specs(manifest: dict[str, Any], ratings: list[dict[str, Any]]) -> list
     return specs
 
 
+def _validate_call_evidence(
+    call_input: dict[str, Any], plan: dict[str, Any], manifest: dict[str, Any] | None = None,
+) -> None:
+    expected = (
+        manager.expected_stage_user_reference_evidence(plan, manifest)
+        if manifest is not None else plan.get("user_reference_evidence", [])
+    )
+    if call_input.get("user_reference_evidence", []) != expected:
+        raise manager.StylePackError(
+            "Exact-call user attachment provenance differs from the evidence bound to this stage's reviewed physical slots."
+            if manifest is not None else "Exact-call user attachment provenance differs from the prepared plan."
+        )
+
+
 def _finalize_call(args: argparse.Namespace, call_input: dict[str, Any]) -> str:
     stage_id = call_input.get("stage_id", "")
     resolve_args = _parsed_manager_command("resolve-call", args, stage_id)
@@ -328,6 +345,7 @@ def _finalize_call(args: argparse.Namespace, call_input: dict[str, Any]) -> str:
     except (OSError, KeyError, json.JSONDecodeError, TypeError) as exc:
         raise manager.StylePackError(f"Cannot read resolved call inputs: {exc}") from exc
     prompt = manager.render_confirmed_prompt(plan, _exact_prompt(call_input))
+    _validate_call_evidence(call_input, plan, manifest)
     specs = _risk_specs(manifest, call_input.get("reference_ratings", []))
     risk_module_parser = risk_assessor.build_parser()
     risk_path = manifest_path.parent / (
@@ -346,6 +364,12 @@ def _finalize_call(args: argparse.Namespace, call_input: dict[str, Any]) -> str:
     prepare_args.prompt_text = prompt
     prepare_args.prompt_text_file = ""
     prepare_args.risk_assessment = str(risk_path)
+    evidence_rows = call_input.get("user_reference_evidence", [])
+    if evidence_rows:
+        evidence_path = plan_path.parent / "TECHNICAL_REFERENCES" / "USER_REFERENCE_EVIDENCE.json"
+        evidence_path.parent.mkdir(parents=True, exist_ok=True)
+        evidence_path.write_text(json.dumps(evidence_rows, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        prepare_args.user_reference_evidence_json = str(evidence_path)
     resolved_snapshot = getattr(resolve_args, "_resolved_call_snapshot", None)
     if isinstance(resolved_snapshot, dict):
         prepare_args._resolved_call_snapshot = resolved_snapshot

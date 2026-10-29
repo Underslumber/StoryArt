@@ -19,11 +19,11 @@ SOFT_ROLES = {
     "POSE", "POSE_SOFT", "AUX_POSE", "STYLE", "STYLE_SOFT", "BACKGROUND", "BACKGROUND_STYLE",
     "CAMERA", "CAMERA_ONLY", "AUX_CAMERA", "CLOTHES", "CLOTHING_BEHAVIOR",
     "AUX_CLOTHING_BEHAVIOR", "OBJECT_INTERACTION", "AUX_OBJECT_INTERACTION", "AUX_CONTACT_POINTS",
-    "LIGHTING", "COMPOSITION",
+    "LIGHTING", "COMPOSITION", "ITEM_SCALE_FIT",
 }
 ANATOMY_VALUES = {"MALE_ANATOMY", "FEMALE_ANATOMY", "ANDROGYNOUS_ANATOMY"}
 POSE_ROLES = {"POSE", "POSE_SOFT", "AUX_POSE", "ART_POSE_SOFT", "POSE_STUDY", "STAGING_ONLY"}
-NO_SUBJECT_ROLES = {"STYLE", "STYLE_SOFT", "BACKGROUND", "BACKGROUND_STYLE", "CAMERA", "CAMERA_ONLY", "AUX_CAMERA", "LIGHTING", "COMPOSITION", "ART_CAMERA_SOFT"}
+NO_SUBJECT_ROLES = {"STYLE", "STYLE_SOFT", "BACKGROUND", "BACKGROUND_STYLE", "CAMERA", "CAMERA_ONLY", "AUX_CAMERA", "LIGHTING", "COMPOSITION", "ART_CAMERA_SOFT", "ITEM_DESIGN"}
 
 
 def explicit_subject_label(reference: dict[str, Any]) -> str:
@@ -248,6 +248,21 @@ def validate_reference_compatibility(
     if not role_set:
         decisions.append(("REVIEW_REQUIRED", "Role is missing or has no compatibility policy."))
     for role in sorted(role_set):
+        if (role == "FACE" and reference.get("face_reference_purpose") == "USER_IDENTITY_INTENT"
+                and reference.get("face_reference_purpose_scope") == "NEW_CHARACTER_BASE"
+                and target_id == UNKNOWN):
+            strict = strict_subject_decision(identity, reference, role=role)
+            target_label = _clean(identity.get("target_anatomy")).upper()
+            source_label = explicit_subject_label(reference)
+            if strict is not None and strict[0] != "ALLOWED":
+                decisions.append(strict)
+            elif target_label not in {"MALE_ANATOMY", "FEMALE_ANATOMY"} or _clean(identity.get("anatomy_evidence_source")) == UNKNOWN:
+                decisions.append(("REVIEW_REQUIRED", "Identity-intent face requires an explicit evidence-backed target subject label."))
+            elif source_label != target_label:
+                decisions.append(("BLOCKED", "Identity-intent face subject label does not match the current target."))
+            else:
+                decisions.append(("ALLOWED", "Reviewed matching face appearance intent; not a canonical character identity binding."))
+            continue
         if role == "FACE" and target_id != UNKNOWN and ref_character != UNKNOWN and target_id != ref_character:
             decisions.append(("BLOCKED", "Face identity references must belong to the canonical target character."))
             continue

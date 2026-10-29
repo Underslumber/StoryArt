@@ -1,9 +1,15 @@
 # StoryArt model routing
 
+User routing correction of 2026-10-13 takes precedence over historical profile
+descriptions below: ordinary subagents use Luna 6 High with no inherited
+transcript; root keeps its selected model. Sol requires the dedicated review or
+escalation gate, or a direct user request. The specialized Web image agent keeps
+Sol 6.1 Low for explicitly selected ChatGPT Web image execution.
+
 The authoritative role registry is `config/model_routes.json`. The profile
 switcher and orchestration handoffs read it; do not infer a worker's model family
-from the root model or copy old Luna/Astra assignments. This project route
-supersedes the generic orchestration model defaults for StoryArt. Other protocol,
+from the root model or copy old model assignments. The user routing correction
+governs this registry. Other protocol,
 ownership, fidelity, stage, safety and QA requirements still apply.
 
 ## Active route
@@ -11,15 +17,15 @@ ownership, fidelity, stage, safety and QA requirements still apply.
 | Responsibility | Model / effort | Use |
 |---|---|---|
 | Root: user contract, planning, execution, recovery and acceptance | `gpt-6.1-sol`, Medium | Current production default |
-| Bounded source discovery and ordinary code implementation | `gpt-6.1-sol`, Low | Optional worker with explicit inputs and ownership |
-| Complex call planning and independent visual/code review | `gpt-6.1-sol`, Medium | Only where a separate judgement materially helps |
-| Exceptional diagnosis | `gpt-6.1-sol`, High | Recorded complex fault or substantive repair failure |
+| Source discovery, call planning, ordinary implementation and result checks | `gpt-6-luna`, High | `default`, `worker` or `explorer`; bounded packet without transcript |
+| Mandatory independent code review | `gpt-6.1-sol`, Medium | `sol_review` after machine checks and recorded SOL_GATE |
+| Escalation after substantive Luna failure | `gpt-6.1-sol`, High | `sol_escalation` with evidence and recorded SOL_GATE |
+| Explicit ChatGPT Web image execution | `gpt-6.1-sol`, Low | Project-local `web_image`; complete final-spec packet; root retains QA |
 | Ordinary-scene root experiment | `gpt-6.1-sol`, Low | Explicit trial; no automatic lowering of root effort |
-| Mechanical-worker experiment | `gpt-5.6-luna`, Low | Explicit trial with no decisions about identity, blockers or acceptance |
 
-Sol 6.1 High requires evidence of a complex fault or substantive repair failure.
-High is not the default for workers. Luna 6 is outside the normal production
-route. The two experiments are opt-in and are not automatic fallbacks.
+Difficulty alone does not authorize Sol. Ordinary workers use Luna High;
+unavailability never permits automatic Sol fallback. Specialized Web roles are
+not substitutes for ordinary workers.
 
 ## Configuration
 
@@ -32,7 +38,7 @@ Apply the approved production profile from the repository root:
 The switcher updates only the root/default-agent model and their effort in
 `.codex/config.toml`, preserving other settings. A missing default project config
 is created from `config/codex.project.example.toml`. The production profile uses
-Medium root and Low default worker. Spawn requests must still specify the
+Medium root and Luna High default worker. Spawn requests must still specify the
 registry role's model and effort explicitly with `fork_turns="none"`.
 
 Legacy `5.6` and `6` profiles remain explicit compatibility/comparison choices;

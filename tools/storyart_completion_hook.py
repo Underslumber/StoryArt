@@ -36,12 +36,25 @@ def decide(event: dict, root: Path = ROOT) -> dict:
         return {}
     registry = root / ".agent" / "chat_requests"
     key = hashlib.sha256(session.encode("utf-8")).hexdigest()
+    # Store notification preferences separately: managers refresh focus files.
+    reminder_preference = registry / "reminder_preferences" / f"{key}.json"
+    if reminder_preference.is_file():
+        try:
+            preference = _read(reminder_preference)
+            if (preference.get("thread_id") == session
+                    and preference.get("completion_reminders_enabled") is False):
+                return {}
+        except (OSError, ValueError, TypeError):
+            pass
     focus_path = registry / "focus" / f"{key}.json"
     if not focus_path.is_file():
         return {}
     try:
         focus = _read(focus_path)
         if focus.get("thread_id") != session or focus.get("task_kind") not in IMAGE_KINDS:
+            return {}
+        # A direct user request to stop reminders applies only to this chat.
+        if focus.get("completion_reminders_enabled") is False:
             return {}
         path = Path(str(focus.get("guard_path") or "")).resolve()
         relative = path.relative_to(root.resolve())

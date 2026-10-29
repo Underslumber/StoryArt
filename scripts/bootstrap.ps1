@@ -1,5 +1,6 @@
 [CmdletBinding()]
 param(
+    [switch]$WebImages,
     [switch]$CollectPoseLineLibrary,
     [ValidateRange(1, 10)]
     [int]$PoseLinePages = 4
@@ -51,6 +52,11 @@ else {
 $localAgents = Join-Path $root 'AGENTS.md'
 if (-not (Test-Path -LiteralPath $localAgents)) {
     Copy-Item -LiteralPath (Join-Path $root 'AGENTS.example.md') -Destination $localAgents
+}
+
+& (Join-Path $root 'scripts\register-web-image-agent.ps1') -Workspace $root
+if ($WebImages) {
+    & (Join-Path $root 'scripts\setup-web-image.ps1') -PythonPath $python
 }
 
 $testFiles = @(Get-ChildItem -LiteralPath (Join-Path $root 'tests') -File -Filter 'test_*.py' | Sort-Object Name | ForEach-Object { $_.FullName })

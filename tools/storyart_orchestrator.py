@@ -21,7 +21,8 @@ STATE_SCHEMA_VERSION = 1
 STYLE_ADAPTER_SCHEMA_VERSION = 1
 HANDOFF_STATUSES = {"PENDING", "DONE", "REJECTED", "BLOCKED"}
 COMPLETION_STATUSES = HANDOFF_STATUSES - {"PENDING"}
-WRITER_ROLES = {"GENERATOR_OPERATOR", "REGISTRAR"}
+ROOT_ONLY_ROLES = {"GENERATOR_OPERATOR", "REGISTRAR"}
+WRITER_ROLES = ROOT_ONLY_ROLES | {"WEB_IMAGE"}
 READ_ONLY_ROLES = {
     "STYLE_LIBRARIAN",
     "IDENTITY_CURATOR",
@@ -36,6 +37,7 @@ ROLE_DESCRIPTIONS = {
     "GENERATOR_OPERATOR": "Execute one declared generator call without research or prompt drift.",
     "VISUAL_QA": "Independently score every required semantic QA layer.",
     "REGISTRAR": "Record and store a finalized result through existing StoryArt managers.",
+    "WEB_IMAGE": "Execute the exact approved Web image packet and download its original; root retains visual QA and acceptance.",
     "ESCALATION_ORCHESTRATOR": "Exceptional read-only escalation: return one bounded Sol work order from repeated stage-failure evidence.",
 }
 FORBIDDEN_INFRASTRUCTURE_ROOTS = {
@@ -93,7 +95,7 @@ def load_model_routes() -> dict[str, Any]:
     routes = load_json(PROJECT_ROOT / "config" / "model_routes.json")
     if routes.get("schema_version") != 1 or routes.get("default_profile") != "6.1":
         raise OrchestratorError("Model routes require schema_version=1 and default_profile='6.1'.")
-    required_roles = READ_ONLY_ROLES | {"ROOT", "DEFAULT_WORKER", "CODE_IMPLEMENTER", "CODE_REVIEW"}
+    required_roles = READ_ONLY_ROLES | {"ROOT", "DEFAULT_WORKER", "CODE_IMPLEMENTER", "CODE_REVIEW", "WEB_IMAGE"}
     sections = (("roles", required_roles), ("experiments", {"ROUTINE_ROOT", "MECHANICAL_WORKER"}))
     profiles = routes.get("profiles")
     if not isinstance(profiles, dict) or set(profiles) != {"6.1", "5.6", "6"}:
@@ -226,6 +228,8 @@ def validate_writer_paths(
             raise OrchestratorError(
                 f"{role} cannot modify project infrastructure: {relative}"
             )
+        if role == "WEB_IMAGE" and path != request_root and request_root not in path.parents:
+            raise OrchestratorError("WEB_IMAGE may write only inside its active request folder.")
         if role == "GENERATOR_OPERATOR":
             inside_request = path == request_root or request_root in path.parents
             inside_archive = (
@@ -292,15 +296,15 @@ def _persist_handoff(
     handoff_id: str,
     execution_profile: dict[str, str],
 ) -> dict[str, Any]:
-    if role == "GENERATOR_OPERATOR":
+    if role in {"GENERATOR_OPERATOR", "WEB_IMAGE"}:
         if not stage.strip():
-            raise OrchestratorError("GENERATOR_OPERATOR requires --stage.")
+            raise OrchestratorError(f"{role} requires --stage.")
         if output_contract != "REQUESTED_DELIVERABLE":
             raise OrchestratorError(
-                "GENERATOR_OPERATOR requires --output-contract REQUESTED_DELIVERABLE."
+                f"{role} requires --output-contract REQUESTED_DELIVERABLE."
             )
     elif output_contract:
-        raise OrchestratorError("--output-contract is valid only for GENERATOR_OPERATOR.")
+        raise OrchestratorError("--output-contract is valid only for GENERATOR_OPERATOR or WEB_IMAGE.")
 
     relative_inputs = [relative_project_path(path) for path in normalized_inputs]
     relative_writes = [relative_project_path(path) for path in normalized_writes]
@@ -369,7 +373,7 @@ def dispatch_handoff(
     state = load_state(state_path)
     if role not in ROLE_DESCRIPTIONS:
         raise OrchestratorError(f"Unknown role: {role}")
-    if role in WRITER_ROLES:
+    if role in ROOT_ONLY_ROLES:
         raise OrchestratorError(
             f"{role} is a root-only production responsibility and cannot be dispatched."
         )
@@ -384,6 +388,29 @@ def dispatch_handoff(
     normalized_writes = [normalize_project_path(item) for item in write_paths]
     request_root = normalize_project_path(str(state["request_root"]))
     validate_writer_paths(role, request_root, normalized_writes)
+    if role == "WEB_IMAGE":
+        if __package__:
+            from .chatgpt_web_image_handoff import validate_packet
+        else:
+            from chatgpt_web_image_handoff import validate_packet
+
+        packets = []
+        for candidate in normalized_inputs:
+            if candidate.is_file() and candidate.name.endswith(".web-image-packet.json"):
+                packets.append(candidate)
+        if len(packets) != 1:
+            raise OrchestratorError("WEB_IMAGE requires exactly one validated Web image packet.")
+        packet = validate_packet(packets[0], workspace=PROJECT_ROOT, for_submission=True)
+        if (packet["request_id"] != state["request_id"]
+                or Path(packet["guard_path"]).resolve() != normalize_project_path(state["guard_path"])
+                or packet["stage"] != stage.strip()
+                or Path(packet["journal_path"]).parent != request_root):
+            raise OrchestratorError("WEB_IMAGE packet does not bind this request/stage.")
+        required_inputs = {Path(item).resolve() for item in packet["input_paths"]}
+        if required_inputs != set(normalized_inputs):
+            raise OrchestratorError("WEB_IMAGE handoff inputs must exactly match its sealed packet.")
+        if request_root not in normalized_writes:
+            raise OrchestratorError("WEB_IMAGE requires its exact active request folder as allowed write scope.")
 
     sequence = len(state.get("handoffs", [])) + 1
     handoff_id = f"H{sequence:03d}"
