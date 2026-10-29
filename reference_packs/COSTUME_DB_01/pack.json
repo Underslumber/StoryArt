@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "pool": "COSTUME_DB_01",
+  "title": "Женская одежда COSTUME-DB-01 (1407 нарядов)",
+  "target_root": "COSTUME_DB_01_SOURCE_COLLECTION",
+  "source": {
+    "name": "AI costume gallery",
+    "author": "ギア (@giaaibusi)",
+    "homepage": "https://ai-costume-gallery.pages.dev/",
+    "terms_url": "https://ai-costume-gallery.pages.dev/",
+    "terms_summary": "Free use for creating works, including commercial work, editing and reference use. Redistributing, republishing or reselling the images, original or processed, is not allowed. Not for depicting real people or minors.",
+    "redistribution": "forbidden"
+  },
+  "metadata": ["DOWNLOAD_MANIFEST.csv", "catalog.source.json", "README.md"],
+  "build": {
+    "glob": "0*_*/*.png",
+    "url_template": "https://ai-costume-gallery.pages.dev/png/{name}"
+  }
+}

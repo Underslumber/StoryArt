@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "provider": "anhao",
+  "source_index_sha256": "59a1fa54610b4e781fcc356cf268be41f851d5cd177d008a8b3aee6bfa46e7df",
+  "review_file_sha256": "25187c75a463ceb28b986511544f1c725da8bdb28c85a8c32a20c05c1decfd4e",
+  "source_index": "work/pose-library-20261029/dataset_index.json",
+  "source_index_commit": "072a3690af6e7e0011abbe0fa1ccc08939fbb47d",
+  "source_root": "work/pose-library-20261029/source",
+  "source_count": 1439,
+  "group_count": 288,
+  "imported_at": "2026-10-29T09:28:54+03:00",
+  "availability_correction": {
+    "date": "2026-10-29",
+    "quote": "ЭТО НОРМАЛЬНЫЕ РАКУРСЫ! Верни все 1439 изображений в доступные референсы. Ничего не исключай по категориям или своим оценкам. Замечания сохрани как примечания, без блокировки выбора. Группировку поз и ракурсов сохрани.",
+    "policy": "ALL_SOURCE_IMAGES",
+    "selectable_views": 1439,
+    "source_images_changed": 0,
+    "prior_assessment_effect": "ADVISORY_ONLY",
+    "previous_metadata_snapshot": "work/pose-curation-20261029/all-available/baseline/library"
+  }
+}

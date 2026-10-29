@@ -2,6 +2,7 @@
 # Root-level user data stays local unless explicitly added here.
 /*
 !/.gitignore
+!/.gitattributes
 !/README.md
 !/requirements.txt
 !/requirements-dev.txt
@@ -13,6 +14,7 @@
 !/templates/
 !/tests/
 !/skills/
+!/reference_packs/
 !/runtime/
 !/.codex/
 /.codex/*

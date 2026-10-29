@@ -3,7 +3,9 @@ param(
     [switch]$WebImages,
     [switch]$CollectPoseLineLibrary,
     [ValidateRange(1, 10)]
-    [int]$PoseLinePages = 4
+    [int]$PoseLinePages = 4,
+    # Optional reference packs to download from their publishers, e.g. POSE_ATLAS or all.
+    [string[]]$WithReferences = @()
 )
 
 $ErrorActionPreference = 'Stop'
@@ -96,6 +98,18 @@ elseif ($poseStatus.status -eq 'NOT_BUILT') {
 }
 elseif ($poseStatus.status -eq 'REVIEW_REQUIRED') {
     Write-Output 'POSE_LINE_LIBRARY_NEXT_ACTION=Offer to continue visual review and apply POSE_LINE_REVIEW.csv.'
+}
+
+$packsTool = Join-Path $root 'tools\reference_packs.py'
+if ($WithReferences.Count -gt 0) {
+    $packArgs = if ($WithReferences -contains 'all') { @('--all') } else { $WithReferences }
+    & $python $packsTool install @packArgs
+    Assert-NativeSuccess 'Installing reference packs'
+}
+else {
+    & $python $packsTool list
+    Assert-NativeSuccess 'Listing reference packs'
+    Write-Output 'REFERENCE_PACKS_INSTALL_COMMAND=.\scripts\bootstrap.ps1 -WithReferences POSE_ATLAS'
 }
 
 Write-Output 'STATUS=READY'

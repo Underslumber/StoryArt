@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "pool": "POSE_ATLAS",
+  "title": "Атлас поз (288 поз, 1439 ракурсов)",
+  "target_root": "BODY_REFERENCE_LIBRARY/POSE_ATLAS",
+  "source": {
+    "name": "AI pose gallery (Chinese mirror anhao/ai-pose-gallery-zh)",
+    "author": "ギア",
+    "homepage": "https://ai-pose-gallery.pages.dev/",
+    "mirror": "https://github.com/anhao/ai-pose-gallery-zh",
+    "commit": "072a3690af6e7e0011abbe0fa1ccc08939fbb47d",
+    "terms_url": "https://ai-pose-gallery.pages.dev/",
+    "terms_summary": "Free use for creating works, including commercial work and editing. Redistributing, republishing or reselling the image files themselves is not allowed. The mirror's MIT license covers its code only, not img/ or data/.",
+    "redistribution": "forbidden"
+  },
+  "metadata": ["POSE_GROUPS.json", "BODY_REFERENCE_MANIFEST.csv", "IMPORT_PROVENANCE.json"],
+  "build": {
+    "glob": "sources/anhao/img/*.png",
+    "url_template": "https://raw.githubusercontent.com/anhao/ai-pose-gallery-zh/072a3690af6e7e0011abbe0fa1ccc08939fbb47d/img/{name}"
+  }
+}
