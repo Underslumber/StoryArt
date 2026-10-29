@@ -24,4 +24,7 @@ jobs:
         with:
           node-version: "24"
       - run: python -m pip install -r requirements-dev.txt
-      - run: python -m unittest discover -s tests
+      - name: Run tests
+        shell: bash
+        # The hosted Windows TEMP is an 8.3 short path (RUNNER~1), which resolve() expands; use a long temp dir.
+        run: TEMP="$RUNNER_TEMP" TMP="$RUNNER_TEMP" TMPDIR="$RUNNER_TEMP" python -m unittest discover -s tests
