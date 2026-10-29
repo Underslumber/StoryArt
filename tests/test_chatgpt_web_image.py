@@ -13,6 +13,9 @@ from tools import task_execution_guard as guard
 
 RECOVERY_URL = (Path(__file__).resolve().parents[1] / "tools" / "chatgpt_web_image_recovery.mjs").as_uri()
 
+WINDOWS_ONLY = unittest.skipUnless(os.name == "nt", "isolated browser sessions exist only on Windows")
+
+
 class WebImageTests(unittest.TestCase):
     def oracle_fixture_root(self):
         configured=os.environ.get("ORACLE_FIXTURE_ROOT")
@@ -467,6 +470,7 @@ runImageTransport(request,async(name,args)=>{calls.push({name,args});
         with self.assertRaises(ValueError): self.prepare_native(call, proof_path)
 
 
+    @WINDOWS_ONLY
     def test_windows_default_prepare_is_headless(self):
         with patch.object(web.os, "name", "nt"):
             state = web.prepare(self.journal, web.NEUTRAL_PROMPT, [self.ref], "current",
@@ -477,6 +481,7 @@ runImageTransport(request,async(name,args)=>{calls.push({name,args});
         self.assertEqual(state["browser_mode"], "headless")
         self.assertTrue(state["oracle_config"]["browser"]["headless"])
 
+    @WINDOWS_ONLY
     def test_windows_isolated_mode_pin_and_tamper(self):
         with patch.object(web.os, "name", "nt"):
             state = web.prepare(self.journal, web.NEUTRAL_PROMPT, [self.ref], "current",
@@ -989,6 +994,7 @@ for(const change of [{status:'UNKNOWN'},{opt_in:false},{session_id:'other'},{pro
         self.assertIn("else menu=await inspectImageToolMenu", source)
         self.assertLess(source.index("await fs.access(candidate)"), source.index("const nativeModule=await import"))
 
+    @WINDOWS_ONLY
     def test_recovery_cli_exclusive_download_preserves_original_error(self):
         state=self.recovery_fixture();home=Path(state["oracle_home"])
         def transport(payload,timeout):
@@ -1001,6 +1007,7 @@ for(const change of [{status:'UNKNOWN'},{opt_in:false},{session_id:'other'},{pro
         self.assertIsNone(json.loads((home/"sessions/original/meta.json").read_bytes())["browser"]["runtime"]["submittedPromptHash"])
         with self.assertRaises(ValueError):web.recover(self.journal,transport=transport)
 
+    @WINDOWS_ONLY
     def test_recovery_cli_failure_remains_unknown_without_second_recovery(self):
         self.recovery_fixture()
         def lost(payload,timeout):
@@ -1009,11 +1016,13 @@ for(const change of [{status:'UNKNOWN'},{opt_in:false},{session_id:'other'},{pro
         self.assertEqual(web.load(self.journal)["status"],"UNKNOWN")
         with self.assertRaisesRegex(ValueError,"already consumed"):web.recover(self.journal,transport=lost)
 
+    @WINDOWS_ONLY
     def test_recovery_cli_rejects_changed_receipt_before_launch(self):
         state=self.recovery_fixture();web.save(Path(state["oracle_home"])/"receipt.json",{"type":"receipt","session_id":"other","prompt_sha256":state["prompt_sha256"]})
         with self.assertRaisesRegex(ValueError,"receipt mismatch"):web.recover(self.journal,transport=lambda *_:self.fail("must not launch"))
         self.assertFalse(web.load(self.journal).get("recovery_started"))
 
+    @WINDOWS_ONLY
     def test_recovery_status_append_only_preserves_consumed_unknown_journal(self):
         state=self.recovery_fixture();state.update(status="UNKNOWN",recovery_started=True);web.save(self.journal,state)
         original=self.journal.read_bytes();home=Path(state["oracle_home"]);meta=(home/"sessions/original/meta.json").read_bytes()
@@ -1084,6 +1093,7 @@ composerForm.querySelectorAll=()=>[plus,new Element({'aria-label':'Add files and
         result=subprocess.run([node,str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
+    @WINDOWS_ONLY
     def test_native_menu_diagnostic_preserves_journal_and_error(self):
         state=self.recovery_fixture();original=self.journal.read_bytes();home=Path(state["oracle_home"])
         def inspect(payload,timeout):

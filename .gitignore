@@ -3,6 +3,7 @@
 /*
 !/.gitignore
 !/.gitattributes
+!/.github/
 !/README.md
 !/requirements.txt
 !/requirements-dev.txt

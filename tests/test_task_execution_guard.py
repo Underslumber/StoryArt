@@ -374,7 +374,9 @@ class TaskExecutionGuardTests(unittest.TestCase):
         path = Path(folder) / "EXECUTION_GUARD.json"
         result = guard.create_guard(path, **values)
         if values["task_kind"] == "IMAGE_GENERATION":
-            plan_path = Path(folder) / "REFERENCE_PLAN.json"
+            # Mirror <workspace>/<STYLE>_GENERATIONS/00_PENDING/<request>/ so the guard resolves the workspace on any temp depth.
+            plan_path = Path(folder) / "FIXTURE_STYLE_GENERATIONS" / "00_PENDING" / "request-1" / "REFERENCE_PLAN.json"
+            plan_path.parent.mkdir(parents=True, exist_ok=True)
             _fixture_plans[str(path.resolve())] = plan_path
         return path, result
 
