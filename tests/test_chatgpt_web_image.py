@@ -11,6 +11,8 @@ from PIL import Image
 from tools import chatgpt_web_image as web
 from tools import task_execution_guard as guard
 
+RECOVERY_URL = (Path(__file__).resolve().parents[1] / "tools" / "chatgpt_web_image_recovery.mjs").as_uri()
+
 class WebImageTests(unittest.TestCase):
     def oracle_fixture_root(self):
         configured=os.environ.get("ORACLE_FIXTURE_ROOT")
@@ -521,7 +523,7 @@ assert.equal(networkCalls,0);
 delete process.env.ORACLE_IMAGE_BROWSER_DOWNLOAD_ONLY;
 await collectGeneratedImageArtifacts(params);assert.equal(networkCalls,1);assert.equal(buttonCalls,2);
 """
-        script=self.folder / "offline-check.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder / "offline-check.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run([node,str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
@@ -531,7 +533,7 @@ await collectGeneratedImageArtifacts(params);assert.equal(networkCalls,1);assert
         oracle_root=self.oracle_fixture_root()
         module=(Path(oracle_root)/"dist/src/cli/detachedSession.js").as_uri()
         program=f"import {{buildDetachedSessionSpawnSpec}} from {json.dumps(module)}; import assert from 'node:assert/strict'; const spec=buildDetachedSessionSpawnSpec({{sessionId:'test',env:{{ORACLE_IMAGE_BROWSER_DOWNLOAD_ONLY:'1'}}}}); assert.equal(spec.options.env.ORACLE_IMAGE_BROWSER_DOWNLOAD_ONLY,'1'); assert.equal(spec.options.windowsHide,true);"
-        script=self.folder / "offline-check.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder / "offline-check.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run([node,str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
@@ -566,7 +568,7 @@ delete process.env.ORACLE_IMAGE_BROWSER_DOWNLOAD_ONLY;
 assert.equal((await collectChatGptFileArtifacts(params)).savedFiles.length,1);
 assert.equal(fileReads,1);assert.equal(cookieCalls,1);assert.equal(fetchCalls,1);
 """
-        script=self.folder / "offline-check.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder / "offline-check.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run([node,str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
@@ -637,7 +639,7 @@ fail=true;await assert.rejects(recoverOriginal(request,meta,actions),/UI failed/
 
 
 """.replace('MODULE',json.dumps(module)).replace('HOME',json.dumps(self.folder.as_posix()))
-        script=self.folder / "offline-check.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder / "offline-check.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run([node,str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
@@ -659,7 +661,7 @@ await fs.appendFile(path.join(base,'chatgptImages.js'),'drift');await assert.rej
 const legacy=await resolveRecoveryCollectorPins({oracle_root:oracle},base);assert.equal(legacy['chatgptImages.js'],'ceae7c37a063ba06a8a59527053b1438eaa54ae69605592792392a9ebf7d3085');
 console.log('current patched collector pin, drift rejection, and legacy pin fixtures passed');
 """.replace('MODULE',json.dumps(module)).replace('HOME',json.dumps(self.folder.as_posix())).replace('SOURCE',json.dumps(source))
-        script=self.folder/"recovery-pins.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder/"recovery-pins.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run([node,str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
@@ -697,7 +699,7 @@ assert.equal(result.reason,'navigation-unverified');
         env=os.environ.copy();env["ORACLE_TURNS"]=turns;env["ORACLE_NATIVE"]=native
         with tempfile.TemporaryDirectory(dir=str(self.folder)) as folder:
             script=Path(folder)/"native-composition.mjs"
-            script.write_text(program,encoding="utf-8")
+            script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
             completed=subprocess.run(["node",str(script)],capture_output=True,text=True,env=env)
             self.assertEqual(completed.returncode,0,completed.stderr)
 
@@ -708,7 +710,7 @@ assert.equal(result.reason,'navigation-unverified');
         oracle_root=self.oracle_fixture_root()
         constants=(Path(oracle_root)/"dist/src/browser/constants.js").as_uri()
         program=f"import {{INPUT_SELECTORS}} from {json.dumps(constants)}; import assert from 'node:assert/strict'; assert(Array.isArray(INPUT_SELECTORS)); assert(INPUT_SELECTORS.some(s=>s.includes('textbox')));"
-        script=self.folder/"canonical-inputs.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder/"canonical-inputs.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         completed=subprocess.run(["node",str(script)],capture_output=True,text=True)
         self.assertEqual(completed.returncode,0,completed.stderr)
 
@@ -716,30 +718,32 @@ assert.equal(result.reason,'navigation-unverified');
         source=Path("tools/chatgpt_web_image_backend.mjs").read_text(encoding="utf-8")
         function=source[source.index("export function desktopBrokerConfiguration"):source.index("export function nativeImageEnvironment")].replace("export function","function")
         program="import vm from 'node:vm'; import assert from 'node:assert/strict'; const context={}; vm.createContext(context); vm.runInContext("+json.dumps(function)+",context); const old=context.desktopBrokerConfiguration(false), opt=context.desktopBrokerConfiguration(true); assert(old.relativePath.endsWith('/DesktopBroker.exe')); assert.equal(old.allowDisconnectedSession,false); assert.match(old.sha256,/^[a-f0-9]{64}$/); assert(opt.relativePath.endsWith('/session-broker/DesktopBrokerSession.exe')); assert.equal(opt.allowDisconnectedSession,true); assert.equal(opt.sha256,'37df09b866684140b9182003e4bdfaa2e21b74717f9cb51f3bbc43db7eb1a0e1');"
-        script=self.folder/"broker-config.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder/"broker-config.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         completed=subprocess.run(["node",str(script)],capture_output=True,text=True)
         self.assertEqual(completed.returncode,0,completed.stderr)
         self.assertLess(source.index("Session desktop broker fingerprint not approved"),source.index("const brokerHash") if "const brokerHash" in source else source.index("const child = spawn"))
         self.assertIn("allowDisconnectedSession:true",source)
 
-    def test_shared_advisor_launcher_is_optional_and_defaults_unchanged(self):
-        source=Path("D:/Projects/Web-Advisor/src/oracle.ts").read_text(encoding="utf-8")
-        self.assertIn("launcher?: { command: string; args: string[] }",source)
+    def test_vendored_oracle_launcher_is_optional_and_defaults_unchanged(self):
+        source=Path("runtime/chatgpt-web-image/oracle-client.mjs").read_text(encoding="utf-8")
+        self.assertIn("const launcher = context?.launcher;",source)
         self.assertIn("command: launcher?.command ?? process.execPath",source)
-        self.assertIn('args: launcher ? [...launcher.args] : [resolveOracleEntrypoint(projectRoot, "oracle-mcp.js")]',source)
+        self.assertIn('args: launcher ? [...launcher.args] : [resolveOracleEntrypoint(installationRoot, "oracle-mcp.js")]',source)
+        self.assertNotRegex(source,r"[A-Za-z]:[\/]")
 
     def test_isolated_desktop_receipt_failure_blocks_consult(self):
         source=Path("tools/chatgpt_web_image_backend.mjs").read_text(encoding="utf-8")
         function=source[source.index("export function validateDesktopLaunchReceipt"):source.index("async function verifyIsolatedDesktop")].replace("export function","function")
         program="import vm from 'node:vm';import assert from 'node:assert/strict';const c={};vm.createContext(c);vm.runInContext("+json.dumps(function)+",c);const d='OracleIsolated_'+'a'.repeat(32);const r={workerPid:7,state:'RUNNING',desktop:d,inputReadable:true,inputBefore:'Default',threadDesktop:'Default',allowDisconnectedSession:false,prelaunch:{inputReadable:true,inputName:'Default'}};assert.equal(c.validateDesktopLaunchReceipt(r),true);for(const [key,value] of Object.entries({workerPid:0,state:'FAILED',desktop:'Default',inputReadable:false,inputBefore:'Other',threadDesktop:d,allowDisconnectedSession:true,prelaunch:null}))assert.equal(c.validateDesktopLaunchReceipt({...r,[key]:value}),false,key);"
-        script=self.folder/"desktop-receipt.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder/"desktop-receipt.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         completed=subprocess.run(["node",str(script)],capture_output=True,text=True)
         self.assertEqual(completed.returncode,0,completed.stderr)
         self.assertLess(source.index("await verifyIsolatedDesktop(desktopReceiptPath,"),source.index("await runImageTransport(request"))
 
     def test_shared_advisor_submit_allows_only_receipt_gated_isolated_mode(self):
         source=Path("tools/chatgpt_web_image_backend.mjs").read_text(encoding="utf-8")
-        self.assertIn("new ProjectLocalOracleMcpClient(advisorRoot,launchContext)",source)
+        self.assertIn("new ProjectLocalOracleMcpClient(installation,launchContext)",source)
+        self.assertNotIn("Web-Advisor",source)
         self.assertIn("await client.callTool(name, args)",source)
         self.assertIn("request.browser_mode !== 'headless' && !isolatedMode",source)
         self.assertIn("config.browser?.headless !== (isolatedMode ? false : true)",source)
@@ -756,7 +760,7 @@ assert.equal(result.reason,'navigation-unverified');
     def test_disconnected_receipt_strict_contract(self):
         program=r"""
 import assert from 'node:assert/strict';
-import {validateDesktopReceipt as check} from 'file:///D:/Projects/StoryArt/tools/chatgpt_web_image_recovery.mjs';
+import {validateDesktopReceipt as check} from '__RECOVERY_URL__';
 const desktop='OracleIsolated_'+'a'.repeat(32), request={windows_isolated_browser:true};
 const pre={sessionId:1,inputReadable:false,inputName:null,inputError:5,sessionQuerySucceeded:true,connectState:4,sessionQueryError:null,threadDesktop:'Default'};
 const good={workerPid:7,state:'RUNNING',inheritedHandleCount:3,desktop,inputBefore:null,inputReadable:false,inputError:5,threadDesktop:'Default',sessionQuerySucceeded:true,connectState:4,allowDisconnectedSession:true,sessionId:1,sessionQueryError:null,prelaunch:pre};
@@ -766,37 +770,37 @@ for(const [key,value] of Object.entries({sessionId:2,inputReadable:true,inputNam
 assert.equal(check(good,{windows_isolated_browser:false},7),false);
 assert(check({workerPid:7,state:'RUNNING',inheritedHandleCount:3,desktop,inputBefore:'Default'},{},7));
 """
-        script=self.folder/"desktop-receipt.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder/"desktop-receipt.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run(["node",str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
     def test_native_capture_redirect_reads_no_dom(self):
         program=r"""
 import vm from 'node:vm';import assert from 'node:assert/strict';
-import {buildScreenshotProbe} from 'file:///D:/Projects/StoryArt/tools/chatgpt_web_image_recovery.mjs';
+import {buildScreenshotProbe} from '__RECOVERY_URL__';
 let reads=0;const expression=buildScreenshotProbe('owned','key',true);
 assert(expression.includes('__oracleNativeImageActions'));assert(!expression.includes('__storyartPopupIdentity'));
 const context={location:{href:'other'}};Object.defineProperty(context,'document',{get(){reads++;throw Error('private DOM')}});Object.defineProperty(context,'window',{get(){reads++;throw Error('private map')}});
 const result=vm.runInNewContext(expression,context);assert.equal(result.allowed,false);assert.equal(reads,0);
 """
-        script=self.folder/"native-capture.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder/"native-capture.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run(["node",str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
     def test_native_failed_receipt_preserves_valid_dto_and_unknown_malformed(self):
         program=r"""
-import assert from 'node:assert/strict';import {nativeFailureDiagnostic as convert} from 'file:///D:/Projects/StoryArt/tools/chatgpt_web_image_recovery.mjs';
+import assert from 'node:assert/strict';import {nativeFailureDiagnostic as convert} from '__RECOVERY_URL__';
 const dto={method:'trusted-pointer',selectionOperations:1,selectionInputAttempts:1,modeReady:true,delivery:{sawKeyDown:false,clicked:false,pointerDown:true,blocked:'pointer-predicate-changed',traces:[{event:'pointerdown',predicates:{evaluation:true,url:true,navigation:true,plusIdentity:true,ownedForm:true,blank:true,portal:true,leaf:true,target:true,hit:true,enabled:true,trusted:true,eventTarget:true,focus:true,sequence:true,notPreviouslyBlocked:true},allowed:true,transitionObserved:false}]},post:{ok:true,observedOnly:true,plusExpanded:'false',portalConnected:false,editor:[{tag:'div',placeholder:null,ariaLabel:'Ask anything',empty:true}],controls:[{type:'button',label:'Image',pressed:null,disabled:true}]}};
 const got=convert({nativeImageDiagnostic:dto});assert.equal(got.selectionInputAttempts,1);assert.deepEqual(got.post,dto.post);assert.deepEqual(got.delivery,dto.delivery);assert.equal(got.modeReady,false);assert.equal(got.failedNativeDiagnostic,true);
 for(const bad of [null,{...dto,selectionOperations:9},{...dto,post:{private:'SECRET'}}]){const unknown=convert({nativeImageDiagnostic:bad});assert.equal(unknown.selectionOperations,null);assert.equal(unknown.selectionInputAttempts,null);assert.equal(unknown.modeReady,false);}
 """
-        script=self.folder/"native-failure.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder/"native-failure.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run(["node",str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
     def test_native_token_redirect_no_dom_reads(self):
-        program="import vm from 'node:vm'; import assert from 'node:assert/strict'; import {buildNativeTokenProbe} from 'file:///D:/Projects/StoryArt/tools/chatgpt_web_image_recovery.mjs'; let reads=0;const ctx={location:{href:'other'}};Object.defineProperty(ctx,'document',{get(){reads++;throw Error('private DOM')}});const result=vm.runInNewContext(buildNativeTokenProbe('owned',['[role=textbox]']),ctx);assert.equal(result.mismatch,true);assert.equal(reads,0);const expression=buildNativeTokenProbe('owned',['[role=textbox]']);for(const field of ['parentAtomIndex','containsExactLabel','textLength','visible','childTags'])assert(expression.includes(field));"
-        script=self.folder/"native-token.mjs";script.write_text(program,encoding="utf-8")
+        program="import vm from 'node:vm'; import assert from 'node:assert/strict'; import {buildNativeTokenProbe} from '__RECOVERY_URL__'; let reads=0;const ctx={location:{href:'other'}};Object.defineProperty(ctx,'document',{get(){reads++;throw Error('private DOM')}});const result=vm.runInNewContext(buildNativeTokenProbe('owned',['[role=textbox]']),ctx);assert.equal(result.mismatch,true);assert.equal(reads,0);const expression=buildNativeTokenProbe('owned',['[role=textbox]']);for(const field of ['parentAtomIndex','containsExactLabel','textLength','visible','childTags'])assert(expression.includes(field));"
+        script=self.folder/"native-token.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run(["node",str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
@@ -804,7 +808,7 @@ for(const bad of [null,{...dto,selectionOperations:9},{...dto,post:{private:'SEC
         source=Path("tools/chatgpt_web_image_backend.mjs").read_text(encoding="utf-8")
         fragment=source[source.index("export function nativeImageEnvironment"):source.index("let raw =")].replace("export function","function").replace("export const","const").replace("export async function","async function")
         program="import vm from 'node:vm';import assert from 'node:assert/strict';import fs from 'node:fs/promises';import path from 'node:path';import {createHash} from 'node:crypto';const ctx={fs,path,createHash};vm.createContext(ctx);vm.runInContext("+json.dumps(fragment)+",ctx);assert.equal(Object.keys(ctx.nativeImageEnvironment({operation:'status'})).length,0);assert.throws(()=>ctx.nativeImageEnvironment({operation:'submit'}));const env=ctx.nativeImageEnvironment({operation:'submit',project_binding:{route:{project_id:'g-p-abc',project_url:'https://chatgpt.com/g/g-p-abc/project'}}});assert.equal(env.ORACLE_REQUIRE_NATIVE_IMAGE_TOOL,'1');assert.equal(env.ORACLE_IMAGE_PROJECT_ID,'g-p-abc');await assert.rejects(ctx.verifyNativeImageInstallation('.',{'pending':'PENDING'}),/not approved/);await assert.rejects(ctx.verifyNativeImageInstallation('.',{'tools/chatgpt_web_image_backend.mjs':'a'.repeat(64)}),/changed/);const root=HOME;await fs.mkdir(root,{recursive:true});const target=path.join(root,'oracle.js');const payload=Buffer.from('pinned oracle');await fs.writeFile(target,payload);const manifest=Buffer.from(JSON.stringify({files:[{path:target,sha256:createHash('sha256').update(payload).digest('hex')}]}));const manifestPath=path.join(root,'installation-manifest.json');await fs.writeFile(manifestPath,manifest);const binding={installation:root,manifest_path:manifestPath,manifest_sha256:createHash('sha256').update(manifest).digest('hex')};await ctx.verifyRuntimeBinding(binding,root);await fs.appendFile(target,'drift');await assert.rejects(ctx.verifyRuntimeBinding(binding,root),/runtime file changed/);await assert.rejects(ctx.verifyRuntimeBinding(binding,path.join(root,'other')),/binding root changed/);".replace('HOME',json.dumps(self.folder.as_posix()))
-        script=self.folder/"native-production-gate.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder/"native-production-gate.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run(["node",str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertLess(source.index("await verifyNativeImageInstallation"),source.index("const child = spawn"))
@@ -823,8 +827,8 @@ for(const bad of [null,{...dto,selectionOperations:9},{...dto,post:{private:'SEC
                 web.recovery_status(self.journal,operation="image-tool-inspect",transport=lambda *_:self.fail("no launch"),**kwargs)
 
     def test_native_user_probe_redirect_before_canonical_or_dom(self):
-        program="import vm from 'node:vm';import assert from 'node:assert/strict';import {buildNativeUserRenderProbe} from 'file:///D:/Projects/StoryArt/tools/chatgpt_web_image_recovery.mjs';let reads=0;const ctx={location:{href:'other'}};Object.defineProperty(ctx,'document',{get(){reads++;throw Error('private')}});const r=vm.runInNewContext(buildNativeUserRenderProbe('owned','document.body.children',''),ctx);assert.equal(r.mismatch,true);assert.equal(reads,0);"
-        script=self.folder/"native-user.mjs";script.write_text(program,encoding="utf-8")
+        program="import vm from 'node:vm';import assert from 'node:assert/strict';import {buildNativeUserRenderProbe} from '__RECOVERY_URL__';let reads=0;const ctx={location:{href:'other'}};Object.defineProperty(ctx,'document',{get(){reads++;throw Error('private')}});const r=vm.runInNewContext(buildNativeUserRenderProbe('owned','document.body.children',''),ctx);assert.equal(r.mismatch,true);assert.equal(reads,0);"
+        script=self.folder/"native-user.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run(["node",str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
@@ -847,7 +851,7 @@ paragraph.childNodes.unshift({nodeType:3,textContent:'before'});assert.equal(pro
 ctx.fixtureRoots=[root,root];r=probe();assert.equal(r.ambiguous,true);assert.equal(r.leaves,undefined);assert.equal(outsideReads,0);
 ctx.fixtureRoots=[];assert.equal(probe().userCount,0);
 """.replace('MODULE',json.dumps(module))
-        script=self.folder/"native-user-dto.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder/"native-user-dto.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run(["node",str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
@@ -859,7 +863,7 @@ assert.equal(observeStrictPromptBinding(request,meta,{}).available,false);let bi
 for(const change of [{lastUserContentText:'Create image full prompt'},{lastUserContentText:'full prompt extra'},{url:'other'},{conversationId:'other'},{lastUserMessageId:null}])assert.equal(observeStrictPromptBinding(request,meta,{...observed,...change}).matched,false);
 assert.equal(observeStrictPromptBinding(request,meta,{...observed,lastUserContentText:' full prompt\r\n'}).matched,true);assert.equal(JSON.stringify(binding).includes('full prompt'),false);
 """.replace('MODULE',json.dumps(module))
-        script=self.folder/"strict-binding.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder/"strict-binding.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run(["node",str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
@@ -872,7 +876,7 @@ for(const change of [{lastUserMessageId:''},{lastUserTurnIndex:undefined},{lastU
 let later=matchObservedPrompt(request,meta,{...actual,lastUserTurnIndex:4,lastAssistantTurnIndex:5,assistantCount:3});assert.equal(later.userTurnIndex,4);assert.equal(later.userMessageId,undefined);
 const legacy=matchObservedPrompt(request,meta,{...actual,lastUserMessageId:'actual-id',turnLayout:'legacy-message',lastUserTurnIndex:undefined,lastAssistantTurnIndex:undefined});assert.equal(legacy.userMessageId,'actual-id');assert.equal(legacy.kind,undefined);
 """.replace('MODULE',json.dumps(module))
-        script=self.folder/"strict-no-id.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder/"strict-no-id.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run(["node",str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
@@ -896,7 +900,7 @@ r=await probe();assert.equal(r.allowed,true);assert.equal(r.exactPromptMatches,t
 positive.crypto={subtle:{digest:async(...args)=>{const result=await webcrypto.subtle.digest(...args);claim.retiring=true;return result;}}};r=await probe();assert.equal(r.allowed,false);assert.equal(r.reason,'original-target-changed');claim.retiring=false;
 positive.crypto=webcrypto;positive.fixtureTurns[0].text='wrong';r=await probe();assert.equal(r.exactPromptMatches,false);assert.equal(r.normalizedContentSha256,null);assert.equal(r.mainImages.length,0);assert.equal(r.controls.length,0);assert.equal(r.headings.length,0);positive.fixtureTurns=[{role:'user',text:'prompt',contains:()=>false}];r=await probe();assert.equal(r.adjacentAssistant,false);assert.equal(r.assistantTextLength,0);
 """.replace('MODULE',json.dumps(module))
-        script=self.folder/"pure-live.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder/"pure-live.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run(["node",str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
@@ -907,7 +911,7 @@ const hash=s=>createHash('sha256').update(s).digest('hex');const state={status:'
 const terminalState={...state,status:'UNKNOWN',recovery_started:true};const terminalMeta={...meta,status:'error',error:{details:{stage:'assistant-timeout',runtime:{...runtime}}}};const terminalGuard={active_attempt:null,attempts:[{status:'UNKNOWN',attempt_id:'original',reference_binding:{prompt_sha256:state.prompt_sha256}}]};let retained=validateLiveStatus(terminalState,terminalMeta,receipt,terminalGuard);assert.equal(retained.retainedOriginal,true);const facts={chromeAlive:true,controllerAlive:false,chromeParent:11,listenerOwned:true};validateLiveFacts(facts,runtime,true);assert.throws(()=>validateLiveFacts(facts,runtime,false));for(const change of [{chromeAlive:false},{listenerOwned:false},{chromeParent:999}])assert.throws(()=>validateLiveFacts({...facts,...change},runtime,true));for(const badMeta of [{...terminalMeta,status:'completed'},{...terminalMeta,error:{details:{stage:'other',runtime}}},{...terminalMeta,error:{details:{stage:'assistant-timeout',runtime:{...runtime,chromeTargetId:'OTHER'}}}}])assert.throws(()=>validateLiveStatus(terminalState,badMeta,receipt,terminalGuard));for(const badGuard of [{...terminalGuard,active_attempt:guard.active_attempt},{active_attempt:null,attempts:[]},{...terminalGuard,attempts:[{...terminalGuard.attempts[0],status:'REFUSED'}]},{...terminalGuard,attempts:[terminalGuard.attempts[0],terminalGuard.attempts[0]]}])assert.throws(()=>validateLiveStatus(terminalState,terminalMeta,receipt,badGuard));assert.throws(()=>validateLiveStatus({...terminalState,status:'DOWNLOADED'},terminalMeta,receipt,terminalGuard));
 for(const change of [{status:'UNKNOWN'},{opt_in:false},{session_id:'other'},{prompt:'tampered'},{profile_dir:'other'},{safety_history:'BLOCKED'}])assert.throws(()=>validateLiveStatus({...state,...change},meta,receipt,guard));assert.throws(()=>validateLiveStatus(state,meta,{...receipt,session_id:'other'},guard));assert.throws(()=>validateLiveStatus(state,meta,receipt,{active_attempt:{...guard.active_attempt,status:'REFUSED'}}));assert.throws(()=>validateLiveStatus(state,meta,receipt,{active_attempt:{...guard.active_attempt,attempt_id:'other'}}));for(const change of [{chromeHost:'remote'},{chromeTargetId:'OTHER'},{tabUrl:'https://chatgpt.com/c/12345678-1234-1234-1234-123456789abc'},{conversationId:'other'},{controllerPid:null},{ownedRecoveryTarget:{...runtime.ownedRecoveryTarget,claimId:'bad'}}])assert.throws(()=>validateLiveStatus(state,{...meta,browser:{...meta.browser,runtime:{...runtime,...change}}},receipt,guard));
 """.replace('MODULE',json.dumps(module))
-        script=self.folder/"live-state-guards.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder/"live-state-guards.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run(["node",str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
@@ -1076,7 +1080,7 @@ composerForm.querySelectorAll=()=>[plus,new Element({'aria-label':'Add files and
 
 
 """.replace('MODULE',json.dumps(module))
-        script=self.folder/"menu-inspect-test.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder/"menu-inspect-test.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run([node,str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
@@ -1143,7 +1147,7 @@ const competingPortal=new Element();competingPortal.getBoundingClientRect=()=>({
 
 
 """.replace('MODULE',json.dumps(module))
-        script=self.folder/"popup-identity-test.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder/"popup-identity-test.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run([node,str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 
@@ -1166,7 +1170,7 @@ const Runtime={evaluate:async({expression})=>({result:{value:expression==='locat
 const result=await captureOwnedMain(Runtime,Page,url,key,OUTPUT);assert.equal(result.captured,true);assert.equal(screenshots,1);assert.ok((await fs.stat(OUTPUT)).size>0);
 navWidth=350;assert.equal((await captureOwnedMain(Runtime,Page,url,key,OUTPUT+'-blocked')).captured,false);assert.equal(screenshots,1);
 """.replace('MODULE',json.dumps(module)).replace('PNG',json.dumps(base64.b64encode(self.ref.read_bytes()).decode())).replace('OUTPUT',json.dumps(str(self.folder/"main-diag.png")))
-        script=self.folder/"screenshot-test.mjs";script.write_text(program,encoding="utf-8")
+        script=self.folder/"screenshot-test.mjs";script.write_text(program.replace("__RECOVERY_URL__",RECOVERY_URL),encoding="utf-8")
         result=subprocess.run([node,str(script)],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 

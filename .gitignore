@@ -37,7 +37,7 @@
 /tools/build_moderation_diagnostic_variants.py
 /tools/create_side_topology_anchor.py
 /tools/extract_teal_garment_topology.py
-/tools/chatgpt_web_image_desktop_proof.js
+!/tools/chatgpt_web_image_desktop_proof.js
 
 # Private ChatGPT destination binding stays local.
 /config/chatgpt_web_image.local.json

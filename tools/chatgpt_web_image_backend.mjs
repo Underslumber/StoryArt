@@ -51,8 +51,8 @@ export function nativeImageEnvironment(request){
 }
 export const nativeImagePins={
  'browser/actions/native-image-production.mjs':'2e6f676ce00e58d679a8ad5b1a8481bd7092630b3ac8b53e43bc05cf9830f923',
- 'browser/index.js':'1797fbd96a56952298e504ff54469d641de28fff7c241a19c35b164acd77253c',
- 'browser/actions/promptComposer.js':'34d37b472722c6a1fa454776176009b367740878761741f4207d66c624a83779',
+ 'browser/index.js':'67361d61251ba101703ba46062fc5289da9bab694346e98d1d51b2d471b552b3',
+ 'browser/actions/promptComposer.js':'25b21668edd1982bd4a89ba9ddfcc56284533935be76ab3161019202f798710a',
  'browser/providers/chatgptDomProvider.js':'b0971de1f49de12c34b8324640af2249bb466ba84abbdd70a21b26c22cf30094'
 };
 export async function verifyRuntimeBinding(binding, installation){
@@ -90,11 +90,11 @@ async function phase(name, extra = {}) {
   try { await handle.writeFile(JSON.stringify(row) + '\n'); await handle.sync(); }
   finally { await handle.close(); }
 }
-// Use the same pinned Oracle installation and MCP client that Web Advisor uses.
-const advisorRoot = 'D:\\Projects\\Web-Advisor';
-const advisorRequire = createRequire(path.join(advisorRoot, 'package.json'));
-const advisorPkg = advisorRequire.resolve('@steipete/oracle/package.json');
-if (JSON.parse(await fs.readFile(advisorPkg, 'utf8')).version !== '0.21.1') throw new Error('Pinned Advisor Oracle version changed');
+// Pinned Oracle and the vendored MCP client both come from the private installation
+// that setup-web-image.ps1 deploys (runtime/chatgpt-web-image -> .local/chatgpt-web-image).
+const installationRequire = createRequire(path.join(installation, 'package.json'));
+const oraclePkg = installationRequire.resolve('@steipete/oracle/package.json');
+if (JSON.parse(await fs.readFile(oraclePkg, 'utf8')).version !== '0.21.1') throw new Error('Pinned Oracle version changed');
 const isolated = request.windows_isolated_browser === true;
 const recoveryOperations = ['recover','recovery-status','image-tool-inspect'];
 if (recoveryOperations.includes(request.operation) && !isolated)
@@ -106,7 +106,7 @@ if (!recoveryOperations.includes(request.operation) && request.browser_mode && r
   throw new Error('Pinned browser mode changed; no visible-browser fallback');
 if(request.runtime_binding){
  await verifyRuntimeBinding(request.runtime_binding,request.oracle_root);
-}else if(request.operation==='submit')await verifyNativeImageInstallation(path.join(path.dirname(advisorPkg),'dist/src'));
+}else if(request.operation==='submit')await verifyNativeImageInstallation(path.join(path.dirname(oraclePkg),'dist/src'));
 
 if (['recover','recovery-status','image-tool-inspect'].includes(request.operation)) {
   if (!isolated) throw new Error('Recovery requires explicit isolated Windows mode');
@@ -139,7 +139,7 @@ if (['recover','recovery-status','image-tool-inspect'].includes(request.operatio
   process.exit(0);
 }
 
-const { ProjectLocalOracleMcpClient, resolveOracleEntrypoint } = await import(pathToFileURL(path.join(advisorRoot, 'dist/oracle.js')));
+const { ProjectLocalOracleMcpClient, resolveOracleEntrypoint } = await import(pathToFileURL(path.join(installation, 'oracle-client.mjs')));
 const launchContext = {cwd:request.oracle_home,environment:{
   ORACLE_HOME_DIR:request.oracle_home, ORACLE_BROWSER_PROFILE_DIR:request.profile_dir,
   ORACLE_IMAGE_BROWSER_DOWNLOAD_ONLY:'1', ...nativeImageEnvironment(request),
@@ -158,12 +158,12 @@ if (isolatedMode && !recoveryOperations.includes(request.operation)) {
   const launchPacket = path.join(request.oracle_home, `advisor-desktop-launch-${launchId}.json`);
   desktopReceiptPath = path.join(request.oracle_home, `advisor-desktop-receipt-${launchId}.json`);
   await fs.writeFile(launchPacket, JSON.stringify({executable:process.execPath,
-    argv:['--require',path.join(path.dirname(fileURLToPath(import.meta.url)),'chatgpt_web_image_desktop_proof.js'),resolveOracleEntrypoint(advisorRoot,'oracle-mcp.js')],cwd:request.oracle_home,
+    argv:['--require',path.join(path.dirname(fileURLToPath(import.meta.url)),'chatgpt_web_image_desktop_proof.js'),resolveOracleEntrypoint(installation,'oracle-mcp.js')],cwd:request.oracle_home,
     launchId,submissionOperationId:request.submission_operation_id,
     expectedInputDesktop:'Default',allowDisconnectedSession:false,receipt:desktopReceiptPath}), {flag:'wx'});
   launchContext.launcher = {command:brokerConfig.path,args:[launchPacket]};
 }
-const client = new ProjectLocalOracleMcpClient(advisorRoot,launchContext);
+const client = new ProjectLocalOracleMcpClient(installation,launchContext);
 const envKeys = ['ORACLE_HOME_DIR','ORACLE_BROWSER_PROFILE_DIR','CHROME_PATH'];
 const originalEnv = new Map(envKeys.map(key => [key, process.env[key]]));
 process.env.ORACLE_HOME_DIR = request.oracle_home;
@@ -171,7 +171,7 @@ process.env.ORACLE_BROWSER_PROFILE_DIR = request.profile_dir;
 if (request.runtime_binding?.chrome_path) process.env.CHROME_PATH = request.runtime_binding.chrome_path;
 try {
   // Load only our tool-owned configuration and fail closed on project inheritance.
-  const { loadUserConfig } = await import(pathToFileURL(path.join(path.dirname(advisorPkg), 'dist/src/config.js')));
+  const { loadUserConfig } = await import(pathToFileURL(path.join(path.dirname(oraclePkg), 'dist/src/config.js')));
   const { config } = await loadUserConfig({ cwd: request.oracle_home });
   const expected = JSON.parse(await fs.readFile(path.join(request.oracle_home, 'config.json'), 'utf8'));
   if (JSON.stringify(config) !== JSON.stringify(expected)) throw new Error('Inherited Oracle configuration differs from private configuration');

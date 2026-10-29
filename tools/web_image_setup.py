@@ -101,6 +101,8 @@ def install(root=ROOT,node_path=None,profile_dir=None):
         npm=target/'package/bin/npm-cli.js'
     env=dict(os.environ,PATH=str(pathlib.Path(node).parent)+os.pathsep+os.environ.get('PATH',''))
     subprocess.run([node,str(npm),'ci','--ignore-scripts','--no-audit','--no-fund'],cwd=installation,env=env,check=True)
+    # The vendored MCP client must sit next to node_modules so its bare imports resolve to the pinned packages.
+    shutil.copyfile(source/'oracle-client.mjs',installation/'oracle-client.mjs')
     vendor=installation/'node_modules/@steipete/oracle';patch=json.loads((source/'oracle-patches.json').read_text())
     recorded=[]
     for item in patch['files']:
