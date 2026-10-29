@@ -2234,14 +2234,36 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
     def test_all_five_canonical_stages_resolve_packs_pass_qa_and_complete(self):
         self._run_multistage_character_base(child=False)
 
+    def test_character_base_driver_runs_passport_gates_rejection_and_approval(self):
+        self._run_multistage_character_base(child=False, driver=True)
+
+    def _driver(self, *args: object, succeeds: bool = True) -> dict[str, str]:
+        result = self._cli("character_base.py", *args, succeeds=succeeds)
+        return dict(line.split("=", 1) for line in result.stdout.splitlines() if "=" in line)
+
+    def _driver_record(self, request_id: str, guard: Path, plan_path: Path, stage: str, attempt: str,
+                       output: Path, results: dict[str, str], *, limb_evidence: str = "", extra: dict | None = None,
+                       review: tuple[str, Path] | None = None, succeeds: bool = True) -> dict[str, str]:
+        qa_path = self.workspace / f"{attempt}-qa.json"
+        qa = {"results": results, "limb_qa_evidence": limb_evidence, "observed_topology": "TWO_PIECE", **(extra or {})}
+        qa_path.write_text(json.dumps(qa), encoding="utf-8")
+        review = review or self._visual_review_args(guard, attempt, output)
+        return self._driver(
+            "record", "--workspace", self.workspace, "--style-name", self.style_name,
+            "--request-id", request_id, "--request-dir", guard.parent, "--stage", stage,
+            "--image", output, "--attempt-id", attempt, "--visual-review-json", review[1],
+            "--qa-json", qa_path, "--description", f"Synthetic {stage} via driver", "--fidelity", "70",
+            succeeds=succeeds,
+        )
+
     def test_child_boy_five_stage_cli_approval_profile_and_resolver(self):
         self._run_multistage_character_base(child=True, anatomy="MALE_ANATOMY")
 
     def test_child_girl_five_stage_cli_approval_profile_and_resolver(self):
         self._run_multistage_character_base(child=True, anatomy="FEMALE_ANATOMY")
 
-    def _run_multistage_character_base(self, *, child: bool, anatomy: str = ""):
-        request_id = "multistage-child" if child else "multistage-continuation"
+    def _run_multistage_character_base(self, *, child: bool, anatomy: str = "", driver: bool = False):
+        request_id = "multistage-child" if child else "multistage-driver" if driver else "multistage-continuation"
         subject = "boy" if anatomy == "MALE_ANATOMY" else "girl"
         required_garment = (
             "opaque age-appropriate T-shirt and shorts" if anatomy == "MALE_ANATOMY"
@@ -2289,6 +2311,20 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
         self.assertEqual(plan["generation_workflow"]["mode"], "MULTI_STAGE")
         self.assertEqual(len(plan["generation_workflow"]["stages"]), 5)
+        if driver:
+            self.assertEqual(self._driver("next", "--request-dir", guard.parent)["NEXT_ACTION"], "CONFIRM_BRIEF")
+            brief_path = self.workspace / "brief.json"
+            self._driver("brief-template", "--output", brief_path)
+            brief = json.loads(brief_path.read_text(encoding="utf-8"))
+            brief["name"] = "Synthetic"
+            for key in ("apparent_age", "species", "gender_presentation", "height_heads", "build", "skin_or_fur",
+                        "hair", "eyes", "face_shape", "distinctive_features"):
+                brief["fields"][key] = {"value": f"synthetic {key}", "source": "USER"}
+            brief["must_not"] = ["pale muzzle"]
+            brief_path.write_text(json.dumps(brief), encoding="utf-8")
+            stored = self._driver("brief", "--request-dir", guard.parent, "--brief-file", brief_path,
+                                  "--confirmation-quote", "Да, паспорт верный.")
+            self.assertEqual(stored["BRIEF_REVISION"], "1")
         if child:
             contract = plan["character_base_contract"]
             self.assertEqual(contract["age_group"], "CHILD")
@@ -2344,6 +2380,14 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--summary", "Synthetic first stage has a durable QA-passed record.",
             "--stage", "01_FACE_IDENTITY", "--evidence", copied_face,
         )
+        if driver:
+            waiting = self._driver("next", "--request-dir", guard.parent)
+            self.assertEqual((waiting["NEXT_ACTION"], waiting["STAGE"]), ("WAIT_USER_APPROVAL", "01_FACE_IDENTITY"))
+            self._driver("gate", "--request-dir", guard.parent, "--stage", "01_FACE_IDENTITY", "--user-quote", "Лицо то.")
+            following = self._driver("next", "--request-dir", guard.parent)
+            self.assertEqual((following["NEXT_ACTION"], following["STAGE"]), ("GENERATE_STAGE", "02_PHYSIQUE_FRONT"))
+            self.assertEqual(following["SWIMWEAR_RUNG"], "TWO_PIECE")
+            self.assertIn("LIMB_PROPORTIONS", following["REQUIRED_QA"].split(","))
 
         front_prompt = (
             f"Project the verified face into the canonical full-body front view wearing {required_garment}."
@@ -2411,6 +2455,9 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         if not child:
             front_completion.extend(("--swimwear-rung", "TWO_PIECE", "--observed-topology", "TWO_PIECE"))
         self._cli("task_execution_guard.py", *front_completion)
+        if driver:
+            self.assertEqual(self._driver("next", "--request-dir", guard.parent)["NEXT_ACTION"], "WAIT_USER_APPROVAL")
+            self._driver("gate", "--request-dir", guard.parent, "--stage", "02_PHYSIQUE_FRONT", "--user-quote", "Тело ок.")
 
         side_prompt = (
             f"Create the canonical side view wearing {required_garment}; preserve the verified face and child proportions."
@@ -2429,33 +2476,73 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         self.assertTrue(all(Path(source["path"]).is_file() for source in manifest["sources"]))
         self.assertEqual(json.loads(guard.read_text(encoding="utf-8"))["status"], "READY")
 
+        side_limb_evidence = limb_evidence.replace("view=FRONT;", "view=SIDE;")
+        side_qa = {name: "PASS" for name in (
+            "ATTACHMENTS", "CANVAS", "STAGE_LAYER", "FACE_GEOMETRY", "BODY_SILHOUETTE", "BODY_PROPORTIONS",
+            "LIMB_PROPORTIONS", "SIDE_VIEW", "SAFE_COVERAGE", "CLOTHING_TOPOLOGY", "MULTIVIEW_CONSISTENCY",
+            "STYLE", "BODY_RENDERING_STYLE",
+        )}
+        if driver:
+            rejected_attempt = self._start_call(guard, plan_path, side_call)
+            rejected_output = self.workspace / "side-stage-rejected.png"
+            Image.new("RGB", (720, 1280), (90, 116, 102)).save(rejected_output)
+            from tools.style_pack_manager import prompt_review_clauses
+            _, review_path = self._visual_review_args(guard, rejected_attempt, rejected_output)
+            review = json.loads(review_path.read_text(encoding="utf-8"))
+            first_clause = prompt_review_clauses(side_call["prompt"]["text"])[0]
+            review["prompt_adherence"] = {
+                "status": "FAIL", "checked_scope": "REJECTION_FINDINGS",
+                "constraints": [{"constraint": first_clause, "status": "FAIL", "evidence": "Face narrowed."}],
+            }
+            review_path.write_text(json.dumps(review), encoding="utf-8")
+            rejected = self._driver_record(
+                request_id, guard, plan_path, "03_PHYSIQUE_SIDE", rejected_attempt, rejected_output,
+                {**side_qa, "FACE_GEOMETRY": "FAIL"}, limb_evidence=side_limb_evidence,
+                extra={"findings": ["Face narrowed toward the centre."], "avoid": ["Keep the face as wide as in FACE_IDENTITY."]},
+                review=("--visual-review-json", review_path),
+            )
+            self.assertEqual(rejected["CHARACTER_BASE_RESULT"], "REJECTED")
+            retry = self._driver("next", "--request-dir", guard.parent)
+            self.assertEqual((retry["NEXT_ACTION"], retry["STAGE"]), ("GENERATE_STAGE", "03_PHYSIQUE_SIDE"))
+            self.assertEqual(retry["AVOID"], "Keep the face as wide as in FACE_IDENTITY.")
+            (self.workspace / f"{request_id}-03_PHYSIQUE_SIDE-risk.json").unlink()
+            side_call = self._resolve_and_prepare_call(
+                request_id, guard, plan_path, f"{side_prompt} {retry['AVOID']}", "03_PHYSIQUE_SIDE",
+            )
         side_attempt = self._start_call(guard, plan_path, side_call)
         side_output = self.workspace / "side-stage.png"
         Image.new("RGB", (720, 1280), (144, 116, 102)).save(side_output)
-        side_limb_evidence = limb_evidence.replace("view=FRONT;", "view=SIDE;")
-        self._cli(
-            "style_pack_manager.py", "record-generation", "--workspace", self.workspace,
-            "--style-name", self.style_name, "--image", side_output, "--request-id", request_id,
-            "--description", "Synthetic side physique stage", "--fidelity", "70", "--status", "STAGING",
-            "--character-id", "NEW", "--attempt-id", side_attempt, "--reference-plan", plan_path,
-            *self._visual_review_args(guard, side_attempt, side_output),
-            "--stage-id", "03_PHYSIQUE_SIDE", "--qa-attachments", "PASS", "--qa-canvas", "PASS",
-            "--qa-stage-layer", "PASS", "--qa-face", "PASS", "--qa-body-silhouette", "PASS",
-            "--qa-body-proportions", "PASS", "--qa-limb-proportions", "PASS", "--limb-qa-evidence", side_limb_evidence,
-            "--qa-view", "PASS", "--qa-safe-coverage", "PASS", "--qa-clothing-topology", "PASS",
-            *( ("--qa-clothing", "PASS") if child else () ),
-            "--qa-multiview-consistency", "PASS", "--qa-style", "PASS", "--qa-body-style", "PASS",
-        )
+        if driver:
+            side_result = self._driver_record(
+                request_id, guard, plan_path, "03_PHYSIQUE_SIDE", side_attempt, side_output, side_qa,
+                limb_evidence=side_limb_evidence,
+            )
+            self.assertEqual((side_result["CHARACTER_BASE_RESULT"], side_result["USER_GATE"]), ("COMPLETED", "NONE"))
+        else:
+            self._cli(
+                "style_pack_manager.py", "record-generation", "--workspace", self.workspace,
+                "--style-name", self.style_name, "--image", side_output, "--request-id", request_id,
+                "--description", "Synthetic side physique stage", "--fidelity", "70", "--status", "STAGING",
+                "--character-id", "NEW", "--attempt-id", side_attempt, "--reference-plan", plan_path,
+                *self._visual_review_args(guard, side_attempt, side_output),
+                "--stage-id", "03_PHYSIQUE_SIDE", "--qa-attachments", "PASS", "--qa-canvas", "PASS",
+                "--qa-stage-layer", "PASS", "--qa-face", "PASS", "--qa-body-silhouette", "PASS",
+                "--qa-body-proportions", "PASS", "--qa-limb-proportions", "PASS", "--limb-qa-evidence", side_limb_evidence,
+                "--qa-view", "PASS", "--qa-safe-coverage", "PASS", "--qa-clothing-topology", "PASS",
+                *( ("--qa-clothing", "PASS") if child else () ),
+                "--qa-multiview-consistency", "PASS", "--qa-style", "PASS", "--qa-body-style", "PASS",
+            )
         with (self.generations / "GENERATION_MANIFEST.csv").open(encoding="utf-8-sig", newline="") as manifest_file:
             side_row = list(csv.DictReader(manifest_file))[-1]
         copied_side = Path(side_row["style_file"])
-        side_completion: list[object] = [
-            "checkpoint", "--state", guard, "--event", "STAGE_COMPLETED",
-            "--summary", "Synthetic side stage passed required QA.", "--stage", "03_PHYSIQUE_SIDE", "--evidence", copied_side,
-        ]
-        if not child:
-            side_completion.extend(("--swimwear-rung", "TWO_PIECE", "--observed-topology", "TWO_PIECE"))
-        self._cli("task_execution_guard.py", *side_completion)
+        if not driver:
+            side_completion: list[object] = [
+                "checkpoint", "--state", guard, "--event", "STAGE_COMPLETED",
+                "--summary", "Synthetic side stage passed required QA.", "--stage", "03_PHYSIQUE_SIDE", "--evidence", copied_side,
+            ]
+            if not child:
+                side_completion.extend(("--swimwear-rung", "TWO_PIECE", "--observed-topology", "TWO_PIECE"))
+            self._cli("task_execution_guard.py", *side_completion)
 
         back_prompt = (
             f"Create the canonical back view wearing {required_garment}; use the verified face and prior views."
@@ -2536,6 +2623,25 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--summary", "Synthetic assembly result delivery receipt.", "--attempt-id", assembly_attempt,
             "--delivery-evidence", str(copied_assembly),
         )
+        if driver:
+            self.assertEqual(self._driver("next", "--request-dir", guard.parent)["NEXT_ACTION"], "SHOW_SHEET_AND_APPROVE")
+            sheet = self._driver("sheet", "--request-dir", guard.parent, "--panel-height", "200")
+            self.assertTrue(Path(sheet["CHARACTER_SHEET_PREVIEW"]).is_file())
+            self.assertEqual(Path(sheet["STAGE_FILE_03_PHYSIQUE_SIDE"]), copied_side)
+            approved = self._cli(
+                "style_pack_manager.py", "approve-character", "--workspace", self.workspace,
+                "--style-name", self.style_name, "--request-id", request_id, "--image", copied_assembly,
+                "--name", "Synthetic", "--risk-level", self._risk_level(plan_path),
+                "--face-reference", copied_face, "--body-reference", copied_front,
+                "--body-reference", copied_side, "--body-reference", copied_back,
+                "--approval-quote", "Сохраняй персонажа.", "--user-approved",
+            )
+            registration = dict(line.split("=", 1) for line in approved.stdout.splitlines() if "=" in line)
+            from tools import character_profile_state
+            profile = character_profile_state.load_effective(Path(registration["CHARACTER_PROFILE"]))["profile"]
+            self.assertIn("synthetic face_shape", profile["locked_invariants"]["face_geometry"])
+            self.assertIn("Never: pale muzzle", profile["locked_invariants"]["permanent_features"])
+            self.assertEqual(profile["known_failure_modes"], ["Keep the face as wide as in FACE_IDENTITY."])
         if child:
             approved = self._cli(
                 "style_pack_manager.py", "approve-character", "--workspace", self.workspace,

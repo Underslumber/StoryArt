@@ -49,7 +49,8 @@ def test_age_contract_rejects_unknown_or_adult_minor_conflict_and_keeps_adults()
     adult = manager.resolve_character_base_contract(
         Namespace(character_age_group="ADULT", adult_character=True), {"target_anatomy": "MALE_ANATOMY"}
     )
-    assert adult["adult_swimwear_ladder"] is True
+    assert adult["adult_swimwear"] is True
+    assert "adult_swimwear_ladder" not in adult
     assert adult["adult_anthropometry"] is True
 
 

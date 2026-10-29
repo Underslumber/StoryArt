@@ -555,6 +555,12 @@ no-reference lane.
 - Keep availability, delivery, QA, and completion distinct. Deliver only an
   eligible final `TEST` result with a user-visible receipt. Preserve all
   five `CHARACTER_BASE` stages and their dependencies.
+- For a new `CHARACTER_BASE`, follow [the short route](../../docs/NEW_CHARACTER.md)
+  with `tools/character_base.py`: confirmed passport first, `next` for each
+  stage's QA list, passport block and avoid lines, `record` for registration
+  plus the guard checkpoint, `gate` after FACE and FRONT only. Generate one
+  face candidate at a time. SIDE, BACK and assembly stay separate
+  full-quality generations; the sheet is preview-only, never a reference.
 
 ## Route work
 
