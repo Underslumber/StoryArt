@@ -34,6 +34,14 @@ Every handoff is created by `tools/storyart_orchestrator.py` and stored under
 
 ## Native subagent use
 
+Explicit Web execution is the scoped exception to root-only generator roles:
+`WEB_IMAGE` uses the project `web_image` agent. Create it with
+`chatgpt_web_image_handoff create` from the prepared production journal and
+complete final-spec file. The manager verifies the immutable packet, current
+attempt, stage, project and every listed input before dispatch. Its write scope
+is only the active request folder. It executes/downloads; root keeps source
+authority, QA, delivery and COMPLETE. See `docs/CHATGPT_WEB_IMAGE.md`.
+
 Pass the generated handoff object or its `agent_prompt` to one native subagent.
 Request an explicit model, effort, and `fork_turns="none"`; this document does
 not switch a model itself. Give only task-local context and listed files, never
@@ -65,11 +73,13 @@ task; root follows `REQUEST_FIDELITY.md` and continues or escalates diagnosis.
 ## Routing precedence
 
 Use `config/model_routes.json` as the role authority and
-`docs/MODEL_PROFILES.md` for activation and experiments. Sol 6.1 Medium owns the
-user contract and acceptance; bounded implementation/discovery uses Low;
-fresh independent review uses Medium; exceptional diagnosis uses High.
-Luna 6 is outside normal production routing. Sol 6.1 Low root and Luna 5.6 Low
-mechanical workers require an explicit opt-in trial. Normally zero workers,
+`docs/MODEL_PROFILES.md` for activation. Root retains its selected model and the
+user contract. Ordinary discovery, implementation, planning and result checks
+use Luna 6 High in default/worker/explorer with fork_turns="none". Mandatory
+read-only code review after machine checks uses sol_review, Sol 6.1 Medium;
+evidenced Luna failure permits sol_escalation, Sol 6.1 High. Record SOL_GATE
+before either Sol dispatch. Specialized Web roles retain their authorized
+contracts and never replace ordinary workers. Normally zero workers,
 one when useful, at most two independent workers. No full-history forks,
 nesting, or agents merely for generator/archive/CLI operations.
 Reuse source evidence only when hash, role, view, applicability and limitations

@@ -39,16 +39,16 @@ class StoryArtOrchestratorTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def test_project_config_template_uses_sol_medium_root_low_workers(self):
+    def test_project_config_template_uses_sol_medium_root_luna_high_workers(self):
         config_path = ROOT / "config" / "codex.project.example.toml"
         config_text = config_path.read_text(encoding="utf-8")
         config = tomllib.loads(config_text)
 
         self.assertEqual(config["model"], "gpt-6.1-sol")
         self.assertEqual(config["model_reasoning_effort"], "medium")
-        self.assertEqual(config["agents"]["default_subagent_model"], "gpt-6.1-sol")
-        self.assertEqual(config["agents"]["default_subagent_reasoning_effort"], "low")
-        allowed_models = {"gpt-6.1-sol", "gpt-5.6-luna"}
+        self.assertEqual(config["agents"]["default_subagent_model"], "gpt-6-luna")
+        self.assertEqual(config["agents"]["default_subagent_reasoning_effort"], "high")
+        allowed_models = {"gpt-6.1-sol", "gpt-6-luna"}
         configured_models = {config["model"], config["agents"]["default_subagent_model"]}
         self.assertLessEqual(configured_models, allowed_models)
 
@@ -100,9 +100,13 @@ class StoryArtOrchestratorTests(unittest.TestCase):
         self.assertIn("Stop searching once the required roles have suitable sources", roles)
 
     def test_profile_style_never_replaces_current_chat_chooser(self):
-        for relative in ("AGENTS.example.md", "docs/GENERATION_RULES.md",
-                         "docs/PORTABLE_GENERATION_RULES.md",
-                         "skills/storyart-orchestrator/SKILL.md"):
+        contracts = ["AGENTS.example.md", "docs/PORTABLE_GENERATION_RULES.md",
+                     "skills/storyart-orchestrator/SKILL.md"]
+        # Personal generation rules are intentionally absent from portable kits;
+        # always validate the public contract and also any local private rules.
+        if (ROOT / "docs/GENERATION_RULES.md").is_file():
+            contracts.append("docs/GENERATION_RULES.md")
+        for relative in contracts:
             with self.subTest(path=relative):
                 text = (ROOT / relative).read_text(encoding="utf-8")
                 self.assertIn("STYLE NAME only", text)
@@ -113,7 +117,7 @@ class StoryArtOrchestratorTests(unittest.TestCase):
         self.assertIn("fidelity and BODY_REFERENCE_LIBRARY still", adapter)
         self.assertIn("Never inherit those choices from another chat or profile", adapter)
 
-    def test_routing_keeps_medium_control_and_bounded_low_workers(self):
+    def test_routing_keeps_root_control_and_luna_high_workers(self):
         routing_paths = (
             ROOT / "docs" / "EFFICIENT_WORKFLOW.md",
             ROOT / "skills" / "storyart-orchestrator" / "SKILL.md",
@@ -125,8 +129,9 @@ class StoryArtOrchestratorTests(unittest.TestCase):
                 self.assertIn("Sol 6.1 Medium", path.read_text(encoding="utf-8"))
 
         workflow = (ROOT / "docs" / "EFFICIENT_WORKFLOW.md").read_text(encoding="utf-8")
-        self.assertIn("Sol 6.1 Medium (`CALL_PLANNER` / `CODE_REVIEW` / `VISUAL_QA`)", workflow)
-        self.assertIn("| `VISUAL_QA` / critical independent QA | Registry role: fresh Sol 6.1 Medium |", workflow)
+        self.assertIn("Luna 6 High", workflow)
+        self.assertIn("`sol_review` with recorded SOL_GATE", workflow)
+        self.assertIn("| `VISUAL_QA` / result checks | Registry role: Luna 6 High |", workflow)
 
     def initialize(self):
         return orchestrator.initialize_state(self.state_path, self.guard_path)

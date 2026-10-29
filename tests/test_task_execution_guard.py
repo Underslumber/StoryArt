@@ -136,6 +136,66 @@ def _native_default_call(folder: Path, prompt: str) -> dict[str, object]:
 
 
 class TaskExecutionGuardTests(unittest.TestCase):
+    def native_scene_result_fixture(self, folder):
+        environment=patch.dict("os.environ", {"CODEX_THREAD_ID":"native-scene-stage-unit-test"});environment.start();self.addCleanup(environment.stop)
+        registry=patch.object(guard,"_chat_request_root",return_value=Path(folder)/"registry");registry.start();self.addCleanup(registry.stop)
+        path,_=self.make_guard(folder,task_kind="IMAGE_GENERATION_NATIVE_DEFAULT",required_stages=["SCENE"])
+        call=_native_default_call(Path(folder),"A graphite landscape.");call["stage_id"]="SCENE"
+        _raw_checkpoint(path,event="READY_FOR_EXECUTION",execution_call=call,summary="Exact native scene ready.",now=BASE_TIME)
+        started=_raw_checkpoint(path,event="EXECUTION_STARTED",execution_call=call,summary="Execute exact native scene.",now=BASE_TIME)
+        image=Path(folder)/"scene.png";image.write_bytes(b"executed-native-provider-artifact")
+        available=_raw_checkpoint(path,event="VISIBLE_RESULT",attempt_id=started["active_attempt"]["attempt_id"],result_status="TEST",evidence=[str(image)],summary="Real native scene result registered.",now=BASE_TIME)
+        return path,available,image
+
+    def test_native_scene_stage_completes_immutable_single_pass_result(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[1]) as folder:
+            path,state,image=self.native_scene_result_fixture(folder)
+            attempt=state["attempts"][-1];self.assertEqual(attempt["stage"],"SINGLE_PASS")
+            before=json.loads(json.dumps(attempt))
+            done=_raw_checkpoint(path,event="STAGE_COMPLETED",stage="SCENE",evidence=[str(image)],summary="Native scene complete.",now=BASE_TIME)
+            self.assertEqual(done["required_stages"][0]["status"],"COMPLETED")
+            self.assertEqual(done["attempts"][-1],before)
+            _raw_checkpoint(path,event="RESULT_DELIVERED",attempt_id=attempt["attempt_id"],delivery_evidence=["Original native image displayed"],summary="Deliver original native scene.",now=BASE_TIME)
+            completed=_raw_checkpoint(path,event="COMPLETE",summary="Original native scene fully complete.",now=BASE_TIME)
+            self.assertEqual(completed["status"],"COMPLETE")
+
+    def test_native_scene_alias_rejects_other_lanes_and_inconsistent_bindings(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[1]) as folder:
+            _,original,image=self.native_scene_result_fixture(folder)
+            changes=[("lane",lambda s:s.update(task_kind="IMAGE_GENERATION")),
+                     ("callstage",lambda s:s["attempts"][-1]["execution_snapshot"]["execution_call"].update(stage_id="OTHER")),
+                     ("callrequest",lambda s:s["attempts"][-1]["execution_snapshot"]["execution_call"].update(request_id="other")),
+                     ("snapshotrequest",lambda s:s["attempts"][-1]["execution_snapshot"].update(request_id="other")),
+                     ("revision",lambda s:s["attempts"][-1]["execution_snapshot"].update(task_revision=99)),
+                     ("invalidrevision",lambda s:s["attempts"][-1]["execution_snapshot"].update(task_revision="0")),
+                     ("hash",lambda s:s["attempts"][-1]["execution_snapshot"].update(execution_call_sha256="wrong")),
+                     ("status",lambda s:s["attempts"][-1].update(result_status="REJECTED")),
+                     ("artifact",lambda s:s["attempts"][-1]["provider_artifact"].update(sha256="wrong"))]
+            for name,change in changes:
+                with self.subTest(name=name):
+                    state=json.loads(json.dumps(original));change(state)
+                    with self.assertRaises(guard.GuardError):guard.validate_stage_attempt_binding(state,"SCENE",[str(image)])
+            wrong=Path(folder)/"other.png";wrong.write_bytes(b"different")
+            with self.assertRaises(guard.GuardError):guard.validate_stage_attempt_binding(original,"SCENE",[str(wrong)])
+            with self.assertRaises(guard.GuardError):guard.validate_stage_attempt_binding(original,"OTHER",[str(image)])
+
+    def test_native_scene_completion_rejects_superseded_or_changed_stage_binding(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[1]) as folder:
+            path,available,image=self.native_scene_result_fixture(folder)
+            staged=_raw_checkpoint(path,event="STAGE_COMPLETED",stage="SCENE",evidence=[str(image)],summary="Register original native stage.",now=BASE_TIME)
+            attempt=staged["attempts"][-1]
+            delivered=_raw_checkpoint(path,event="RESULT_DELIVERED",attempt_id=attempt["attempt_id"],delivery_evidence=["Original native image displayed"],summary="Deliver original native scene.",now=BASE_TIME)
+            for status in ("RESULT_AVAILABLE","REJECTED","DELIVERED"):
+                with self.subTest(status=status):
+                    changed=json.loads(json.dumps(delivered));later=json.loads(json.dumps(attempt));later["attempt_id"]="later-native-attempt";later["execution_snapshot"]["attempt_id"]=later["attempt_id"];later["status"]=status
+                    changed["attempts"].append(later)
+                    self.assertIsNotNone(guard.completion_block_reason(changed))
+            for field,value in (("attempt_id","wrong"),("artifact_sha256","wrong"),("task_revision",99)):
+                changed=json.loads(json.dumps(delivered));changed["required_stages"][0]["accepted_attempt_binding"][field]=value
+                self.assertIsNotNone(guard.completion_block_reason(changed))
+            image.write_bytes(b"changed-provider-artifact")
+            self.assertIsNotNone(guard.completion_block_reason(delivered))
+
     def test_multistage_character_identity_anchor_must_be_in_lineage(self):
         assembly = Path("approved/CHAR_001/assembly.png").resolve()
         workflow = {"stages": [
@@ -314,9 +374,84 @@ class TaskExecutionGuardTests(unittest.TestCase):
         path = Path(folder) / "EXECUTION_GUARD.json"
         result = guard.create_guard(path, **values)
         if values["task_kind"] == "IMAGE_GENERATION":
-            plan_path = Path(folder) / "REFERENCE_PLAN.json"
+            # Mirror <workspace>/<STYLE>_GENERATIONS/00_PENDING/<request>/ so the guard resolves the workspace on any temp depth.
+            plan_path = Path(folder) / "FIXTURE_STYLE_GENERATIONS" / "00_PENDING" / "request-1" / "REFERENCE_PLAN.json"
+            plan_path.parent.mkdir(parents=True, exist_ok=True)
             _fixture_plans[str(path.resolve())] = plan_path
         return path, result
+
+    def make_native_unknown_attempt(self, folder: str):
+        environment = patch.dict("os.environ", {"CODEX_THREAD_ID": f"replacement-auth-{uuid.uuid4()}"})
+        environment.start(); self.addCleanup(environment.stop)
+        registry = patch.object(guard, "_chat_request_root", return_value=Path(folder) / "registry")
+        registry.start(); self.addCleanup(registry.stop)
+        path, _ = self.make_guard(folder, task_kind="IMAGE_GENERATION_NATIVE_DEFAULT")
+        call = _native_default_call(Path(folder), "A graphite landscape.")
+        ready = _raw_checkpoint(path, event="READY_FOR_EXECUTION", execution_call=call,
+                                summary="Exact native call ready.", now=BASE_TIME)
+        started = _raw_checkpoint(path, event="EXECUTION_STARTED", execution_call=call,
+                                  summary="Start exact native call.", now=BASE_TIME)
+        attempt_id = started["active_attempt"]["attempt_id"]
+        unknown = _raw_checkpoint(path, event="ATTEMPT_UNKNOWN", attempt_id=attempt_id,
+                                  summary="No durable receipt; outcome is unknown.", now=BASE_TIME)
+        return path, call, attempt_id, unknown
+
+    def write_replacement_authorization(self, path: Path, attempt_id: str):
+        receipt = path.parent / "replacement-authorization.json"
+        receipt.write_text(json.dumps({
+            "request_id": "request-1", "attempt_id": attempt_id,
+            "question": guard.REPLACEMENT_AUTHORIZATION_QUESTION,
+            "answer": "Разрешаю новую попытку после исправления",
+            "source": "Direct user structured reply in current chat",
+        }, ensure_ascii=False), encoding="utf-8")
+        return receipt
+
+    def test_replacement_requires_exact_user_receipt_and_preserves_unknown(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[1]) as folder:
+            path, call, attempt_id, before = self.make_native_unknown_attempt(folder)
+            with self.assertRaisesRegex(guard.GuardError, "one structured user authorization receipt"):
+                _raw_checkpoint(path, event="USER_AUTHORIZED_REPLACEMENT", attempt_id=attempt_id,
+                                summary="Retire unknown only with user authorization.", now=BASE_TIME)
+            self.assertEqual(guard.load_guard(path)["attempts"][0]["status"], "UNKNOWN")
+
+            receipt = self.write_replacement_authorization(path, attempt_id)
+            authorized = _raw_checkpoint(path, event="USER_AUTHORIZED_REPLACEMENT", attempt_id=attempt_id,
+                                         evidence=[str(receipt)], summary="User authorized one replacement.", now=BASE_TIME)
+            old = authorized["attempts"][0]
+            self.assertEqual(old["status"], "ABANDONED_UNKNOWN")
+            self.assertEqual(old["outcome"], "NOT_KNOWN")
+            self.assertEqual(old["attempt_id"], attempt_id)
+            self.assertTrue(any(e["event"] == "ATTEMPT_UNKNOWN" for e in authorized["events"]))
+            self.assertEqual(authorized["replacement_authorization"]["sha256"], guard.file_sha256(receipt))
+            self.assertEqual(authorized["next_required_action"], "PREFLIGHT_OR_EXECUTION")
+
+            with self.assertRaises(guard.GuardError):
+                _raw_checkpoint(path, event="USER_AUTHORIZED_REPLACEMENT", attempt_id=attempt_id,
+                                evidence=[str(receipt)], summary="Try to reuse the authorization.", now=BASE_TIME)
+            _raw_checkpoint(path, event="READY_FOR_EXECUTION", execution_call=call,
+                            summary="Revalidate the exact replacement call.", now=BASE_TIME)
+            replacement = _raw_checkpoint(path, event="EXECUTION_STARTED", execution_call=call,
+                                          summary="Start the explicitly authorized replacement.", now=BASE_TIME)
+            self.assertNotEqual(replacement["active_attempt"]["attempt_id"], attempt_id)
+            self.assertEqual(replacement["attempts"][0]["outcome"], "NOT_KNOWN")
+            self.assertTrue(replacement["replacement_authorization"]["consumed"])
+            self.assertEqual(replacement["replacement_authorization"]["consumed_by_attempt_id"], replacement["active_attempt"]["attempt_id"])
+
+    def test_replacement_receipt_tampering_blocks_execution(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[1]) as folder:
+            path, call, attempt_id, _ = self.make_native_unknown_attempt(folder)
+            receipt = self.write_replacement_authorization(path, attempt_id)
+            _raw_checkpoint(path, event="USER_AUTHORIZED_REPLACEMENT", attempt_id=attempt_id,
+                            evidence=[str(receipt)], summary="User authorized one replacement.", now=BASE_TIME)
+            _raw_checkpoint(path, event="READY_FOR_EXECUTION", execution_call=call,
+                            summary="Revalidate the exact replacement call.", now=BASE_TIME)
+            receipt.write_text(receipt.read_text(encoding="utf-8") + " ", encoding="utf-8")
+            with self.assertRaisesRegex(guard.GuardError, "authorization binding changed"):
+                _raw_checkpoint(path, event="EXECUTION_STARTED", execution_call=call,
+                                summary="Do not start after authorization receipt changed.", now=BASE_TIME)
+            state = guard.load_guard(path)
+            self.assertEqual(state["attempts"][0]["status"], "ABANDONED_UNKNOWN")
+            self.assertIsNone(state["active_attempt"])
 
     def checkpoint_fixture(self, path: Path, **kwargs):
         return _checkpoint_fixture(path, **kwargs)
@@ -614,7 +749,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
             plan_path = _fixture_plans[str(path.resolve())]
             plan = json.loads(plan_path.read_text(encoding="utf-8"))
             started = _raw_checkpoint(
-                path, event="EXECUTION_STARTED", stage="02_PHYSIQUE_FRONT", swimwear_rung="EXTREME_MICRO",
+                path, event="EXECUTION_STARTED", stage="02_PHYSIQUE_FRONT", swimwear_rung="TWO_PIECE",
                 reference_plan=plan_path, execution_call=plan["execution_call"],
                 summary="Start canonical numbered physique stage.", now=BASE_TIME,
             )
@@ -628,7 +763,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(guard.GuardError, "observed-topology"):
                 _raw_checkpoint(
-                    path, event="STAGE_COMPLETED", stage="02_PHYSIQUE_FRONT", swimwear_rung="EXTREME_MICRO",
+                    path, event="STAGE_COMPLETED", stage="02_PHYSIQUE_FRONT", swimwear_rung="TWO_PIECE",
                     evidence=[str(image)], summary="Completion cannot skip the clothing topology check.", now=BASE_TIME,
                 )
 
@@ -952,6 +1087,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
             state["required_stages"][0]["status"] = "COMPLETED"
             plan = {
                 "generation_purpose": "CHARACTER_BASE",
+                "character_base_contract": {"age_group": "ADULT"},
                 "generation_workflow": {
                     "mode": "MULTI_STAGE",
                     "stages": [{"stage_id": stage_id} for stage_id in guard.CHARACTER_BASE_STAGES],
@@ -1189,7 +1325,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
                     path,
                     event="EXECUTION_STARTED",
                     stage="PHYSIQUE_SIDE",
-                    swimwear_rung="EXTREME_MICRO",
+                    swimwear_rung="TWO_PIECE",
                     summary="Generate a neutral STAGING_ONLY side mannequin for proportions.",
                     now=BASE_TIME,
                 )
@@ -1214,7 +1350,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
                     path,
                     event="EXECUTION_STARTED",
                     stage="PHYSIQUE_SIDE",
-                    swimwear_rung="EXTREME_MICRO",
+                    swimwear_rung="TWO_PIECE",
                     summary="Generate the mannequin explicitly requested by the user.",
                     output_contract="USER_REQUESTED_EXTRA",
                     user_approved_extra_generation=True,
@@ -1224,7 +1360,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
                 path,
                 event="EXECUTION_STARTED",
                 stage="PHYSIQUE_SIDE",
-                swimwear_rung="EXTREME_MICRO",
+                swimwear_rung="TWO_PIECE",
                 summary="Generate the mannequin explicitly requested by the user.",
                 output_contract="USER_REQUESTED_EXTRA",
                 user_approved_extra_generation=True,
@@ -1561,79 +1697,56 @@ class TaskExecutionGuardTests(unittest.TestCase):
             state = self.checkpoint_fixture(path, event="ATTEMPT_REJECTED", stage="FRONT", qa_layer="FACE_GEOMETRY", summary="Second face failure.", now=BASE_TIME)
             self.assertEqual(state["next_required_action"], "ESCALATION_ORCHESTRATOR_REQUIRED")
 
-    def test_physique_swimwear_ladder_starts_at_extreme_micro(self):
+    def test_physique_requires_default_two_piece_without_user_override(self):
         with tempfile.TemporaryDirectory() as folder:
             path, _ = self.make_guard(folder, required_stages=["PHYSIQUE_FRONT"])
-            with self.assertRaises(guard.GuardError) as raised:
-                self.checkpoint_fixture(
-                    path,
-                    event="EXECUTION_STARTED",
-                    stage="PHYSIQUE_FRONT",
-                    swimwear_rung="BIKINI",
-                    summary="Incorrectly skip the default first rung.",
-                    now=BASE_TIME,
-                )
-            self.assertIn("ladder jump", str(raised.exception))
-
-    def test_physique_swimwear_ladder_advances_only_after_recorded_failure(self):
-        with tempfile.TemporaryDirectory() as folder:
-            path, _ = self.make_guard(folder, required_stages=["PHYSIQUE_FRONT"])
-            self.checkpoint_fixture(
-                path,
-                event="EXECUTION_STARTED",
-                stage="PHYSIQUE_FRONT",
-                swimwear_rung="EXTREME_MICRO",
-                summary="Generate the mandatory default extreme-micro rung.",
-                now=BASE_TIME,
-            )
-            self.checkpoint_fixture(
-                path,
-                event="ATTEMPT_REJECTED",
-                stage="PHYSIQUE_FRONT",
-                swimwear_rung="EXTREME_MICRO",
-                rung_routes_exhausted=True,
-                summary="The exact extreme-micro call was rejected.",
-                now=BASE_TIME,
-            )
+            for rung in ("EXTREME_MICRO", "BIKINI"):
+                with self.assertRaises(guard.GuardError) as raised:
+                    self.checkpoint_fixture(
+                        path,
+                        event="EXECUTION_STARTED",
+                        stage="PHYSIQUE_FRONT",
+                        swimwear_rung=rung,
+                        summary="Incorrectly replace the default swimsuit.",
+                        now=BASE_TIME,
+                    )
+                self.assertIn("TWO_PIECE", str(raised.exception))
             state = self.checkpoint_fixture(
                 path,
                 event="EXECUTION_STARTED",
                 stage="PHYSIQUE_FRONT",
-                swimwear_rung="BIKINI",
-                summary="Advance to ordinary bikini after the recorded failure.",
+                swimwear_rung="TWO_PIECE",
+                summary="Generate the default two-piece swimsuit.",
                 now=BASE_TIME,
             )
-            self.assertEqual(state["active_swimwear_attempt"]["swimwear_rung"], "BIKINI")
+            self.assertEqual(state["active_swimwear_attempt"]["swimwear_rung"], "TWO_PIECE")
 
-    def test_single_rejection_does_not_unlock_next_swimwear_rung(self):
+    def test_rejection_keeps_default_two_piece(self):
         with tempfile.TemporaryDirectory() as folder:
             path, _ = self.make_guard(folder, required_stages=["PHYSIQUE_FRONT"])
             self.checkpoint_fixture(
-                path,
-                event="EXECUTION_STARTED",
-                stage="PHYSIQUE_FRONT",
-                swimwear_rung="EXTREME_MICRO",
-                summary="Try one exact route for the fixed extreme-micro target.",
-                now=BASE_TIME,
+                path, event="EXECUTION_STARTED", stage="PHYSIQUE_FRONT", swimwear_rung="TWO_PIECE",
+                summary="Try one route for the default swimsuit.", now=BASE_TIME,
             )
             self.checkpoint_fixture(
-                path,
-                event="ATTEMPT_REJECTED",
-                stage="PHYSIQUE_FRONT",
-                swimwear_rung="EXTREME_MICRO",
-                summary="One prompt and BODY combination failed; other routes remain.",
-                now=BASE_TIME,
+                path, event="ATTEMPT_REJECTED", stage="PHYSIQUE_FRONT", swimwear_rung="TWO_PIECE",
+                summary="One prompt and BODY combination failed.", now=BASE_TIME,
             )
-            with self.assertRaises(guard.GuardError) as raised:
+            with self.assertRaises(guard.GuardError):
                 self.checkpoint_fixture(
-                    path,
-                    event="EXECUTION_STARTED",
-                    stage="PHYSIQUE_FRONT",
-                    swimwear_rung="BIKINI",
-                    summary="Incorrectly advance after one failed route.",
-                    now=BASE_TIME,
+                    path, event="EXECUTION_STARTED", stage="PHYSIQUE_FRONT", swimwear_rung="BIKINI",
+                    summary="Incorrectly change the cut after a rejection.", now=BASE_TIME,
                 )
-            self.assertIn("rung-routes-exhausted", str(raised.exception))
+
+    def test_direct_user_override_allows_other_cut(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, _ = self.make_guard(folder, required_stages=["PHYSIQUE_FRONT"])
+            state = self.checkpoint_fixture(
+                path, event="EXECUTION_STARTED", stage="PHYSIQUE_FRONT", swimwear_rung="BIKINI",
+                user_swimwear_override=True, user_override_evidence="Сделай в бикини.",
+                summary="The user asked for a bikini.", now=BASE_TIME,
+            )
+            self.assertEqual(state["active_swimwear_attempt"]["swimwear_rung"], "BIKINI")
 
     def test_wrong_observed_topology_cannot_complete_physique_stage(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -1642,8 +1755,8 @@ class TaskExecutionGuardTests(unittest.TestCase):
                 path,
                 event="EXECUTION_STARTED",
                 stage="PHYSIQUE_FRONT",
-                swimwear_rung="EXTREME_MICRO",
-                summary="Generate the mandatory default rung.",
+                swimwear_rung="TWO_PIECE",
+                summary="Generate the default two-piece swimsuit.",
                 now=BASE_TIME,
             )
             image = Path(folder) / "front.png"
@@ -1660,7 +1773,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
                     path,
                     event="STAGE_COMPLETED",
                     stage="PHYSIQUE_FRONT",
-                    swimwear_rung="EXTREME_MICRO",
+                    swimwear_rung="TWO_PIECE",
                     observed_topology="SPORT_TOP",
                     summary="Incorrectly accept a sports top.",
                     evidence=[str(image)],

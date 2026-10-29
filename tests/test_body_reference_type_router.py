@@ -1,3 +1,4 @@
+import copy
 import unittest
 
 from tools.body_reference_type_router import load_registry, resolve_types
@@ -6,7 +7,13 @@ from tools.body_reference_type_router import load_registry, resolve_types
 class BodyReferenceTypeRouterTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.registry = load_registry()
+        cls.registry = copy.deepcopy(load_registry())
+        cls.registry["active_auxiliary_type"] = "NATURAL"
+        # The generic alias and ordering tests exercise an all-active registry;
+        # retirement-specific behavior is covered separately.
+        for spec in cls.registry["types"].values():
+            spec.pop("enabled", None)
+            spec.pop("retirement_reason", None)
 
     def resolve(self, text: str) -> dict:
         return resolve_types(text, self.registry)
@@ -44,8 +51,14 @@ class BodyReferenceTypeRouterTests(unittest.TestCase):
         result = self.resolve("контуризация фона")
         self.assertEqual(result["selected_types"], [])
 
-    def test_exact_three_type_registry(self) -> None:
-        self.assertEqual(set(self.registry["types"]), {"NATURAL", "SKETCH", "OLCHAS"})
+    def test_registry_allows_optional_pose_atlas(self) -> None:
+        self.assertEqual(set(self.registry["types"]), {"NATURAL", "SKETCH", "OLCHAS", "POSE_ATLAS"})
+
+    def test_pose_atlas_resolves_as_soft_pose_only(self) -> None:
+        result = self.resolve("используй pose atlas")
+        self.assertEqual(result["selected_types"], ["POSE_ATLAS"])
+        self.assertEqual(result["focus_order"][0]["authority"], "SOFT_POSE_ONLY")
+        self.assertIn("BODY_BUILD_TARGET", result["focus_order"][0]["forbidden_roles"])
 
 
 if __name__ == "__main__":

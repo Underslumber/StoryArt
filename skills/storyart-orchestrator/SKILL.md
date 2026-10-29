@@ -37,6 +37,12 @@ infer these choices from a profile, silence, scene wording or another chat.
 
 ## Scenario execution backend
 
+For an explicit ChatGPT Web image request, load
+`../storyart-web-image/SKILL.md`. Keep the same scenario and approved sources,
+prepare its exact call and complete final specification, then dispatch the
+bound `WEB_IMAGE` handoff to the project-local `web_image` agent. Root retains
+QA and completion. The default built-in backend below applies otherwise.
+
 StoryArt prepares and validates a call; the built-in `image_gen` tool executes it.
 There is no additional StoryArt-named generator or executor to discover or wait
 for. After the scenario prepares the exact call and records `EXECUTION_STARTED`,
@@ -115,6 +121,48 @@ In an active StoryArt workspace, every generation request must enter the StoryAr
 
 Never infer a request to bypass a project rule or leave the scenario. The user must directly ask to leave it. Explain the concrete likely consequences and wait for confirmation after the warning every time. External platform limits cannot be bypassed.
 
+## Collected reference pools
+
+For an explicitly requested reference search, consult `docs/REFERENCE_POOLS.md`
+and the current `config/reference_pools.json`. Use
+`scripts/storyart.ps1 reference_pool_manager categories`, then `search --category`
+across all sources for the narrow role and requested subject. Source pools are
+provenance facets, not the primary catalog organization: POSE_ATLAS (pose/angle),
+PINTEREST_SKETCH (actions, combat, hands, animals and group compositions),
+COSTUME_DB_01 (outfit design) and DRAWING_GUIDES (curated positive teaching
+examples). Candidate export checks current bytes and preserves source IDs,
+parent/crop relationships, tags, rights and review status. It is NOT_APPROVED
+and does not replace profile/item approval, reference preparation or exact-call
+validation. Never use an unknown hand or mixed composition as a confirmed
+male/female full-body source. Use the existing positive-fragment manager for
+corrective teaching sheets; do not attach their raw wrong/right examples.
+Keep existing current-chat choices and do not start optional reference search
+without the user's request. No library import silently changes a character.
+
+## Grouped pose reference library
+
+OWNER CORRECTION 2026-10-29: POSE_ATLAS uses ALL_SOURCE_IMAGES. All1439 images in
+all288 pose groups are available for reference selection. Never exclude by source
+category, quality judgement, prior FAIL/NOT_CHECKED or generator_eligible. Keep
+these as advisory notes. Browse complete groups and all existing angles; fix an
+exact source only after choosing. Preserve truthful QA/subject facts, actual file
+hashes and applicable per-call attachment checks; do not invent a global safety
+PASS. Historical assessment fields never restore the removed selection exclusions.
+
+When BODY_REFERENCE_LIBRARY is selected, resolve its active auxiliary type from
+`config/body_reference_types.json`. Retired NATURAL and SKETCH stay unavailable;
+the replacement POSE_ATLAS is soft pose/camera evidence only. Follow
+`docs/POSE_REFERENCE_SCENARIO.md`: select a pose GROUP first, then any existing
+angle through `pose_reference_manager context`. Keep all source angles grouped,
+with advisory observations and honest review history. Bind the selected BR id, group_id, source_id,
+angle and current SHA256 to the plan and physical exact-call attachment. After
+binding, never silently replace it with a sibling or mirror. Actual hash checks
+preserve exact sources; subject matching applies when preparing an attachment to
+a concrete character, not as a hidden all-catalog selection exclusion. Source siblings are
+approximate illustrations, not calibrated 3D views; do not combine inconsistent
+gestures or infer missing back views. Use STAGING_ONLY; preserve approved body,
+identity, wardrobe and style authority.
+
 ## Approved-generation source boundary
 
 Do not search, enumerate, inspect, or surface prior unconfirmed generations as candidate bases, references, or continuation options. Treat historical `00_PENDING` folders and manifest statuses `TEST`, `STAGING`, `REJECTED`, `DRAFT`, or any other non-approved status as ineligible, even if a copy exists in `GENERATION_RESULTS` or appeared in another chat. During an active request, inspect only that request's guard-scoped outputs when required for its own stage QA; such outputs cannot become reusable references for another request. Reuse earlier project images only from approved project folders through the authoritative approved registry. Previous unapproved outputs remain inaccessible and ineligible; do not open their folders even to inspect status or recover a similar scene.
@@ -187,6 +235,26 @@ error. Never ask the user to reattach a character card when its approved
 registry already resolves the required asset, and never infer approval from a
 file's presence in a role folder alone. Face/body variants remain optional
 role assets and must never replace canonical face, body, or assembly identity.
+
+## Typed item references
+
+For a new accessory, weapon, tool, or garment reference set, apply
+`../../docs/ITEM_REFERENCES.md`. Creating an accessory requires an isolated
+design view AND a general view with the exact character to establish scale.
+The item may lie beside the character; do not invent a holding/wearing action.
+For clothing, preserve construction separately from character fit and layers.
+Both views depict the same approved item version. A reviewed NO_SUBJECT source
+is eligible only for the dedicated item-design role, never identity/anatomy/pose.
+Use the item manager's production contract and approved typed references through
+the standard StoryArt scenario, physically attach every mandatory item source,
+and compare design and character scale/fit independently in final QA.
+Do not generate missing item views as hidden auxiliary images during an ordinary
+scene request. Existing approved wardrobe/accessory references remain eligible.
+For a requested item, use `item_reference_manager list` with the exact character
+and identity style to discover approved typed sets without browsing directories.
+Use the matching selected manifest via repeatable `prepare-generation
+--item-reference`; this explicit scene selection does not activate a persistent
+profile default. Keep both physical roles even when the final item is small.
 
 ## Agent executes; user directs
 
@@ -415,6 +483,13 @@ no-reference lane.
   review to its exact path and SHA-256 under every active role; a role count
   cannot stand in for that source-bound evidence. A selected source without a
   matching review declaration remains blocked.
+- When composing the executable prompt, optional descriptive fragments are
+  available in [the classical drawing catalogue](../../templates/PROMPT_FRAGMENTS/CLASSICAL_DRAWING_RU.md).
+  Read it only when a compatible drawing/linework description would help. Select
+  individual fragments only if they clarify an already permitted property;
+  unknown compatibility means omit. They never select or override style,
+  fidelity, identity, anatomy, clothing/coverage, lighting, composition, or format.
+  Recheck the final prompt and visual result against the full user contract.
 - For the current stage, save the resolved inputs and observed source ratings
   once, then use `python tools/generation_request.py --request-file <request.json>
   --call-file <call.json>`. This bundles plan preparation, `resolve-call`, exact
@@ -433,6 +508,8 @@ no-reference lane.
   plan, character, and stage, archives the original, applies the required QA,
   and records result availability.
 - Before registration, inspect the actual full-resolution output against the
+  full current user contract using `docs/IMAGE_REVIEW_DECISION.md`; record its
+  explicit Decision alongside existing QA evidence, then compare against the
   exact executable prompt and the approved identity/style references applicable
   to the stage. Complete three independent visual layers: anatomy and body
   mechanics, visible defects/artifacts across the whole image, and a checklist
@@ -559,11 +636,13 @@ mandatory StoryArt stage is complete.
 ## Routing precedence
 
 Use `config/model_routes.json` as the role authority and
-`docs/MODEL_PROFILES.md` for activation and experiments. Sol 6.1 Medium owns the
-user contract and acceptance; bounded implementation/discovery uses Low;
-fresh independent review uses Medium; exceptional diagnosis uses High.
-Luna 6 is outside normal production routing. Sol 6.1 Low root and Luna 5.6 Low
-mechanical workers require an explicit opt-in trial. Normally zero workers,
+`docs/MODEL_PROFILES.md` for activation. Root retains its selected model and the
+user contract. Ordinary discovery, implementation, planning and result checks
+use Luna 6 High in default/worker/explorer with fork_turns="none". Mandatory
+read-only code review after machine checks uses sol_review, Sol 6.1 Medium;
+evidenced Luna failure permits sol_escalation, Sol 6.1 High. Record SOL_GATE
+before either Sol dispatch. Specialized Web roles retain their authorized
+contracts and never replace ordinary workers. Normally zero workers,
 one when useful, at most two independent workers. No full-history forks,
 nesting, or agents merely for generator/archive/CLI operations.
 Reuse source evidence only when hash, role, view, applicability and limitations

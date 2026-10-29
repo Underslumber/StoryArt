@@ -2,7 +2,8 @@
 
 Use the smallest set of roles needed. The primary agent remains the coordinator
 and never delegates user communication, scope changes, guard completion,
-generation, or registration. This is a role policy, not a scheduler: the root
+visual acceptance or registration. Built-in generation is root-only; explicit
+ChatGPT Web execution uses the WEB_IMAGE exception below. The root
 requests explicit model/effort when spawning, and tools cannot change models.
 
 The configured normal hard cap is two active workers. Use more only after an
@@ -49,8 +50,25 @@ Execute through the available built-in `image_gen` / `image_gen__imagegen`
 with the prepared prompt and physical reference paths. StoryArt supplies the
 scenario and validated inputs; no separate StoryArt generator is required.
 
+## WEB_IMAGE
+
+This role is dispatched only when the user explicitly chooses ChatGPT Web.
+`chatgpt_web_image_handoff create` binds the complete final specification,
+unchanged execution prompt, source hashes, current attempt and private project
+destination. Pass its packet to `web_image` (registry profile: Sol 6.1 Low).
+The role writes only inside the active request, submits once and downloads the
+original through the local Oracle CLI. UNKNOWN/RUNNING continue the original
+session. No source selection, prompt edits, manual browser control, visible
+generation windows, auth copying, Cloudflare bypass or alternate generator.
+Root owns source authority, visual QA, registration and COMPLETE. See
+`docs/CHATGPT_WEB_IMAGE.md` for portable setup and human login/project binding.
+
 ## VISUAL_QA
 
+- Apply `docs/IMAGE_REVIEW_DECISION.md` to the actual output and full user
+  contract. Return an evidence-backed `ACCEPT`, `REVISE`, or `REVIEW_REQUIRED`
+  summary alongside the independent per-layer results. This is a review
+  verdict, not user approval or a replacement for existing QA records.
 - Inspect the full-resolution result and authoritative comparison sources.
 - Score every required semantic QA layer independently.
 - Return `PASS` or `FAIL` per layer with short visual evidence.
@@ -83,11 +101,13 @@ references, change QA, call the generator, or modify infrastructure.
 ## Routing precedence
 
 Use `config/model_routes.json` as the role authority and
-`docs/MODEL_PROFILES.md` for activation and experiments. Sol 6.1 Medium owns the
-user contract and acceptance; bounded implementation/discovery uses Low;
-fresh independent review uses Medium; exceptional diagnosis uses High.
-Luna 6 is outside normal production routing. Sol 6.1 Low root and Luna 5.6 Low
-mechanical workers require an explicit opt-in trial. Normally zero workers,
+`docs/MODEL_PROFILES.md` for activation. Root retains its selected model and the
+user contract. Ordinary discovery, implementation, planning and result checks
+use Luna 6 High in default/worker/explorer with fork_turns="none". Mandatory
+read-only code review after machine checks uses sol_review, Sol 6.1 Medium;
+evidenced Luna failure permits sol_escalation, Sol 6.1 High. Record SOL_GATE
+before either Sol dispatch. Specialized Web roles retain their authorized
+contracts and never replace ordinary workers. Normally zero workers,
 one when useful, at most two independent workers. No full-history forks,
 nesting, or agents merely for generator/archive/CLI operations.
 Reuse source evidence only when hash, role, view, applicability and limitations

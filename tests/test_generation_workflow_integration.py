@@ -5,13 +5,17 @@ from __future__ import annotations
 import hashlib
 import json
 import csv
+from argparse import Namespace
+import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+import shutil
 
 from PIL import Image
+import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,7 +36,10 @@ def review_declaration(role: str, slot_role: str, path: Path | str, *, outcome: 
 
 class GenerationWorkflowIntegrationTests(unittest.TestCase):
     def setUp(self):
-        self.temporary = tempfile.TemporaryDirectory()
+        if self._testMethodName == "test_assembly_plus_face_uses_assembly_as_the_only_body_reference":
+            self.temporary = tempfile.TemporaryDirectory(dir=ROOT)
+        else:
+            self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.workspace = Path(self.temporary.name)
         self.style_name = "INTEGRATION"
@@ -66,14 +73,18 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
     def _cli(self, script: str, *args: object, succeeds: bool = True):
         return self._run(script, *args, succeeds=succeeds)
 
-    def _classify(self, filename: str, role: str, color: tuple[int, int, int]) -> Path:
+    def _classify(self, filename: str, role: str, color: tuple[int, int, int], *, subject_label: str = "", copy_from: Path | None = None) -> Path:
         source = self.workspace / filename
-        Image.new("RGB", (96, 128), color).save(source)
+        if copy_from:
+            shutil.copyfile(copy_from, source)
+        else:
+            Image.new("RGB", (96, 128), color).save(source)
         result = self._cli(
             "style_pack_manager.py", "classify", "--workspace", self.workspace,
             "--style-name", self.style_name, "--file", source, "--role", role,
             "--status", "ANCHOR" if role == "ANCHOR_STYLE" else "TEST",
             *( ("--user-approved",) if role == "ANCHOR_STYLE" else () ),
+            *( ("--subject-label", subject_label, "--subject-label-evidence", "Synthetic integration metadata fixture.") if subject_label else () ),
         )
         stored = next(line.removeprefix("FILE=") for line in result.stdout.splitlines() if line.startswith("FILE="))
         # These fixtures are plain color fields with no depicted subjects.
@@ -82,8 +93,12 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             reader = csv.DictReader(stream)
             fields = list(reader.fieldnames)
             rows = list(reader)
-        labels = {"subject_label": "NO_SUBJECT", "subject_label_evidence": "SYNTHETIC_PLAIN_COLOR_FIELD",
-                  "subject_label_sha256": hashlib.sha256(Path(stored).read_bytes()).hexdigest(), "subject_label_status": "APPROVED"}
+        labels = {
+            "subject_label": subject_label or "NO_SUBJECT",
+            "subject_label_evidence": "SYNTHETIC_SUBJECT_LABEL_FIXTURE" if subject_label else "SYNTHETIC_PLAIN_COLOR_FIELD",
+            "subject_label_sha256": hashlib.sha256(Path(stored).read_bytes()).hexdigest(),
+            "subject_label_status": "REVIEWED",
+        }
         fields.extend(key for key in labels if key not in fields)
         for row in rows:
             if row.get("stored_relative_path") == Path(stored).relative_to(self.style_pack).as_posix():
@@ -116,6 +131,21 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         }
         path = self.workspace / f"{request_id}-user-selections.json"
         path.write_text(json.dumps(selections, ensure_ascii=False, indent=2), encoding="utf-8")
+        return path
+
+    def _user_reference_evidence_file(self, message_id: str) -> Path:
+        rows = []
+        for stored in (self.primary_face, self.supporting_face):
+            upload = self.workspace / "user-attachments" / stored.name
+            upload.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(stored, upload)
+            rows.append({
+                "path": str(stored), "sha256": hashlib.sha256(stored.read_bytes()).hexdigest(),
+                "source_path": str(upload), "chat_id": "integration-chat",
+                "message_id": message_id,
+            })
+        path = self.workspace / f"user-reference-evidence-{message_id}.json"
+        path.write_text(json.dumps(rows), encoding="utf-8")
         return path
 
     def test_approved_canonical_character_assets_are_positive_references(self):
@@ -187,6 +217,773 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         manager.write_csv(paths.generation_manifest, manager.GENERATION_FIELDS, manifest_rows)
         rejected(base)
 
+    def test_typed_item_approval_flows_through_scene_prepare_and_guard_validation(self):
+        from tools import style_pack_manager as manager
+
+        request_id = "typed-item-lifecycle"
+        guard = self._start_request(request_id)
+        paths = manager.make_paths(self.workspace, self.style_name)
+        character_folder = paths.generations / "01_APPROVED_CHARACTERS" / "CHAR_007_Forge"
+        base_dir = character_folder / "01_APPROVED_BASE"
+        base_dir.mkdir(parents=True)
+        assembly = base_dir / "CHARACTER_ASSEMBLY_USER_SELECTED.png"
+        Image.new("RGB", (48, 72), (110, 90, 70)).save(assembly)
+        profile = character_folder / "CHARACTER_PROFILE.yaml"
+        profile.write_text(
+            "character_id: CHAR_007\nname: Forge\nstatus: APPROVED\n"
+            "identity:\n  gender_identity: man\n  visible_presentation: masculine\n"
+            "anatomy_compatibility:\n  target_anatomy: MALE_ANATOMY\n  evidence_source: APPROVED_PROFILE\n",
+            encoding="utf-8",
+        )
+        manager.write_csv(paths.character_registry, manager.CHARACTER_FIELDS, [{
+            "character_id": "CHAR_007", "name": "Forge", "approved_base": str(assembly),
+            "profile_path": str(profile), "status": "APPROVED",
+        }])
+        manager.append_generation(
+            paths, request_id="typed-item-character", character_id="CHAR_007",
+            status="APPROVED_CHARACTER_BASE", fidelity=70, risk_level="D1",
+            description="Synthetic approved character assembly", source_image=assembly,
+            archive_file=assembly, style_file=assembly,
+        )
+
+        request_dir = guard.parent
+        plan_path = request_dir / "TYPED_ITEM_PLAN.json"
+        self._cli(
+            "item_reference_manager.py", "create-plan", "--workspace", self.workspace,
+            "--style-name", self.style_name, "--request-id", request_id, "--output", plan_path,
+            "--character-id", "CHAR_007", "--item-id", "ITEM_FORGE_SWORD", "--item-kind", "CLOTHING",
+            "--name", "Forge sword", "--version", "v1", "--design-spec", "single-edged steel sword with a plain crossguard",
+            "--dimensions", "blade 1.0 m; grip 0.2 m", "--material", "steel and leather",
+            "--construction", "forged blade with wrapped grip", "--attachment-constraints", "may rest beside character",
+        )
+        sheet = request_dir / "item-sheet.png"
+        design = request_dir / "item-design.png"
+        scale = request_dir / "item-scale.png"
+        for image, color in ((sheet, (20, 20, 20)), (design, (180, 180, 180)), (scale, (100, 120, 140))):
+            Image.new("RGB", (40, 40), color).save(image)
+        digest = lambda image: hashlib.sha256(image.read_bytes()).hexdigest()
+        qa = {
+            "checks": {name: {"status": "PASS", "evidence": f"synthetic review of {name}"} for name in (
+                "ITEM_DESIGN", "ITEM_VERSION", "ITEM_DIMENSIONS", "ITEM_MATERIAL_CONSTRUCTION", "ITEM_CHARACTER_SCALE",
+                "CLOTHING_FIT", "LAYER_ORDER", "CONTACT_CONSTRAINTS",
+            )},
+            "item_design_source": {
+                "sha256": digest(design), "subject_label": "NO_SUBJECT",
+                "subject_label_evidence": "Reviewed isolated item crop.",
+                "source_sheet_path": str(sheet), "source_sheet_sha256": digest(sheet),
+            },
+            "item_scale_fit_source": {
+                "sha256": digest(scale), "character_id": "CHAR_007",
+                "character_assembly_sha256": digest(assembly), "subject_label": "MALE",
+                "subject_label_sha256": digest(scale), "subject_label_evidence": "Reviewed male canonical character in scale view.",
+                "anatomy_compatibility": "MALE_ANATOMY", "anatomy_evidence_source": "APPROVED_PROFILE",
+                "source_sheet_path": str(sheet), "source_sheet_sha256": digest(sheet),
+            },
+        }
+        qa_path = request_dir / "item-qa.json"
+        qa_path.write_text(json.dumps(qa), encoding="utf-8")
+        approved_text = self._cli(
+            "item_reference_manager.py", "approve", "--workspace", self.workspace,
+            "--item-plan", plan_path, "--design-image", design, "--scale-fit-image", scale,
+            "--qa-json", qa_path, "--approval-quote", "Approve Forge sword v1 for integration.", "--user-approved",
+        ).stdout
+        manifest = Path(json.loads(approved_text)["manifest_path"])
+
+        _guard, reference_plan = self._prepare_scene(
+            request_id, start_guard=False, character_id="CHAR_007", item_reference=(manifest,),
+        )
+        call = self._resolve_and_prepare_call(
+            request_id, guard, reference_plan, "Create a synthetic scene showing Forge with the approved sword nearby."
+        )
+        item_roles = {role for slot in call["slots"] for role in slot["active_roles"]
+                      if role in {"ITEM_DESIGN", "ITEM_SCALE_FIT"}}
+        self.assertEqual(item_roles, {"ITEM_DESIGN", "ITEM_SCALE_FIT"})
+        attempt_id = self._start_call(guard, reference_plan, call)
+        output = self.workspace / "typed-item-single-pass.png"
+        Image.new("RGB", (120, 180), (30, 40, 50)).save(output)
+        review_args = self._visual_review_args(guard, attempt_id, output)
+        semantic_qa = (
+            "--qa-attachments", "PASS", "--qa-canvas", "PASS", "--qa-stage-layer", "PASS",
+            "--qa-face", "PASS", "--qa-body-silhouette", "PASS", "--qa-body-proportions", "PASS",
+            "--qa-style", "PASS", "--qa-subject-accuracy", "PASS", "--qa-clothing", "PASS",
+            "--qa-pose-contacts", "PASS", "--qa-objects-action", "PASS", "--qa-background", "PASS",
+            "--qa-composition", "PASS",
+        )
+        record_base = (
+            "style_pack_manager.py", "record-generation", "--workspace", self.workspace,
+            "--style-name", self.style_name, "--image", output, "--request-id", request_id,
+            "--description", "Synthetic typed clothing scene", "--fidelity", "70", "--status", "TEST",
+            "--character-id", "CHAR_007", "--attempt-id", attempt_id, "--reference-plan", reference_plan,
+        )
+        missing_item_qa = self._cli(*record_base, *review_args, *semantic_qa, succeeds=False)
+        self.assertIn("Required post-generation QA was not performed", missing_item_qa.stderr)
+        self.assertIn("CLOTHING_FIT", missing_item_qa.stderr)
+        item_qa = (
+            "--qa-item-design", "PASS", "--qa-item-version", "PASS", "--qa-item-dimensions", "PASS",
+            "--qa-item-material-construction", "PASS", "--qa-item-character-scale", "PASS",
+            "--qa-clothing-fit", "PASS", "--qa-layer-order", "PASS", "--qa-contact-constraints", "PASS",
+        )
+        recorded = self._cli(*record_base, *review_args, *semantic_qa, *item_qa)
+        self.assertIn("STATUS=TEST", recorded.stdout)
+        with (self.generations / "GENERATION_MANIFEST.csv").open(encoding="utf-8-sig", newline="") as stream:
+            row = next(row for row in csv.DictReader(stream) if row["request_id"] == request_id)
+        receipt = manager.generation_qa_evidence(row)
+        self.assertIsNotNone(receipt)
+        qa_contract = json.loads(Path(receipt["qa_contract"]).read_text(encoding="utf-8"))
+        for layer in ("ITEM_DESIGN", "ITEM_VERSION", "ITEM_DIMENSIONS", "ITEM_MATERIAL_CONSTRUCTION",
+                      "ITEM_CHARACTER_SCALE", "CLOTHING_FIT", "LAYER_ORDER", "CONTACT_CONSTRAINTS"):
+            self.assertEqual(qa_contract["qa_results"][layer], "PASS")
+
+        multi_request = "typed-item-multistage-final"
+        multi_guard = self._start_request(multi_request, required_stages=("05_FINAL_SCENE",))
+        _guard, multi_plan_path = self._prepare_scene(
+            multi_request, start_guard=False, character_id="CHAR_007", item_reference=(manifest,),
+            reference_workflow="MULTI_STAGE",
+        )
+        multi_plan = json.loads(multi_plan_path.read_text(encoding="utf-8"))
+        single_pass_plan = json.loads(reference_plan.read_text(encoding="utf-8"))
+        final_stage = next(stage for stage in multi_plan["generation_workflow"]["stages"]
+                           if stage["stage_id"] == "05_FINAL_SCENE")
+        final_stage["slots"] = single_pass_plan["generation_workflow"]["slots"]
+        final_stage["attachments_used"] = len(final_stage["slots"])
+        multi_plan["generation_workflow"]["stages"] = [final_stage]
+        multi_plan_path.write_text(json.dumps(multi_plan, indent=2), encoding="utf-8")
+        multi_prompt = "Create a synthetic final scene showing Forge with the approved sword nearby."
+        final_call = self._resolve_and_prepare_call(
+            multi_request, multi_guard, multi_plan_path, multi_prompt, "05_FINAL_SCENE",
+        )
+        final_attempt = self._start_call(multi_guard, multi_plan_path, final_call)
+        final_output = self.workspace / "typed-item-multistage-final.png"
+        Image.new("RGB", (120, 180), (35, 45, 55)).save(final_output)
+        final_review = self._visual_review_args(multi_guard, final_attempt, final_output)
+        final_semantic_qa = (*semantic_qa, "--qa-lighting", "PASS")
+        final_record_base = (
+            "style_pack_manager.py", "record-generation", "--workspace", self.workspace,
+            "--style-name", self.style_name, "--image", final_output, "--request-id", multi_request,
+            "--description", "Synthetic typed multi-stage final scene", "--fidelity", "70", "--status", "TEST",
+            "--character-id", "CHAR_007", "--attempt-id", final_attempt,
+            "--reference-plan", multi_plan_path, "--stage-id", "05_FINAL_SCENE",
+        )
+        final_missing = self._cli(
+            *final_record_base, *final_review, *final_semantic_qa, succeeds=False,
+        )
+        self.assertIn("Required post-generation QA was not performed", final_missing.stderr)
+        self.assertIn("CLOTHING_FIT", final_missing.stderr)
+        final_recorded = self._cli(
+            *final_record_base, *final_review, *final_semantic_qa, *item_qa,
+        )
+        self.assertIn("STATUS=TEST", final_recorded.stdout)
+        with (self.generations / "GENERATION_MANIFEST.csv").open(encoding="utf-8-sig", newline="") as stream:
+            final_row = [row for row in csv.DictReader(stream) if row["request_id"] == multi_request][-1]
+        final_receipt = manager.generation_qa_evidence(final_row)
+        self.assertIsNotNone(final_receipt)
+        final_contract = json.loads(Path(final_receipt["qa_contract"]).read_text(encoding="utf-8"))
+        self.assertTrue({"ITEM_DESIGN", "ITEM_VERSION", "ITEM_DIMENSIONS", "ITEM_MATERIAL_CONSTRUCTION",
+                         "ITEM_CHARACTER_SCALE", "CLOTHING_FIT", "LAYER_ORDER", "CONTACT_CONSTRAINTS"}
+                        .issubset(final_contract["expected_qa_layers"]))
+        self.assertTrue(all(final_contract["qa_results"][layer] == "PASS"
+                            for layer in ("ITEM_DESIGN", "ITEM_VERSION", "ITEM_DIMENSIONS",
+                                          "ITEM_MATERIAL_CONSTRUCTION", "ITEM_CHARACTER_SCALE",
+                                          "CLOTHING_FIT", "LAYER_ORDER", "CONTACT_CONSTRAINTS")))
+
+        fail_request = "typed-item-multistage-final-fail"
+        fail_guard = self._start_request(fail_request, required_stages=("05_FINAL_SCENE",))
+        _guard, fail_plan_path = self._prepare_scene(
+            fail_request, start_guard=False, character_id="CHAR_007", item_reference=(manifest,),
+            reference_workflow="MULTI_STAGE",
+        )
+        fail_plan = json.loads(fail_plan_path.read_text(encoding="utf-8"))
+        fail_stage = next(stage for stage in fail_plan["generation_workflow"]["stages"]
+                          if stage["stage_id"] == "05_FINAL_SCENE")
+        fail_stage["slots"] = single_pass_plan["generation_workflow"]["slots"]
+        fail_stage["attachments_used"] = len(fail_stage["slots"])
+        fail_plan["generation_workflow"]["stages"] = [fail_stage]
+        fail_plan_path.write_text(json.dumps(fail_plan, indent=2), encoding="utf-8")
+        fail_call = self._resolve_and_prepare_call(
+            fail_request, fail_guard, fail_plan_path,
+            "Create a synthetic final scene showing Forge with the approved sword nearby.", "05_FINAL_SCENE",
+        )
+        fail_attempt = self._start_call(fail_guard, fail_plan_path, fail_call)
+        fail_output = self.workspace / "typed-item-multistage-final-fail.png"
+        Image.new("RGB", (120, 180), (45, 40, 35)).save(fail_output)
+        fail_recorded = self._cli(
+            "style_pack_manager.py", "record-generation", "--workspace", self.workspace,
+            "--style-name", self.style_name, "--image", fail_output, "--request-id", fail_request,
+            "--description", "Synthetic typed multi-stage final scene with failed fit QA",
+            "--fidelity", "70", "--status", "TEST", "--character-id", "CHAR_007",
+            "--attempt-id", fail_attempt, "--reference-plan", fail_plan_path,
+            "--stage-id", "05_FINAL_SCENE",
+            *self._visual_review_args(fail_guard, fail_attempt, fail_output), *final_semantic_qa,
+            "--qa-item-design", "PASS", "--qa-item-version", "PASS", "--qa-item-dimensions", "PASS",
+            "--qa-item-material-construction", "PASS", "--qa-item-character-scale", "PASS",
+            "--qa-clothing-fit", "FAIL", "--qa-layer-order", "PASS", "--qa-contact-constraints", "PASS",
+        )
+        self.assertIn("STATUS=REJECTED", fail_recorded.stdout)
+        with (self.generations / "GENERATION_MANIFEST.csv").open(encoding="utf-8-sig", newline="") as stream:
+            fail_row = [row for row in csv.DictReader(stream) if row["request_id"] == fail_request][-1]
+        fail_receipt = manager.generation_qa_evidence(fail_row)
+        self.assertIsNotNone(fail_receipt)
+        fail_contract = json.loads(Path(fail_receipt["qa_contract"]).read_text(encoding="utf-8"))
+        self.assertEqual(fail_contract["qa_results"]["CLOTHING_FIT"], "FAIL")
+
+        plan = json.loads(reference_plan.read_text(encoding="utf-8"))
+        plan["selected_references"]["item_scale_fit"] = []
+        with self.assertRaisesRegex(manager.StylePackError, "no selected approved-manifest binding|complete ITEM_DESIGN"):
+            manager.resolve_call_slots(paths, reference_plan, plan, "SINGLE_PASS")
+        design_path = Path(json.loads(manifest.read_text(encoding="utf-8"))["item_design"]["path"])
+        design_path.write_bytes(b"tampered approved item source")
+        self._cli("item_reference_manager.py", "validate", "--workspace", self.workspace,
+                  "--manifest", manifest, succeeds=False)
+
+    def _register_synthetic_item_character(self, request_id: str) -> tuple[object, Path]:
+        from tools import style_pack_manager as manager
+
+        paths = manager.make_paths(self.workspace, self.style_name)
+        folder = paths.generations / "01_APPROVED_CHARACTERS" / "CHAR_007_Forge"
+        base = folder / "01_APPROVED_BASE"
+        base.mkdir(parents=True)
+        assembly = base / "CHARACTER_ASSEMBLY_USER_SELECTED.png"
+        Image.new("RGB", (48, 72), (110, 90, 70)).save(assembly)
+        profile = folder / "CHARACTER_PROFILE.yaml"
+        profile.write_text(
+            "character_id: CHAR_007\nname: Forge\nstatus: APPROVED\n"
+            "identity:\n  gender_identity: man\n  visible_presentation: masculine\n"
+            "anatomy_compatibility:\n  target_anatomy: MALE_ANATOMY\n  evidence_source: APPROVED_PROFILE\n",
+            encoding="utf-8",
+        )
+        manager.write_csv(paths.character_registry, manager.CHARACTER_FIELDS, [{
+            "character_id": "CHAR_007", "name": "Forge", "approved_base": str(assembly),
+            "profile_path": str(profile), "status": "APPROVED",
+        }])
+        manager.append_generation(
+            paths, request_id=f"{request_id}-character", character_id="CHAR_007",
+            status="APPROVED_CHARACTER_BASE", fidelity=70, risk_level="D1",
+            description="Synthetic approved character assembly", source_image=assembly,
+            archive_file=assembly, style_file=assembly,
+        )
+        return paths, assembly
+
+    def _approve_synthetic_typed_item(self, request_id: str, assembly: Path, kind: str) -> Path:
+        plan_path = self._guard_path(request_id).parent / "ITEM_REFERENCE_PLAN.json"
+        self._cli(
+            "item_reference_manager.py", "create-plan", "--workspace", self.workspace,
+            "--style-name", self.style_name, "--request-id", request_id, "--output", plan_path,
+            "--character-id", "CHAR_007", "--item-id", f"ITEM_FORGE_{kind}", "--item-kind", kind,
+            "--name", f"Forge {kind.lower()}", "--version", "v1",
+            "--design-spec", "synthetic item with exact approved construction and silhouette",
+            "--dimensions", "height 0.8 m; width 0.3 m", "--material", "steel and cloth",
+            "--construction", "layered synthetic construction", "--attachment-constraints", "may rest beside character",
+        )
+        sheet = self._guard_path(request_id).parent / f"{kind}-sheet.png"
+        design = self._guard_path(request_id).parent / f"{kind}-design.png"
+        scale = self._guard_path(request_id).parent / f"{kind}-scale.png"
+        for image, color in ((sheet, (20, 20, 20)), (design, (180, 180, 180)), (scale, (100, 120, 140))):
+            Image.new("RGB", (40, 40), color).save(image)
+        digest = lambda image: hashlib.sha256(image.read_bytes()).hexdigest()
+        qa_names = ("ITEM_DESIGN", "ITEM_VERSION", "ITEM_DIMENSIONS", "ITEM_MATERIAL_CONSTRUCTION", "ITEM_CHARACTER_SCALE")
+        if kind == "CLOTHING":
+            qa_names += ("CLOTHING_FIT", "LAYER_ORDER", "CONTACT_CONSTRAINTS")
+        qa = {
+            "checks": {name: {"status": "PASS", "evidence": f"synthetic review of {name}"} for name in qa_names},
+            "item_design_source": {
+                "sha256": digest(design), "subject_label": "NO_SUBJECT",
+                "subject_label_evidence": "Reviewed isolated item crop.",
+                "source_sheet_path": str(sheet), "source_sheet_sha256": digest(sheet),
+            },
+            "item_scale_fit_source": {
+                "sha256": digest(scale), "character_id": "CHAR_007",
+                "character_assembly_sha256": digest(assembly), "subject_label": "MALE",
+                "subject_label_sha256": digest(scale), "subject_label_evidence": "Reviewed exact male character scale view.",
+                "anatomy_compatibility": "MALE_ANATOMY", "anatomy_evidence_source": "APPROVED_PROFILE",
+                "source_sheet_path": str(sheet), "source_sheet_sha256": digest(sheet),
+            },
+        }
+        qa_path = self._guard_path(request_id).parent / "item-qa.json"
+        qa_path.write_text(json.dumps(qa), encoding="utf-8")
+        result = self._cli(
+            "item_reference_manager.py", "approve", "--workspace", self.workspace,
+            "--item-plan", plan_path, "--design-image", design, "--scale-fit-image", scale,
+            "--qa-json", qa_path, "--approval-quote", f"Approve Forge {kind.lower()} v1 for integration.", "--user-approved",
+        )
+        return Path(json.loads(result.stdout)["manifest_path"])
+
+    def test_typed_clothing_and_weapon_complete_full_multistage_lifecycles(self):
+        from tools import style_pack_manager as manager
+
+        character_request = "typed-multistage-character"
+        _paths, assembly = self._register_synthetic_item_character(character_request)
+        stage_ids = ("01_FACE_IDENTITY", "02_BODY_POSE", "03_CLOTHING", "04_CHARACTER_COMPOSITE", "05_FINAL_SCENE")
+        qa_flags = {
+            "FACE_GEOMETRY": "face", "EXPRESSION": "expression", "BODY_SILHOUETTE": "body-silhouette",
+            "BODY_PROPORTIONS": "body-proportions", "LIMB_PROPORTIONS": "limb-proportions",
+            "POSE_CONTACTS": "pose-contacts", "CAMERA": "camera", "STYLE": "style",
+            "CLOTHING": "clothing", "LIGHTING": "lighting", "BACKGROUND": "background",
+            "COMPOSITION": "composition", "MULTIVIEW_CONSISTENCY": "multiview-consistency",
+            "NEUTRAL_BACKDROP": "neutral-backdrop", "SAFE_COVERAGE": "safe-coverage",
+            "CLOTHING_TOPOLOGY": "clothing-topology", "BODY_RENDERING_STYLE": "body-style",
+            "ITEM_DESIGN": "item-design", "ITEM_VERSION": "item-version", "ITEM_DIMENSIONS": "item-dimensions",
+            "ITEM_MATERIAL_CONSTRUCTION": "item-material-construction", "ITEM_CHARACTER_SCALE": "item-character-scale",
+            "CLOTHING_FIT": "clothing-fit", "LAYER_ORDER": "layer-order", "CONTACT_CONSTRAINTS": "contact-constraints",
+            "SUBJECT_ACCURACY": "subject-accuracy", "OBJECTS_AND_ACTION": "objects-action",
+            "NO_UNREQUESTED_CHARACTERS": "no-unrequested-characters", "FOCAL_HIERARCHY": "focal-hierarchy",
+            "DISTANCE_READABILITY": "distance-readability", "DESKTOP_USABILITY": "desktop-usability",
+            "POSTER_READABILITY": "poster-readability", "COPY_SAFE_AREA": "copy-safe-area",
+            "DEPTH_AND_SCALE": "depth-and-scale", "PHENOMENON_CAUSALITY": "phenomenon-causality",
+            "ARTIFACT_INTEGRITY": "artifact-integrity",
+        }
+        max_slots_by_kind = {}
+        resolved_slot_evidence = {}
+        plans_by_kind = {}
+        plan_paths_by_kind = {}
+        for kind in ("CLOTHING", "WEAPON"):
+            request_id = f"typed-full-{kind.lower()}"
+            guard = self._start_request(request_id, required_stages=stage_ids)
+            item_manifest = self._approve_synthetic_typed_item(request_id, assembly, kind)
+            _guard, plan_path = self._prepare_scene(
+                request_id, start_guard=False, character_id="CHAR_007", item_reference=(item_manifest,),
+                reference_workflow="MULTI_STAGE",
+            )
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            plans_by_kind[kind] = plan
+            plan_paths_by_kind[kind] = plan_path
+            stages = plan["generation_workflow"]["stages"]
+            self.assertEqual([stage["stage_id"] for stage in stages], list(stage_ids))
+            self.assertEqual(plan["selected_references"]["item_design"][0]["item_kind"], kind)
+            self.assertEqual(plan["selected_references"]["item_design"][0]["version"], "v1")
+            max_slots = 0
+            prior_outputs = {}
+            kind_slot_evidence = []
+            for index, stage in enumerate(stages):
+                stage_id = stage["stage_id"]
+                call = self._resolve_and_prepare_call(
+                    request_id, guard, plan_path,
+                    f"Create stage {stage_id} for the exact approved character and the approved {kind.lower()} item.",
+                    stage_id,
+                )
+                self.assertEqual(call["stage_id"], stage_id)
+                max_slots = max(max_slots, len(call["slots"]))
+                self.assertLessEqual(len(call["slots"]), 5)
+                if stage_id in {"03_CLOTHING", "04_CHARACTER_COMPOSITE", "05_FINAL_SCENE"}:
+                    assembly_hash = hashlib.sha256(assembly.read_bytes()).hexdigest()
+                    self.assertTrue(any(
+                        "CHARACTER_ASSEMBLY" in slot["active_roles"] and slot["sha256"] == assembly_hash
+                        for slot in call["slots"]
+                    ), f"{stage_id} must physically attach this character's approved assembly")
+                kind_slot_evidence.append({
+                    "stage_id": stage_id,
+                    "slots": [
+                        {
+                            "path_name": Path(slot["path"]).name,
+                            "sha256": slot["sha256"],
+                            "active_roles": slot["active_roles"],
+                        }
+                        for slot in call["slots"]
+                    ],
+                    "stage_output_bindings": [
+                        {"stage_id": binding["stage_id"], "path_name": Path(binding["path"]).name,
+                         "sha256": binding["sha256"]}
+                        for binding in call.get("stage_output_bindings", [])
+                    ],
+                })
+                if stage_id in {"03_CLOTHING", "05_FINAL_SCENE"}:
+                    roles = {role for slot in call["slots"] for role in slot["active_roles"]}
+                    self.assertEqual(roles & {"ITEM_DESIGN", "ITEM_SCALE_FIT"}, {"ITEM_DESIGN", "ITEM_SCALE_FIT"})
+                expected_bindings = [binding["stage_id"] for binding in call.get("stage_output_bindings", [])]
+                self.assertTrue(set(expected_bindings).issubset(prior_outputs))
+                attempt = self._start_call(guard, plan_path, call)
+                output = self.workspace / f"{request_id}-{index}-{stage_id}.png"
+                kind_offset = 0 if kind == "CLOTHING" else 19
+                color = (35 + index * 23 + kind_offset, 45 + index * 17 + kind_offset,
+                         55 + index * 11 + kind_offset)
+                Image.new("RGB", (120 + index, 180), color).save(output)
+                qa_args: list[str] = ["--qa-attachments", "PASS", "--qa-canvas", "PASS", "--qa-stage-layer", "PASS"]
+                for name in dict.fromkeys([*stage["required_qa"], *plan.get("scene_semantic_requirements", [])]):
+                    suffix = qa_flags.get(name)
+                    if suffix:
+                        qa_args.extend((f"--qa-{suffix}", "PASS"))
+                if stage_id in {"03_CLOTHING", "05_FINAL_SCENE"}:
+                    for name in ("ITEM_DESIGN", "ITEM_VERSION", "ITEM_DIMENSIONS", "ITEM_MATERIAL_CONSTRUCTION", "ITEM_CHARACTER_SCALE"):
+                        qa_args.extend((f"--qa-{qa_flags[name]}", "PASS"))
+                    if kind == "CLOTHING":
+                        for name in ("CLOTHING_FIT", "LAYER_ORDER", "CONTACT_CONSTRAINTS"):
+                            qa_args.extend((f"--qa-{qa_flags[name]}", "PASS"))
+                self._cli(
+                    "style_pack_manager.py", "record-generation", "--workspace", self.workspace,
+                    "--style-name", self.style_name, "--image", output, "--request-id", request_id,
+                    "--description", f"Synthetic {kind} {stage_id} stage", "--fidelity", "70",
+                    "--status", "TEST" if stage_id == "05_FINAL_SCENE" else "STAGING",
+                    "--character-id", "CHAR_007", "--attempt-id", attempt,
+                    "--reference-plan", plan_path, "--stage-id", stage_id,
+                    *self._visual_review_args(guard, attempt, output), *qa_args,
+                )
+                with (self.generations / "GENERATION_MANIFEST.csv").open(encoding="utf-8-sig", newline="") as stream:
+                    row = [row for row in csv.DictReader(stream) if row["request_id"] == request_id][-1]
+                copied = Path(row["style_file"])
+                prior_outputs[stage_id] = copied
+                self._cli(
+                    "task_execution_guard.py", "checkpoint", "--state", guard, "--event", "STAGE_COMPLETED",
+                    "--summary", f"Synthetic {stage_id} output passed stage QA.", "--stage", stage_id, "--evidence", copied,
+                )
+                if stage_id in {"03_CLOTHING", "05_FINAL_SCENE"}:
+                    receipt = manager.generation_qa_evidence(row)
+                    self.assertIsNotNone(receipt)
+                    contract = json.loads(Path(receipt["qa_contract"]).read_text(encoding="utf-8"))
+                    self.assertTrue({"ITEM_DESIGN", "ITEM_VERSION", "ITEM_DIMENSIONS", "ITEM_MATERIAL_CONSTRUCTION", "ITEM_CHARACTER_SCALE"}
+                                    .issubset(contract["expected_qa_layers"]))
+            max_slots_by_kind[kind] = max_slots
+            resolved_slot_evidence[kind] = {"peak_slots": max_slots, "stages": kind_slot_evidence}
+            final_attempt = attempt
+            final_output = copied
+            self._cli(
+                "task_execution_guard.py", "checkpoint", "--state", guard, "--event", "RESULT_DELIVERED",
+                "--summary", f"Synthetic {kind} multistage result delivery receipt.", "--attempt-id", final_attempt,
+                "--delivery-evidence", str(final_output),
+            )
+            self._cli(
+                "task_execution_guard.py", "checkpoint", "--state", guard, "--event", "COMPLETE",
+                "--summary", f"All {kind} scene stages passed and the result was delivered.",
+            )
+            final_state = json.loads(guard.read_text(encoding="utf-8"))
+            self.assertEqual(final_state["status"], "COMPLETE")
+            self.assertEqual([stage["id"] for stage in final_state["required_stages"]], list(stage_ids))
+            self.assertEqual([stage["status"] for stage in final_state["required_stages"]], ["COMPLETED"] * len(stage_ids))
+        self.assertEqual(max_slots_by_kind, {"CLOTHING": 5, "WEAPON": 5})
+        clothing_outputs = {
+            binding["stage_id"]: binding["sha256"]
+            for stage in resolved_slot_evidence["CLOTHING"]["stages"]
+            for binding in stage["stage_output_bindings"]
+        }
+        weapon_outputs = {
+            binding["stage_id"]: binding["sha256"]
+            for stage in resolved_slot_evidence["WEAPON"]["stages"]
+            for binding in stage["stage_output_bindings"]
+        }
+        self.assertTrue(set(clothing_outputs) & set(weapon_outputs))
+        self.assertTrue(all(clothing_outputs[stage] != weapon_outputs[stage]
+                            for stage in set(clothing_outputs) & set(weapon_outputs)),
+                        "a stage output from the other item's run must not share the same synthetic bytes")
+        clothing_stage_outputs = manager.validated_stage_outputs(
+            _paths, plan_paths_by_kind["CLOTHING"], plans_by_kind["CLOTHING"],
+        )
+        with self.assertRaisesRegex(manager.StylePackError, "different request"):
+            manager.resolve_call_slots(
+                _paths, plan_paths_by_kind["WEAPON"], plans_by_kind["WEAPON"],
+                "03_CLOTHING", clothing_stage_outputs,
+            )
+        evidence_dir = Path(__file__).resolve().parents[1] / ".task_guard" / "character-base-multistage-20261016"
+        evidence_dir.mkdir(parents=True, exist_ok=True)
+        (evidence_dir / "resolved-slot-evidence.json").write_text(
+            json.dumps(resolved_slot_evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8",
+        )
+
+    def test_assembly_plus_face_uses_assembly_as_the_only_body_reference(self):
+        from tools import style_pack_manager as manager
+
+        original_thread_id = os.environ.get("CODEX_THREAD_ID")
+        self.addCleanup(
+            lambda: os.environ.__setitem__("CODEX_THREAD_ID", original_thread_id)
+            if original_thread_id is not None else os.environ.pop("CODEX_THREAD_ID", None)
+        )
+        paths = manager.make_paths(self.workspace, self.style_name)
+        folder = paths.generations / "01_APPROVED_CHARACTERS" / "CHAR_001_Chance"
+        base_dir = folder / "01_APPROVED_BASE"
+        face_dir = folder / "03_FACE_REFERENCES"
+        body_dir = folder / "04_BODY_REFERENCES"
+        for directory in (base_dir, face_dir, body_dir):
+            directory.mkdir(parents=True)
+        assembly = base_dir / "CHARACTER_ASSEMBLY_USER_SELECTED.png"
+        face = face_dir / "face.png"
+        body = body_dir / "front.png"
+        side = body_dir / "side.png"
+        back = body_dir / "back.png"
+        unapproved_face = self.workspace / "unapproved-face.png"
+        for index, image in enumerate((assembly, face, body, side, back, unapproved_face)):
+            Image.new("RGB", (32, 48), (80 + index, 100, 120)).save(image)
+        profile = folder / "CHARACTER_PROFILE.yaml"
+        profile.write_text(
+            "character_id: CHAR_001\nname: Chance\nstatus: APPROVED\n"
+            "identity:\n  gender_identity: man\n  visible_presentation: masculine\n"
+            "anatomy_compatibility:\n  target_anatomy: MALE_ANATOMY\n  evidence_source: APPROVED_PROFILE\n"
+            'character_face_references:\n  - "03_FACE_REFERENCES/face.png"\n'
+            'character_body_references:\n  - "04_BODY_REFERENCES/front.png"\n  - "04_BODY_REFERENCES/side.png"\n  - "04_BODY_REFERENCES/back.png"\n'
+            'canonical_views:\n  face: "03_FACE_REFERENCES/face.png"\n',
+            encoding="utf-8",
+        )
+        manager.write_csv(paths.character_registry, manager.CHARACTER_FIELDS, [{
+            "character_id": "CHAR_001", "name": "Chance", "approved_base": str(assembly),
+            "profile_path": str(profile), "face_references": str(face),
+            "body_references": ";".join(str(path) for path in (body, side, back)),
+            "status": "APPROVED",
+        }])
+        manager.append_generation(
+            paths, request_id="assembly-plus-face-base", character_id="CHAR_001",
+            status="APPROVED_CHARACTER_BASE", fidelity=70, risk_level="D1",
+            description="Approved canonical character base", source_image=assembly,
+            archive_file=assembly, style_file=assembly,
+        )
+        resolved_result = self._cli(
+            "style_pack_manager.py", "resolve-character", "--workspace", self.workspace,
+            "--name", "Chance", "--json",
+        )
+        resolved = json.loads(resolved_result.stdout)
+        self.assertEqual(resolved["status"], "FOUND", json.dumps(resolved, ensure_ascii=False))
+        self.assertTrue(any(row["character_id"] == "CHAR_001" for row in resolved["matches"]))
+
+        def prepare(mode: str, request_id: str, *, selected_face: Path | None = face,
+                    body_reference: Path | None = None, selected_view: str = "ASSEMBLY",
+                    use_profile_face_default: bool = False,
+                    succeeds: bool = True) -> dict | None:
+            os.environ["CODEX_THREAD_ID"] = f"integration-{self.workspace.name}-{request_id}"
+            guard = self._guard_path(request_id)
+            self._cli(
+                "task_execution_guard.py", "start", "--state", guard,
+                "--request-id", request_id, "--goal", "Check approved character scene references.",
+                "--deliverable", "One synthetic preparation plan.",
+            )
+            args: list[object] = [
+                "prepare-generation", "--workspace", self.workspace, "--style-name", self.style_name,
+                "--request-id", request_id, "--fidelity", "70",
+                "--startup-selection-mode", "DIRECT_CONFIRMATION", "--aux-body-decision", "DECLINED",
+                "--confirmed-parameters-user-quote", "Use 70% fidelity and decline BODY_REFERENCE_LIBRARY.",
+                "--confirmed-chat-id", f"integration-chat-{request_id}", "--confirmed-message-id", request_id,
+                "--generation-purpose", "SCENE", "--character-id", "CHAR_001",
+                "--scene-kind", "ARTIFACT", "--scene-output-use", "GENERAL_ART",
+                "--orientation", "PORTRAIT", "--framing", "FULL_BODY",
+                "--target-pose-family", "STANDING", "--dominant-body-source", "CHARACTER_BODY",
+                "--body-source-coverage", "FULL_BODY", "--body-source-pose-family", "STANDING",
+                "--body-silhouette-notes", "Preserve approved character silhouette.",
+                "--style-reference", self.style_reference, "--reviewed", "STYLE=1",
+                "--character-assembly", assembly, "--character-reference-mode", mode,
+                "--shot-complexity", "COMPLEX", "--selected-body-view", selected_view,
+                "--character-reference-evidence", "The assembly covers body identity; use face detail when needed.",
+                "--override", "POSE", "--override", "CLOTHES", "--override", "LIGHTING",
+                "--override", "BACKGROUND", "--override", "COMPOSITION",
+            ]
+            if selected_face and not use_profile_face_default:
+                args.extend(("--primary-face", selected_face))
+            if body_reference:
+                args.extend(("--body-reference", body_reference))
+            selected_body = body_reference or assembly
+            for role, slot, path in (
+                ("STYLE", "STYLE", self.style_reference),
+                ("FACE", "PRIMARY_FACE", selected_face or face),
+                ("FACE", "CHARACTER_ASSEMBLY", assembly),
+                ("BODY", "BODY", selected_body),
+                ("BODY", "CHARACTER_ASSEMBLY", assembly),
+            ):
+                args.extend(("--reviewed-source", review_declaration(role, slot, path)))
+            original_profile = profile.read_text(encoding="utf-8")
+            if selected_face is None:
+                profile_data = yaml.safe_load(original_profile)
+                profile_data["canonical_views"] = {}
+                profile.write_text(yaml.safe_dump(profile_data, allow_unicode=True, sort_keys=False), encoding="utf-8")
+            try:
+                result = self._cli("style_pack_manager.py", *args, succeeds=succeeds)
+            finally:
+                profile.write_text(original_profile, encoding="utf-8")
+            if not succeeds:
+                return None
+            plan = json.loads((guard.parent / "REFERENCE_PLAN.json").read_text(encoding="utf-8"))
+            return plan
+
+        plan = prepare("ASSEMBLY_PLUS_FACE", "assembly-plus-face-success", use_profile_face_default=True)
+        selection = plan["character_reference_selection"]
+        self.assertEqual(selection["mode"], "ASSEMBLY_PLUS_FACE")
+        self.assertEqual(selection["selected_body_view"], "ASSEMBLY")
+        selected = plan["selected_references"]
+        self.assertEqual(Path(selected["body"]["path"]).resolve(), assembly.resolve())
+        self.assertEqual(Path(selected["character_assembly"]["path"]).resolve(), assembly.resolve())
+        self.assertEqual(Path(selected["primary_face"]["path"]).resolve(), face.resolve())
+        self.assertEqual(len({Path(row["path"]).resolve() for row in plan["selected_source_reviews"]}), 3)
+
+        prepare("ASSEMBLY_PLUS_FACE", "assembly-plus-face-missing", selected_face=None, succeeds=False)
+        prepare("ASSEMBLY_PLUS_FACE", "assembly-plus-face-unapproved", selected_face=unapproved_face, succeeds=False)
+        prepare("ASSEMBLY_PLUS_FACE", "assembly-plus-face-extra-body", body_reference=body, succeeds=False)
+        strict_plan = prepare("IDENTITY_STRICT", "assembly-plus-face-strict", body_reference=body, selected_view="FRONT")
+        strict_selection = strict_plan["character_reference_selection"]
+        self.assertEqual(strict_selection["mode"], "IDENTITY_STRICT")
+        self.assertEqual(Path(strict_plan["selected_references"]["body"]["path"]).resolve(), body.resolve())
+        auto_plan = prepare("AUTO", "assembly-plus-face-auto-regression", body_reference=body, selected_view="FRONT")
+        self.assertEqual(auto_plan["character_reference_selection"]["mode"], "IDENTITY_STRICT")
+        self.assertEqual(Path(auto_plan["selected_references"]["body"]["path"]).resolve(), body.resolve())
+
+    def test_new_character_face_sources_can_be_explicit_identity_intent(self):
+        request_id = "new-face-identity-intent"
+        self.primary_face = self._classify(
+            "identity-primary.png", "CHARACTER_FACE", (175, 115, 105), subject_label="MALE",
+        )
+        self.supporting_face = self._classify(
+            "identity-supporting.png", "CHARACTER_FACE", (165, 108, 98), subject_label="MALE",
+        )
+        duplicate_bytes_face = self._classify(
+            "identity-duplicate-bytes.png", "CHARACTER_FACE", (0, 0, 0),
+            subject_label="MALE", copy_from=self.primary_face,
+        )
+        guard = self._start_request(request_id)
+        args: list[object] = [
+            "prepare-generation", "--workspace", self.workspace, "--style-name", self.style_name,
+            "--request-id", request_id, "--fidelity", "50", "--confirmed-chat-id", "integration-chat",
+            "--startup-selection-mode", "DIRECT_CONFIRMATION", "--aux-body-decision", "DECLINED",
+            "--confirmed-message-id", "identity-intent-message",
+            "--confirmed-parameters-user-quote", "Use 50% fidelity and decline BODY_REFERENCE_LIBRARY.",
+            "--generation-purpose", "CHARACTER_BASE", "--character-id", "NEW", "--character-name", "Intent Test",
+            "--adult-character", "--target-prompt", "Intent Test is an adult male character.",
+            "--orientation", "PORTRAIT", "--framing", "FULL_BODY", "--target-pose-family", "STANDING",
+            "--dominant-body-source", "PROMPT_BODY_SPEC", "--body-source-coverage", "FULL_BODY",
+            "--body-source-pose-family", "STANDING", "--body-height-heads", "7.2-7.5",
+            "--body-silhouette-notes", "Synthetic stable proportions for test fixture.", "--prompt-only-physique",
+            "--style-reference", self.style_reference, "--primary-face", self.primary_face,
+            "--supporting-face", self.supporting_face, "--new-face-reference-purpose", "USER_IDENTITY_INTENT",
+            "--new-face-reference-purpose-evidence", "Current author message requests these portraits as identity intent.",
+            "--reviewed", "STYLE=1", "--reviewed-source", review_declaration("STYLE", "STYLE", self.style_reference),
+            "--reviewed-source", review_declaration("FACE", "PRIMARY_FACE", self.primary_face),
+            "--reviewed-source", review_declaration("FACE", "SUPPORTING_FACE", self.supporting_face),
+            "--reviewed", "FACE=2",
+            "--override", "CLOTHES", "--override", "LIGHTING", "--override", "BACKGROUND", "--override", "COMPOSITION",
+            "--user-reference-evidence-json", self._user_reference_evidence_file("identity-intent-message"),
+        ]
+        self._cli("style_pack_manager.py", *args)
+        plan_path = guard.parent / "REFERENCE_PLAN.json"
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        binding = plan["new_face_reference_purpose"]
+        self.assertEqual(binding["mode"], "USER_IDENTITY_INTENT")
+        self.assertEqual(binding["scope"], "NEW_CHARACTER_BASE")
+        self.assertEqual([row["semantic_role"] for row in binding["sources"]], ["FACE", "FACE"])
+        self.assertEqual({row["selection_key"] for row in binding["sources"]}, {"primary_face", "supporting_face"})
+        self.assertEqual({row["sha256"] for row in binding["sources"]}, {
+            hashlib.sha256(self.primary_face.read_bytes()).hexdigest(),
+            hashlib.sha256(self.supporting_face.read_bytes()).hexdigest(),
+        })
+        selected_reviews = plan["selected_source_reviews"]
+        face_reviews = [row for row in selected_reviews if row.get("role") == "FACE"]
+        self.assertEqual({slot for row in face_reviews for slot in row["active_slot_roles"]}, {"PRIMARY_FACE", "SUPPORTING_FACE"})
+        self.assertEqual([row["role"] for row in selected_reviews if "STYLE" in row.get("active_slot_roles", [])], ["STYLE"])
+
+        call = self._resolve_and_prepare_call(
+            request_id, guard, plan_path, "Create the synthetic identity face stage.", "01_FACE_IDENTITY",
+        )
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        self.assertEqual(call["new_face_reference_purpose"], binding)
+        self.assertEqual(call["risk_assessment"]["new_face_reference_purpose"], binding)
+        self.assertEqual(plan["risk_assessment"]["new_face_reference_purpose"], binding)
+        ready_bytes = plan_path.read_bytes()
+        changed_purpose = json.loads(ready_bytes)
+        changed_purpose["new_face_reference_purpose"]["evidence"] = "altered after call preparation"
+        plan_path.write_text(json.dumps(changed_purpose), encoding="utf-8")
+        guard_module = __import__("tools.task_execution_guard", fromlist=["validate_reference_plan"])
+        with self.assertRaisesRegex(guard_module.GuardError, "face purpose differs"):
+            guard_module.validate_reference_plan(plan_path)
+        plan_path.write_bytes(ready_bytes)
+        for duplicate_mode in ("same_path", "same_hash_distinct_path"):
+            altered = json.loads(ready_bytes)
+            binding_to_tamper = altered["new_face_reference_purpose"]
+            first_source, second_source = binding_to_tamper["sources"]
+            if duplicate_mode == "same_path":
+                duplicate_path = first_source["path"]
+                duplicate_hash = first_source["sha256"]
+                duplicate_selected = altered["selected_references"]["primary_face"]
+                expected_error = "distinct absolute FACE source paths"
+            else:
+                duplicate_path = str(duplicate_bytes_face.resolve())
+                duplicate_hash = hashlib.sha256(duplicate_bytes_face.read_bytes()).hexdigest()
+                duplicate_selected = dict(altered["selected_references"]["primary_face"])
+                duplicate_selected["path"] = duplicate_path
+                duplicate_selected["sha256"] = duplicate_hash
+                expected_error = "distinct FACE source SHA-256 hashes"
+            altered["selected_references"]["supporting_face"] = duplicate_selected
+            second_source["path"] = duplicate_path
+            second_source["sha256"] = duplicate_hash
+            second_source["subject_label_sha256"] = duplicate_hash
+            for carrier in (
+                altered["execution_call"],
+                altered["risk_assessment"],
+                altered["execution_call"]["risk_assessment"],
+            ):
+                carrier["new_face_reference_purpose"] = binding_to_tamper
+            plan_path.write_text(json.dumps(altered), encoding="utf-8")
+            with self.assertRaisesRegex(guard_module.GuardError, expected_error):
+                guard_module.validate_reference_plan(plan_path)
+            plan_path.write_bytes(ready_bytes)
+        self._start_call(guard, plan_path, call)
+        state = json.loads(guard.read_text(encoding="utf-8"))
+        self.assertEqual(state["active_attempt"]["execution_snapshot"]["execution_call"]["new_face_reference_purpose"], binding)
+
+        from tools import style_pack_manager as manager
+        default_binding = manager.new_face_reference_purpose_binding(
+            Namespace(new_face_reference_purpose="STYLE_SEED", new_face_reference_purpose_evidence="",
+                     workspace=str(self.workspace), style_name=self.style_name),
+            "CHARACTER_BASE", "NEW", {}, {},
+        )
+        self.assertEqual(default_binding, {"mode": "STYLE_SEED", "scope": "DEFAULT_EXISTING_BEHAVIOR", "sources": []})
+        with self.assertRaisesRegex(manager.StylePackError, "only for a NEW CHARACTER_BASE"):
+            manager.new_face_reference_purpose_binding(
+                Namespace(new_face_reference_purpose="USER_IDENTITY_INTENT", new_face_reference_purpose_evidence="current author request",
+                         workspace=str(self.workspace), style_name=self.style_name),
+                "SCENE", "NONE", {}, {},
+            )
+        selected = plan["selected_references"]
+        identity = plan["target_identity_compatibility"]["target"]
+        args_namespace = Namespace(
+            new_face_reference_purpose="USER_IDENTITY_INTENT",
+            new_face_reference_purpose_evidence="current author request",
+            workspace=self.workspace, style_name=self.style_name,
+        )
+        with self.assertRaisesRegex(manager.StylePackError, "both distinct"):
+            manager.new_face_reference_purpose_binding(
+                args_namespace, "CHARACTER_BASE", "NEW", {key: value for key, value in selected.items() if key != "supporting_face"}, identity,
+            )
+        with self.assertRaisesRegex(manager.StylePackError, "reviewed FEMALE subject label"):
+            manager.new_face_reference_purpose_binding(
+                args_namespace, "CHARACTER_BASE", "NEW", selected,
+                {**identity, "target_anatomy": "FEMALE_ANATOMY"},
+            )
+        paths = manager.make_paths(self.workspace, self.style_name)
+        duplicate_record = manager.validate_plan_reference(paths, str(duplicate_bytes_face), "FACE")
+        same_path_selected = {**selected, "supporting_face": selected["primary_face"]}
+        with self.assertRaisesRegex(manager.StylePackError, "distinct absolute FACE source paths"):
+            manager.new_face_reference_purpose_binding(args_namespace, "CHARACTER_BASE", "NEW", same_path_selected, identity)
+        same_hash_selected = {**selected, "supporting_face": duplicate_record}
+        with self.assertRaisesRegex(manager.StylePackError, "distinct FACE source SHA-256 hashes"):
+            manager.new_face_reference_purpose_binding(args_namespace, "CHARACTER_BASE", "NEW", same_hash_selected, identity)
+
+        def rejected_preparation(variant_id: str, supporting_path: Path, expected: str) -> None:
+            self._start_request(variant_id)
+            variant = list(args)
+            variant[variant.index("--request-id") + 1] = variant_id
+            variant[variant.index("--supporting-face") + 1] = supporting_path
+            for index, value in enumerate(variant):
+                if not isinstance(value, str) or not value.startswith("{"):
+                    continue
+                try:
+                    declaration = json.loads(value)
+                except json.JSONDecodeError:
+                    continue
+                if declaration.get("role") == "FACE" and declaration.get("slot_role") == "SUPPORTING_FACE":
+                    variant[index] = review_declaration("FACE", "SUPPORTING_FACE", supporting_path)
+            result = self._cli("style_pack_manager.py", *variant, succeeds=False)
+            self.assertIn(expected, result.stdout + result.stderr)
+
+        rejected_preparation(
+            "new-face-same-path-fidelity50", self.primary_face, "distinct absolute FACE source paths",
+        )
+        rejected_preparation(
+            "new-face-same-hash-fidelity50", duplicate_bytes_face,
+            "distinct FACE source SHA-256 hashes",
+        )
+        stale_selected = json.loads(json.dumps(selected))
+        stale_selected["primary_face"]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(manager.StylePackError, "missing or changed"):
+            manager.new_face_reference_purpose_binding(args_namespace, "CHARACTER_BASE", "NEW", stale_selected, identity)
+        style_overlap = dict(selected)
+        style_overlap["style"] = selected["primary_face"]
+        with self.assertRaisesRegex(manager.StylePackError, "independent STYLE authority"):
+            manager.new_face_reference_purpose_binding(args_namespace, "CHARACTER_BASE", "NEW", style_overlap, identity)
+        malformed = json.loads(plan_path.read_text(encoding="utf-8"))
+        malformed["execution_call"]["new_face_reference_purpose"] = {"mode": "STYLE_SEED"}
+        plan_path.write_text(json.dumps(malformed), encoding="utf-8")
+        with self.assertRaisesRegex(guard_module.GuardError, "purpose"):
+            guard_module.validate_reference_plan(plan_path)
+
     def _start_request(self, request_id: str, *, required_stages: tuple[str, ...] = ()) -> Path:
         guard_path = self._guard_path(request_id)
         args: list[object] = [
@@ -219,6 +1016,9 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         reuse_message_id: str = "",
         reviewed_style: int = 1,
         review_selected_source: bool = True,
+        character_id: str = "NONE",
+        item_reference: tuple[Path, ...] = (),
+        reference_workflow: str = "SINGLE_PASS",
     ) -> tuple[Path, Path]:
         guard = self._start_request(request_id) if start_guard else self._guard_path(request_id)
         args: list[object] = [
@@ -241,7 +1041,8 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         elif startup_mode == "REUSE":
             args.extend(("--reuse-startup-from", reuse_from, "--reuse-chat-id", reuse_chat_id, "--reuse-message-id", reuse_message_id))
         args.extend((
-            "--generation-purpose", "SCENE", "--character-id", "NONE",
+            "--generation-purpose", "SCENE", "--character-id", character_id,
+            "--reference-workflow", reference_workflow,
             "--scene-kind", "ARTIFACT", "--scene-output-use", "GENERAL_ART",
             "--scene-subject-from-prompt", "--style-reference", self.style_reference,
             "--reviewed", f"STYLE={reviewed_style}",
@@ -251,6 +1052,27 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         ))
         if review_selected_source:
             args.extend(("--reviewed-source", review_declaration("STYLE", "STYLE", self.style_reference)))
+        if character_id != "NONE":
+            from tools import style_pack_manager as manager
+            row = next(item for item in manager.read_csv(manager.make_paths(self.workspace, self.style_name).character_registry)
+                       if item.get("character_id") == character_id)
+            args.extend((
+                "--character-assembly", row["approved_base"],
+                "--character-reference-evidence", "The approved assembly is the requested exact character identity source.",
+                "--framing", "THREE_QUARTER", "--target-pose-family", "STANDING",
+                "--dominant-body-source", "CHARACTER_BODY", "--body-source-coverage", "THREE_QUARTER",
+                "--body-source-pose-family", "STANDING",
+            ))
+            assembly = Path(row["approved_base"])
+            for role, slot_role in (("FACE", "CHARACTER_ASSEMBLY"), ("BODY", "CHARACTER_ASSEMBLY"),
+                                    ("FACE", "PRIMARY_FACE"), ("BODY", "BODY")):
+                args.extend(("--reviewed-source", review_declaration(role, slot_role, assembly)))
+        for manifest in item_reference:
+            args.extend(("--item-reference", manifest))
+            item = json.loads(manifest.read_text(encoding="utf-8"))
+            for role, slot_role, key in (("ITEM_DESIGN", "ITEM_DESIGN", "item_design"),
+                                         ("ITEM_SCALE_FIT", "ITEM_SCALE_FIT", "item_scale_fit")):
+                args.extend(("--reviewed-source", review_declaration(role, slot_role, Path(item[key]["path"]))))
         if body_decision == "SELECTED":
             args.extend(("--aux-body-selection-note", "No reviewed reusable body reference is relevant to this artifact scene."))
         self._cli("style_pack_manager.py", *args, succeeds=succeeds)
@@ -357,7 +1179,7 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "status": "TEST",
             "generator_safe": "YES",
             "subject_label": "NO_SUBJECT", "subject_label_evidence": "SYNTHETIC_PLAIN_COLOR_FIELD",
-            "subject_label_sha256": hashlib.sha256(candidate.read_bytes()).hexdigest(), "subject_label_status": "APPROVED",
+            "subject_label_sha256": hashlib.sha256(candidate.read_bytes()).hexdigest(), "subject_label_status": "REVIEWED",
         })
         manifest_rows.append(candidate_row)
         with reference_manifest.open("w", encoding="utf-8", newline="") as stream:
@@ -492,7 +1314,7 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "stored_relative_path": "01_WORK/STYLE_CROPS/MASTER_STYLE_fixture.png",
             "primary_role": "MASTER_STYLE", "status": "TEST", "generator_safe": "YES",
             "subject_label": "NO_SUBJECT", "subject_label_evidence": "SYNTHETIC_PLAIN_COLOR_FIELD",
-            "subject_label_sha256": hashlib.sha256(candidate.read_bytes()).hexdigest(), "subject_label_status": "APPROVED",
+            "subject_label_sha256": hashlib.sha256(candidate.read_bytes()).hexdigest(), "subject_label_status": "REVIEWED",
             "user_approved": "NO",
         })
         manifest_rows.append(candidate_row)
@@ -647,6 +1469,8 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             resolve_args.extend(("--stage-id", stage_id))
         self._cli("style_pack_manager.py", *resolve_args)
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        from tools.style_pack_manager import render_confirmed_prompt
+        prompt = render_confirmed_prompt(plan, prompt)
         selected_stage = stage_id or "SINGLE_PASS"
         resolved_manifest = guard.parent / "TECHNICAL_REFERENCES" / f"RESOLVED_CALL_{selected_stage}.json"
         resolved = json.loads(resolved_manifest.read_text(encoding="utf-8"))
@@ -666,11 +1490,13 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         if plan.get("startup_parameter_selection", {}).get("resolved_user_selections"):
             call_args = call_args[:-2]
         if plan.get("character_id") == "NEW":
-            evidence_path = self.workspace / "user-reference-evidence.json"
-            evidence_path.write_text(json.dumps([
-                {"path": str(stored), "sha256": hashlib.sha256(stored.read_bytes()).hexdigest(), "source_path": str(self.workspace / source), "chat_id": "integration-chat", "message_id": "synthetic-user-attachment"}
-                for stored, source in ((self.primary_face, "primary-face.png"), (self.supporting_face, "supporting-face.png"))
-            ]), encoding="utf-8")
+            stage_id = stage_id or "SINGLE_PASS"
+            resolved_path = guard.parent / "TECHNICAL_REFERENCES" / f"RESOLVED_CALL_{stage_id}.json"
+            resolved = json.loads(resolved_path.read_text(encoding="utf-8"))
+            from tools import style_pack_manager as manager
+            stage_evidence = manager.expected_stage_user_reference_evidence(plan, resolved)
+            evidence_path = self.workspace / f"stage-user-reference-evidence-{stage_id}.json"
+            evidence_path.write_text(json.dumps(stage_evidence), encoding="utf-8")
             call_args.extend(("--user-reference-evidence-json", evidence_path))
         if stage_id:
             call_args.extend(("--stage-id", stage_id))
@@ -692,14 +1518,53 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--summary", "Synthetic integration call started.", "--reference-plan", plan_path,
             "--stage", call["stage_id"], "--output-contract", "REQUESTED_DELIVERABLE",
         ]
-        if call["stage_id"] in {"02_PHYSIQUE_FRONT", "03_PHYSIQUE_SIDE", "04_PHYSIQUE_BACK"}:
-            args.extend(("--swimwear-rung", "EXTREME_MICRO"))
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        child_base = isinstance(plan.get("character_base_contract"), dict) and plan["character_base_contract"].get("age_group") == "CHILD"
+        if not child_base and call["stage_id"] in {"02_PHYSIQUE_FRONT", "03_PHYSIQUE_SIDE", "04_PHYSIQUE_BACK"}:
+            args.extend(("--swimwear-rung", "TWO_PIECE"))
         self._cli("task_execution_guard.py", *args)
         state = json.loads(guard.read_text(encoding="utf-8"))
         return state["active_attempt"]["attempt_id"]
 
     def _risk_level(self, plan_path: Path) -> str:
         return json.loads(plan_path.read_text(encoding="utf-8"))["risk_assessment"]["generation_risk"]
+
+    def test_exact_call_user_evidence_is_stage_scoped_and_rejects_invalid_bindings(self):
+        from tools import generation_request, style_pack_manager as manager
+
+        evidence_path = self._user_reference_evidence_file("integration-message")
+        evidence_rows = json.loads(evidence_path.read_text(encoding="utf-8"))
+        plan = {
+            "user_reference_evidence": evidence_rows,
+            "startup_parameter_selection": {"confirmed_provenance": {"chat_id": "integration-chat"}},
+            "selected_source_reviews": [
+                {"role": "FACE", "active_slot_roles": [role], "path": row["path"], "sha256": row["sha256"]}
+                for row, role in zip(evidence_rows, ("PRIMARY_FACE", "SUPPORTING_FACE"))
+            ],
+        }
+        first_stage = {"slots": [{
+            "path": evidence_rows[0]["path"], "sha256": evidence_rows[0]["sha256"],
+            "active_roles": ["PRIMARY_FACE"],
+        }]}
+        expected = manager.expected_stage_user_reference_evidence(plan, first_stage)
+        self.assertEqual(expected, [evidence_rows[0]])
+        generation_request._validate_call_evidence({"user_reference_evidence": expected}, plan, first_stage)
+        with self.assertRaisesRegex(manager.StylePackError, "stage's reviewed physical slots"):
+            generation_request._validate_call_evidence({"user_reference_evidence": []}, plan, first_stage)
+        with self.assertRaisesRegex(manager.StylePackError, "stage's reviewed physical slots"):
+            generation_request._validate_call_evidence({"user_reference_evidence": evidence_rows}, plan, first_stage)
+
+        stale = json.loads(json.dumps(plan))
+        stale["user_reference_evidence"][0]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(manager.StylePackError, "hash"):
+            manager.expected_stage_user_reference_evidence(stale, first_stage)
+        wrong_chat = json.loads(json.dumps(plan))
+        wrong_chat["user_reference_evidence"][0]["chat_id"] = "another-chat"
+        with self.assertRaisesRegex(manager.StylePackError, "different chat"):
+            manager.expected_stage_user_reference_evidence(wrong_chat, first_stage)
+        wrong_role = {"slots": [{**first_stage["slots"][0], "active_roles": ["SUPPORTING_FACE"]}]}
+        with self.assertRaisesRegex(manager.StylePackError, "reviewed role"):
+            manager.expected_stage_user_reference_evidence(plan, wrong_role)
 
     def _visual_review_args(self, guard: Path, attempt_id: str, output: Path) -> tuple[str, Path]:
         """Create a fixture review bound to the exact attempt snapshot and output."""
@@ -708,8 +1573,10 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         state = json.loads(guard.read_text(encoding="utf-8"))
         attempt = next(row for row in state["attempts"] if row["attempt_id"] == attempt_id)
         snapshot = attempt["execution_snapshot"]
-        prompt = snapshot["execution_call"]["prompt"]["text"]
-        anatomy_status = "PASS" if snapshot["execution_stage"] in {
+        execution_call = snapshot["execution_call"]
+        prompt = execution_call["prompt"]["text"]
+        visible_character = str(execution_call.get("character_id", "NONE")).upper() not in {"NONE", "NEW", ""}
+        anatomy_status = "PASS" if visible_character or snapshot["execution_stage"] in {
             "01_FACE_IDENTITY", "02_PHYSIQUE_FRONT", "03_PHYSIQUE_SIDE", "04_PHYSIQUE_BACK", "05_CHARACTER_ASSEMBLY"
         } else "NOT_APPLICABLE"
         report = {
@@ -1365,23 +2232,48 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         self.assertEqual(len(visible_events), 1)
 
     def test_all_five_canonical_stages_resolve_packs_pass_qa_and_complete(self):
-        request_id = "multistage-continuation"
+        self._run_multistage_character_base(child=False)
+
+    def test_child_boy_five_stage_cli_approval_profile_and_resolver(self):
+        self._run_multistage_character_base(child=True, anatomy="MALE_ANATOMY")
+
+    def test_child_girl_five_stage_cli_approval_profile_and_resolver(self):
+        self._run_multistage_character_base(child=True, anatomy="FEMALE_ANATOMY")
+
+    def _run_multistage_character_base(self, *, child: bool, anatomy: str = ""):
+        request_id = "multistage-child" if child else "multistage-continuation"
+        subject = "boy" if anatomy == "MALE_ANATOMY" else "girl"
+        required_garment = (
+            "opaque age-appropriate T-shirt and shorts" if anatomy == "MALE_ANATOMY"
+            else "opaque age-appropriate T-shirt and skirt" if anatomy == "FEMALE_ANATOMY" else ""
+        )
+        if child:
+            self.primary_face = self._classify(
+                f"child-{subject}-primary.png", "CHARACTER_FACE", (175, 115, 105),
+                subject_label="MALE" if anatomy == "MALE_ANATOMY" else "FEMALE",
+            )
+            self.supporting_face = self._classify(
+                f"child-{subject}-support.png", "CHARACTER_FACE", (165, 108, 98),
+                subject_label="MALE" if anatomy == "MALE_ANATOMY" else "FEMALE",
+            )
         stages = (
             "01_FACE_IDENTITY", "02_PHYSIQUE_FRONT", "03_PHYSIQUE_SIDE",
             "04_PHYSIQUE_BACK", "05_CHARACTER_ASSEMBLY",
         )
-        guard = self._start_request(request_id)
+        guard = self._start_request(request_id, required_stages=stages if child else ())
         prep_args: list[object] = [
             "prepare-generation", "--workspace", self.workspace, "--style-name", self.style_name,
             "--request-id", request_id, "--fidelity", "70", "--confirmed-chat-id", "integration-chat",
             "--startup-selection-mode", "DIRECT_CONFIRMATION", "--aux-body-decision", "DECLINED",
             "--confirmed-message-id", "integration-message",
             "--confirmed-parameters-user-quote", "Keep 70% fidelity and decline BODY_REFERENCE_LIBRARY.",
-            "--generation-purpose", "CHARACTER_BASE", "--character-id", "NEW", "--character-name", "Synthetic", "--adult-character",
-            "--target-prompt", "Synthetic is an adult male character.",
+            "--generation-purpose", "CHARACTER_BASE", "--character-id", "NEW", "--character-name", f"Synthetic {subject.title()}" if child else "Synthetic",
+            "--character-age-group", "CHILD" if child else "ADULT",
+            *(() if child else ("--adult-character",)),
+            "--target-prompt", f"Synthetic {subject.title()} is a child {subject}." if child else "Synthetic is an adult male character.",
             "--orientation", "PORTRAIT", "--framing", "FULL_BODY", "--target-pose-family", "STANDING",
             "--dominant-body-source", "PROMPT_BODY_SPEC", "--body-source-coverage", "FULL_BODY",
-            "--body-source-pose-family", "STANDING", "--body-height-heads", "7.2-7.5",
+            "--body-source-pose-family", "STANDING", "--body-height-heads", "CHILD_AGE_APPROPRIATE" if child else "7.2-7.5",
             "--body-silhouette-notes", "Synthetic stable proportions for test fixture.", "--prompt-only-physique",
             "--style-reference", self.style_reference, "--primary-face", self.primary_face,
             "--supporting-face", self.supporting_face, "--reviewed", "STYLE=1",
@@ -1390,14 +2282,42 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--reviewed-source", review_declaration("STYLE", "SUPPORTING_FACE", self.supporting_face),
             "--reviewed", "FACE=2",
             "--override", "CLOTHES", "--override", "LIGHTING", "--override", "BACKGROUND", "--override", "COMPOSITION",
+            "--user-reference-evidence-json", self._user_reference_evidence_file("integration-message"),
         ]
         self._cli("style_pack_manager.py", *prep_args)
         plan_path = guard.parent / "REFERENCE_PLAN.json"
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
         self.assertEqual(plan["generation_workflow"]["mode"], "MULTI_STAGE")
         self.assertEqual(len(plan["generation_workflow"]["stages"]), 5)
+        if child:
+            contract = plan["character_base_contract"]
+            self.assertEqual(contract["age_group"], "CHILD")
+            self.assertEqual(contract["subject_anatomy"], anatomy)
+            self.assertEqual(contract["required_garment"], required_garment)
+            height = plan["body_proportion_contract"]["height_in_heads"]
+            self.assertEqual(height["mode"], "CHILD_AGE_APPROPRIATE")
+            self.assertIsNone(height["numeric_head_count"])
+            self.assertFalse(height["adult_anthropometric_bounds"])
+            self.assertNotIn("bust_volume", plan["body_proportion_contract"]["locked_measurements"])
+            from tools import style_pack_manager as manager
+            with self.assertRaisesRegex(manager.StylePackError, "must explicitly require"):
+                manager.validate_character_base_executable_prompt(
+                    f"A child {subject} in the wrong swimsuit.", contract,
+                )
+            incomplete_qa = Namespace(
+                stage_id="02_PHYSIQUE_FRONT", qa_attachments="PASS", qa_canvas="PASS", qa_stage_layer="PASS",
+                qa_face="PASS", qa_body_silhouette="PASS", qa_body_proportions="PASS", qa_limb_proportions="PASS",
+                limb_qa_evidence="age_group=CHILD;view=FRONT;proportions_reviewed=PASS", visual_anatomy_status="PASS",
+                visual_defects_status="PASS", visual_prompt_status="PASS", qa_view="PASS", qa_safe_coverage="NOT_CHECKED",
+                qa_clothing_topology="PASS", qa_clothing="PASS", qa_style="PASS", qa_body_style="PASS",
+            )
+            with self.assertRaisesRegex(manager.StylePackError, "SAFE_COVERAGE"):
+                manager.evaluate_generation_qa(plan, incomplete_qa)
 
-        face_prompt = "Resolve the synthetic adult character face in the selected drawing style."
+        face_prompt = (
+            f"Resolve the synthetic child {subject} face in the selected drawing style; identity kit garment is {required_garment}."
+            if child else "Resolve the synthetic adult character face in the selected drawing style."
+        )
         face_call = self._resolve_and_prepare_call(request_id, guard, plan_path, face_prompt, "01_FACE_IDENTITY")
         ready_state = json.loads(guard.read_text(encoding="utf-8"))
         self.assertEqual([row["id"] for row in ready_state["required_stages"]], list(stages))
@@ -1425,7 +2345,10 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--stage", "01_FACE_IDENTITY", "--evidence", copied_face,
         )
 
-        front_prompt = "Project the verified face into the canonical full-body front view."
+        front_prompt = (
+            f"Project the verified face into the canonical full-body front view wearing {required_garment}."
+            if child else "Project the verified face into the canonical full-body front view."
+        )
         front_call = self._resolve_and_prepare_call(request_id, guard, plan_path, front_prompt, "02_PHYSIQUE_FRONT")
         face_binding = next(binding for binding in front_call["stage_output_bindings"] if binding["stage_id"] == "01_FACE_IDENTITY")
         self.assertEqual(face_binding["sha256"], hashlib.sha256(copied_face.read_bytes()).hexdigest())
@@ -1447,13 +2370,15 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "task_execution_guard.py", "checkpoint", "--state", guard, "--event", "EXECUTION_STARTED",
             "--summary", "Synthetic multi-stage call started.", "--reference-plan", plan_path,
             "--stage", front_call["stage_id"], "--output-contract", "REQUESTED_DELIVERABLE",
-            "--swimwear-rung", "EXTREME_MICRO", succeeds=False,
+            "--swimwear-rung", "TWO_PIECE", succeeds=False,
         )
         manifest_path.write_bytes(original_manifest)
         front_attempt = self._start_call(guard, plan_path, front_call)
         front_output = self.workspace / "front-stage.png"
         Image.new("RGB", (720, 1280), (145, 118, 104)).save(front_output)
         limb_evidence = (
+            f"age_group=CHILD;view=FRONT;proportions_reviewed=PASS"
+            if child else
             "source=PROMPT_BODY_SPEC;view=FRONT;head_units=7.3;pubic_height_fraction=0.5;hip_knee=1.0;"
             "knee_ankle=1.0;ankle_width=0.2;foot_length=1.0;foot_pose=FLAT;foot_length_mode=MEASURED;"
             "hip_landmark=FEMORAL_HEAD_CENTER;knee_landmark=KNEE_JOINT_CENTER;ankle_landmark=TALOCRURAL_JOINT_CENTER;"
@@ -1468,22 +2393,29 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             *self._visual_review_args(guard, front_attempt, front_output),
             "--stage-id", "02_PHYSIQUE_FRONT", "--qa-attachments", "PASS", "--qa-canvas", "PASS",
             "--qa-stage-layer", "PASS", "--qa-face", "PASS", "--qa-body-silhouette", "PASS",
-            "--qa-body-proportions", "PASS", "--qa-limb-proportions", "PASS", "--limb-qa-evidence", limb_evidence,
+            "--qa-body-proportions", "PASS", "--qa-limb-proportions", "PASS",
+            "--limb-qa-evidence", limb_evidence,
             "--qa-view", "PASS", "--qa-safe-coverage", "PASS", "--qa-clothing-topology", "PASS",
+            *( ("--qa-clothing", "PASS") if child else () ),
             "--qa-style", "PASS", "--qa-body-style", "PASS",
         )
         with (self.generations / "GENERATION_MANIFEST.csv").open(encoding="utf-8-sig", newline="") as manifest_file:
             front_rows = list(csv.DictReader(manifest_file))
         self.assertEqual(front_rows[-1]["status"], "STAGING")
         copied_front = Path(front_rows[-1]["style_file"])
-        self._cli(
-            "task_execution_guard.py", "checkpoint", "--state", guard, "--event", "STAGE_COMPLETED",
+        front_completion: list[object] = [
+            "checkpoint", "--state", guard, "--event", "STAGE_COMPLETED",
             "--summary", "Synthetic front stage has a durable QA-passed record.",
             "--stage", "02_PHYSIQUE_FRONT", "--evidence", copied_front,
-            "--swimwear-rung", "EXTREME_MICRO", "--observed-topology", "EXTREME_MICRO",
-        )
+        ]
+        if not child:
+            front_completion.extend(("--swimwear-rung", "TWO_PIECE", "--observed-topology", "TWO_PIECE"))
+        self._cli("task_execution_guard.py", *front_completion)
 
-        side_prompt = "Create the canonical side view while preserving the verified face and front proportions."
+        side_prompt = (
+            f"Create the canonical side view wearing {required_garment}; preserve the verified face and child proportions."
+            if child else "Create the canonical side view while preserving the verified face and front proportions."
+        )
         side_call = self._resolve_and_prepare_call(request_id, guard, plan_path, side_prompt, "03_PHYSIQUE_SIDE")
         self.assertEqual(len(side_call["targeted_pack_bindings"]), 1)
         pack_binding = side_call["targeted_pack_bindings"][0]
@@ -1511,18 +2443,24 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--qa-stage-layer", "PASS", "--qa-face", "PASS", "--qa-body-silhouette", "PASS",
             "--qa-body-proportions", "PASS", "--qa-limb-proportions", "PASS", "--limb-qa-evidence", side_limb_evidence,
             "--qa-view", "PASS", "--qa-safe-coverage", "PASS", "--qa-clothing-topology", "PASS",
+            *( ("--qa-clothing", "PASS") if child else () ),
             "--qa-multiview-consistency", "PASS", "--qa-style", "PASS", "--qa-body-style", "PASS",
         )
         with (self.generations / "GENERATION_MANIFEST.csv").open(encoding="utf-8-sig", newline="") as manifest_file:
             side_row = list(csv.DictReader(manifest_file))[-1]
         copied_side = Path(side_row["style_file"])
-        self._cli(
-            "task_execution_guard.py", "checkpoint", "--state", guard, "--event", "STAGE_COMPLETED",
-            "--summary", "Synthetic side stage passed required QA.", "--stage", "03_PHYSIQUE_SIDE",
-            "--evidence", copied_side, "--swimwear-rung", "EXTREME_MICRO", "--observed-topology", "EXTREME_MICRO",
-        )
+        side_completion: list[object] = [
+            "checkpoint", "--state", guard, "--event", "STAGE_COMPLETED",
+            "--summary", "Synthetic side stage passed required QA.", "--stage", "03_PHYSIQUE_SIDE", "--evidence", copied_side,
+        ]
+        if not child:
+            side_completion.extend(("--swimwear-rung", "TWO_PIECE", "--observed-topology", "TWO_PIECE"))
+        self._cli("task_execution_guard.py", *side_completion)
 
-        back_prompt = "Create the canonical back view using the verified face, front, and side outputs."
+        back_prompt = (
+            f"Create the canonical back view wearing {required_garment}; use the verified face and prior views."
+            if child else "Create the canonical back view using the verified face, front, and side outputs."
+        )
         back_call = self._resolve_and_prepare_call(request_id, guard, plan_path, back_prompt, "04_PHYSIQUE_BACK")
         back_pack = next(binding for binding in back_call["targeted_pack_bindings"])
         back_manifest = json.loads(Path(back_pack["manifest_path"]).read_text(encoding="utf-8"))
@@ -1545,18 +2483,24 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--qa-stage-layer", "PASS", "--qa-face", "PASS", "--qa-body-silhouette", "PASS",
             "--qa-body-proportions", "PASS", "--qa-limb-proportions", "PASS", "--limb-qa-evidence", back_limb_evidence,
             "--qa-view", "PASS", "--qa-safe-coverage", "PASS", "--qa-clothing-topology", "PASS",
+            *( ("--qa-clothing", "PASS") if child else () ),
             "--qa-multiview-consistency", "PASS", "--qa-style", "PASS", "--qa-body-style", "PASS",
         )
         with (self.generations / "GENERATION_MANIFEST.csv").open(encoding="utf-8-sig", newline="") as manifest_file:
             back_row = list(csv.DictReader(manifest_file))[-1]
         copied_back = Path(back_row["style_file"])
-        self._cli(
-            "task_execution_guard.py", "checkpoint", "--state", guard, "--event", "STAGE_COMPLETED",
-            "--summary", "Synthetic back stage passed required QA.", "--stage", "04_PHYSIQUE_BACK",
-            "--evidence", copied_back, "--swimwear-rung", "EXTREME_MICRO", "--observed-topology", "EXTREME_MICRO",
-        )
+        back_completion: list[object] = [
+            "checkpoint", "--state", guard, "--event", "STAGE_COMPLETED",
+            "--summary", "Synthetic back stage passed required QA.", "--stage", "04_PHYSIQUE_BACK", "--evidence", copied_back,
+        ]
+        if not child:
+            back_completion.extend(("--swimwear-rung", "TWO_PIECE", "--observed-topology", "TWO_PIECE"))
+        self._cli("task_execution_guard.py", *back_completion)
 
-        assembly_prompt = "Assemble the verified face and all three physique views into a neutral 3/4 character image."
+        assembly_prompt = (
+            f"Assemble the verified face and all three child physique views in {required_garment} into a neutral 3/4 image."
+            if child else "Assemble the verified face and all three physique views into a neutral 3/4 character image."
+        )
         assembly_call = self._resolve_and_prepare_call(
             request_id, guard, plan_path, assembly_prompt, "05_CHARACTER_ASSEMBLY",
         )
@@ -1572,9 +2516,11 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             *self._visual_review_args(guard, assembly_attempt, assembly_output),
             "--stage-id", "05_CHARACTER_ASSEMBLY", "--qa-attachments", "PASS", "--qa-canvas", "PASS",
             "--qa-stage-layer", "PASS", "--qa-face", "PASS", "--qa-body-silhouette", "PASS",
-            "--qa-body-proportions", "PASS", "--qa-limb-proportions", "PASS", "--limb-qa-evidence", limb_evidence,
+            "--qa-body-proportions", "PASS", "--qa-limb-proportions", "PASS",
+            "--limb-qa-evidence", limb_evidence.replace("view=FRONT", "view=ASSEMBLY") if child else limb_evidence,
             "--qa-multiview-consistency", "PASS", "--qa-neutral-backdrop", "PASS", "--qa-style", "PASS",
             "--qa-body-style", "PASS",
+            *( ("--qa-safe-coverage", "PASS", "--qa-clothing-topology", "PASS", "--qa-clothing", "PASS") if child else () ),
         )
         assembly_row = None
         with (self.generations / "GENERATION_MANIFEST.csv").open(encoding="utf-8-sig", newline="") as manifest_file:
@@ -1590,6 +2536,44 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--summary", "Synthetic assembly result delivery receipt.", "--attempt-id", assembly_attempt,
             "--delivery-evidence", str(copied_assembly),
         )
+        if child:
+            approved = self._cli(
+                "style_pack_manager.py", "approve-character", "--workspace", self.workspace,
+                "--style-name", self.style_name, "--request-id", request_id, "--image", copied_assembly,
+                "--name", f"Synthetic {subject.title()}", "--risk-level", self._risk_level(plan_path),
+                "--face-reference", copied_face, "--body-reference", copied_front,
+                "--body-reference", copied_side, "--body-reference", copied_back,
+                "--approval-quote", f"Approve synthetic child {subject} profile for integration testing.", "--user-approved",
+            )
+            registration = dict(line.split("=", 1) for line in approved.stdout.splitlines() if "=" in line)
+            self.assertEqual(registration.get("STATUS"), "APPROVED_CHARACTER_REGISTERED")
+            from tools import character_profile_state, style_pack_manager as manager
+            profile_path = Path(registration["CHARACTER_PROFILE"])
+            effective_profile = character_profile_state.load_effective(profile_path)["profile"]
+            self.assertEqual(effective_profile["character_age_group"], "CHILD")
+            self.assertEqual(effective_profile["character_base_contract"]["required_garment"], required_garment)
+            self.assertEqual(effective_profile["anatomy_compatibility"]["target_anatomy"], anatomy)
+            self.assertTrue((profile_path.parent / "CONFIRMED_PROFILE" / "ACTIVE.json").is_file())
+            profile_yaml = yaml.safe_load(profile_path.read_text(encoding="utf-8"))
+            self.assertEqual(len(profile_yaml["character_face_references"]), 1)
+            self.assertEqual(len(profile_yaml["character_body_references"]), 3)
+            self.assertTrue(all((profile_path.parent / relative).is_file() for relative in [
+                *profile_yaml["character_face_references"], *profile_yaml["character_body_references"],
+                profile_yaml["approved_base"],
+            ]))
+            resolved_raw = self._cli(
+                "style_pack_manager.py", "resolve-character", "--workspace", self.workspace,
+                "--name", registration["CHARACTER_ID"], "--json",
+            )
+            resolved = json.loads(resolved_raw.stdout)
+            self.assertEqual(resolved["status"], "FOUND")
+            match = next(row for row in resolved["matches"] if row["character_id"] == registration["CHARACTER_ID"])
+            confirmed = json.loads(match["confirmed_profile"])
+            resolved_assets = json.loads(match["identity_assets"])
+            self.assertEqual(set(resolved_assets), {
+                "CHARACTER_ASSEMBLY", "FACE_IDENTITY", "BODY_IDENTITY_1", "BODY_IDENTITY_2", "BODY_IDENTITY_3",
+            })
+            self.assertTrue(confirmed["identity_bindings"])
         self._cli(
             "task_execution_guard.py", "checkpoint", "--state", guard, "--event", "COMPLETE",
             "--summary", "All five canonical stages passed and the assembly was delivered.",

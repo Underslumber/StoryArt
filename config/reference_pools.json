@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "pools": {
+    "POSE_ATLAS": {"root": "BODY_REFERENCE_LIBRARY/POSE_ATLAS", "adapter": "pose_atlas", "count": 1439, "groups": 288, "roles": ["STAGING_ONLY", "POSE_SOFT", "AUX_POSE", "AUX_CAMERA"]},
+    "PINTEREST_SKETCH": {"root": "work/pinterest-sketch-20261029", "candidate_manifest": "work/pinterest-sketch-20261029/INTEGRATION_CANDIDATES.json", "source_manifest": "work/pinterest-sketch-20261029/ready/manifest.json", "adapter": "pinterest", "count": 586, "roles": ["HUMAN_POSE_SOFT", "HAND_GESTURE_ONLY", "GROUP_COMPOSITION_SOFT", "ANIMAL_OR_DETAIL_SOFT"]},
+    "COSTUME_DB_01": {"root": "COSTUME_DB_01_SOURCE_COLLECTION", "manifest": "COSTUME_DB_01_SOURCE_COLLECTION/DOWNLOAD_MANIFEST.csv", "adapter": "csv", "count": 1407, "roles": ["CLOTHING_REFERENCE"]},
+    "DRAWING_GUIDES": {"root": "OLDMANLUX_SOURCE_COLLECTION", "manifest": "OLDMANLUX_SOURCE_COLLECTION/CURATED_ITEMS.json", "adapter": "curated", "count": 238, "roles": ["DRAWING_TECHNIQUE"]}
+  }
+}
+

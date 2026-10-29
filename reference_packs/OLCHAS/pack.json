@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "pool": "OLCHAS",
+  "title": "Художественные референсы форм OlchaS (620 работ)",
+  "target_root": "BODY_REFERENCE_LIBRARY/02_LOCAL_ONLY/ARTIST_COLLECTIONS/OLCHAS",
+  "source": {
+    "name": "OlchaS artwork (DeviantArt, Tumblr, JoyReactor, DTF, X, Safebooru)",
+    "author": "OlchaS",
+    "homepage": "https://www.deviantart.com/olchas",
+    "terms_url": "https://www.deviantart.com/about/policy/service/",
+    "terms_summary": "The artist's own works; no licence is published, so all rights are reserved. Redistribution is forbidden. Use only as a local soft reference for form, pose and camera (see metadata/05_FINAL_LIBRARY/USAGE_POLICY.md). DeviantArt image links are signed and expire, so those files install only from your own copy (--from-dir); Tumblr and JoyReactor files are fetched from the original hosts when still available.",
+    "redistribution": "forbidden"
+  },
+  "metadata": [
+    "05_FINAL_LIBRARY/FINAL_LIBRARY_MANIFEST.csv",
+    "05_FINAL_LIBRARY/README.md",
+    "05_FINAL_LIBRARY/USAGE_POLICY.md",
+    "README.md"
+  ],
+  "build": {
+    "glob": "05_FINAL_LIBRARY/0*_*/0*_*/*",
+    "url_sources": [
+      {"file": "DEVIANTART_MANIFEST.csv", "sha256": "sha256", "url": "media_url", "exclude_url_substrings": ["token="]},
+      {"file": "TUMBLR_MANIFEST.csv", "path": "local_path", "url": "source_url"},
+      {"file": "JOYREACTOR_ALL_MANIFEST.csv", "path": "local_path", "url": "source_url"},
+      {"file": "JOYREACTOR_MANIFEST.csv", "path": "local_path", "url": "source_url"}
+    ]
+  }
+}

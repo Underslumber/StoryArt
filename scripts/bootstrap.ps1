@@ -1,8 +1,13 @@
 [CmdletBinding()]
 param(
+    [switch]$WebImages,
     [switch]$CollectPoseLineLibrary,
     [ValidateRange(1, 10)]
-    [int]$PoseLinePages = 4
+    [int]$PoseLinePages = 4,
+    # Optional reference packs to download from their publishers, e.g. POSE_ATLAS or all.
+    [string[]]$WithReferences = @(),
+    # Local copy for pack files that have no public URL (crops, expired links).
+    [string]$ReferencesFromDir
 )
 
 $ErrorActionPreference = 'Stop'
@@ -53,6 +58,15 @@ if (-not (Test-Path -LiteralPath $localAgents)) {
     Copy-Item -LiteralPath (Join-Path $root 'AGENTS.example.md') -Destination $localAgents
 }
 
+# The ChatGPT Web image skill is optional: without -WebImages nothing of it is
+# installed or registered. setup-web-image.ps1 registers the agent after install.
+if ($WebImages) {
+    & (Join-Path $root 'scripts\setup-web-image.ps1') -PythonPath $python
+}
+else {
+    Write-Output 'WEB_IMAGES=SKIPPED (.\scripts\bootstrap.ps1 -WebImages)'
+}
+
 $testFiles = @(Get-ChildItem -LiteralPath (Join-Path $root 'tests') -File -Filter 'test_*.py' | Sort-Object Name | ForEach-Object { $_.FullName })
 if ($testFiles.Count -eq 0) {
     throw 'No project tests were found.'
@@ -90,6 +104,24 @@ elseif ($poseStatus.status -eq 'NOT_BUILT') {
 }
 elseif ($poseStatus.status -eq 'REVIEW_REQUIRED') {
     Write-Output 'POSE_LINE_LIBRARY_NEXT_ACTION=Offer to continue visual review and apply POSE_LINE_REVIEW.csv.'
+}
+
+$packsTool = Join-Path $root 'tools\reference_packs.py'
+if ($WithReferences.Count -gt 0) {
+    $packArgs = if ($WithReferences -contains 'all') { @('--all') } else { $WithReferences }
+    if ($ReferencesFromDir) { $packArgs += @('--from-dir', $ReferencesFromDir) }
+    & $python $packsTool install @packArgs
+    # Exit 1 means some files had no reachable source; the rest stay installed.
+    if ($LASTEXITCODE -eq 1) {
+        Write-Output 'REFERENCE_PACKS=INCOMPLETE (rerun with -ReferencesFromDir <folder> for files without a public URL)'
+        $global:LASTEXITCODE = 0
+    }
+    Assert-NativeSuccess 'Installing reference packs'
+}
+else {
+    & $python $packsTool list
+    Assert-NativeSuccess 'Listing reference packs'
+    Write-Output 'REFERENCE_PACKS_INSTALL_COMMAND=.\scripts\bootstrap.ps1 -WithReferences POSE_ATLAS,COSTUME_DB_01 [-ReferencesFromDir <folder>]'
 }
 
 Write-Output 'STATUS=READY'

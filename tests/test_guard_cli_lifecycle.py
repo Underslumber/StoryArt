@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+import uuid
 
 from PIL import Image
+from tools.task_execution_guard import REPLACEMENT_AUTHORIZATION_QUESTION
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,9 +21,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class GuardCliLifecycleTests(unittest.TestCase):
     def setUp(self):
-        self.temporary = tempfile.TemporaryDirectory()
+        self.temporary = tempfile.TemporaryDirectory(dir=ROOT)
         self.addCleanup(self.temporary.cleanup)
         self.folder = Path(self.temporary.name)
+        self.thread_id = f"guard-cli-test-{uuid.uuid4()}"
         self.state = self.folder / "EXECUTION_GUARD.json"
         self.plan = self.folder / "REFERENCE_PLAN.json"
         self.reference = self.folder / "reference.png"
@@ -76,7 +80,7 @@ class GuardCliLifecycleTests(unittest.TestCase):
         result = subprocess.run(
             [sys.executable, "-B", str(ROOT / "tools" / tool), *arguments],
             cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
-            timeout=20,
+            timeout=20, env={**os.environ, "CODEX_THREAD_ID": self.thread_id},
         )
         if succeeds:
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -140,6 +144,27 @@ class GuardCliLifecycleTests(unittest.TestCase):
             "composition": "zipline flight toward viewer",
             "background": "burning castle",
         })
+
+    def test_cli_user_authorized_replacement_uses_structured_evidence(self):
+        attempt_id = "unknown-cli-attempt"
+        state = self.read_state()
+        state.update(task_kind="IMAGE_GENERATION_NATIVE_DEFAULT", status="ACTIVE",
+                     phase="ATTEMPT_UNKNOWN", next_required_action="RECONCILE_UNKNOWN_ATTEMPT",
+                     active_attempt=None, attempts=[{"attempt_id": attempt_id, "status": "UNKNOWN"}])
+        self.state.write_text(json.dumps(state), encoding="utf-8")
+        receipt = self.folder / "replacement-authorization.json"
+        receipt.write_text(json.dumps({
+            "request_id": "cli-scene", "attempt_id": attempt_id,
+            "question": REPLACEMENT_AUTHORIZATION_QUESTION,
+            "answer": "Разрешаю новую попытку после исправления",
+            "source": "Direct user structured reply in current chat",
+        }, ensure_ascii=False), encoding="utf-8")
+        result = self.checkpoint("USER_AUTHORIZED_REPLACEMENT", "--attempt-id", attempt_id,
+                                 "--evidence", str(receipt))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        updated = self.read_state()
+        self.assertEqual(updated["attempts"][0]["status"], "ABANDONED_UNKNOWN")
+        self.assertEqual(updated["attempts"][0]["outcome"], "NOT_KNOWN")
 
     def test_cli_stop_reconciliation_never_implicitly_resumes(self):
         attempt = self.start_attempt()

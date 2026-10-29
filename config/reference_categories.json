@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "categories": {
+    "POSE_ACTION": {"label_ru": "Поза и действие"},
+    "HANDS_FINGERS": {"label_ru": "Кисти и пальцы"},
+    "GROUP_COMPOSITION": {"label_ru": "Групповая композиция"},
+    "ANIMALS": {"label_ru": "Животные"},
+    "CLOTHING": {"label_ru": "Одежда"},
+    "ACCESSORIES": {"label_ru": "Аксессуары"},
+    "FABRIC_FIT": {"label_ru": "Ткань и посадка"},
+    "ANATOMY": {"label_ru": "Анатомия"},
+    "FACE_EXPRESSION": {"label_ru": "Лицо и выражение"},
+    "HAIR": {"label_ru": "Волосы"},
+    "LIGHT_COLOR": {"label_ru": "Свет и цвет"},
+    "DRAWING_TECHNIQUE": {"label_ru": "Техника рисования"},
+    "OTHER": {"label_ru": "Другое"}
+  },
+  "source_category_map": {
+    "POSE_AND_GESTURE": "POSE_ACTION",
+    "ANATOMY": "ANATOMY",
+    "CLOTHING": "CLOTHING",
+    "ACCESSORIES": "ACCESSORIES",
+    "FABRIC_AND_FIT": "FABRIC_FIT",
+    "FACE_AND_EXPRESSION": "FACE_EXPRESSION",
+    "HAIR": "HAIR",
+    "LIGHTING_AND_COLOR": "LIGHT_COLOR",
+    "DRAWING_TECHNIQUE": "DRAWING_TECHNIQUE",
+    "OTHER": "OTHER"
+  },
+  "pinterest_role_map": {
+    "HUMAN_POSE_SOFT": "POSE_ACTION",
+    "HAND_GESTURE_ONLY": "HANDS_FINGERS",
+    "GROUP_COMPOSITION_SOFT": "GROUP_COMPOSITION"
+  },
+  "tag_category_map": {
+    "exact": {"CONTENT:CREATURE": "ANIMALS", "ANIMAL": "ANIMALS", "DETAIL:COSTUME": "CLOTHING", "DETAIL:CHARACTER_DESIGN": "DRAWING_TECHNIQUE"},
+    "prefix": {
+      "BODY_PART:HAND": "HANDS_FINGERS",
+      "BODY_PART:FINGER": "HANDS_FINGERS",
+      "DETAIL:HAND": "HANDS_FINGERS",
+      "DETAIL:FINGER": "HANDS_FINGERS",
+      "DETAIL:PALM": "HANDS_FINGERS",
+      "HAND:": "HANDS_FINGERS",
+      "FINGER": "HANDS_FINGERS",
+      "FINGERS:": "HANDS_FINGERS",
+      "PALM": "HANDS_FINGERS",
+      "ANIMAL:": "ANIMALS"
+    },
+    "title_exact": {
+      "Правильный фрагмент: Строение хвоста у русалки": {"category": "ANATOMY", "basis": "SOURCE_REVIEWED_TITLE_TOPIC_ONLY"}
+    }
+  }
+}
+

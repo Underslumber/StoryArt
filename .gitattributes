@@ -1,0 +1,2 @@
+# Shipped Oracle patches are integrity-pinned by exact bytes; never convert line endings.
+runtime/chatgpt-web-image/oracle-patches/** -text

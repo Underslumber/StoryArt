@@ -209,6 +209,14 @@ def test_ratings_require_exact_resolved_paths_and_roles_and_hash_from_manifest()
             raise AssertionError("missing, extra, or duplicate ratings must be rejected")
 
 
+def test_empty_plan_user_attachment_evidence_accepts_only_an_empty_exact_call_list():
+    plan = {"user_reference_evidence": []}
+    manifest = {"slots": []}
+    request._validate_call_evidence({"user_reference_evidence": []}, plan, manifest)
+    with pytest.raises(request.manager.StylePackError, match="differs from the evidence bound"):
+        request._validate_call_evidence({"user_reference_evidence": [{"path": "unbound.png"}]}, plan, manifest)
+
+
 def test_finalizer_renders_prompt_before_assessment_and_preserves_phase_order(monkeypatch):
     manifest_path = Path("resolved.json")
     plan_path = Path("REFERENCE_PLAN.json")

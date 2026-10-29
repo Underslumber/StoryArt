@@ -3,6 +3,9 @@
   "default_when_unmentioned": "UNRESOLVED",
   "types": {
     "NATURAL": {
+      "enabled": false,
+      "status": "RETIRED",
+      "retirement_reason": "Retired from selection pending replacement body-reference source review.",
       "display_name_ru": "НАТУРА",
       "aliases": [
         "натура",
@@ -38,6 +41,9 @@
       ]
     },
     "SKETCH": {
+      "enabled": false,
+      "status": "RETIRED",
+      "retirement_reason": "Legacy sketch library retired; replacement is not yet selected.",
       "display_name_ru": "НАБРОСОК",
       "aliases": [
         "набросок",
@@ -94,12 +100,28 @@
         "IDENTITY",
         "ANCHOR_STYLE"
       ]
+    },
+    "POSE_ATLAS": {
+      "enabled": true,
+      "status": "ACTIVE_ALL_SOURCE_IMAGES",
+      "selection_policy": "ALL_SOURCE_IMAGES",
+      "activation_reason": "2026-10-29 explicit owner correction: all 1439 images are selectable; prior category and quality assessments are advisory notes, not selection exclusions.",
+      "display_name_ru": "АТЛАС ПОЗ",
+      "aliases": ["pose_atlas", "атлас поз", "библиотека поз", "pose atlas"],
+      "root": "BODY_REFERENCE_LIBRARY/POSE_ATLAS",
+      "manifest": "BODY_REFERENCE_LIBRARY/POSE_ATLAS/BODY_REFERENCE_MANIFEST.csv",
+      "group_manifest": "BODY_REFERENCE_LIBRARY/POSE_ATLAS/POSE_GROUPS.json",
+      "body_focus": "POSE_GESTURE_BALANCE_AND_CAMERA_ANGLE",
+      "authority": "SOFT_POSE_ONLY",
+      "allowed_roles": ["STAGING_ONLY", "POSE_SOFT"],
+      "forbidden_roles": ["BODY_BUILD_TARGET", "IDENTITY", "STYLE", "PERMANENT_PROPORTIONS", "PHYSIOLOGY", "FACE", "CLOTHES"]
     }
   },
+  "active_auxiliary_type": "POSE_ATLAS",
   "combination_policy": {
-    "permanent_body_geometry": "NATURAL when explicitly selected; otherwise approved CHARACTER_BODY or a complete PROMPT_BODY_SPEC remains authoritative",
+    "permanent_body_geometry": "Approved CHARACTER_BODY or a complete PROMPT_BODY_SPEC remains authoritative; retired NATURAL is unavailable",
     "illustrated_form_emphasis": "OLCHAS may supplement geometry as ART_BODY_SHAPE_SOFT",
-    "pose_and_gesture": "SKETCH may supplement geometry as POSE_SOFT",
-    "conflict_rule": "NATURAL or approved CHARACTER_BODY wins every anatomy and permanent-proportion conflict; OLCHAS never transfers style unless separately selected as style evidence"
+    "pose_and_gesture": "POSE_ATLAS is a soft pose and camera reference only when enabled; otherwise retired SKETCH is unavailable",
+    "conflict_rule": "Approved CHARACTER_BODY or a complete PROMPT_BODY_SPEC remains authoritative; OLCHAS never transfers style unless separately selected as style evidence"
   }
 }
