@@ -20,6 +20,11 @@ from statistics import median
 
 TOOLS = Path(__file__).resolve().parent
 
+try:
+    from tools.task_execution_guard import continuation_guidance
+except ModuleNotFoundError:  # Direct execution as python tools\character_base.py
+    from task_execution_guard import continuation_guidance
+
 STAGES = (
     "01_FACE_IDENTITY",
     "02_PHYSIQUE_FRONT",
@@ -76,7 +81,7 @@ INVARIANT_FIELDS = {
     "face_geometry": ("face_shape", "eyes", "ears", "apparent_age"),
     "body_proportions": ("height_heads", "build"),
     "skin_tone": ("skin_or_fur",),
-    "permanent_features": ("hair", "distinctive_features", "palette"),
+    "permanent_features": ("species", "gender_presentation", "hair", "distinctive_features", "palette"),
 }
 
 # record-generation flag for each stage QA name. Visual-review layers
@@ -403,12 +408,26 @@ def stage_required_qa(plan: dict, stage: str) -> list[str]:
     return [name for index, name in enumerate(required) if name not in required[:index] and name not in VISUAL_REVIEW_LAYERS]
 
 
+# Guard states that must be handled before another stage call.
+GUARD_PREREQUISITES = {
+    "RESOLVE_EXTERNAL_BOUNDARY", "USER_STOPPED", "WAIT_FOR_USER", "RECONCILE_ATTEMPT",
+    "CHECK_EXECUTION", "REVIEW_AND_REGISTER_RESULT", "RECOVER_AND_CONTINUE", "ESCALATE_AND_REPLAN",
+}
+
+
 def next_action(folder: Path) -> dict:
     state = load_guard(folder)
     plan = load_plan(folder)
     brief = load_confirmed_brief(folder)
     if brief is None:
         return {"action": "CONFIRM_BRIEF", "message": "Show the passport to the user and record it with `brief` before FACE_IDENTITY."}
+    guidance = continuation_guidance(state)
+    if guidance["action"] in GUARD_PREREQUISITES:
+        return {
+            "action": "RESOLVE_GUARD",
+            "guard_action": guidance["action"],
+            "message": f"The execution guard requires {guidance['action']} first: {guidance['reason']}",
+        }
     stages = guard_stages(state)
     for stage in STAGES:
         row = stages.get(stage)
@@ -446,6 +465,8 @@ def command_next(args: argparse.Namespace) -> None:
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return
     print(f"NEXT_ACTION={result['action']}")
+    if result.get("guard_action"):
+        print(f"GUARD_ACTION={result['guard_action']}")
     if result.get("stage"):
         print(f"STAGE={result['stage']}")
     if "user_gate_after" in result:
@@ -527,6 +548,23 @@ def output_value(stdout: str, key: str) -> str:
     return ""
 
 
+def review_findings(review: object) -> list[str]:
+    """Concrete observations from a failed visual review, for the failure log."""
+    if not isinstance(review, dict):
+        return []
+    findings: list[str] = []
+    for key in ("anatomy_review", "visible_defect_review"):
+        layer = review.get(key)
+        if isinstance(layer, dict) and layer.get("status") == "FAIL":
+            findings.extend(str(item) for item in layer.get("findings", []) if str(item).strip())
+    adherence = review.get("prompt_adherence")
+    if isinstance(adherence, dict):
+        for row in adherence.get("constraints", []):
+            if isinstance(row, dict) and row.get("status") == "FAIL":
+                findings.append(f"{row.get('constraint')}: {row.get('evidence')}")
+    return findings
+
+
 def command_record(args: argparse.Namespace) -> None:
     folder = request_dir(args.request_dir)
     stage = args.stage.upper()
@@ -580,17 +618,23 @@ def command_record(args: argparse.Namespace) -> None:
     guard = folder / "EXECUTION_GUARD.json"
     adult_physique = stage in PHYSIQUE_STAGES and not is_child(plan)
     observed = str(qa.get("observed_topology", "")).upper()
+    # A user-approved override (for example ONE_PIECE) is tracked by the guard.
+    tracked = load_guard(folder).get("active_swimwear_attempt")
+    rung = str(tracked.get("swimwear_rung", "")) if isinstance(tracked, dict) else ""
+    rung = rung or "TWO_PIECE"
 
     if recorded_status == "REJECTED":
         layer = (failed or review_failed or ["QA"])[0]
         findings = [str(item) for item in qa.get("findings", []) if str(item).strip()]
+        if not findings:
+            findings = review_findings(review)
         summary = "; ".join(findings) or f"{stage} failed {', '.join(failed or review_failed)}."
         reject_args = [
             "checkpoint", "--state", str(guard), "--event", "ATTEMPT_REJECTED", "--attempt-id", args.attempt_id,
             "--stage", stage, "--qa-layer", layer, "--outcome", "QA_REJECTED", "--summary", summary,
         ]
         if adult_physique:
-            reject_args.extend(("--swimwear-rung", "TWO_PIECE"))
+            reject_args.extend(("--swimwear-rung", rung))
             if observed:
                 reject_args.extend(("--observed-topology", observed))
         run_tool("task_execution_guard.py", reject_args)
@@ -609,7 +653,7 @@ def command_record(args: argparse.Namespace) -> None:
         "--evidence", style_file, "--summary", f"{stage} recorded with all required QA passed.",
     ]
     if adult_physique:
-        complete_args.extend(("--swimwear-rung", "TWO_PIECE", "--observed-topology", observed or "TWO_PIECE"))
+        complete_args.extend(("--swimwear-rung", rung, "--observed-topology", observed or rung))
     run_tool("task_execution_guard.py", complete_args)
     print(f"CHARACTER_BASE_STAGE={stage}")
     print("CHARACTER_BASE_RESULT=COMPLETED")

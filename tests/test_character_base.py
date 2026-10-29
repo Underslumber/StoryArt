@@ -84,6 +84,8 @@ class CharacterBaseDriverTests(unittest.TestCase):
             {"stage": "05_CHARACTER_ASSEMBLY", "finding": "Crooked axes", "avoid": ""},
         ])
         self.assertIn("all-black fur", patch["locked_invariants"]["skin_tone"])
+        self.assertIn("Species: value of species", patch["locked_invariants"]["permanent_features"])
+        self.assertIn("Gender presentation: value of gender_presentation", patch["locked_invariants"]["permanent_features"])
         self.assertIn("Never: pale muzzle", patch["locked_invariants"]["permanent_features"])
         self.assertEqual(patch["known_failure_modes"], ["Keep a lean build.", "Crooked axes"])
 
@@ -125,6 +127,29 @@ class CharacterBaseDriverTests(unittest.TestCase):
         files.update({stage: self.stage_file(stage, (90, 90, 90)) for stage in driver.STAGES[2:]})
         self.write_guard(files)
         self.assertEqual(driver.next_action(self.request)["action"], "SHOW_SHEET_AND_APPROVE")
+
+    def test_next_defers_to_guard_escalation_and_unknown_attempts(self):
+        self.store_brief()
+        state = json.loads(self.guard_path.read_text(encoding="utf-8"))
+        state["next_required_action"] = "ESCALATION_ORCHESTRATOR_REQUIRED"
+        self.guard_path.write_text(json.dumps(state), encoding="utf-8")
+        step = driver.next_action(self.request)
+        self.assertEqual((step["action"], step["guard_action"]), ("RESOLVE_GUARD", "ESCALATE_AND_REPLAN"))
+        state.pop("next_required_action")
+        state["attempts"] = [{"attempt_id": "a1", "status": "UNKNOWN"}]
+        self.guard_path.write_text(json.dumps(state), encoding="utf-8")
+        self.assertEqual(driver.next_action(self.request)["guard_action"], "RECONCILE_ATTEMPT")
+
+    def test_rejection_without_qa_findings_keeps_review_observations(self):
+        review = {
+            "anatomy_review": {"status": "FAIL", "findings": ["Left hand has six fingers."]},
+            "visible_defect_review": {"status": "PASS", "findings": []},
+            "prompt_adherence": {"status": "FAIL", "constraints": [
+                {"constraint": "Keep large ears", "status": "FAIL", "evidence": "Ears are small."},
+                {"constraint": "Black fur", "status": "PASS", "evidence": "Black."},
+            ]},
+        }
+        self.assertEqual(driver.review_findings(review), ["Left hand has six fingers.", "Keep large ears: Ears are small."])
 
     def test_failures_become_avoid_lines_once(self):
         driver.append_failure(self.request, "01_FACE_IDENTITY", "Face narrowed", "Keep the face wide.")
