@@ -4,42 +4,42 @@
     {
       "path": "dist/src/browser/chatgptFiles.js",
       "upstream_sha256": "694859bb6ae6138ec3d1a2556274a3720a4c05d44947587df5cd030fb6c6d81a",
-      "patched_sha256": "0aaef0c1b0163a519544ce252d8bb5c17dc66ac9279c445ce83e9d415e2ab91d"
+      "patched_sha256": "53d7013d834ef895b3d8c90ffc60aacd6bbfe700fec3c2e9445df20a86bae390"
     },
     {
       "path": "dist/src/browser/chatgptImages.js",
       "upstream_sha256": "ed58129fbad9e4531c8820fbb92d5d5e68253031d3bbfe664fd378b57ac444ec",
-      "patched_sha256": "b16b3d94cbde3c6f843db6488a8ff85f9166b790f24022e158bad1cb4ca8e09e"
+      "patched_sha256": "f90a168b3c5a37d7c18803512c06157af0dc5815b67686e072e6cc351750dc11"
     },
     {
       "path": "dist/src/browser/conversationTurns.js",
       "upstream_sha256": "19bbae50d8f3127579ce5dfadf9c895eea41f9eeb36a5ae9222f5f5de47ff82a",
-      "patched_sha256": "eb5dad49401d84fe5ccea071ea63b0d5e1dc3ffd47d3a4df80c5a8a2261de1db"
+      "patched_sha256": "85126ab147ca5c80a4db4b18b1dc5f5b1fc818bd08e83ca153b2b5791e0c3d14"
     },
     {
       "path": "dist/src/browser/index.js",
       "upstream_sha256": "93c91773a63e35cb108348a2d22c8bd6ba7b01efd3d5c60b0006af0bc989545c",
-      "patched_sha256": "8da67d6c048e99f29032ae9ff353a6ebd33750c9b6472003a60a94bef9ae3565"
+      "patched_sha256": "67361d61251ba101703ba46062fc5289da9bab694346e98d1d51b2d471b552b3"
     },
     {
       "path": "dist/src/browser/liveTabs.js",
       "upstream_sha256": "92b3fb0acb5648c544bfa0645a2cefe0b61835b23f28f7529bf8c45810546e7d",
-      "patched_sha256": "04080a6be380ab9e9e4200c1bfb6c8d861bd0bcdc93ff803a8e1ddd5ec68ba82"
+      "patched_sha256": "151976c18c31e9d5dc65aea348b50093831af16bea7b15badc29d5f04ea935c5"
     },
     {
       "path": "dist/src/browser/promptFingerprint.js",
       "upstream_sha256": "269a6aa4e711c64407b8c651caff1cedbb814af43d1808863826e3d456b75acc",
-      "patched_sha256": "fea42d5b164e1b32c2d4a4b7ec711f05a259f7c03d97214438ed53f3a087dec4"
+      "patched_sha256": "c6774f59809c8f5dd836caab0c679cbda04e78400f311a387bd5c94d67a75944"
     },
     {
       "path": "dist/src/browser/actions/assistantResponse.js",
       "upstream_sha256": "37ee8ece58ac9fa81caec0d725c20dfa7062d73d6025942a583327b51cce684e",
-      "patched_sha256": "742c59bc00fbb4ca2af897a5622a99be72f6126ac935bd1ba632f86e06e7746d"
+      "patched_sha256": "d172ff3237914f205891d89f2fbaeb752d9be1bf38f38e69e6d6d329364f1c2d"
     },
     {
       "path": "dist/src/browser/actions/attachments.js",
       "upstream_sha256": "2b50332d3ac2ec059d04283ba519bff0eee5649807becfdbd68e8e7f4670dcce",
-      "patched_sha256": "451623c4d9539a073df0a83b7122f1c27f1a88c392cf86a9b650c3d64867b8bf"
+      "patched_sha256": "54f4811cf1c2474f69d24fdb465050ed5e8f80f96424f8b2567e000ed2131ece"
     },
     {
       "path": "dist/src/browser/actions/modelSelection.js",
@@ -54,17 +54,17 @@
     {
       "path": "dist/src/browser/actions/navigation.js",
       "upstream_sha256": "4ad1a4d87e0feb2218ef53d5f3e3c3aca9dc0e2613fd8d70f87fe67dd796a886",
-      "patched_sha256": "c2349fb826f1bf9fd9e2e9ce1e6cfdc7a9db8ee578d0e7aeb03bc8ba0c60f112"
+      "patched_sha256": "d215f82e891c7caae631558a39a950f6fd8680187726e034df25b962aaf1de1f"
     },
     {
       "path": "dist/src/browser/actions/promptComposer.js",
       "upstream_sha256": "df93782fa6b958467384c83d2ce6a70de2ba509ca0287f15ed23b81bea26cf21",
-      "patched_sha256": "34d37b472722c6a1fa454776176009b367740878761741f4207d66c624a83779"
+      "patched_sha256": "25b21668edd1982bd4a89ba9ddfcc56284533935be76ab3161019202f798710a"
     },
     {
       "path": "dist/src/browser/actions/thinkingTime.js",
       "upstream_sha256": "740d80cfc1b69a1f925d4427b57b56ae8073e9b8bca6f764b797b74878cf6db8",
-      "patched_sha256": "408efe9bde7b7fb43ba262759a64336e7293535fe1de1e25ea8c7fa07c3df54e"
+      "patched_sha256": "7be82be8e8241729dd58178270362cc66f360d4a9055bdf2b4d3ed2ca0317401"
     },
     {
       "path": "dist/src/browser/providers/chatgptDomProvider.js",
