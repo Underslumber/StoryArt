@@ -57,8 +57,13 @@ def safe_join(root: Path, relative: str) -> Path:
     if candidate.is_absolute() or ".." in candidate.parts or not candidate.parts:
         raise PackError(f"Unsafe relative path: {relative}")
     resolved = (root / candidate).resolve()
-    resolved.relative_to(root.resolve())
-    return resolved
+    # Windows may return an extended-length (\\?\) form for one side only.
+    strip = lambda p: Path(str(p)[4:]) if str(p).startswith("\\\\?\\") else p
+    try:
+        strip(resolved).relative_to(strip(root.resolve()))
+    except ValueError:
+        raise PackError(f"Path escapes the pool root: {relative}") from None
+    return strip(resolved)
 
 
 def pack_dir(pool: str, packs_root: Path = PACKS_ROOT) -> Path:

@@ -22,6 +22,16 @@
 или она совпадает; изменённая локальная разметка сохраняется
 (`--overwrite-metadata` заменяет её).
 
+То же при подготовке проекта на чистой машине:
+
+```powershell
+.\scripts\bootstrap.ps1 -WithReferences POSE_ATLAS,COSTUME_DB_01
+# Все пулы; файлы без публичной ссылки берутся из своей копии.
+.\scripts\bootstrap.ps1 -WithReferences all -ReferencesFromDir D:\backup\refs
+```
+
+Без `-WithReferences` ничего не скачивается, `bootstrap` только показывает список.
+
 Обновить каталог после изменений пула на машине, где он установлен:
 
 ```powershell
