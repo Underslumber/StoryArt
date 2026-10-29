@@ -749,7 +749,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
             plan_path = _fixture_plans[str(path.resolve())]
             plan = json.loads(plan_path.read_text(encoding="utf-8"))
             started = _raw_checkpoint(
-                path, event="EXECUTION_STARTED", stage="02_PHYSIQUE_FRONT", swimwear_rung="EXTREME_MICRO",
+                path, event="EXECUTION_STARTED", stage="02_PHYSIQUE_FRONT", swimwear_rung="TWO_PIECE",
                 reference_plan=plan_path, execution_call=plan["execution_call"],
                 summary="Start canonical numbered physique stage.", now=BASE_TIME,
             )
@@ -763,7 +763,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(guard.GuardError, "observed-topology"):
                 _raw_checkpoint(
-                    path, event="STAGE_COMPLETED", stage="02_PHYSIQUE_FRONT", swimwear_rung="EXTREME_MICRO",
+                    path, event="STAGE_COMPLETED", stage="02_PHYSIQUE_FRONT", swimwear_rung="TWO_PIECE",
                     evidence=[str(image)], summary="Completion cannot skip the clothing topology check.", now=BASE_TIME,
                 )
 
@@ -1325,7 +1325,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
                     path,
                     event="EXECUTION_STARTED",
                     stage="PHYSIQUE_SIDE",
-                    swimwear_rung="EXTREME_MICRO",
+                    swimwear_rung="TWO_PIECE",
                     summary="Generate a neutral STAGING_ONLY side mannequin for proportions.",
                     now=BASE_TIME,
                 )
@@ -1350,7 +1350,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
                     path,
                     event="EXECUTION_STARTED",
                     stage="PHYSIQUE_SIDE",
-                    swimwear_rung="EXTREME_MICRO",
+                    swimwear_rung="TWO_PIECE",
                     summary="Generate the mannequin explicitly requested by the user.",
                     output_contract="USER_REQUESTED_EXTRA",
                     user_approved_extra_generation=True,
@@ -1360,7 +1360,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
                 path,
                 event="EXECUTION_STARTED",
                 stage="PHYSIQUE_SIDE",
-                swimwear_rung="EXTREME_MICRO",
+                swimwear_rung="TWO_PIECE",
                 summary="Generate the mannequin explicitly requested by the user.",
                 output_contract="USER_REQUESTED_EXTRA",
                 user_approved_extra_generation=True,
@@ -1697,79 +1697,56 @@ class TaskExecutionGuardTests(unittest.TestCase):
             state = self.checkpoint_fixture(path, event="ATTEMPT_REJECTED", stage="FRONT", qa_layer="FACE_GEOMETRY", summary="Second face failure.", now=BASE_TIME)
             self.assertEqual(state["next_required_action"], "ESCALATION_ORCHESTRATOR_REQUIRED")
 
-    def test_physique_swimwear_ladder_starts_at_extreme_micro(self):
+    def test_physique_requires_default_two_piece_without_user_override(self):
         with tempfile.TemporaryDirectory() as folder:
             path, _ = self.make_guard(folder, required_stages=["PHYSIQUE_FRONT"])
-            with self.assertRaises(guard.GuardError) as raised:
-                self.checkpoint_fixture(
-                    path,
-                    event="EXECUTION_STARTED",
-                    stage="PHYSIQUE_FRONT",
-                    swimwear_rung="BIKINI",
-                    summary="Incorrectly skip the default first rung.",
-                    now=BASE_TIME,
-                )
-            self.assertIn("ladder jump", str(raised.exception))
-
-    def test_physique_swimwear_ladder_advances_only_after_recorded_failure(self):
-        with tempfile.TemporaryDirectory() as folder:
-            path, _ = self.make_guard(folder, required_stages=["PHYSIQUE_FRONT"])
-            self.checkpoint_fixture(
-                path,
-                event="EXECUTION_STARTED",
-                stage="PHYSIQUE_FRONT",
-                swimwear_rung="EXTREME_MICRO",
-                summary="Generate the mandatory default extreme-micro rung.",
-                now=BASE_TIME,
-            )
-            self.checkpoint_fixture(
-                path,
-                event="ATTEMPT_REJECTED",
-                stage="PHYSIQUE_FRONT",
-                swimwear_rung="EXTREME_MICRO",
-                rung_routes_exhausted=True,
-                summary="The exact extreme-micro call was rejected.",
-                now=BASE_TIME,
-            )
+            for rung in ("EXTREME_MICRO", "BIKINI"):
+                with self.assertRaises(guard.GuardError) as raised:
+                    self.checkpoint_fixture(
+                        path,
+                        event="EXECUTION_STARTED",
+                        stage="PHYSIQUE_FRONT",
+                        swimwear_rung=rung,
+                        summary="Incorrectly replace the default swimsuit.",
+                        now=BASE_TIME,
+                    )
+                self.assertIn("TWO_PIECE", str(raised.exception))
             state = self.checkpoint_fixture(
                 path,
                 event="EXECUTION_STARTED",
                 stage="PHYSIQUE_FRONT",
-                swimwear_rung="BIKINI",
-                summary="Advance to ordinary bikini after the recorded failure.",
+                swimwear_rung="TWO_PIECE",
+                summary="Generate the default two-piece swimsuit.",
                 now=BASE_TIME,
             )
-            self.assertEqual(state["active_swimwear_attempt"]["swimwear_rung"], "BIKINI")
+            self.assertEqual(state["active_swimwear_attempt"]["swimwear_rung"], "TWO_PIECE")
 
-    def test_single_rejection_does_not_unlock_next_swimwear_rung(self):
+    def test_rejection_keeps_default_two_piece(self):
         with tempfile.TemporaryDirectory() as folder:
             path, _ = self.make_guard(folder, required_stages=["PHYSIQUE_FRONT"])
             self.checkpoint_fixture(
-                path,
-                event="EXECUTION_STARTED",
-                stage="PHYSIQUE_FRONT",
-                swimwear_rung="EXTREME_MICRO",
-                summary="Try one exact route for the fixed extreme-micro target.",
-                now=BASE_TIME,
+                path, event="EXECUTION_STARTED", stage="PHYSIQUE_FRONT", swimwear_rung="TWO_PIECE",
+                summary="Try one route for the default swimsuit.", now=BASE_TIME,
             )
             self.checkpoint_fixture(
-                path,
-                event="ATTEMPT_REJECTED",
-                stage="PHYSIQUE_FRONT",
-                swimwear_rung="EXTREME_MICRO",
-                summary="One prompt and BODY combination failed; other routes remain.",
-                now=BASE_TIME,
+                path, event="ATTEMPT_REJECTED", stage="PHYSIQUE_FRONT", swimwear_rung="TWO_PIECE",
+                summary="One prompt and BODY combination failed.", now=BASE_TIME,
             )
-            with self.assertRaises(guard.GuardError) as raised:
+            with self.assertRaises(guard.GuardError):
                 self.checkpoint_fixture(
-                    path,
-                    event="EXECUTION_STARTED",
-                    stage="PHYSIQUE_FRONT",
-                    swimwear_rung="BIKINI",
-                    summary="Incorrectly advance after one failed route.",
-                    now=BASE_TIME,
+                    path, event="EXECUTION_STARTED", stage="PHYSIQUE_FRONT", swimwear_rung="BIKINI",
+                    summary="Incorrectly change the cut after a rejection.", now=BASE_TIME,
                 )
-            self.assertIn("rung-routes-exhausted", str(raised.exception))
+
+    def test_direct_user_override_allows_other_cut(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, _ = self.make_guard(folder, required_stages=["PHYSIQUE_FRONT"])
+            state = self.checkpoint_fixture(
+                path, event="EXECUTION_STARTED", stage="PHYSIQUE_FRONT", swimwear_rung="BIKINI",
+                user_swimwear_override=True, user_override_evidence="Сделай в бикини.",
+                summary="The user asked for a bikini.", now=BASE_TIME,
+            )
+            self.assertEqual(state["active_swimwear_attempt"]["swimwear_rung"], "BIKINI")
 
     def test_wrong_observed_topology_cannot_complete_physique_stage(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -1778,8 +1755,8 @@ class TaskExecutionGuardTests(unittest.TestCase):
                 path,
                 event="EXECUTION_STARTED",
                 stage="PHYSIQUE_FRONT",
-                swimwear_rung="EXTREME_MICRO",
-                summary="Generate the mandatory default rung.",
+                swimwear_rung="TWO_PIECE",
+                summary="Generate the default two-piece swimsuit.",
                 now=BASE_TIME,
             )
             image = Path(folder) / "front.png"
@@ -1796,7 +1773,7 @@ class TaskExecutionGuardTests(unittest.TestCase):
                     path,
                     event="STAGE_COMPLETED",
                     stage="PHYSIQUE_FRONT",
-                    swimwear_rung="EXTREME_MICRO",
+                    swimwear_rung="TWO_PIECE",
                     observed_topology="SPORT_TOP",
                     summary="Incorrectly accept a sports top.",
                     evidence=[str(image)],

@@ -34,8 +34,10 @@ REPLACEMENT_AUTHORIZATION_QUESTION = REPLACEMENT_AUTHORIZATION_QUESTION.encode("
 REPLACEMENT_AUTHORIZATION_ANSWER = REPLACEMENT_AUTHORIZATION_ANSWER.encode("ascii").decode("unicode_escape")
 REPLACEMENT_AUTHORIZATION_SOURCE = "Direct user structured reply in current chat"
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff"}
-SWIMWEAR_RUNGS = ("EXTREME_MICRO", "BIKINI", "TWO_PIECE")
-SWIMWEAR_TOPOLOGIES = (*SWIMWEAR_RUNGS, "SPORT_TOP", "ONE_PIECE", "SHORTS", "OTHER", "CUSTOM")
+# Adult physique stages default to one plain two-piece swimsuit; other cuts need the user's direct instruction.
+DEFAULT_SWIMWEAR_RUNG = "TWO_PIECE"
+SWIMWEAR_OVERRIDE_RUNGS = ("BIKINI", "EXTREME_MICRO", "SPORT_TOP", "ONE_PIECE", "CUSTOM")
+SWIMWEAR_TOPOLOGIES = (DEFAULT_SWIMWEAR_RUNG, "BIKINI", "EXTREME_MICRO", "SPORT_TOP", "ONE_PIECE", "SHORTS", "OTHER", "CUSTOM")
 CHARACTER_BASE_STAGES = (
     "01_FACE_IDENTITY", "02_PHYSIQUE_FRONT", "03_PHYSIQUE_SIDE",
     "04_PHYSIQUE_BACK", "05_CHARACTER_ASSEMBLY",
@@ -1406,30 +1408,6 @@ def validate_reference_plan(
         call_json = json.dumps(execution_call, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         binding["execution_call_sha256"] = hashlib.sha256(call_json.encode("utf-8")).hexdigest()
     return binding
-def swimwear_failures(state: dict[str, object], stage: str) -> set[str]:
-    stage_key = normalize_stage_key(stage)
-    events = list(state.get("events", []))
-    # Reopening a completed physique stage starts a new rung epoch, but its
-    # prior rejection history remains intact for audit and repeated-failure
-    # escalation.
-    reopen_index = max(
-        (
-            index for index, event in enumerate(events)
-            if event.get("event") == "STAGE_REOPENED"
-            and normalize_stage_key(str(event.get("stage", ""))) == stage_key
-        ),
-        default=-1,
-    )
-    return {
-        str(event.get("swimwear_rung", "")).upper()
-        for event in events[reopen_index + 1 :]
-        if event.get("event") == "ATTEMPT_REJECTED"
-        and normalize_stage_key(str(event.get("stage", ""))) == stage_key
-        and bool(event.get("rung_routes_exhausted"))
-        and str(event.get("swimwear_rung", "")).upper() in SWIMWEAR_RUNGS
-    }
-
-
 def escalation_incident_key(
     state: dict[str, object], stage: str, qa_layer: str, *, include_current_rejection: bool = False
 ) -> str | None:
@@ -1514,29 +1492,13 @@ def validate_swimwear_execution_start(
     if user_swimwear_override:
         if not user_override_evidence.strip():
             raise GuardError("A swimwear override requires --user-override-evidence with the user's direct instruction.")
-        if rung not in (*SWIMWEAR_RUNGS, "CUSTOM"):
-            raise GuardError("A user swimwear override still requires a declared rung or CUSTOM.")
-    else:
-        if rung not in SWIMWEAR_RUNGS:
-            raise GuardError(
-                "Adult physique execution requires --swimwear-rung EXTREME_MICRO|BIKINI|TWO_PIECE. "
-                "Project defaults are authoritative unless the user directly overrides them."
-            )
-        failed = swimwear_failures(state, str(entry.get("id")))
-        highest_allowed = 0
-        if "EXTREME_MICRO" in failed:
-            highest_allowed = 1
-        if "BIKINI" in failed:
-            if "EXTREME_MICRO" not in failed:
-                raise GuardError("Recorded BIKINI failure is invalid without a prior EXTREME_MICRO failure.")
-            highest_allowed = 2
-        if SWIMWEAR_RUNGS.index(rung) > highest_allowed:
-            required = SWIMWEAR_RUNGS[highest_allowed]
-            raise GuardError(
-                f"Swimwear ladder jump is forbidden for {entry.get('id')}: start or remain at {required}. "
-                "Change prompts, real BODY candidates, reference combinations, and staging while keeping the same target. "
-                "Advance only after ATTEMPT_REJECTED records --rung-routes-exhausted for the preceding rung."
-            )
+        if rung not in (DEFAULT_SWIMWEAR_RUNG, *SWIMWEAR_OVERRIDE_RUNGS):
+            raise GuardError("A user swimwear override still requires a declared --swimwear-rung or CUSTOM.")
+    elif rung != DEFAULT_SWIMWEAR_RUNG:
+        raise GuardError(
+            f"Adult physique execution requires --swimwear-rung {DEFAULT_SWIMWEAR_RUNG}. "
+            "Other cuts are allowed only with --user-swimwear-override and the user's direct instruction."
+        )
     return {
         "stage": str(entry.get("id")),
         "swimwear_rung": rung,
@@ -2048,7 +2010,6 @@ def checkpoint(
     observed_topology: str | None = None,
     user_swimwear_override: bool = False,
     user_override_evidence: str = "",
-    rung_routes_exhausted: bool = False,
     output_contract: str | None = "REQUESTED_DELIVERABLE",
     user_approved_extra_generation: bool = False,
     extra_generation_evidence: str = "",
@@ -3081,10 +3042,6 @@ def checkpoint(
             event_details["invariant_change_evidence"] = invariant_change_evidence.strip()
     if event == "USER_CORRECTION" and correction_binding:
         event_details.update(correction_binding)
-    if event == "ATTEMPT_REJECTED" and rung_routes_exhausted:
-        if not is_physique_stage(stage) or not swimwear_rung:
-            raise GuardError("--rung-routes-exhausted requires a physique --stage and --swimwear-rung.")
-        event_details["rung_routes_exhausted"] = True
     if event in {"ATTEMPT_REJECTED", "ESCALATION_ORCHESTRATOR_RECORDED"} and qa_layer.strip():
         event_details["qa_layer"] = qa_layer.strip().upper()
     if event == "BLOCKER":
@@ -3261,7 +3218,7 @@ def make_parser() -> argparse.ArgumentParser:
                        help="Internal failures continue via recovery; only evidenced external boundaries may become BLOCKED.")
     check.add_argument("--safe-routes-exhausted", action="store_true")
     check.add_argument("--user-decision-essential", action="store_true")
-    check.add_argument("--swimwear-rung", choices=(*SWIMWEAR_RUNGS, "CUSTOM"))
+    check.add_argument("--swimwear-rung", choices=(DEFAULT_SWIMWEAR_RUNG, *SWIMWEAR_OVERRIDE_RUNGS))
     check.add_argument("--observed-topology", choices=SWIMWEAR_TOPOLOGIES)
     check.add_argument("--user-swimwear-override", action="store_true")
     check.add_argument(
@@ -3280,14 +3237,9 @@ def make_parser() -> argparse.ArgumentParser:
         help="Exact user request required for an auxiliary image generation.",
     )
     check.add_argument(
-        "--rung-routes-exhausted",
-        action="store_true",
-        help="Unlock the next default rung only after every approved prompt, BODY, attachment, and staging route for the current target is exhausted.",
-    )
-    check.add_argument(
         "--user-override-evidence",
         default="",
-        help="Exact user instruction required when overriding the project-default swimwear ladder.",
+        help="Exact user instruction required when overriding the project-default two-piece swimsuit.",
     )
 
     status = subparsers.add_parser("status", help="Show the current guard state and enforce elapsed-time limits.")
@@ -3358,7 +3310,6 @@ def main(argv: Sequence[str] | None = None) -> int:
                 observed_topology=args.observed_topology,
                 user_swimwear_override=args.user_swimwear_override,
                 user_override_evidence=args.user_override_evidence,
-                rung_routes_exhausted=args.rung_routes_exhausted,
                 output_contract=args.output_contract,
                 user_approved_extra_generation=args.user_approved_extra_generation,
                 extra_generation_evidence=args.extra_generation_evidence,

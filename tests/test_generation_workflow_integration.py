@@ -1521,7 +1521,7 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
         child_base = isinstance(plan.get("character_base_contract"), dict) and plan["character_base_contract"].get("age_group") == "CHILD"
         if not child_base and call["stage_id"] in {"02_PHYSIQUE_FRONT", "03_PHYSIQUE_SIDE", "04_PHYSIQUE_BACK"}:
-            args.extend(("--swimwear-rung", "EXTREME_MICRO"))
+            args.extend(("--swimwear-rung", "TWO_PIECE"))
         self._cli("task_execution_guard.py", *args)
         state = json.loads(guard.read_text(encoding="utf-8"))
         return state["active_attempt"]["attempt_id"]
@@ -2370,7 +2370,7 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "task_execution_guard.py", "checkpoint", "--state", guard, "--event", "EXECUTION_STARTED",
             "--summary", "Synthetic multi-stage call started.", "--reference-plan", plan_path,
             "--stage", front_call["stage_id"], "--output-contract", "REQUESTED_DELIVERABLE",
-            "--swimwear-rung", "EXTREME_MICRO", succeeds=False,
+            "--swimwear-rung", "TWO_PIECE", succeeds=False,
         )
         manifest_path.write_bytes(original_manifest)
         front_attempt = self._start_call(guard, plan_path, front_call)
@@ -2409,7 +2409,7 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--stage", "02_PHYSIQUE_FRONT", "--evidence", copied_front,
         ]
         if not child:
-            front_completion.extend(("--swimwear-rung", "EXTREME_MICRO", "--observed-topology", "EXTREME_MICRO"))
+            front_completion.extend(("--swimwear-rung", "TWO_PIECE", "--observed-topology", "TWO_PIECE"))
         self._cli("task_execution_guard.py", *front_completion)
 
         side_prompt = (
@@ -2454,7 +2454,7 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--summary", "Synthetic side stage passed required QA.", "--stage", "03_PHYSIQUE_SIDE", "--evidence", copied_side,
         ]
         if not child:
-            side_completion.extend(("--swimwear-rung", "EXTREME_MICRO", "--observed-topology", "EXTREME_MICRO"))
+            side_completion.extend(("--swimwear-rung", "TWO_PIECE", "--observed-topology", "TWO_PIECE"))
         self._cli("task_execution_guard.py", *side_completion)
 
         back_prompt = (
@@ -2494,7 +2494,7 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--summary", "Synthetic back stage passed required QA.", "--stage", "04_PHYSIQUE_BACK", "--evidence", copied_back,
         ]
         if not child:
-            back_completion.extend(("--swimwear-rung", "EXTREME_MICRO", "--observed-topology", "EXTREME_MICRO"))
+            back_completion.extend(("--swimwear-rung", "TWO_PIECE", "--observed-topology", "TWO_PIECE"))
         self._cli("task_execution_guard.py", *back_completion)
 
         assembly_prompt = (

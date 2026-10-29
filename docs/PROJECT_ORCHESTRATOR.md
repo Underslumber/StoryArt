@@ -74,7 +74,7 @@ python tools\style_pack_manager.py confirm-profile --workspace . --style-name "<
 полный комплект; в крупном плане лица видна футболка, а нижняя одежда может
 быть вне кадра.
 `SAFE_COVERAGE`, `CLOTHING_TOPOLOGY` и `CLOTHING` проверяются отдельно. Детские
-вызовы запрещают adult swimwear ladder, topology override и adult anthropometry.
+вызовы запрещают взрослый купальник, topology override и adult anthropometry.
 Если в активном guard уже был другой обязательный deliverable, новый scope можно
 добавить только явным `checkpoint --event SCOPE_CHANGE --user-approved-scope-change
 --add-required-stage <ID>`; операция блокируется при ACTIVE или UNKNOWN попытке.
