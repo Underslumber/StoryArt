@@ -190,7 +190,10 @@ def install_file(item: PackFile, root: Path, from_dir: Path | None, timeout: flo
     with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=".download-", delete=False) as handle:
         temporary = Path(handle.name)
     try:
-        fetch(item.url, temporary, timeout)
+        try:
+            fetch(item.url, temporary, timeout)
+        except PackError:
+            return "DOWNLOAD_FAILED"
         if sha256_file(temporary) != item.sha256:
             return "HASH_MISMATCH"
         temporary.replace(destination)
@@ -227,12 +230,84 @@ def install(pool: str, workspace: Path, packs_root: Path = PACKS_ROOT, from_dir:
     failed = []
     for path, outcome in outcomes:
         summary[outcome] = summary.get(outcome, 0) + 1
-        if outcome in {"NO_SOURCE", "HASH_MISMATCH"}:
+        if outcome in {"NO_SOURCE", "HASH_MISMATCH", "DOWNLOAD_FAILED"}:
             failed.append({"path": path, "outcome": outcome})
     notes = install_metadata(pool, pack, root, packs_root, overwrite_metadata)
     return {"pool": pool, "target_root": pack["target_root"], "summary": summary,
             "failed": failed[:50], "failed_count": len(failed), "notes": notes,
             "status": "INSTALLED" if not failed else "INCOMPLETE"}
+
+
+def read_records(path: Path, records_key: str | None) -> list[dict[str, Any]]:
+    if path.suffix.lower() == ".csv":
+        with path.open(encoding="utf-8-sig", newline="") as handle:
+            return list(csv.DictReader(handle))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data[records_key] if records_key else data
+
+
+def resolve_local(relative: str, root: Path, workspace: Path) -> Path | None:
+    """Manifests record paths relative to either the pool root or the workspace."""
+    for base in (root, workspace):
+        try:
+            candidate = safe_join(base, relative)
+        except (PackError, ValueError):
+            continue
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def build_paths(spec: dict[str, Any], root: Path, workspace: Path) -> list[Path]:
+    if "glob" in spec:
+        return [p for p in sorted(root.glob(spec["glob"])) if p.is_file()]
+    listing = spec["paths_from"]
+    paths = set()
+    for record in read_records(safe_join(root, listing["file"]), listing.get("records")):
+        local = resolve_local(record[listing["path"]], root, workspace)
+        if local is not None:
+            paths.add(local)
+    return sorted(paths)
+
+
+def build_url_map(spec: dict[str, Any], root: Path, workspace: Path) -> dict[str, str]:
+    """Map sha256 -> original URL from the pool's download manifests.
+
+    Files are matched by hash, so crops and other derivatives never inherit the
+    URL of the original they were cut from.
+    """
+    urls: dict[str, str] = {}
+    for source in spec.get("url_sources", []):
+        path = resolve_local(source["file"], root, workspace)
+        if path is None:
+            continue
+        excluded = source.get("exclude_url_substrings", [])
+        for record in read_records(path, source.get("records")):
+            url = record.get(source["url"]) or ""
+            if not url.startswith("https://") or any(part in url for part in excluded):
+                continue
+            digest = (record.get(source["sha256"]) or "").lower() if "sha256" in source else ""
+            if not digest and "path" in source:
+                local = resolve_local(record.get(source["path"]) or "", root, workspace)
+                digest = sha256_file(local) if local else ""
+            if digest:
+                urls.setdefault(digest, url)
+    return urls
+
+
+def relativize(data: bytes, workspace: Path) -> bytes:
+    """Strip this machine's workspace prefix from metadata before it enters Git."""
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return data
+    base = str(workspace).rstrip("\\/")
+    variants = {base, base.replace("\\", "/"), base.replace("\\", "\\\\"), base.replace("/", "\\")}
+    for prefix in sorted(variants, key=len, reverse=True):
+        for separator in ("\\\\", "\\", "/"):
+            text = text.replace(prefix + separator, "")
+        text = text.replace(prefix, ".")
+    return text.encode("utf-8")
 
 
 def build(pool: str, workspace: Path, packs_root: Path = PACKS_ROOT) -> dict[str, Any]:
@@ -243,15 +318,15 @@ def build(pool: str, workspace: Path, packs_root: Path = PACKS_ROOT) -> dict[str
         raise PackError(f"{pool}: pack.json has no build section")
     root = target_root(pack, workspace)
     template = spec.get("url_template", "")
+    url_map = build_url_map(spec, root, workspace)
     files = []
-    for path in sorted(root.glob(spec["glob"])):
-        if not path.is_file():
-            continue
+    for path in build_paths(spec, root, workspace):
         relative = path.relative_to(root).as_posix()
-        url = template.format(name=path.name, stem=path.stem, path=relative) if template else ""
-        files.append(PackFile(relative, sha256_file(path), path.stat().st_size, url))
+        digest = sha256_file(path)
+        url = url_map.get(digest) or (template.format(name=path.name, stem=path.stem, path=relative) if template else "")
+        files.append(PackFile(relative, digest, path.stat().st_size, url))
     if not files:
-        raise PackError(f"{pool}: no files match {spec['glob']} under {pack['target_root']}")
+        raise PackError(f"{pool}: no files found for build spec under {pack['target_root']}")
     write_files(pool, files, packs_root)
     metadata_dir = pack_dir(pool, packs_root) / METADATA_DIR
     copied = []
@@ -260,9 +335,10 @@ def build(pool: str, workspace: Path, packs_root: Path = PACKS_ROOT) -> dict[str
         if source.is_file():
             destination = safe_join(metadata_dir, name)
             destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(source, destination)
+            destination.write_bytes(relativize(source.read_bytes(), workspace))
             copied.append(name)
-    return {"pool": pool, "files": len(files), "bytes": sum(f.size for f in files), "metadata": copied}
+    return {"pool": pool, "files": len(files), "bytes": sum(f.size for f in files),
+            "with_url": sum(1 for f in files if f.url), "metadata": copied}
 
 
 def describe_terms(pack: dict[str, Any]) -> str:

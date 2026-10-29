@@ -121,7 +121,61 @@ class ReferencePackTests(unittest.TestCase):
                 self.assertTrue((packs.pack_dir(pool) / "metadata" / name).is_file(), f"{pool}: {name}")
             for item in files:
                 self.assertRegex(item.sha256, r"^[0-9a-f]{64}$")
-                self.assertTrue(item.url.startswith("https://"), item.path)
+                self.assertTrue(item.url == "" or item.url.startswith("https://"), item.path)
+            for name in pack.get("metadata", []) if files else []:
+                text = (packs.pack_dir(pool) / "metadata" / name).read_text(encoding="utf-8")
+                self.assertNotRegex(text, r"(?i)\b[a-z]:[\\/]+(users|projects)\b", f"{pool}: {name}")
+
+    def test_build_maps_urls_by_hash_and_reads_paths_from_manifest(self) -> None:
+        write_pack(self.packs_root, "DEMO", [], {"ITEMS.json": ""})
+        pack_file = self.packs_root / "DEMO" / "pack.json"
+        pack = json.loads(pack_file.read_text(encoding="utf-8"))
+        pack["build"] = {
+            "paths_from": {"file": "ITEMS.json", "records": "items", "path": "local_path"},
+            "url_sources": [{"file": "downloads.csv", "path": "local_path", "url": "url",
+                             "exclude_url_substrings": ["token="]}],
+        }
+        pack_file.write_text(json.dumps(pack), encoding="utf-8")
+        root = self.workspace / "LIBRARY" / "DEMO"
+        (root / "raw").mkdir(parents=True)
+        (root / "crops").mkdir()
+        (root / "raw" / "a.png").write_bytes(b"alpha")
+        (root / "raw" / "b.png").write_bytes(b"beta")
+        (root / "crops" / "a.png").write_bytes(b"alpha")
+        (root / "crops" / "b_crop.png").write_bytes(b"be")
+        (root / "crops" / "c.png").write_bytes(b"gamma")
+        (root / "downloads.csv").write_text(
+            "local_path,url\n"
+            "LIBRARY\\DEMO\\raw\\a.png,https://example.invalid/a.png\n"
+            "raw/b.png,https://example.invalid/b.png\n"
+            "crops/c.png,https://example.invalid/c.png?token=x\n", encoding="utf-8")
+        (root / "ITEMS.json").write_text(json.dumps({"items": [
+            {"local_path": "crops\\a.png"}, {"local_path": "crops/b_crop.png"}, {"local_path": "crops/c.png"},
+            {"local_path": f"{self.workspace}\\gone.png"}]}), encoding="utf-8")
+
+        result = packs.build("DEMO", self.workspace, self.packs_root)
+
+        urls = {f.path: f.url for f in packs.load_files("DEMO", self.packs_root)}
+        self.assertEqual(urls, {"crops/a.png": "https://example.invalid/a.png", "crops/b_crop.png": "", "crops/c.png": ""})
+        self.assertEqual(result["with_url"], 1)
+        metadata = (self.packs_root / "DEMO" / "metadata" / "ITEMS.json").read_text(encoding="utf-8")
+        self.assertNotIn(str(self.workspace).replace("\\", "\\\\"), metadata)
+        self.assertIn("gone.png", metadata)
+
+    def test_failed_download_is_reported_not_raised(self) -> None:
+        write_pack(self.packs_root, "DEMO", [("img/a.png", b"alpha", "https://example.invalid/a.png")])
+        original = packs.fetch
+
+        def failing_fetch(url: str, destination: Path, timeout: float, attempts: int = 3) -> None:
+            raise packs.PackError("offline")
+
+        packs.fetch = failing_fetch
+        try:
+            result = packs.install("DEMO", self.workspace, self.packs_root)
+        finally:
+            packs.fetch = original
+        self.assertEqual(result["status"], "INCOMPLETE")
+        self.assertEqual(result["failed"], [{"path": "img/a.png", "outcome": "DOWNLOAD_FAILED"}])
 
     def test_pose_atlas_catalog_matches_its_group_metadata(self) -> None:
         files = {f.path: f.sha256 for f in packs.load_files("POSE_ATLAS")}

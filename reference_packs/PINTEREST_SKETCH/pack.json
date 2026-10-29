@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "pool": "PINTEREST_SKETCH",
+  "title": "Наброски поз с Pinterest (586 вырезок и листов)",
+  "target_root": "work/pinterest-sketch-20261029",
+  "source": {
+    "name": "Pinterest boards (sketch, gesture and hand studies)",
+    "author": "various; per-file pin and discovery URLs are in metadata/ready/manifest.json",
+    "homepage": "https://www.pinterest.com/",
+    "terms_url": "https://policy.pinterest.com/en/terms-of-service",
+    "terms_summary": "Images were pinned by third parties; the original authors and their licences are not established. Pinterest terms give no right to redistribute pinned images. Use only as a local soft pose/gesture reference. Most files are StoryArt crops of the originals, so they install only from your own copy (--from-dir); files identical to the original pin image are fetched from i.pinimg.com.",
+    "redistribution": "unknown"
+  },
+  "metadata": ["ready/manifest.json", "INTEGRATION_CANDIDATES.json", "README.md"],
+  "build": {
+    "glob": "ready/*/**/*",
+    "url_sources": [
+      {"file": "downloads.json", "records": "assets", "sha256": "sha256", "url": "url"}
+    ]
+  }
+}

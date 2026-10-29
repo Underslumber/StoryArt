@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "pool": "DRAWING_GUIDES",
+  "title": "Учебные фрагменты по рисованию oldmanlux (238 позиций)",
+  "target_root": "OLDMANLUX_SOURCE_COLLECTION",
+  "source": {
+    "name": "oldmanlux drawing tutorials on X",
+    "author": "ЛЮКС (@oldmanlux)",
+    "homepage": "https://x.com/oldmanlux",
+    "terms_url": "https://x.com/en/tos",
+    "terms_summary": "Tutorial images posted on X by the author. No licence to redistribute them has been granted; X terms do not grant one either. Treat redistribution as forbidden. Almost all catalog files are hash-checked positive fragments cut from the tutorial sheets, so they install only from your own copy (--from-dir); a file identical to the posted original is fetched from pbs.twimg.com.",
+    "redistribution": "forbidden"
+  },
+  "metadata": ["CURATED_ITEMS.json", "PROJECT_USAGE.md", "LIBRARY_INDEX.md", "README.md"],
+  "build": {
+    "paths_from": {"file": "CURATED_ITEMS.json", "records": "items", "path": "local_path"},
+    "url_sources": [
+      {"file": "downloads.json", "records": "assets", "sha256": "sha256", "url": "download_url"}
+    ]
+  }
+}
