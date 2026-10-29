@@ -110,6 +110,11 @@ The agent performs available project operations; the user gives the goal and dec
 - For `CHARACTER_BASE`, complete and independently QA `FACE_IDENTITY`,
   `PHYSIQUE_FRONT`, `PHYSIQUE_SIDE`, `PHYSIQUE_BACK`, and
   `CHARACTER_ASSEMBLY`. A passed layer never implies another layer passed.
+  Start from `docs/NEW_CHARACTER.md` and drive the stages with
+  `tools/character_base.py`: a user-confirmed character passport before the
+  first call, one face candidate at a time, user approval of FACE and FRONT,
+  then SIDE, BACK and the 3/4 assembly as separate full-quality generations
+  without stops, shown together with a preview-only sheet.
 - Preserve approval, identity, storyline, provenance, coverage/topology, and
   source-role rules from the relevant detailed sections. Do not treat partial
   praise or an intermediate result as permanent approval.

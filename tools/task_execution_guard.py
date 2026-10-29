@@ -451,7 +451,7 @@ def reconcile_plan_required_stages(state: dict[str, object], plan: dict[str, obj
             "opaque age-appropriate T-shirt and shorts" if anatomy == "MALE_ANATOMY"
             else "opaque age-appropriate T-shirt and skirt" if anatomy == "FEMALE_ANATOMY" else ""
         )
-        if (contract.get("adult_swimwear_ladder") is not False
+        if (contract.get("adult_swimwear", contract.get("adult_swimwear_ladder")) is not False
                 or contract.get("adult_anthropometry") is not False
                 or contract.get("coverage_policy") != "OPAQUE_AGE_APPROPRIATE_CLOSED_COVERAGE"
                 or not expected_garment

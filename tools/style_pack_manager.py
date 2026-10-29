@@ -77,6 +77,11 @@ except ModuleNotFoundError:  # Direct execution as python tools\style_pack_manag
     )
 
 try:
+    from tools.character_base import load_confirmed_brief, load_failures, profile_patch_from_brief
+except ModuleNotFoundError:  # Direct execution as python tools\style_pack_manager.py
+    from character_base import load_confirmed_brief, load_failures, profile_patch_from_brief
+
+try:
     from tools.task_execution_guard import (
         GuardError as ExecutionGuardError,
         assert_active_request_path as guard_assert_active_request_path,
@@ -4167,6 +4172,11 @@ def identity_paths_for_plan(paths: StylePaths, plan: dict[str, object]) -> Style
     return identity
 
 
+def adult_swimwear_flag(contract: dict[str, object]) -> object:
+    """Read the adult physique swimwear flag; plans before 2026-10-29 used adult_swimwear_ladder."""
+    return contract.get("adult_swimwear", contract.get("adult_swimwear_ladder"))
+
+
 def resolve_character_base_contract(args: argparse.Namespace, target_identity: dict[str, object]) -> dict[str, object]:
     age_group = str(getattr(args, "character_age_group", "") or "").strip().upper()
     adult_flag = bool(getattr(args, "adult_character", False))
@@ -4194,13 +4204,13 @@ def resolve_character_base_contract(args: argparse.Namespace, target_identity: d
             "subject_anatomy": anatomy, "subject_anatomy_evidence": anatomy_evidence,
             "required_garment": garment,
             "coverage_policy": "OPAQUE_AGE_APPROPRIATE_CLOSED_COVERAGE",
-            "adult_swimwear_ladder": False, "adult_anthropometry": False,
+            "adult_swimwear": False, "adult_anthropometry": False,
         }
     return {
         "age_group": "ADULT", "age_evidence": "EXPLICIT_ADULT_FLAG",
         "subject_anatomy": anatomy, "required_garment": "prompt-defined adult safety garment",
         "coverage_policy": "EXISTING_ADULT_POLICY",
-        "adult_swimwear_ladder": True, "adult_anthropometry": True,
+        "adult_swimwear": True, "adult_anthropometry": True,
     }
 
 
@@ -4828,7 +4838,7 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
                 "opaque_required": True,
                 "age_appropriate_required": True,
                 "adult_minimal_topology_forbidden": True,
-                "adult_swimwear_ladder": False,
+                "adult_swimwear": False,
                 "adult_anthropometry": False,
             }
     plan_path.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -5001,7 +5011,7 @@ def validate_reference_plan_for_recording(
             anatomy = base_contract.get("subject_anatomy")
             expected_garment = "opaque age-appropriate T-shirt and shorts" if anatomy == "MALE_ANATOMY" else "opaque age-appropriate T-shirt and skirt" if anatomy == "FEMALE_ANATOMY" else ""
             if (not expected_garment or base_contract.get("required_garment") != expected_garment
-                    or base_contract.get("adult_swimwear_ladder") is not False
+                    or adult_swimwear_flag(base_contract) is not False
                     or base_contract.get("adult_anthropometry") is not False
                     or base_contract.get("coverage_policy") != "OPAQUE_AGE_APPROPRIATE_CLOSED_COVERAGE"
                     or kit.get("character_base_contract") != base_contract
@@ -5882,6 +5892,28 @@ def validate_visual_review(
     # the exact prompt. This is a structural completeness check, not a claim
     # that syntax can determine semantic atomicity in free-form language.
     prompt_requirements = prompt_review_clauses(str(prompt_text))
+    if adherence.get("status") == "FAIL" and adherence.get("checked_scope") == "REJECTION_FINDINGS":
+        # A rejected output needs the clauses it failed, not a full PASS
+        # checklist: list only failed clauses, verbatim and in prompt order.
+        if not isinstance(constraints, list) or not constraints:
+            raise StylePackError("REJECTION_FINDINGS requires at least one failed prompt clause.")
+        position = -1
+        for index, constraint in enumerate(constraints, start=1):
+            if (
+                not isinstance(constraint, dict)
+                or constraint.get("status") != "FAIL"
+                or not isinstance(constraint.get("evidence"), str)
+                or not constraint["evidence"].strip()
+            ):
+                raise StylePackError(f"REJECTION_FINDINGS constraint #{index} requires FAIL status and evidence.")
+            text = str(constraint.get("constraint", "")).strip(" \t\r\n,;:-")
+            try:
+                position = prompt_requirements.index(text, position + 1)
+            except ValueError as error:
+                raise StylePackError(
+                    f"REJECTION_FINDINGS constraint #{index} must quote a clause of the exact executed prompt, in prompt order."
+                ) from error
+        return report
     if (
         adherence.get("checked_scope") != "FULL_EXECUTED_PROMPT"
         or adherence.get("all_explicit_constraints_assessed") is not True
@@ -6876,7 +6908,7 @@ def command_approve_character(args: argparse.Namespace) -> None:
                         or not isinstance(target_compatibility, dict)
                         or target_compatibility.get("target_anatomy") != anatomy
                         or target_compatibility.get("anatomy_evidence_source") != evidence_source
-                        or base_contract.get("adult_swimwear_ladder") is not False
+                        or adult_swimwear_flag(base_contract) is not False
                         or base_contract.get("adult_anthropometry") is not False):
                     raise StylePackError("Child character approval requires the validated age, anatomy, garment, exclusions, and exact anatomy provenance from its CHARACTER_BASE plan.")
                 profile_confirmation_patch = {
@@ -6929,6 +6961,11 @@ def command_approve_character(args: argparse.Namespace) -> None:
             if sha256(image) != sha256(stage_files["05_CHARACTER_ASSEMBLY"]):
                 raise StylePackError("The approved base image must be the passed 05_CHARACTER_ASSEMBLY output.")
             kit_stage_files = stage_files
+            brief = load_confirmed_brief(pending)
+            if brief is not None:
+                # The confirmed passport and the request's failure log become
+                # the profile's locked invariants and known failure modes.
+                profile_confirmation_patch.update(profile_patch_from_brief(brief, load_failures(pending)))
     approval_operation = f"approve-character-{request_id}"
     retry_rows = []
     for row in read_csv(paths.character_registry):
