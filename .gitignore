@@ -4,6 +4,7 @@
 !/.gitignore
 !/README.md
 !/requirements.txt
+!/requirements-dev.txt
 !/AGENTS.example.md
 !/scripts/
 !/tools/
@@ -12,25 +13,40 @@
 !/templates/
 !/tests/
 !/skills/
+!/runtime/
+!/.codex/
+/.codex/*
+!/.codex/agents/
+/.codex/agents/*
+!/.codex/agents/web_image.toml
 
-# Only the reusable managers belong in Git.
+# Reusable Python managers and web-image runtime scripts belong in Git.
 /tools/*
-!/tools/style_pack_manager.py
-!/tools/body_reference_manager.py
-!/tools/body_reference_type_router.py
-!/tools/generation_risk_assessor.py
-!/tools/task_execution_guard.py
-!/tools/style_calibration_manager.py
-!/tools/storyart_orchestrator.py
-!/tools/reference_compatibility.py
-!/tools/generation_call_contract.py
-!/tools/generation_request.py
-!/tools/character_profile_state.py
+!/tools/*.py
+!/tools/chatgpt_web_image_runtime.js
+!/tools/chatgpt_web_image_backend.mjs
+!/tools/chatgpt_web_image_recovery.mjs
+!/tools/chatgpt_web_image_live_status.mjs
+!/tools/chatgpt_web_image_native_download.mjs
+
+# One-off local scripts with hardcoded personal paths stay local.
+/tools/analyze_fb2_images.py
+/tools/build_beal_scene_reference_boards.py
+/tools/build_moderation_diagnostic_variants.py
+/tools/create_side_topology_anchor.py
+/tools/extract_teal_garment_topology.py
+/tools/chatgpt_web_image_desktop_proof.js
+
+# Private ChatGPT destination binding stays local.
+/config/chatgpt_web_image.local.json
+/config/chatgpt_web_image.runtime.local.json
 
 # Local agent policy is copied from AGENTS.example.md during bootstrap.
 /AGENTS.md
 /.agents/
-/.codex/
+/.codex/config.toml
+/.local/
+node_modules/
 
 # Local provenance and performance notes are never release artifacts.
 /docs/GENERATION_RULES.md
@@ -68,6 +84,16 @@
 !/docs/assets/
 !/docs/assets/previews/
 !/docs/assets/previews/*.jpg
+
+# Test and scratch temp folders.
+/tests/.pytest_*/
+/tests/tmp*/
+/tests/storyart-asset-catalog-*/
+/.tmp*/
+/.test*/
+/_tmp*/
+/.pytest-tmp*/
+/.codex-test-tmp*/
 
 # Python and local environment state.
 __pycache__/
