@@ -1,0 +1,12 @@
+{
+  "name": "storyart-web-image-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@steipete/oracle": "0.21.1",
+    "@modelcontextprotocol/client": "2.0.0"
+  }
+}

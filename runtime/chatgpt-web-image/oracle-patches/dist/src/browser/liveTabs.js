@@ -1,0 +1,590 @@
+import CDP from "chrome-remote-interface";
+import { createHash } from "node:crypto";
+import { ANSWER_SELECTORS, ASSISTANT_ROLE_SELECTOR, INPUT_SELECTORS, MODEL_BUTTON_SELECTOR, SEND_BUTTON_SELECTORS, STOP_BUTTON_SELECTORS, } from "./constants.js";
+import { captureAssistantMarkdown, readAssistantSnapshot } from "./actions/assistantResponse.js";
+import { buildConversationTurnListExpression, buildConversationTurnSemantics } from "./conversationTurns.js";
+import { extractStableConversationIdFromUrl } from "./conversationUrl.js";
+import { delay } from "./utils.js";
+import { connectToRemoteChromeTarget, listRemoteChromeTargets } from "./chromeLifecycle.js";
+export const DEFAULT_REMOTE_CHROME_HOST = "127.0.0.1";
+export const DEFAULT_REMOTE_CHROME_PORT = 9222;
+const LOGIN_CTA_PATTERN = /\b(log in|login|sign up|sign in|continue with google|continue with microsoft)\b/i;
+const noopLogger = Object.assign((_message) => { }, {});
+function trimToSnippet(text, max = 140) {
+    const normalized = String(text ?? "")
+        .replace(/\s+/g, " ")
+        .trim();
+    if (normalized.length <= max) {
+        return normalized;
+    }
+    return `${normalized.slice(0, Math.max(0, max - 1)).trimEnd()}…`;
+}
+function normalizeHostPort(input = {}) {
+    return {
+        host: input.host ?? DEFAULT_REMOTE_CHROME_HOST,
+        port: input.port ?? DEFAULT_REMOTE_CHROME_PORT,
+        ...(input.browserWSEndpoint
+            ? { browserWSEndpoint: input.browserWSEndpoint, approvalWaitMs: input.approvalWaitMs }
+            : {}),
+    };
+}
+function chromeTransportError(operation, endpoint, error) {
+    const detail = error instanceof Error ? error.message.trim() : String(error ?? "").trim();
+    return new Error(`Unable to ${operation} on Chrome at ${endpoint.host}:${endpoint.port}. ${detail || "Chrome returned no error details."} Check that Chrome is running and remote debugging is enabled, then retry and allow the connection prompt.`, { cause: error });
+}
+function normalizeUrl(value) {
+    return String(value ?? "").trim();
+}
+function normalizeTitle(value) {
+    return String(value ?? "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+function buildTargetFingerprint(summary) {
+    return createHash("sha1")
+        .update(`${summary.targetId ?? ""}|${summary.url ?? ""}|${summary.lastAssistantText ?? ""}`)
+        .digest("hex");
+}
+function isChatGptUrl(url) {
+    const normalized = normalizeUrl(url).toLowerCase();
+    return (normalized.startsWith("https://chatgpt.com") || normalized.startsWith("https://chat.openai.com"));
+}
+function isChatGptConversationUrl(url) {
+    return /\/c\//.test(normalizeUrl(url));
+}
+function isChatGptTarget(target) {
+    if (!target || target.type !== "page") {
+        return false;
+    }
+    return isChatGptUrl(target.url ?? "") || /chatgpt/i.test(target.title ?? "");
+}
+function extractTargetId(target) {
+    return target?.targetId ?? target?.id ?? null;
+}
+function escapeLiteral(value) {
+    return JSON.stringify(value);
+}
+function buildTabInspectionExpression() {
+    const inputSelectorsLiteral = JSON.stringify(INPUT_SELECTORS);
+    const sendSelectorsLiteral = JSON.stringify(SEND_BUTTON_SELECTORS);
+    const answerSelectorsLiteral = JSON.stringify(ANSWER_SELECTORS);
+    const assistantRoleLiteral = escapeLiteral(ASSISTANT_ROLE_SELECTOR);
+    const modelButtonSelectorLiteral = escapeLiteral(MODEL_BUTTON_SELECTOR);
+    const stopSelectorLiteral = escapeLiteral(STOP_BUTTON_SELECTORS.join(","));
+    return `(() => {
+      const INPUT_SELECTORS = ${inputSelectorsLiteral};
+      const SEND_SELECTORS = ${sendSelectorsLiteral};
+      const ANSWER_SELECTORS = ${answerSelectorsLiteral};
+      const ASSISTANT_ROLE_SELECTOR = ${assistantRoleLiteral};
+      const MODEL_BUTTON_SELECTOR = ${modelButtonSelectorLiteral};
+      const STOP_BUTTON_SELECTOR = ${stopSelectorLiteral};
+      const LOGIN_CTA = ${LOGIN_CTA_PATTERN.toString()};
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
+      const isVisible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const style = window.getComputedStyle(node);
+        if (!style) return false;
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const firstVisible = (selectors) => {
+        for (const selector of selectors) {
+          const node = document.querySelector(selector);
+          if (node && isVisible(node)) return node;
+        }
+        return null;
+      };
+      const loginButtonExists = Array.from(document.querySelectorAll('button,a,[role="button"]')).some((node) => {
+        const label = normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('title'));
+        return LOGIN_CTA.test(label);
+      });
+      const stopExists = Array.from(document.querySelectorAll(STOP_BUTTON_SELECTOR)).some(isVisible);
+      const sendButton = firstVisible(SEND_SELECTORS);
+      const sendExists = Boolean(sendButton);
+      const promptNode = firstVisible(INPUT_SELECTORS);
+      const promptReady = Boolean(promptNode);
+      ${buildConversationTurnSemantics()}
+      const turns = ${buildConversationTurnListExpression()};
+      const assistantTurns = turns.filter((turn) => {
+        if (oracleReadTurnRole(turn) === 'assistant') return true;
+        const role = normalize(turn.getAttribute('data-message-author-role') || turn.getAttribute('data-turn')).toLowerCase();
+        if (role === 'assistant') return true;
+        return Boolean(turn.querySelector(ASSISTANT_ROLE_SELECTOR));
+      });
+      const fallbackUserTurns = Array.from(
+        document.querySelectorAll('[data-message-author-role="user"], [data-turn="user"]'),
+      );
+      const userTurns = turns.filter((turn) => {
+        if (oracleReadTurnRole(turn) === 'user') return true;
+        const role = normalize(turn.getAttribute('data-message-author-role') || turn.getAttribute('data-turn')).toLowerCase();
+        if (role === 'user') return true;
+        return Boolean(
+          turn.querySelector('[data-message-author-role="user"], [data-turn="user"]'),
+        );
+      });
+      const answerNode = ANSWER_SELECTORS
+        .map((selector) => document.querySelectorAll(selector))
+        .find((matches) => matches && matches.length > 0);
+      const currentModelButton = document.querySelector(MODEL_BUTTON_SELECTOR);
+      const hasProPill = Boolean(document.querySelector('button.__composer-pill, button[aria-label="Pro, click to remove"]'));
+      let currentModelLabel = normalize(currentModelButton?.textContent || currentModelButton?.getAttribute?.('aria-label') || '');
+      if (currentModelLabel === 'ChatGPT' && hasProPill) {
+        currentModelLabel = 'ChatGPT + Pro';
+      }
+      const rawAnswerNodes = Array.from(answerNode || []);
+      const userCandidates = Array.from(new Set([...userTurns, ...fallbackUserTurns]));
+      const lastUserTurn = userCandidates.reduce((latest, candidate) => {
+        if (!latest) return candidate;
+        return latest.compareDocumentPosition(candidate) & 4 ? candidate : latest;
+      }, null);
+      const lastUserContainer = lastUserTurn
+        ? turns.find((turn) => turn === lastUserTurn || turn.contains?.(lastUserTurn))
+        : null;
+      const answerNodes = rawAnswerNodes.filter(
+        (node) =>
+          !lastUserTurn ||
+          (node !== lastUserTurn &&
+            !lastUserTurn.contains?.(node) &&
+            !node.contains?.(lastUserTurn)),
+      );
+      const answerTexts = answerNodes.map((node) => normalize(node.textContent)).filter(Boolean);
+      const assistantCandidates = Array.from(new Set([...assistantTurns, ...answerNodes]));
+      const lastAssistantNode = assistantCandidates.reduce((latest, candidate) => {
+        if (!latest) return candidate;
+        return latest.compareDocumentPosition(candidate) & 4 ? candidate : latest;
+      }, null);
+      const lastAssistantContainer = lastAssistantNode
+        ? turns.find((turn) => turn === lastAssistantNode || turn.contains?.(lastAssistantNode))
+        : null;
+      const assistantFollowsLatestUser = Boolean(
+        lastAssistantNode &&
+        lastUserTurn &&
+        lastAssistantNode !== lastUserTurn &&
+        (lastUserTurn.compareDocumentPosition(lastAssistantNode) & 4),
+      );
+      const lastAssistantTurnIndex = lastAssistantContainer
+        ? turns.indexOf(lastAssistantContainer)
+        : -1;
+      const lastUserTurnIndex = lastUserContainer ? turns.indexOf(lastUserContainer) : -1;
+      const assistantOwners = assistantCandidates.map(
+        (node) => turns.find((turn) => turn === node || turn.contains?.(node)) || node,
+      );
+      const assistantCount = new Set(assistantOwners).size;
+      const lastAssistantText = normalize(oracleReadTurnContentRoot(lastAssistantNode) ? oracleReadTurnText(lastAssistantNode) : lastAssistantNode?.textContent);
+      const lastUserText = normalize(oracleReadTurnContentRoot(lastUserTurn) ? oracleReadTurnText(lastUserTurn) : lastUserTurn?.textContent);
+      const lastUserMessage = lastUserTurn?.matches?.('[data-message-author-role="user"]')
+        ? lastUserTurn : lastUserTurn?.querySelector?.('[data-message-author-role="user"]') || oracleReadTurnContentRoot(lastUserTurn);
+      const userContent = lastUserMessage?.querySelectorAll?.('[class~="whitespace-pre-wrap"]');
+      const authenticated = !loginButtonExists && (promptReady || sendExists || stopExists || assistantCount > 0);
+      return {
+        title: normalize(document.title),
+        url: location.href,
+        currentModelLabel,
+        stopExists,
+        sendExists,
+        promptReady,
+        loginButtonExists,
+        authenticated,
+        assistantCount,
+        lastAssistantText,
+        assistantFollowsLatestUser,
+        lastAssistantTurnIndex,
+        lastUserTurnIndex,
+        lastUserText,
+        turnLayout: turns.some(turn => Boolean(oracleReadTurnContentRoot(turn))) ? 'observed-heading' : 'legacy',
+        lastUserTextRaw: oracleReadTurnContentRoot(lastUserTurn) ? oracleReadTurnText(lastUserTurn) : lastUserMessage?.textContent,
+        lastUserContentText: oracleReadTurnContentRoot(lastUserTurn) ? oracleReadTurnText(lastUserTurn) : userContent?.length === 1 ? userContent[0].textContent : undefined,
+        lastUserMessageId: lastUserMessage?.getAttribute?.('data-message-id') ?? undefined,
+        visibilityState: document.visibilityState,
+        focused: Boolean(document.hasFocus?.()),
+      };
+    })()`;
+}
+export function buildTabInspectionExpressionForTest() {
+    return buildTabInspectionExpression();
+}
+export async function listChatGptTargets(options = {}) {
+    const endpoint = normalizeHostPort(options);
+    try {
+        const targets = await listRemoteChromeTargets(endpoint);
+        return targets.filter(isChatGptTarget);
+    }
+    catch (error) {
+        throw chromeTransportError("list ChatGPT tabs", endpoint, error);
+    }
+}
+export async function openChatGptTarget(options = {}) {
+    const endpoint = normalizeHostPort(options);
+    const { host, port } = endpoint;
+    const url = options.url ?? "https://chatgpt.com/";
+    try {
+        if (endpoint.browserWSEndpoint) {
+            const connection = await connectToRemoteChromeTarget(host, port, noopLogger, {
+                ...endpoint,
+                targetUrl: url,
+            });
+            try {
+                if (!connection.targetId)
+                    throw new Error("Chrome did not return a target ID.");
+                return connection.targetId;
+            }
+            finally {
+                await connection.close();
+            }
+        }
+        const target = await CDP.New({ host, port, url });
+        return target.id;
+    }
+    catch (error) {
+        throw chromeTransportError("open saved ChatGPT conversation", endpoint, error);
+    }
+}
+async function connectToTarget(options, targetId) {
+    const endpoint = normalizeHostPort(options);
+    const { host, port } = endpoint;
+    const connection = await connectToRemoteChromeTarget(host, port, noopLogger, {
+        ...endpoint,
+        targetId,
+    }).catch((error) => {
+        throw chromeTransportError("inspect ChatGPT tab", endpoint, error);
+    });
+    const client = Object.create(connection.client);
+    // Session-bound clients detach only; the owning connection also closes its browser socket.
+    client.close = connection.close;
+    const { Runtime, DOM } = client;
+    try {
+        if (Runtime?.enable) {
+            await Runtime.enable();
+        }
+        if (DOM?.enable) {
+            await DOM.enable();
+        }
+        return client;
+    }
+    catch (error) {
+        await connection.close().catch(() => undefined);
+        throw error;
+    }
+}
+export async function inspectChatGptTab(options) {
+    const { host, port } = normalizeHostPort(options);
+    const target = options.target;
+    const targetId = extractTargetId(target);
+    if (!targetId) {
+        throw new Error("inspectChatGptTab requires a target with targetId.");
+    }
+    const client = await connectToTarget(options, targetId);
+    try {
+        const { Runtime } = client;
+        const evaluation = await Runtime.evaluate({
+            expression: buildTabInspectionExpression(),
+            returnByValue: true,
+            awaitPromise: true,
+        });
+        const info = (evaluation.result?.value ?? {});
+        const snapshot = await readAssistantSnapshot(Runtime).catch(() => null);
+        const inspectedAssistantTurnIndex = typeof info.lastAssistantTurnIndex === "number" && info.lastAssistantTurnIndex >= 0
+            ? info.lastAssistantTurnIndex
+            : undefined;
+        const normalizedSnapshotText = normalizeTitle(snapshot?.text ?? "").toLowerCase();
+        const normalizedInspectedText = normalizeTitle(info.lastAssistantText ?? "").toLowerCase();
+        const snapshotMatchesInspectedTurn = (typeof snapshot?.turnIndex === "number" &&
+            snapshot.turnIndex === inspectedAssistantTurnIndex) ||
+            (snapshot?.turnIndex == null &&
+                inspectedAssistantTurnIndex === undefined &&
+                normalizedSnapshotText.length > 0 &&
+                normalizedSnapshotText === normalizedInspectedText);
+        const lastAssistantText = snapshotMatchesInspectedTurn &&
+            typeof snapshot?.text === "string" &&
+            snapshot.text.trim().length > 0
+            ? snapshot.text.trim()
+            : String(info.lastAssistantText ?? "").trim();
+        const lastUserText = String(info.lastUserText ?? "").trim();
+        const summary = {
+            host,
+            port,
+            targetId,
+            title: normalizeTitle(info.title ?? target.title ?? ""),
+            url: normalizeUrl(info.url ?? target.url ?? ""),
+            currentModelLabel: normalizeTitle(info.currentModelLabel ?? ""),
+            stopExists: Boolean(info.stopExists),
+            sendExists: Boolean(info.sendExists),
+            promptReady: Boolean(info.promptReady),
+            loginButtonExists: Boolean(info.loginButtonExists),
+            authenticated: Boolean(info.authenticated),
+            assistantCount: Number.isFinite(info.assistantCount) ? Number(info.assistantCount) : 0,
+            lastAssistantText,
+            assistantFollowsLatestUser: Boolean(info.assistantFollowsLatestUser),
+            lastAssistantTurnIndex: inspectedAssistantTurnIndex,
+            lastUserTurnIndex: typeof info.lastUserTurnIndex === "number" && info.lastUserTurnIndex >= 0
+                ? info.lastUserTurnIndex
+                : undefined,
+            lastAssistantSnippet: trimToSnippet(lastAssistantText),
+            lastUserText,
+            turnLayout: info.turnLayout,
+            lastUserTextRaw: info.lastUserTextRaw,
+            lastUserContentText: info.lastUserContentText,
+            lastUserContentHashSHA256: typeof info.lastUserContentText === 'string' ? createHash('sha256').update(info.lastUserContentText.replace(/\r\n?/g, '\n').trim()).digest('hex') : undefined,
+            lastUserContentHashProvenance: typeof info.lastUserContentText === 'string' ? 'observed-DOM-content; CRLF-to-LF-and-outer-trim' : undefined,
+            lastUserMessageId: info.lastUserMessageId,
+            lastUserSnippet: trimToSnippet(lastUserText),
+            focused: Boolean(info.focused),
+            visibilityState: typeof info.visibilityState === "string" ? info.visibilityState : "",
+            conversationId: extractConversationIdFromUrl(info.url ?? target.url ?? ""),
+            fingerprint: "",
+            state: "detached",
+            lastAssistantMarkdown: null,
+            lastAssistantMessageId: snapshotMatchesInspectedTurn && typeof snapshot?.messageId === "string"
+                ? snapshot.messageId
+                : undefined,
+            lastAssistantTurnId: snapshotMatchesInspectedTurn && typeof snapshot?.turnId === "string"
+                ? snapshot.turnId
+                : undefined,
+        };
+        summary.state = classifyTabState(summary);
+        summary.fingerprint = buildTargetFingerprint(summary);
+        return summary;
+    }
+    finally {
+        await client.close().catch(() => undefined);
+    }
+}
+export function classifyTabState(summary) {
+    if (!summary?.authenticated) {
+        return "detached";
+    }
+    if (summary.stopExists) {
+        return "running";
+    }
+    if (summary.sendExists || summary.promptReady || summary.assistantCount > 0) {
+        return "completed";
+    }
+    return "detached";
+}
+export async function collectChatGptTabs(options = {}) {
+    const { host, port } = normalizeHostPort(options);
+    const targets = await listChatGptTargets(options);
+    const summaries = [];
+    for (const target of targets) {
+        try {
+            const summary = await inspectChatGptTab({ ...options, target });
+            summaries.push(summary);
+        }
+        catch (error) {
+            summaries.push({
+                host,
+                port,
+                targetId: extractTargetId(target) ?? "",
+                title: normalizeTitle(target.title ?? ""),
+                url: normalizeUrl(target.url ?? ""),
+                currentModelLabel: "",
+                stopExists: false,
+                sendExists: false,
+                promptReady: false,
+                loginButtonExists: false,
+                authenticated: false,
+                assistantCount: 0,
+                lastAssistantText: "",
+                lastAssistantSnippet: "",
+                lastUserText: "",
+                lastUserSnippet: "",
+                focused: false,
+                visibilityState: "",
+                conversationId: extractConversationIdFromUrl(target.url ?? ""),
+                fingerprint: "",
+                state: "detached",
+                error: error instanceof Error ? error.message : String(error),
+                lastAssistantMarkdown: null,
+            });
+        }
+    }
+    return summaries.sort((left, right) => {
+        const leftScore = (left.focused ? 100 : 0) + (isChatGptConversationUrl(left.url) ? 10 : 0);
+        const rightScore = (right.focused ? 100 : 0) + (isChatGptConversationUrl(right.url) ? 10 : 0);
+        return rightScore - leftScore;
+    });
+}
+function resolveChatGptTabFromSummaries(summaries, ref) {
+    if (!Array.isArray(summaries) || summaries.length === 0) {
+        throw new Error("No live ChatGPT tabs found on the configured Chrome DevTools endpoint.");
+    }
+    const trimmedRef = String(ref ?? "").trim();
+    if (!trimmedRef || trimmedRef.toLowerCase() === "current") {
+        return summaries[0];
+    }
+    const exactId = summaries.find((tab) => tab.targetId === trimmedRef);
+    if (exactId) {
+        return exactId;
+    }
+    const exactUrl = summaries.find((tab) => tab.url === trimmedRef);
+    if (exactUrl) {
+        return exactUrl;
+    }
+    const exactConversationId = summaries.find((tab) => tab.conversationId === trimmedRef);
+    if (exactConversationId) {
+        return exactConversationId;
+    }
+    const lower = trimmedRef.toLowerCase();
+    const titleMatches = summaries.filter((tab) => tab.title.toLowerCase().includes(lower));
+    if (titleMatches.length === 1) {
+        return titleMatches[0];
+    }
+    if (titleMatches.length > 1) {
+        const details = titleMatches
+            .map((tab) => `${tab.targetId}: ${tab.title || "(untitled)"} — ${tab.url}`)
+            .join("\n");
+        throw new Error(`Multiple ChatGPT tabs match "${trimmedRef}":\n${details}`);
+    }
+    throw new Error(`No ChatGPT tab matched "${trimmedRef}". Use "oracle-tabs" or "oracle status --browser-tabs" to inspect live targets.`);
+}
+export function resolveChatGptTabFromSummariesForTest(summaries, ref) {
+    return resolveChatGptTabFromSummaries(summaries, ref);
+}
+export async function resolveChatGptTab(options = {}) {
+    const ref = options.ref?.trim();
+    if (ref && ref.toLowerCase() !== "current") {
+        const targets = await listChatGptTargets(options);
+        const exact = targets.find((target) => extractTargetId(target) === ref ||
+            target.url === ref ||
+            extractConversationIdFromUrl(target.url ?? "") === ref);
+        if (exact)
+            return inspectChatGptTab({ ...options, target: exact });
+    }
+    const summaries = await collectChatGptTabs(options);
+    return resolveChatGptTabFromSummaries(summaries, options.ref);
+}
+export async function connectToExistingChatGptTab(options = {}) {
+    const tab = await resolveChatGptTab(options);
+    const client = await connectToTarget(options, tab.targetId);
+    return { client, targetId: tab.targetId, tab };
+}
+export async function harvestChatGptTab(options = {}) {
+    const resolved = options.target
+        ? await inspectChatGptTab({ ...options, target: options.target })
+        : await resolveChatGptTab(options);
+    const client = await connectToTarget(options, resolved.targetId);
+    try {
+        const { Runtime } = client;
+        const snapshot = await readAssistantSnapshot(Runtime).catch(() => null);
+        const nowSummary = await inspectChatGptTab({
+            ...options,
+            target: {
+                targetId: resolved.targetId,
+                title: resolved.title,
+                url: resolved.url,
+                type: "page",
+            },
+        });
+        const normalizedSnapshotText = normalizeTitle(snapshot?.text ?? "").toLowerCase();
+        const normalizedInspectedText = normalizeTitle(nowSummary.lastAssistantText).toLowerCase();
+        const snapshotMatchesLatestTurn = (typeof snapshot?.turnIndex === "number" &&
+            snapshot.turnIndex === nowSummary.lastAssistantTurnIndex) ||
+            (snapshot?.turnIndex == null &&
+                nowSummary.lastAssistantTurnIndex === undefined &&
+                normalizedSnapshotText.length > 0 &&
+                normalizedSnapshotText === normalizedInspectedText);
+        let assistantMarkdown = null;
+        if (snapshotMatchesLatestTurn && (snapshot?.messageId || snapshot?.turnId)) {
+            assistantMarkdown = await captureAssistantMarkdown(Runtime, {
+                messageId: snapshot.messageId,
+                turnId: snapshot.turnId,
+            }, noopLogger).catch(() => null);
+        }
+        const lastAssistantText = snapshotMatchesLatestTurn &&
+            typeof snapshot?.text === "string" &&
+            snapshot.text.trim().length > 0
+            ? snapshot.text.trim()
+            : nowSummary.lastAssistantText;
+        const harvested = {
+            ...nowSummary,
+            lastAssistantText,
+            lastAssistantSnippet: trimToSnippet(lastAssistantText),
+            lastAssistantMarkdown: assistantMarkdown ?? (lastAssistantText || null),
+            lastAssistantMessageId: snapshotMatchesLatestTurn && typeof snapshot?.messageId === "string"
+                ? snapshot.messageId
+                : nowSummary.lastAssistantMessageId,
+            lastAssistantTurnId: snapshotMatchesLatestTurn && typeof snapshot?.turnId === "string"
+                ? snapshot.turnId
+                : nowSummary.lastAssistantTurnId,
+        };
+        if (harvested.stopExists && options.stallWindowMs && options.stallWindowMs > 0) {
+            const firstFingerprint = harvested.fingerprint;
+            await delay(options.stallWindowMs);
+            const followup = await inspectChatGptTab({
+                ...options,
+                target: {
+                    targetId: harvested.targetId,
+                    title: harvested.title,
+                    url: harvested.url,
+                    type: "page",
+                },
+            });
+            harvested.stopExists = followup.stopExists;
+            harvested.sendExists = followup.sendExists;
+            harvested.promptReady = followup.promptReady;
+            harvested.currentModelLabel = followup.currentModelLabel;
+            harvested.focused = followup.focused;
+            harvested.visibilityState = followup.visibilityState;
+            harvested.assistantCount = followup.assistantCount;
+            harvested.authenticated = followup.authenticated;
+            harvested.loginButtonExists = followup.loginButtonExists;
+            harvested.lastUserText = followup.lastUserText;
+            harvested.turnLayout = followup.turnLayout;
+            harvested.lastUserTextRaw = followup.lastUserTextRaw;
+            harvested.lastUserContentText = followup.lastUserContentText;
+            harvested.lastUserContentHashSHA256 = followup.lastUserContentHashSHA256;
+            harvested.lastUserContentHashProvenance = followup.lastUserContentHashProvenance;
+            harvested.lastUserMessageId = followup.lastUserMessageId;
+            harvested.lastUserSnippet = followup.lastUserSnippet;
+            harvested.assistantFollowsLatestUser = followup.assistantFollowsLatestUser;
+            harvested.lastAssistantTurnIndex = followup.lastAssistantTurnIndex;
+            harvested.lastUserTurnIndex = followup.lastUserTurnIndex;
+            harvested.fingerprint = followup.fingerprint;
+            harvested.state =
+                harvested.stopExists && firstFingerprint === followup.fingerprint
+                    ? "stalled"
+                    : classifyTabState(harvested);
+        }
+        else {
+            harvested.state = classifyTabState(harvested);
+        }
+        return harvested;
+    }
+    finally {
+        await client.close().catch(() => undefined);
+    }
+}
+export function extractConversationIdFromUrl(url) {
+    return extractStableConversationIdFromUrl(normalizeUrl(url));
+}
+export function formatBrowserTabState(tab) {
+    return tab.state ?? classifyTabState(tab);
+}
+export function sessionMatchesTab(meta, tab) {
+    const runtime = meta?.browser?.runtime ?? {};
+    const harvest = meta?.browser?.harvest ?? {};
+    const conversationId = tab.conversationId ?? extractConversationIdFromUrl(tab.url ?? "");
+    const portMatches = [runtime.chromePort, meta?.browser?.config?.remoteChrome?.port]
+        .filter(Boolean)
+        .some((port) => Number(port) === Number(DEFAULT_REMOTE_CHROME_PORT) ||
+        Number(port) === Number(tab.port ?? port));
+    const hostMatches = [runtime.chromeHost, meta?.browser?.config?.remoteChrome?.host]
+        .filter(Boolean)
+        .every((host) => !host || host === (tab.host ?? host));
+    if (!hostMatches) {
+        return false;
+    }
+    const matches = [
+        runtime.chromeTargetId && runtime.chromeTargetId === tab.targetId,
+        harvest.targetId && harvest.targetId === tab.targetId,
+        runtime.tabUrl && runtime.tabUrl === tab.url,
+        harvest.url && harvest.url === tab.url,
+        conversationId && runtime.conversationId && runtime.conversationId === conversationId,
+        conversationId && harvest.conversationId && harvest.conversationId === conversationId,
+    ].some(Boolean);
+    return Boolean(matches ||
+        (portMatches &&
+            conversationId &&
+            (runtime.conversationId === conversationId || harvest.conversationId === conversationId)));
+}
