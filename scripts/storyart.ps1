@@ -30,8 +30,8 @@ foreach ($command in @(Get-Command python -All -ErrorAction SilentlyContinue)) {
     $candidates.Add($command.Source)
 }
 
-$localPrograms = Join-Path $env:LOCALAPPDATA 'Programs\Python'
-if (Test-Path -LiteralPath $localPrograms -PathType Container) {
+$localPrograms = if ($env:LOCALAPPDATA) { Join-Path $env:LOCALAPPDATA 'Programs\Python' } else { $null }
+if ($localPrograms -and (Test-Path -LiteralPath $localPrograms -PathType Container)) {
     foreach ($install in @(Get-ChildItem -LiteralPath $localPrograms -Directory | Sort-Object Name -Descending)) {
         $pythonExe = Join-Path $install.FullName 'python.exe'
         if (Test-Path -LiteralPath $pythonExe -PathType Leaf) { $candidates.Add($pythonExe) }

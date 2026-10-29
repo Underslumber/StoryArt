@@ -227,7 +227,7 @@ class StyleCalibrationTests(unittest.TestCase):
             first = calibration.record_quartet_art(state_path, round_number=1, image_path=original)
             archive_path = Path(first["rounds"][0]["quartet_art_archive_path"])
             original_path = first["rounds"][0]["quartet_art_path"]
-            self.assertEqual(original_path, str(original))
+            self.assertEqual(original_path, str(original.resolve()))
             self.assertTrue(original.is_file())
             self.assertTrue(archive_path.is_file())
             self.assertEqual(archive_path.read_bytes(), original.read_bytes())
