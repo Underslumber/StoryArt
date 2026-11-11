@@ -17,5 +17,21 @@
     "source_images_changed": 0,
     "prior_assessment_effect": "ADVISORY_ONLY",
     "previous_metadata_snapshot": "work/pose-curation-20261029/all-available/baseline/library"
+  },
+  "upstream_verification": {
+    "checked_at": "2026-11-11T12:50:15.483662+00:00",
+    "commit": "488939139c69acfe078372b39d4bd0c457dc060e",
+    "source": "https://github.com/anhao/ai-pose-gallery-zh",
+    "original_images_unchanged": true,
+    "verified_local_images": 1439,
+    "verification_method": "Local git blob SHA-1 against pinned upstream Git tree; local SHA-256 against active manifest",
+    "new_source_ids": 0,
+    "translation_updated_groups": 2,
+    "translation_updated_views": 10,
+    "translation_source_sha256": "0cd5a81cec6b438b53d7d5b369f2cc2a8f6a0f050a8e5ea0d7dec1ea3420133c",
+    "translation_source_url": "https://raw.githubusercontent.com/anhao/ai-pose-gallery-zh/488939139c69acfe078372b39d4bd0c457dc060e/data/pose-zh.json",
+    "identity_approval_changes": 0,
+    "source_images_downloaded": 0,
+    "depth_assets_imported": 0
   }
 }

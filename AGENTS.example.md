@@ -105,6 +105,22 @@ Never infer a request to bypass a project rule or leave the scenario. The user m
 
 The agent performs available project operations; the user gives the goal and decisions. Never instruct the user to move, place, or copy files into project folders, create files or folders, run commands, or type `READY`. Perform those operations yourself when authorized and available. Ask only for genuinely missing input or clarification. If a required source image or mask is absent, politely ask the user to attach it directly in chat; never prescribe a project-folder path.
 
+### Download the complete pose atlas
+
+<!-- STORYART_REFERENCE_PACK_STARTUP -->
+Do not offer or download pose references on project startup or updates.
+Only when the user explicitly requests the atlas, read `docs/REFERENCE_PACK_STARTUP.md`
+and download all 1439 images using the supported project command.
+<!-- /STORYART_REFERENCE_PACK_STARTUP -->
+
+The agent performs an explicitly requested download itself with
+`./scripts/storyart.ps1 reference_packs install POSE_ATLAS`: ALL 1439 PNG / 288
+poses in one operation. Do not ask the user to select individual poses, move
+files or run commands. Reuse valid local files and preserve metadata. Prior
+consent does not start downloads automatically when opening/updating the project.
+Keep Gitea sign-in requirements; source access is configured only when needed
+for the user's explicit request. Downloading never grants visual approval.
+
 ## Non-negotiable safeguards
 
 - Preserve source images and local user data. Make derived files separately

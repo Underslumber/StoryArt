@@ -4,7 +4,7 @@ param(
     [switch]$CollectPoseLineLibrary,
     [ValidateRange(1, 10)]
     [int]$PoseLinePages = 4,
-    # Optional reference packs to download from their publishers, e.g. POSE_ATLAS or all.
+    # Optional reference packs; POSE_ATLAS downloads the whole private Gitea atlas.
     [string[]]$WithReferences = @(),
     # Local copy for pack files that have no public URL (crops, expired links).
     [string]$ReferencesFromDir
@@ -57,6 +57,24 @@ $localAgents = Join-Path $root 'AGENTS.md'
 if (-not (Test-Path -LiteralPath $localAgents)) {
     Copy-Item -LiteralPath (Join-Path $root 'AGENTS.example.md') -Destination $localAgents
 }
+# Existing agent instructions survive updates; add only the portable entrypoint.
+$startupMarker = '<!-- STORYART_REFERENCE_PACK_STARTUP -->'
+$startupBlock = @"
+
+$startupMarker
+Do not offer or download pose references on project startup or updates.
+Only when the user explicitly requests the atlas, read docs/REFERENCE_PACK_STARTUP.md
+and download all 1439 images using the supported project command.
+<!-- /STORYART_REFERENCE_PACK_STARTUP -->
+"@
+$agentInstructions = [string](Get-Content -LiteralPath $localAgents -Raw)
+if ($agentInstructions.Contains($startupMarker)) {
+    $agentInstructions = [regex]::Replace($agentInstructions, '(?s)<!-- STORYART_REFERENCE_PACK_STARTUP -->.*?<!-- /STORYART_REFERENCE_PACK_STARTUP -->', $startupBlock.Trim())
+    Set-Content -LiteralPath $localAgents -Encoding utf8 -Value $agentInstructions
+}
+else {
+    Add-Content -LiteralPath $localAgents -Encoding utf8 -Value $startupBlock
+}
 
 # The ChatGPT Web image skill is optional: without -WebImages nothing of it is
 # installed or registered. setup-web-image.ps1 registers the agent after install.
@@ -98,12 +116,8 @@ if ($CollectPoseLineLibrary) {
         Write-Output 'POSE_LINE_LIBRARY_NEXT_ACTION=Visually review every contact sheet, fill POSE_LINE_REVIEW.csv, then run apply-review.'
     }
 }
-elseif ($poseStatus.status -eq 'NOT_BUILT') {
-    Write-Output 'POSE_LINE_LIBRARY_OFFER=Ask the user whether to build a local 200+ female-focused pose-line library.'
-    Write-Output 'POSE_LINE_LIBRARY_COLLECT_COMMAND=.\scripts\bootstrap.ps1 -CollectPoseLineLibrary'
-}
 elseif ($poseStatus.status -eq 'REVIEW_REQUIRED') {
-    Write-Output 'POSE_LINE_LIBRARY_NEXT_ACTION=Offer to continue visual review and apply POSE_LINE_REVIEW.csv.'
+    Write-Output 'POSE_LINE_LIBRARY_NEXT_ACTION=Review is pending; continue only on explicit user request.'
 }
 
 $packsTool = Join-Path $root 'tools\reference_packs.py'
@@ -113,7 +127,7 @@ if ($WithReferences.Count -gt 0) {
     & $python $packsTool install @packArgs
     # Exit 1 means some files had no reachable source; the rest stay installed.
     if ($LASTEXITCODE -eq 1) {
-        Write-Output 'REFERENCE_PACKS=INCOMPLETE (rerun with -ReferencesFromDir <folder> for files without a public URL)'
+        Write-Output 'REFERENCE_PACKS=INCOMPLETE (POSE_ATLAS requires Git SSH access to Gitea; other missing files may use -ReferencesFromDir <folder>)'
         $global:LASTEXITCODE = 0
     }
     Assert-NativeSuccess 'Installing reference packs'
@@ -121,7 +135,6 @@ if ($WithReferences.Count -gt 0) {
 else {
     & $python $packsTool list
     Assert-NativeSuccess 'Listing reference packs'
-    Write-Output 'REFERENCE_PACKS_INSTALL_COMMAND=.\scripts\bootstrap.ps1 -WithReferences POSE_ATLAS,COSTUME_DB_01 [-ReferencesFromDir <folder>]'
 }
 
 Write-Output 'STATUS=READY'

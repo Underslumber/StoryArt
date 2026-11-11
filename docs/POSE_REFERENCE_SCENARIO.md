@@ -103,6 +103,23 @@ group_id, source_id, angle, хеш и доказательства провер�
 
 ## Проверка и обновление
 
+Только по явному запросу пользователя агент загружает **весь атлас разом** из отдельного закрытого
+репозитория проекта (все 1439 PNG, без поштучного выбора):
+
+```powershell
+.\scripts\storyart.ps1 reference_packs install POSE_ATLAS
+```
+
+Установка не клонирует Git-репозиторий и не сохраняет полный архив;
+потоковый Git SSH проверяет размер/SHA-256 каждого PNG. Требуется
+существующий пользовательский SSH-доступ к
+`ssh://git@gitea.xapct.ru:2222/Hatzy/StoryArt-Pose-Atlas.git`.
+Сохранять личный маршрут SSH можно в `.local/reference-packs.json`,
+он не включается в Git. Отказ доступа не разрешает смену источника,
+публикацию коллекции или изменение прав. Подробности:
+`reference_packs/README.md`. После установки применяются обычные проверки
+конкретного референса; скачивание не утверждает новые метки или visual PASS.
+
 ```powershell
 .\scripts\storyart.ps1 pose_reference_manager validate --library-root BODY_REFERENCE_LIBRARY/POSE_ATLAS --json
 ```

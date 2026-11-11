@@ -14,8 +14,17 @@
     "redistribution": "forbidden"
   },
   "metadata": ["POSE_GROUPS.json", "BODY_REFERENCE_MANIFEST.csv", "IMPORT_PROVENANCE.json"],
+  "storage": {
+    "type": "GIT_ARCHIVE",
+    "homepage": "https://gitea.xapct.ru/Hatzy/StoryArt-Pose-Atlas",
+    "repository": "ssh://git@gitea.xapct.ru:2222/Hatzy/StoryArt-Pose-Atlas.git",
+    "ref": "main",
+    "directory": "images",
+    "verified_commit": "ee79d7d366ae53e746f577c4573ad7969f279ae0",
+    "timeout_seconds": 1800
+  },
   "build": {
     "glob": "sources/anhao/img/*.png",
-    "url_template": "https://raw.githubusercontent.com/anhao/ai-pose-gallery-zh/072a3690af6e7e0011abbe0fa1ccc08939fbb47d/img/{name}"
+    "url_template": "https://gitea.xapct.ru/Hatzy/StoryArt-Pose-Atlas/raw/commit/ee79d7d366ae53e746f577c4573ad7969f279ae0/images/{name}"
   }
 }
