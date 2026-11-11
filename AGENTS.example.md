@@ -105,6 +105,32 @@ Never infer a request to bypass a project rule or leave the scenario. The user m
 
 The agent performs available project operations; the user gives the goal and decisions. Never instruct the user to move, place, or copy files into project folders, create files or folders, run commands, or type `READY`. Perform those operations yourself when authorized and available. Ask only for genuinely missing input or clarification. If a required source image or mask is absent, politely ask the user to attach it directly in chat; never prescribe a project-folder path.
 
+### Download the complete pose atlas
+
+<!-- STORYART_REFERENCE_PACK_STARTUP -->
+At project onboarding or after an update, read `docs/REFERENCE_PACK_STARTUP.md`
+and run `./scripts/storyart.ps1 reference_packs startup POSE_ATLAS --apply`.
+If action is OFFER_DOWNLOAD, offer the complete atlas once. After actual user
+acceptance, use `--decision accepted --apply` immediately. Never ask again
+when current-chat or saved acceptance already exists; resume the download.
+READY and DECLINED do not produce another offer. This contract also applies
+when another agent opens the same checkout.
+<!-- /STORYART_REFERENCE_PACK_STARTUP -->
+
+When the user requests the atlas download, or their explicitly selected
+BODY_REFERENCE_LIBRARY requires a missing/partial POSE_ATLAS, the agent runs
+`./scripts/storyart.ps1 reference_packs install POSE_ATLAS` itself. This downloads
+ALL 1439 PNG / 288 poses from the project's private Gitea in one operation;
+do not ask the user to select individual poses, download files, or run commands.
+Use `reference_packs list --json` for availability and `reference_packs verify
+POSE_ATLAS` after installation. Existing correct files and local metadata remain.
+See `reference_packs/README.md` for existing Git SSH access and ignored local
+routing. Do not create credentials or change repository permissions. If actual
+SSH access is missing, report that boundary; never replace the selected library
+or switch to a public mirror. Downloading is not image generation or visual
+approval. Without saved acceptance, opening StoryArt does not silently start a
+638 MiB download, optional reference search, or calibration.
+
 ## Non-negotiable safeguards
 
 - Preserve source images and local user data. Make derived files separately

@@ -4,7 +4,7 @@ param(
     [switch]$CollectPoseLineLibrary,
     [ValidateRange(1, 10)]
     [int]$PoseLinePages = 4,
-    # Optional reference packs to download from their publishers, e.g. POSE_ATLAS or all.
+    # Optional reference packs; POSE_ATLAS downloads the whole private Gitea atlas.
     [string[]]$WithReferences = @(),
     # Local copy for pack files that have no public URL (crops, expired links).
     [string]$ReferencesFromDir
@@ -56,6 +56,18 @@ else {
 $localAgents = Join-Path $root 'AGENTS.md'
 if (-not (Test-Path -LiteralPath $localAgents)) {
     Copy-Item -LiteralPath (Join-Path $root 'AGENTS.example.md') -Destination $localAgents
+}
+# Existing agent instructions survive updates; add only the portable entrypoint.
+$startupMarker = '<!-- STORYART_REFERENCE_PACK_STARTUP -->'
+if (-not ([string](Get-Content -LiteralPath $localAgents -Raw)).Contains($startupMarker)) {
+    Add-Content -LiteralPath $localAgents -Encoding utf8 -Value @"
+
+$startupMarker
+At project startup or after an update, read docs/REFERENCE_PACK_STARTUP.md and
+run the reference_packs startup flow. Offer the whole missing atlas only when
+no decision exists. Preserve accepted consent and resume without asking again.
+<!-- /STORYART_REFERENCE_PACK_STARTUP -->
+"@
 }
 
 # The ChatGPT Web image skill is optional: without -WebImages nothing of it is
@@ -113,7 +125,7 @@ if ($WithReferences.Count -gt 0) {
     & $python $packsTool install @packArgs
     # Exit 1 means some files had no reachable source; the rest stay installed.
     if ($LASTEXITCODE -eq 1) {
-        Write-Output 'REFERENCE_PACKS=INCOMPLETE (rerun with -ReferencesFromDir <folder> for files without a public URL)'
+        Write-Output 'REFERENCE_PACKS=INCOMPLETE (POSE_ATLAS requires Git SSH access to Gitea; other missing files may use -ReferencesFromDir <folder>)'
         $global:LASTEXITCODE = 0
     }
     Assert-NativeSuccess 'Installing reference packs'
@@ -124,4 +136,20 @@ else {
     Write-Output 'REFERENCE_PACKS_INSTALL_COMMAND=.\scripts\bootstrap.ps1 -WithReferences POSE_ATLAS,COSTUME_DB_01 [-ReferencesFromDir <folder>]'
 }
 
+$startupArgs = @('startup', 'POSE_ATLAS')
+if ($WithReferences -notcontains 'POSE_ATLAS' -and $WithReferences -notcontains 'all') {
+    $startupArgs += '--apply'
+}
+$startupJson = & $python $packsTool @startupArgs
+if ($LASTEXITCODE -eq 1) {
+    Write-Output 'POSE_ATLAS_DOWNLOAD=INCOMPLETE (consent preserved; resume without asking again)'
+    $global:LASTEXITCODE = 0
+}
+Assert-NativeSuccess 'Checking pose-atlas startup decision'
+$startup = ($startupJson -join "`n") | ConvertFrom-Json
+Write-Output "POSE_ATLAS_ACTION=$($startup.action)"
+Write-Output "POSE_ATLAS_CONSENT=$($startup.consent)"
+if ($startup.action -eq 'OFFER_DOWNLOAD') {
+    Write-Output "POSE_ATLAS_OFFER=$($startup.question)"
+}
 Write-Output 'STATUS=READY'
