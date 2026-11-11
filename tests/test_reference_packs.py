@@ -264,26 +264,29 @@ class ReferencePackTests(unittest.TestCase):
         self.assertEqual(result["status"], "INCOMPLETE")
         self.assertEqual((self.workspace / "LIBRARY/DEMO/img/a.png").read_bytes(), b"alpha")
 
-    def test_new_device_offers_download_without_network_or_creating_consent(self) -> None:
+    def test_new_device_never_offers_or_downloads_on_startup(self) -> None:
         write_pack(self.packs_root, "DEMO", [("img/a.png", b"alpha", "")])
         with mock.patch.object(packs, "install") as install:
             result = packs.startup("DEMO", self.workspace, self.packs_root, apply=True)
-        self.assertEqual(result["action"], "OFFER_DOWNLOAD")
+        self.assertEqual(result["action"], "ON_REQUEST")
         self.assertEqual(result["consent"], "unknown")
-        self.assertIn("1 PNG", result["question"])
+        self.assertNotIn("question", result)
         self.assertFalse((self.workspace / packs.CONSENT_FILE).exists())
         install.assert_not_called()
 
-    def test_acceptance_survives_failed_download_and_next_agent_resumes_without_offer(self) -> None:
+    def test_saved_acceptance_does_not_download_until_an_explicit_request(self) -> None:
         write_pack(self.packs_root, "DEMO", [("img/a.png", b"alpha", "")])
         failed = packs.startup("DEMO", self.workspace, self.packs_root, decision="accepted", apply=True)
         self.assertEqual(failed["action"], "RETRY_REQUIRED")
         self.assertEqual(packs.consent_state(self.workspace)["packs"]["DEMO"]["decision"], "accepted")
         next_agent = packs.startup("DEMO", self.workspace, self.packs_root)
-        self.assertEqual(next_agent["action"], "DOWNLOAD_REQUIRED")
+        self.assertEqual(next_agent["action"], "ON_REQUEST")
         self.assertNotIn("question", next_agent)
         with mock.patch.object(packs, "install", return_value={"status": "INSTALLED"}) as install:
-            resumed = packs.startup("DEMO", self.workspace, self.packs_root, apply=True)
+            idle = packs.startup("DEMO", self.workspace, self.packs_root, apply=True)
+            install.assert_not_called()
+            self.assertEqual(idle["action"], "ON_REQUEST")
+            resumed = packs.startup("DEMO", self.workspace, self.packs_root, decision="accepted", apply=True)
         install.assert_called_once()
         self.assertEqual(resumed["action"], "READY")
         self.assertNotIn("question", resumed)

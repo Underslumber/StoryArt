@@ -212,16 +212,13 @@ def startup(pool: str, workspace: Path, packs_root: Path = PACKS_ROOT,
     metadata_missing = [name for name in pack.get("metadata", []) if not safe_join(target_root(pack, workspace), name).is_file()]
     if status["status"] == "INSTALLED" and not metadata_missing:
         action = "READY"
-    elif saved == "accepted":
+    elif saved == "accepted" and decision == "accepted":
         action = "DOWNLOAD_REQUIRED"
     elif saved == "declined":
         action = "DECLINED"
     else:
-        action = "OFFER_DOWNLOAD"
+        action = "ON_REQUEST"
     result: dict[str, Any] = {**status, "consent": saved, "action": action, "metadata_missing": metadata_missing}
-    if action == "OFFER_DOWNLOAD":
-        result["question"] = (f"Скачать весь атлас поз из Gitea: {status['files']} PNG, "
-                              f"около {status['bytes'] / 1024**2:.0f} МиБ?")
     if action == "DOWNLOAD_REQUIRED" and apply:
         result["download"] = install(pool, workspace, packs_root)
         result["action"] = "READY" if result["download"]["status"] == "INSTALLED" else "RETRY_REQUIRED"
@@ -548,10 +545,10 @@ def main(argv: list[str] | None = None) -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     listing = commands.add_parser("list", help="show packs and whether they are installed")
     listing.add_argument("--json", action="store_true")
-    onboarding = commands.add_parser("startup", help="offer a missing atlas once, or resume an already accepted download")
+    onboarding = commands.add_parser("startup", help="report atlas state without offers or automatic downloads")
     onboarding.add_argument("pool", nargs="?", default="POSE_ATLAS")
     onboarding.add_argument("--decision", choices=["accepted", "declined"], help="record the user's actual reply")
-    onboarding.add_argument("--apply", action="store_true", help="download only when consent is already accepted")
+    onboarding.add_argument("--apply", action="store_true", help="download only with an explicit --decision accepted in this invocation")
     verify = commands.add_parser("verify", help="hash-check installed files")
     verify.add_argument("pools", nargs="*")
     setup = commands.add_parser("install", help="download or copy pack files and metadata")

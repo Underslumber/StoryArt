@@ -59,15 +59,21 @@ if (-not (Test-Path -LiteralPath $localAgents)) {
 }
 # Existing agent instructions survive updates; add only the portable entrypoint.
 $startupMarker = '<!-- STORYART_REFERENCE_PACK_STARTUP -->'
-if (-not ([string](Get-Content -LiteralPath $localAgents -Raw)).Contains($startupMarker)) {
-    Add-Content -LiteralPath $localAgents -Encoding utf8 -Value @"
+$startupBlock = @"
 
 $startupMarker
-At project startup or after an update, read docs/REFERENCE_PACK_STARTUP.md and
-run the reference_packs startup flow. Offer the whole missing atlas only when
-no decision exists. Preserve accepted consent and resume without asking again.
+Do not offer or download pose references on project startup or updates.
+Only when the user explicitly requests the atlas, read docs/REFERENCE_PACK_STARTUP.md
+and download all 1439 images using the supported project command.
 <!-- /STORYART_REFERENCE_PACK_STARTUP -->
 "@
+$agentInstructions = [string](Get-Content -LiteralPath $localAgents -Raw)
+if ($agentInstructions.Contains($startupMarker)) {
+    $agentInstructions = [regex]::Replace($agentInstructions, '(?s)<!-- STORYART_REFERENCE_PACK_STARTUP -->.*?<!-- /STORYART_REFERENCE_PACK_STARTUP -->', $startupBlock.Trim())
+    Set-Content -LiteralPath $localAgents -Encoding utf8 -Value $agentInstructions
+}
+else {
+    Add-Content -LiteralPath $localAgents -Encoding utf8 -Value $startupBlock
 }
 
 # The ChatGPT Web image skill is optional: without -WebImages nothing of it is
@@ -110,12 +116,8 @@ if ($CollectPoseLineLibrary) {
         Write-Output 'POSE_LINE_LIBRARY_NEXT_ACTION=Visually review every contact sheet, fill POSE_LINE_REVIEW.csv, then run apply-review.'
     }
 }
-elseif ($poseStatus.status -eq 'NOT_BUILT') {
-    Write-Output 'POSE_LINE_LIBRARY_OFFER=Ask the user whether to build a local 200+ female-focused pose-line library.'
-    Write-Output 'POSE_LINE_LIBRARY_COLLECT_COMMAND=.\scripts\bootstrap.ps1 -CollectPoseLineLibrary'
-}
 elseif ($poseStatus.status -eq 'REVIEW_REQUIRED') {
-    Write-Output 'POSE_LINE_LIBRARY_NEXT_ACTION=Offer to continue visual review and apply POSE_LINE_REVIEW.csv.'
+    Write-Output 'POSE_LINE_LIBRARY_NEXT_ACTION=Review is pending; continue only on explicit user request.'
 }
 
 $packsTool = Join-Path $root 'tools\reference_packs.py'
@@ -133,23 +135,6 @@ if ($WithReferences.Count -gt 0) {
 else {
     & $python $packsTool list
     Assert-NativeSuccess 'Listing reference packs'
-    Write-Output 'REFERENCE_PACKS_INSTALL_COMMAND=.\scripts\bootstrap.ps1 -WithReferences POSE_ATLAS,COSTUME_DB_01 [-ReferencesFromDir <folder>]'
 }
 
-$startupArgs = @('startup', 'POSE_ATLAS')
-if ($WithReferences -notcontains 'POSE_ATLAS' -and $WithReferences -notcontains 'all') {
-    $startupArgs += '--apply'
-}
-$startupJson = & $python $packsTool @startupArgs
-if ($LASTEXITCODE -eq 1) {
-    Write-Output 'POSE_ATLAS_DOWNLOAD=INCOMPLETE (consent preserved; resume without asking again)'
-    $global:LASTEXITCODE = 0
-}
-Assert-NativeSuccess 'Checking pose-atlas startup decision'
-$startup = ($startupJson -join "`n") | ConvertFrom-Json
-Write-Output "POSE_ATLAS_ACTION=$($startup.action)"
-Write-Output "POSE_ATLAS_CONSENT=$($startup.consent)"
-if ($startup.action -eq 'OFFER_DOWNLOAD') {
-    Write-Output "POSE_ATLAS_OFFER=$($startup.question)"
-}
 Write-Output 'STATUS=READY'
