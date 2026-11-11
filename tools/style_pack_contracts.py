@@ -6,7 +6,10 @@ Split from style_pack_manager.py; the manager re-exports every name defined here
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import re
+from pathlib import Path
 
 try:
     from tools.style_pack_common import StylePackError
@@ -33,6 +36,695 @@ ANTHROPOMETRIC_QA_LIMITS = {
     "neck_head_ratio": (0.20, 0.48),
     "neck_jaw_ratio": (0.50, 0.90),
 }
+
+CONSTRUCTION_GEOMETRY_METHOD_ID = "AUTHOR_CONFIRMED_CONSTRUCTION_GEOMETRY"
+CONSTRUCTION_GEOMETRY_VERSION = "1"
+CONSTRUCTION_GEOMETRY_NUMERIC_SOURCE = "AUTHOR_CONFIRMED_CONSTRUCTION_NOT_VISIBLE_MEASUREMENT"
+
+
+LOCAL_DERIVATIVE_KIND = "LOCAL_DETERMINISTIC_FOREFOOT_CORRECTION"
+LOCAL_DERIVATIVE_ROI = (270, 1525, 560, 1643)
+
+
+def validate_local_derivative_receipt(
+    receipt_path: Path,
+    *,
+    request_root: Path,
+    request_id: str,
+    character_id: str,
+    stage_id: str,
+    output: Path,
+    guard_path: Path,
+    attempt_id: str,
+    allow_accepted_stage_replay: bool = False,
+) -> dict[str, object]:
+    """Recompute and bind one narrowly scoped, current-request SIDE derivative.
+
+    The recipe is only hash checked; this validator never imports or executes it.
+    The derivative is not represented as provider bytes or art approval.
+    """
+    from PIL import Image, ImageChops
+
+    request_root = request_root.resolve()
+    guard_path = guard_path.resolve()
+    output = output.resolve()
+
+    def inside(path: Path, label: str) -> Path:
+        resolved = path.expanduser().resolve()
+        if not resolved.is_file() or not resolved.is_relative_to(request_root):
+            raise StylePackError(f"Local derivative {label} must be an existing file in the exact active request folder.")
+        return resolved
+
+    def digest(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    try:
+        receipt_path = inside(receipt_path, "receipt")
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        guard = json.loads(guard_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise StylePackError(f"Cannot read local derivative receipt or execution guard: {error}") from error
+    if not isinstance(receipt, dict) or receipt.get("schema_version") != 1:
+        raise StylePackError("Local derivative receipt must use schema_version=1.")
+    if (request_root.name != request_id or receipt.get("request_id") != request_id
+            or guard.get("request_id") != request_id or character_id.upper() != "NEW"
+            or receipt.get("character_id") != "NEW" or receipt.get("generation_purpose") != "CHARACTER_BASE"
+            or receipt.get("stage_id") != "03_PHYSIQUE_SIDE"
+            or stage_id.upper() != "03_PHYSIQUE_SIDE"
+            or receipt.get("kind") != LOCAL_DERIVATIVE_KIND):
+        raise StylePackError("Local derivative receipt is outside the exact NEW CHARACTER_BASE SIDE request scope.")
+    base = guard.get("character_base_contract")
+    if (not isinstance(base, dict) or base.get("age_group") != "ADULT"
+            or base.get("subject_anatomy") != "MALE_ANATOMY"):
+        raise StylePackError("Local derivative requires the guard's adult MALE CHARACTER_BASE contract.")
+    if guard_path.parent.resolve() != request_root:
+        raise StylePackError("Local derivative execution guard must be in the exact active request folder.")
+    attempts = guard.get("attempts")
+    candidates = [row for row in attempts if isinstance(row, dict) and row.get("attempt_id") == attempt_id] if isinstance(attempts, list) else []
+    if len(candidates) != 1:
+        raise StylePackError("Local derivative must bind exactly one existing provider attempt.")
+    attempt = candidates[0]
+    side_attempts = [row for row in attempts if isinstance(row, dict)
+                      and row.get("stage") == "03_PHYSIQUE_SIDE"
+                      and row.get("task_revision") == guard.get("task_revision")]
+    latest_attempt_id = next((row.get("attempt_id") for row in reversed(attempts) if isinstance(row, dict)), None)
+    source_is_current = bool(
+        side_attempts and side_attempts[-1] is attempt
+        and latest_attempt_id == attempt_id
+        and attempt.get("task_revision") == guard.get("task_revision")
+        and attempt.get("status") in {"RESULT_AVAILABLE", "DELIVERED"}
+    )
+    if (attempt.get("status") not in {"RESULT_AVAILABLE", "DELIVERED"}
+            or (not source_is_current and not allow_accepted_stage_replay)):
+        raise StylePackError("Local derivative must bind the current SIDE result or its unchanged accepted stage proof.")
+    snapshot = attempt.get("execution_snapshot")
+    provider = attempt.get("provider_artifact")
+    snap_provider = snapshot.get("provider_artifact") if isinstance(snapshot, dict) else None
+    if (not isinstance(snapshot, dict) or not isinstance(provider, dict)
+            or attempt.get("stage") != "03_PHYSIQUE_SIDE"
+            or snapshot.get("request_id") != request_id or snapshot.get("attempt_id") != attempt_id
+            or snapshot.get("request_purpose") != "CHARACTER_BASE"
+            or snapshot.get("execution_stage") != "03_PHYSIQUE_SIDE"):
+        raise StylePackError("Local derivative is not bound to an executed adult CHARACTER_BASE SIDE attempt.")
+    if not isinstance(snap_provider, dict):
+        snap_provider = provider
+    provider_path = inside(Path(str(provider.get("path", ""))), "original provider source")
+    provider_hash = str(provider.get("sha256", "")).lower()
+    if (provider_path != inside(Path(str(snap_provider.get("path", ""))), "snapshot provider source")
+            or provider_hash != str(snap_provider.get("sha256", "")).lower()
+            or not re.fullmatch(r"[0-9a-f]{64}", provider_hash)
+            or digest(provider_path) != provider_hash):
+        raise StylePackError("Local derivative original provider path/hash differs from the immutable attempt binding.")
+    if receipt.get("source_attempt_id") != attempt_id:
+        raise StylePackError("Local derivative source attempt differs from the exact provider attempt.")
+    executed_plan_path = inside(Path(str(receipt.get("source_executed_plan_path", ""))), "immutable executed plan")
+    executed_plan_hash = str(receipt.get("source_executed_plan_sha256", "")).lower()
+    if (executed_plan_path != Path(str(snapshot.get("reference_plan_snapshot_path", ""))).resolve()
+            or executed_plan_hash != str(snapshot.get("reference_plan_snapshot_sha256", "")).lower()
+            or not re.fullmatch(r"[0-9a-f]{64}", executed_plan_hash)
+            or digest(executed_plan_path) != executed_plan_hash):
+        raise StylePackError("Local derivative source immutable executed-plan path/hash is stale.")
+
+    def receipt_file(path_key: str, hash_key: str, label: str) -> Path:
+        file = inside(Path(str(receipt.get(path_key, ""))), label)
+        expected = str(receipt.get(hash_key, "")).lower()
+        if not re.fullmatch(r"[0-9a-f]{64}", expected) or digest(file) != expected:
+            raise StylePackError(f"Local derivative {label} hash is missing or stale.")
+        return file
+
+    source = receipt_file("source_image", "source_sha256", "source")
+    derivative = receipt_file("output_image", "output_sha256", "output")
+    mask_path = receipt_file("mask_path", "mask_sha256", "mask")
+    directive_path = receipt_file("directive_path", "directive_sha256", "directive")
+    recipe_path = receipt_file("recipe_path", "recipe_sha256", "recipe")
+    if (source != provider_path or str(receipt.get("source_sha256", "")).lower() != provider_hash
+            or derivative != output):
+        raise StylePackError("Local derivative source must be the exact provider bytes and output must be the submitted image.")
+
+    try:
+        directive = json.loads(directive_path.read_text(encoding="utf-8"))
+        operation_path = inside(Path(str(directive.get("operation_specification", ""))), "operation specification")
+        operation_hash = str(directive.get("operation_specification_sha256", "")).lower()
+        operation = json.loads(operation_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, AttributeError) as error:
+        raise StylePackError(f"Local derivative directive or operation specification is invalid: {error}") from error
+    if (directive.get("schema_version") != 1 or directive.get("request_id") != request_id
+            or directive.get("scope") != "CURRENT_SIDE_LOCAL_FOOT_CORRECTION_AND_NATIVE_DERIVATIVE_REGISTRATION"
+            or not isinstance(directive.get("user_directive"), str)
+            or not directive["user_directive"].strip()
+            or "\ufffd" in directive["user_directive"]
+            or not isinstance(directive.get("source"), str)
+            or "Current chat structured free-text reply" not in directive["source"]
+            or not isinstance(directive.get("authority_basis"), str)
+            or "Existing full-kit work authorization" not in directive["authority_basis"]
+            or "exact reply retained" not in directive["authority_basis"]
+            or not isinstance(directive.get("forbidden_changes"), str)
+            or "Everything outside declared region" not in directive["forbidden_changes"]
+            or "fakeQA" not in directive["forbidden_changes"]
+            or directive.get("art_approval") is not False
+            or Path(str(directive.get("source_image", ""))).resolve() != source
+            or str(directive.get("source_sha256", "")).lower() != provider_hash
+            or not re.fullmatch(r"[0-9a-f]{64}", operation_hash)
+            or digest(operation_path) != operation_hash):
+        raise StylePackError("Local derivative directive lacks its exact current-chat context, execution authority, or source binding.")
+    if (not isinstance(operation, dict) or operation.get("schema_version") != 1
+            or operation.get("status") != "PROPOSED_NOT_EXECUTED"
+            or Path(str(operation.get("source_image", ""))).resolve() != source
+            or operation.get("source_sha256", "").lower() != provider_hash
+            or not isinstance(operation.get("scope"), str)
+            or "forefoot" not in operation["scope"].lower()
+            or "no full-frame generation" not in operation["scope"].lower()
+            or tuple(operation.get("roi", ())) != LOCAL_DERIVATIVE_ROI
+            or operation.get("fixed_ankle_x") != 475
+            or operation.get("fixed_heel_x") != 532
+            or operation.get("target_heel_to_toe") != 190
+            or operation.get("vertical_displacement") not in (None, 0)
+            or operation.get("approval") is not None):
+        raise StylePackError("Local derivative operation specification is not the authorized fixed-ankle 190-pixel forefoot correction.")
+    geometry_path = receipt_file("geometry_path", "geometry_sha256", "approved geometry")
+    approval_path = receipt_file("geometry_approval_path", "geometry_approval_sha256", "geometry approval")
+    try:
+        geometry = json.loads(geometry_path.read_text(encoding="utf-8"))
+        approval = json.loads(approval_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise StylePackError(f"Local derivative approved construction source is invalid: {error}") from error
+    dimensions = geometry.get("design_dimensions", {}) if isinstance(geometry, dict) else {}
+    if (not isinstance(geometry, dict) or geometry.get("request_id") != request_id
+            or geometry.get("character_id") != "NEW"
+            or not isinstance(dimensions, dict) or dimensions.get("side_foot_length") != 190
+            or not isinstance(approval, dict) or approval.get("request_id") != request_id
+            or approval.get("character_id") != "NEW"
+            or approval.get("geometry_sha256", "").lower() != digest(geometry_path)
+            or not isinstance(approval.get("approval_quote"), str) or not approval["approval_quote"].strip()
+            or not isinstance(approval.get("approval_source"), str) or not approval["approval_source"].strip()
+            or approval.get("scope") != "CONSTRUCTION_GEOMETRY_ONLY"
+            or approval.get("approves_previous_illustration") is not False
+            or approval.get("numeric_visible_landmarks_remain") != "NOT_CHECKED"):
+        raise StylePackError("Local derivative 190-pixel target lacks its exact scoped approved construction source.")
+    if tuple(receipt.get("roi", ())) != LOCAL_DERIVATIVE_ROI or receipt.get("target_heel_to_toe") != 190:
+        raise StylePackError("Local derivative receipt ROI or target length differs from the authorized operation.")
+    if (receipt.get("fixed_ankle_x") != 475 or receipt.get("fixed_heel_x") != 532
+            or receipt.get("vertical_displacement") != 0
+            or receipt.get("state") != "POSTPROCESSED_QA_PENDING"):
+        raise StylePackError("Local derivative receipt changes the fixed ankle, posterior heel, or foot vertical alignment.")
+
+    try:
+        with Image.open(source) as im:
+            if im.mode != "RGB":
+                raise StylePackError("Local derivative source must be an RGB image.")
+            src = im.copy()
+        with Image.open(derivative) as im:
+            if im.mode != "RGB":
+                raise StylePackError("Local derivative output must be an RGB image.")
+            dst = im.copy()
+        with Image.open(mask_path) as im:
+            mask = im.convert("L").point(lambda value: 255 if value > 0 else 0)
+    except OSError as error:
+        raise StylePackError(f"Local derivative images could not be decoded: {error}") from error
+    if src.size != dst.size or src.size != mask.size or src.mode != "RGB" or dst.mode != "RGB":
+        raise StylePackError("Local derivative source, output, and mask must have the same canvas dimensions.")
+    x0, y0, x1, y1 = LOCAL_DERIVATIVE_ROI
+    mask_bbox = mask.getbbox()
+    if mask_bbox is None or mask_bbox[0] < x0 or mask_bbox[1] < y0 or mask_bbox[2] > x1 or mask_bbox[3] > y1:
+        raise StylePackError("Local derivative mask must be nonempty and contained inside the fixed forefoot ROI.")
+    difference = ImageChops.difference(src, dst)
+    changed = ImageChops.lighter(
+        ImageChops.lighter(difference.getchannel(0), difference.getchannel(1)),
+        difference.getchannel(2),
+    )
+    changed = changed.point(lambda value: 255 if value > 0 else 0)
+    outside_mask = ImageChops.multiply(changed, ImageChops.invert(mask))
+    if outside_mask.getbbox() is not None:
+        raise StylePackError("Local derivative changes pixels outside its hash-bound mask.")
+    changed_bbox = changed.getbbox()
+    if changed_bbox is None or changed_bbox[0] < x0 or changed_bbox[1] < y0 or changed_bbox[2] > x1 or changed_bbox[3] > y1:
+        raise StylePackError("Local derivative changed-pixel bounding box must be nonempty and contained in the authorized ROI.")
+    if (ImageChops.difference(src.crop((475, 0, src.width, src.height)), dst.crop((475, 0, dst.width, dst.height))).getbbox() is not None
+            or ImageChops.difference(src.crop((0, 0, src.width, y0)), dst.crop((0, 0, dst.width, y0))).getbbox() is not None):
+        raise StylePackError("Local derivative changed the fixed ankle/posterior heel or upper-body pixels.")
+    changed_count = changed.histogram()[255]
+    if receipt.get("changed_pixel_count") != changed_count:
+        raise StylePackError("Local derivative changed-pixel count differs from recomputed pixels.")
+    proof = {
+        "schema_version": 1,
+        "kind": LOCAL_DERIVATIVE_KIND,
+        "request_id": request_id,
+        "character_id": character_id,
+        "stage_id": stage_id.upper(),
+        "attempt_id": attempt_id,
+        "task_revision": int(attempt.get("task_revision", -1)),
+        "provider_artifact": {"path": str(provider_path), "sha256": provider_hash},
+        "source_executed_plan_path": str(executed_plan_path),
+        "source_executed_plan_sha256": executed_plan_hash,
+        "derived_artifact": {"path": str(derivative), "sha256": digest(derivative)},
+        "receipt_path": str(receipt_path),
+        "receipt_sha256": digest(receipt_path),
+        "mask_path": str(mask_path), "mask_sha256": digest(mask_path),
+        "directive_path": str(directive_path), "directive_sha256": digest(directive_path),
+        "recipe_path": str(recipe_path), "recipe_sha256": digest(recipe_path),
+        "operation_specification_path": str(operation_path), "operation_specification_sha256": digest(operation_path),
+        "geometry_path": str(geometry_path), "geometry_sha256": digest(geometry_path),
+        "geometry_approval_path": str(approval_path), "geometry_approval_sha256": digest(approval_path),
+        "guard_path": str(guard_path),
+        "roi": list(LOCAL_DERIVATIVE_ROI),
+        "changed_pixel_count": changed_count,
+        "changed_bbox": list(changed_bbox),
+        "art_approval": False,
+    }
+    if allow_accepted_stage_replay:
+        required_stages = guard.get("required_stages")
+        stage_rows = [row for row in required_stages if isinstance(row, dict)
+                      and str(row.get("id", "")).upper() == "03_PHYSIQUE_SIDE"] if isinstance(required_stages, list) else []
+        if len(stage_rows) != 1:
+            raise StylePackError("Local derivative replay requires the exact SIDE required-stage record.")
+        stage_row = stage_rows[0]
+        stage_events = [event for event in guard.get("events", []) if isinstance(event, dict)
+                        and str(event.get("stage", "")).upper() == "03_PHYSIQUE_SIDE"
+                        and event.get("event") in {"STAGE_COMPLETED", "STAGE_REOPENED"}]
+        if stage_row.get("status") == "COMPLETED":
+            binding = stage_row.get("accepted_attempt_binding")
+            derived = proof.get("derived_artifact", {})
+            if (not isinstance(binding, dict)
+                    or binding.get("attempt_id") != attempt_id
+                    or binding.get("task_revision") != attempt.get("task_revision")
+                    or binding.get("result_status") != attempt.get("result_status")
+                    or Path(str(binding.get("artifact_path", ""))).resolve() != provider_path
+                    or str(binding.get("artifact_sha256", "")).lower() != provider_hash
+                    or binding.get("derived_artifact") != proof
+                    or not isinstance(derived, dict)):
+                raise StylePackError("Accepted SIDE stage no longer binds the exact local derivative and original provider result.")
+            stage_evidence = Path(str(binding.get("stage_evidence_path", ""))).resolve()
+            stage_evidence_hash = str(binding.get("stage_evidence_sha256", "")).lower()
+            recorded_hashes = stage_row.get("evidence_sha256", {})
+            if (not stage_evidence.is_file() or not stage_evidence.is_relative_to(request_root)
+                    or digest(stage_evidence) != stage_evidence_hash
+                    or stage_evidence_hash != str(derived.get("sha256", "")).lower()
+                    or not isinstance(recorded_hashes, dict)
+                    or str(recorded_hashes.get(str(stage_evidence), "")).lower() != stage_evidence_hash):
+                raise StylePackError("Accepted SIDE stage evidence was reopened or changed after derivative registration.")
+            if stage_events and stage_events[-1].get("event") != "STAGE_COMPLETED":
+                raise StylePackError("SIDE stage was reopened after accepting the local derivative.")
+        else:
+            if (not source_is_current
+                    or (stage_events and stage_events[-1].get("event") == "STAGE_REOPENED")):
+                raise StylePackError("An unaccepted or reopened SIDE stage cannot use historical derivative replay.")
+    return proof
+
+
+def construction_geometry_violations(
+    values: object,
+    plan: dict[str, object] | None = None,
+) -> list[str]:
+    """Validate design-geometry ratios against the unchanged adult limits.
+
+    These are dimensions from an approved construction scheme, never claims
+    about measurements taken from the rendered image.
+    """
+    if not isinstance(values, dict):
+        raise StylePackError("Construction geometry values must be an object.")
+    names = (
+        "head_units", "pubic_height_fraction", "lower_to_upper_leg_ratio",
+        "ankle_width_head_ratio", "foot_length_head_ratio", "neck_head_ratio",
+        "neck_jaw_ratio",
+    )
+    numeric: dict[str, float] = {}
+    for name in names:
+        try:
+            numeric[name] = float(values[name])
+        except (KeyError, TypeError, ValueError):
+            raise StylePackError(f"Construction geometry requires numeric {name}.")
+        if numeric[name] <= 0:
+            raise StylePackError(f"Construction geometry {name} must be greater than zero.")
+    limits = dict(ANTHROPOMETRIC_QA_LIMITS)
+    body_contract = plan.get("body_proportion_contract", {}) if isinstance(plan, dict) else {}
+    height_contract = body_contract.get("height_in_heads", {}) if isinstance(body_contract, dict) else {}
+    if isinstance(height_contract, dict) and height_contract.get("mode") == "EXPLICIT_RANGE":
+        try:
+            lower, upper = float(height_contract["minimum"]), float(height_contract["maximum"])
+        except (KeyError, TypeError, ValueError):
+            raise StylePackError("Construction geometry body-height contract requires numeric bounds.")
+        if lower <= 0 or upper < lower:
+            raise StylePackError("Construction geometry body-height contract has invalid bounds.")
+        limits["head_units"] = (max(limits["head_units"][0], lower), min(limits["head_units"][1], upper))
+    measured = {
+        "head_units": numeric["head_units"],
+        "pubic_height_fraction": numeric["pubic_height_fraction"],
+        "lower_to_upper_leg_ratio": numeric["lower_to_upper_leg_ratio"],
+        "ankle_width_head_ratio": numeric["ankle_width_head_ratio"],
+        "foot_length_head_ratio": numeric["foot_length_head_ratio"],
+        "neck_head_ratio": numeric["neck_head_ratio"],
+        "neck_jaw_ratio": numeric["neck_jaw_ratio"],
+    }
+    violations = []
+    for name, value in measured.items():
+        minimum, maximum = limits[name]
+        if not minimum <= value <= maximum:
+            violations.append(f"{name}={value:.4g} outside {minimum:g}-{maximum:g}")
+    return violations
+
+
+def validate_mandatory_clothes_authorization(path: str | Path, *, request_id: str,
+                                             character_id: str, plan: dict[str, object]) -> dict[str, object]:
+    """Validate narrow request-bound consent for one mandatory CLOTHES source."""
+    authorization_path = Path(path).expanduser().resolve()
+    request_root = authorization_path.parent
+    if authorization_path.name != "MANDATORY_CLOTHES_AUTHORIZATION.json":
+        raise StylePackError("Mandatory CLOTHES authorization must use the request-bound authorization record.")
+    try:
+        raw = authorization_path.read_bytes()
+        record = json.loads(raw.decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise StylePackError(f"Cannot read mandatory CLOTHES authorization: {error}") from error
+    if not isinstance(record, dict):
+        raise StylePackError("Mandatory CLOTHES authorization must be a JSON object.")
+    request_id = str(request_id).strip()
+    character_id = str(character_id).strip().upper()
+    expected = {"schema_version": 1, "request_id": request_id, "character_id": character_id,
+        "generation_purpose": "SCENE", "stage_id": "SINGLE_PASS", "item_kind": "CLOTHING",
+        "physical_role": "CLOTHES", "style_name": "LORANDESORE", "fidelity": 90,
+        "aux_body_decision": "SELECTED", "reference_policy": "BODY_LIBRARY_ONLY",
+        "source_reference_id": "REF_00217", "subject_label": "MALE",
+        "authorization_quote": "Теперь сделай из этого персонажа + комплект одежды. Полный набор",
+        "continuation_authorization_quote": "Утвердить показанную базу и продолжить комплект одежды",
+        "tool_repair_permission_quote": "Разрешить узкое исправление и продолжить комплект",
+        "unseen_clothing_author_approval_granted": False}
+    if any(record.get(key) != value for key, value in expected.items()):
+        raise StylePackError("Mandatory CLOTHES authorization does not match the exact SCENE/SINGLE_PASS request contract.")
+    source = Path(str(record.get("clothes_reference_path", ""))).expanduser().resolve()
+    source_hash = str(record.get("clothes_reference_sha256", "")).lower()
+    item_plan = Path(str(record.get("item_plan_path", ""))).expanduser().resolve()
+    item_hash = str(record.get("item_plan_sha256", "")).lower()
+    assembly = Path(str(record.get("character_assembly_path", ""))).expanduser().resolve()
+    assembly_hash = str(record.get("character_assembly_sha256", "")).lower()
+    for label, file, digest in (("CLOTHES", source, source_hash), ("item plan", item_plan, item_hash),
+                                ("approved assembly", assembly, assembly_hash)):
+        if (not file.is_file() or not re.fullmatch(r"[0-9a-f]{64}", digest)
+                or hashlib.sha256(file.read_bytes()).hexdigest() != digest):
+            raise StylePackError(f"Mandatory CLOTHES {label} path or hash is missing or stale.")
+    if record.get("subject_label_sha256") != source_hash:
+        raise StylePackError("Mandatory CLOTHES source subject label is not bound to the current source hash.")
+    for file in (item_plan, Path(str(record.get("continuation_authorization_path", ""))).expanduser().resolve(),
+                 Path(str(record.get("tool_repair_permission_path", ""))).expanduser().resolve()):
+        if not file.is_relative_to(request_root):
+            raise StylePackError("Mandatory CLOTHES authority and item-plan files must remain inside this active request folder.")
+    try:
+        item_record = json.loads(item_plan.read_text(encoding="utf-8"))
+        assembly_path = Path(str(record.get("character_assembly_path", ""))).expanduser().resolve()
+        continuation = json.loads(Path(str(record["continuation_authorization_path"])).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise StylePackError(f"Cannot read mandatory CLOTHES item plan or continuation proof: {error}") from error
+    accepted_base = continuation.get("approved_files", {}) if isinstance(continuation, dict) else {}
+    accepted_assembly = accepted_base.get("05_CHARACTER_ASSEMBLY", {}) if isinstance(accepted_base, dict) else {}
+    expected_base_stages = ("01_FACE_IDENTITY", "02_PHYSIQUE_FRONT", "03_PHYSIQUE_SIDE", "04_PHYSIQUE_BACK", "05_CHARACTER_ASSEMBLY")
+    if not isinstance(accepted_base, dict) or set(accepted_base) != set(expected_base_stages):
+        raise StylePackError("Mandatory CLOTHES continuation proof must preserve all five ordered canonical identity outputs.")
+    for stage in expected_base_stages:
+        approved = accepted_base.get(stage)
+        approved_path = Path(str(approved.get("path", ""))).expanduser().resolve() if isinstance(approved, dict) else Path()
+        approved_hash = str(approved.get("sha256", "")).lower() if isinstance(approved, dict) else ""
+        if (not approved_path.is_relative_to(request_root) or not approved_path.is_file()
+                or not re.fullmatch(r"[0-9a-f]{64}", approved_hash)
+                or hashlib.sha256(approved_path.read_bytes()).hexdigest() != approved_hash):
+            raise StylePackError(f"Mandatory CLOTHES continuation has missing or stale accepted {stage} proof.")
+    if (not isinstance(item_record, dict) or item_record.get("status") != "ITEM_PRODUCTION_PLAN"
+            or item_record.get("request_id") != request_id or item_record.get("character_id") != character_id
+            or item_record.get("item_kind") != "CLOTHING" or item_record.get("style_name") != "LORANDESORE"
+            or Path(str(item_record.get("character_assembly", ""))).expanduser().resolve() != assembly_path
+            or str(item_record.get("character_assembly_sha256", "")).lower() != assembly_hash
+            or not isinstance(continuation, dict)
+            or continuation.get("request_id") != request_id
+            or continuation.get("approval_quote") != record.get("continuation_authorization_quote")
+            or not Path(str(accepted_assembly.get("path", ""))).expanduser().is_file()
+            or str(accepted_assembly.get("sha256", "")).lower() != assembly_hash):
+        raise StylePackError("Mandatory CLOTHES item plan or accepted assembly proof differs from this request.")
+    for prefix in ("continuation_authorization", "tool_repair_permission"):
+        proof = Path(str(record.get(prefix + "_path", ""))).expanduser().resolve()
+        digest = str(record.get(prefix + "_sha256", "")).lower()
+        if not proof.is_file() or not re.fullmatch(r"[0-9a-f]{64}", digest) or hashlib.sha256(proof.read_bytes()).hexdigest() != digest:
+            raise StylePackError(f"Mandatory CLOTHES {prefix} proof is missing or stale.")
+        try:
+            proof_record = json.loads(proof.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise StylePackError(f"Cannot read mandatory CLOTHES {prefix} proof: {error}") from error
+        proof_quote = (proof_record.get("approval_quote") if isinstance(proof_record, dict) and prefix == "continuation_authorization"
+                       else proof_record.get("quote") if isinstance(proof_record, dict) else None)
+        if not isinstance(proof_record, dict) or proof_quote != record.get(prefix + "_quote"):
+            raise StylePackError(f"Mandatory CLOTHES {prefix} quote differs from its bound proof.")
+        if prefix == "continuation_authorization" and not str(proof_record.get("approval_source", "")).strip():
+            raise StylePackError("Mandatory CLOTHES continuation lacks native author-approval provenance.")
+        if prefix == "tool_repair_permission" and (not str(proof_record.get("source", "")).strip()
+                or "mandatoryoriginalCLOTHES" not in str(proof_record.get("scope", ""))):
+            raise StylePackError("Mandatory CLOTHES tool-repair permission does not bind this narrow repair scope.")
+    if (str(plan.get("request_id", "")) != request_id
+            or str(plan.get("character_id", "")).upper() != character_id
+            or str(plan.get("generation_purpose", "")).upper() != "SCENE"
+            or str(plan.get("style_name", "")).upper() != "LORANDESORE"):
+        raise StylePackError("Mandatory CLOTHES consent is bound to a different request, character, purpose, or style.")
+    return {"path": str(authorization_path), "sha256": hashlib.sha256(raw).hexdigest(),
+            "source_path": str(source), "source_sha256": source_hash, "reference_id": "REF_00217",
+            "role": "CLOTHES", "subject_label": "MALE", "item_plan_path": str(item_plan),
+            "item_plan_sha256": item_hash, "assembly_path": str(assembly), "assembly_sha256": assembly_hash}
+
+
+def validate_construction_dimension_guide_authorization(
+    authorization_path: Path,
+    *,
+    request_root: Path,
+    request_id: str,
+    character_id: str,
+    stage_id: str,
+) -> dict[str, object]:
+    """Validate the narrowly authorized, hash-bound SIDE dimension guide."""
+    authorization_path = authorization_path.resolve()
+    request_root = request_root.resolve()
+    if not authorization_path.is_file() or not authorization_path.is_relative_to(request_root):
+        raise StylePackError("Construction dimension guide authorization must be inside the active request folder.")
+    try:
+        authorization = json.loads(authorization_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise StylePackError(f"Cannot read construction dimension guide authorization: {error}") from error
+    if not isinstance(authorization, dict) or authorization.get("schema_version") != 1:
+        raise StylePackError("Construction dimension guide authorization must use schema_version=1.")
+    if (authorization.get("request_id") != request_id or authorization.get("character_id") != character_id
+            or authorization.get("stage_id") != stage_id or request_id != authorization_path.parent.name
+            or character_id != "NEW" or stage_id != "03_PHYSIQUE_SIDE"):
+        raise StylePackError("Construction dimension guide authorization is bound to a different request, character, or stage.")
+    if (authorization.get("source_kind") != "DETERMINISTIC_DIMENSION_ONLY_NO_SUBJECT"
+            or authorization.get("physical_role") != "COMPOSITION"
+            or authorization.get("subject_label") != "NO_SUBJECT"):
+        raise StylePackError("Construction dimension guide must be a NO_SUBJECT COMPOSITION source.")
+    guide_path = Path(str(authorization.get("guide_path", ""))).expanduser().resolve()
+    registered_path = Path(str(authorization.get("registered_reference_path", ""))).expanduser().resolve()
+    if not guide_path.is_file() or guide_path != registered_path:
+        raise StylePackError("Construction dimension guide must match the exact registered reference path.")
+    guide_hash = hashlib.sha256(guide_path.read_bytes()).hexdigest()
+    expected_guide_hash = str(authorization.get("guide_sha256", "")).lower()
+    if (not re.fullmatch(r"[0-9a-f]{64}", expected_guide_hash)
+            or guide_hash != expected_guide_hash
+            or str(authorization.get("registered_reference_sha256", "")).lower() != guide_hash
+            or str(authorization.get("subject_label_sha256", "")).lower() != guide_hash):
+        raise StylePackError("Construction dimension guide or NO_SUBJECT label hash is missing or stale.")
+
+    def request_file(path_key: str, hash_key: str, label: str) -> tuple[Path, str]:
+        path = Path(str(authorization.get(path_key, ""))).expanduser().resolve()
+        digest = str(authorization.get(hash_key, "")).lower()
+        if not path.is_file() or not path.is_relative_to(request_root):
+            raise StylePackError(f"Construction dimension guide {label} must be in the active request folder.")
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        if not re.fullmatch(r"[0-9a-f]{64}", digest) or actual != digest:
+            raise StylePackError(f"Construction dimension guide {label} hash is missing or stale.")
+        return path, digest
+
+    geometry_path, geometry_hash = request_file("geometry_path", "geometry_sha256", "geometry source")
+    approval_path, approval_hash = request_file(
+        "approved_geometry_evidence", "approved_geometry_evidence_sha256", "author approval"
+    )
+    try:
+        geometry = json.loads(geometry_path.read_text(encoding="utf-8"))
+        approval = json.loads(approval_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise StylePackError(f"Construction dimension guide geometry or approval is invalid JSON: {error}") from error
+    dimensions = geometry.get("design_dimensions") if isinstance(geometry, dict) else None
+    if (not isinstance(geometry, dict) or geometry.get("request_id") != request_id
+            or geometry.get("character_id") != character_id or not isinstance(dimensions, dict)
+            or dimensions.get("total_height") != authorization.get("design_height")
+            or dimensions.get("head_length") != authorization.get("design_head")
+            or dimensions.get("side_foot_length") != authorization.get("design_foot")
+            or authorization.get("design_height") != 1560 or authorization.get("design_head") != 200
+            or authorization.get("design_foot") != 190 or authorization.get("profile_direction") != "LEFT"):
+        raise StylePackError("Construction dimension guide values do not match the approved 1560/200/190 SIDE geometry.")
+    if (not isinstance(approval, dict) or approval.get("schema_version") != 1
+            or approval.get("request_id") != request_id or approval.get("character_id") != character_id
+            or approval.get("scope") != "CONSTRUCTION_GEOMETRY_ONLY"
+            or approval.get("approves_previous_illustration") is not False
+            or approval.get("numeric_visible_landmarks_remain") != "NOT_CHECKED"
+            or Path(str(approval.get("geometry_path", ""))).resolve() != geometry_path
+            or str(approval.get("geometry_sha256", "")).lower() != geometry_hash
+            or not isinstance(approval.get("approval_quote"), str)
+            or not approval["approval_quote"].strip()
+            or not str(authorization.get("authorization_quote", "")).strip()
+            or str(authorization.get("authorization_quote", "")) != "Создать и приложить размерную схему SIDE"
+            or not isinstance(authorization.get("authorization_source"), str)
+            or not authorization["authorization_source"].strip()
+            or not str(authorization.get("subject_label_evidence", "")).strip()
+            or authorization.get("previous_attempt_pixels_used") is not False
+            or not re.fullmatch(r"REF_\d{5}", str(authorization.get("reference_id", "")))
+            or not {"identity", "style", "clothing", "tattoos", "palette", "rendering", "text_in_final_art"}.issubset(
+                {str(item).strip().lower() for item in authorization.get("forbidden_influence", [])}
+            )):
+        raise StylePackError("Construction dimension guide lacks the exact current author consent or bound geometry approval.")
+    consent_scope = str(authorization.get("authorization_scope", ""))
+    if any(required not in consent_scope for required in (
+        "current90%LORANDESORE", "selectedBODY_REFERENCE_LIBRARY", "mandatorySTYLE/FACE/FRONT retained",
+    )):
+        raise StylePackError("Construction dimension guide consent does not preserve the selected style, body library, and mandatory identity references.")
+    return {
+        "authorization_path": str(authorization_path),
+        "authorization_sha256": hashlib.sha256(authorization_path.read_bytes()).hexdigest(),
+        "request_id": request_id,
+        "character_id": character_id,
+        "stage_id": stage_id,
+        "physical_role": "COMPOSITION",
+        "subject_label": "NO_SUBJECT",
+        "subject_label_sha256": guide_hash,
+        "guide_path": str(guide_path),
+        "guide_sha256": guide_hash,
+        "geometry_path": str(geometry_path),
+        "geometry_sha256": geometry_hash,
+        "approved_geometry_evidence": str(approval_path),
+        "approved_geometry_evidence_sha256": approval_hash,
+        "reference_id": str(authorization.get("reference_id", "")),
+        "authorization_quote": str(authorization["authorization_quote"]),
+        "authorization_scope": str(authorization.get("authorization_scope", "")),
+    }
+
+
+def validate_construction_geometry_receipt(
+    receipt_path: Path,
+    *,
+    request_root: Path,
+    request_id: str,
+    character_id: str,
+    output: Path,
+    stage_id: str,
+    plan: dict[str, object],
+) -> dict[str, object]:
+    """Replay the complete file/hash/approval contract before an alternate QA gate is trusted."""
+    request_root = request_root.resolve()
+    eligible_views = {
+        "02_PHYSIQUE_FRONT": "FRONT", "03_PHYSIQUE_SIDE": "SIDE",
+        "04_PHYSIQUE_BACK": "BACK", "05_CHARACTER_ASSEMBLY": "ASSEMBLY",
+    }
+    body_contract = plan.get("character_base_contract")
+    if (plan.get("generation_purpose") != "CHARACTER_BASE" or not isinstance(body_contract, dict)
+            or body_contract.get("age_group") != "ADULT" or stage_id not in eligible_views):
+        raise StylePackError("Construction geometry receipt is restricted to canonical adult CHARACTER_BASE body stages.")
+    receipt_path = receipt_path if receipt_path.is_absolute() else request_root / receipt_path
+    receipt_path = receipt_path.resolve()
+
+    def local_file(raw: object, label: str) -> tuple[Path, str]:
+        if not isinstance(raw, dict):
+            raise StylePackError(f"Construction geometry {label} binding is missing.")
+        path_value = Path(str(raw.get("path", "")))
+        candidate = path_value if path_value.is_absolute() else request_root / path_value
+        candidate = candidate.resolve()
+        digest = str(raw.get("sha256", "")).lower()
+        if not candidate.is_relative_to(request_root) or not candidate.is_file():
+            raise StylePackError(f"Construction geometry {label} must be a file inside the current request folder.")
+        actual = hashlib.sha256(candidate.read_bytes()).hexdigest()
+        if not re.fullmatch(r"[0-9a-f]{64}", digest) or actual != digest:
+            raise StylePackError(f"Construction geometry {label} hash is missing or stale.")
+        return candidate, digest
+
+    if not receipt_path.is_relative_to(request_root) or not receipt_path.is_file():
+        raise StylePackError("Construction geometry receipt must be inside the current request folder.")
+    try:
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise StylePackError(f"Cannot read construction geometry receipt: {error}") from error
+    if not isinstance(receipt, dict) or receipt.get("schema_version") != 1:
+        raise StylePackError("Construction geometry receipt must be a JSON object with schema_version=1.")
+    expected_view = eligible_views[stage_id]
+    expected_fields = {
+        "request_id": request_id, "character_id": character_id, "stage_id": stage_id,
+        "view": expected_view, "method_id": CONSTRUCTION_GEOMETRY_METHOD_ID,
+        "method_version": CONSTRUCTION_GEOMETRY_VERSION,
+        "numeric_source": CONSTRUCTION_GEOMETRY_NUMERIC_SOURCE,
+    }
+    if any(receipt.get(key) != value for key, value in expected_fields.items()):
+        raise StylePackError("Construction geometry receipt request, character, stage, view, or method binding mismatch.")
+    output_digest = hashlib.sha256(output.read_bytes()).hexdigest()
+    if str(receipt.get("output_sha256", "")).lower() != output_digest:
+        raise StylePackError("Construction geometry receipt is not bound to this exact output image SHA256.")
+    diagram_path, diagram_hash = local_file(receipt.get("diagram"), "construction diagram")
+    geometry_path, geometry_hash = local_file(receipt.get("geometry_source"), "geometry source")
+    approval_path, approval_hash = local_file(receipt.get("approval_evidence"), "author approval evidence")
+    try:
+        geometry = json.loads(geometry_path.read_text(encoding="utf-8"))
+        approval = json.loads(approval_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise StylePackError(f"Construction geometry source or author approval is invalid JSON: {error}") from error
+    if not isinstance(geometry, dict) or geometry.get("request_id") != request_id:
+        raise StylePackError("Construction geometry source does not bind the active request.")
+    if not isinstance(approval, dict) or approval.get("schema_version") != 1:
+        raise StylePackError("Separate author approval evidence must be a JSON object with schema_version=1.")
+    quote = approval.get("approval_quote")
+    if (approval.get("scope") != "CONSTRUCTION_GEOMETRY_ONLY"
+            or approval.get("approves_previous_illustration") is not False
+            or approval.get("numeric_visible_landmarks_remain") != "NOT_CHECKED"
+            or not str(approval.get("approval_source", "")).strip()
+            or not isinstance(quote, str) or len(quote.strip()) < 8
+            or approval.get("request_id") != request_id
+            or approval.get("character_id") != character_id
+            or Path(str(approval.get("diagram_path", ""))).resolve() != diagram_path
+            or Path(str(approval.get("geometry_path", ""))).resolve() != geometry_path
+            or str(approval.get("diagram_sha256", "")).lower() != diagram_hash
+            or str(approval.get("geometry_sha256", "")).lower() != geometry_hash):
+        raise StylePackError("Separate author approval must bind both diagram and geometry hashes, request, character, and exact quote.")
+    values = geometry.get("values")
+    if not isinstance(values, dict):
+        design = geometry.get("design_measurements")
+        try:
+            hip_knee = float(design["hip_knee"])
+            if not isinstance(design, dict) or hip_knee <= 0:
+                raise ValueError
+            values = {
+                "head_units": design["head_units"],
+                "pubic_height_fraction": design["pubic_height_fraction"],
+                "lower_to_upper_leg_ratio": float(design["knee_ankle"]) / hip_knee,
+                "ankle_width_head_ratio": design["ankle_width"],
+                "foot_length_head_ratio": design["foot_length"],
+                "neck_head_ratio": design["neck_head_ratio"],
+                "neck_jaw_ratio": design["neck_jaw_ratio"],
+            }
+        except (KeyError, TypeError, ValueError, ZeroDivisionError) as error:
+            raise StylePackError("Geometry source contains missing or invalid design dimensions.") from error
+    if receipt.get("geometry_values") != values:
+        raise StylePackError("Construction geometry receipt values differ from its hash-bound geometry source.")
+    violations = construction_geometry_violations(values, plan)
+    if violations:
+        raise StylePackError("Construction geometry values exceed the unchanged anthropometric limits: " + "; ".join(violations))
+    consistency = receipt.get("image_scheme_consistency")
+    evidence_text = str(consistency.get("evidence", "")).strip().casefold() if isinstance(consistency, dict) else ""
+    if (not isinstance(consistency, dict) or consistency.get("status") != "PASS"
+            or not str(consistency.get("reviewer", "")).strip() or len(evidence_text) < 40
+            or not any(term in evidence_text for term in ("image", "render", "output", "изображ", "кадр", "силуэт"))
+            or not any(term in evidence_text for term in ("scheme", "geometry", "construction", "схем", "геометр"))
+            or not any(term in evidence_text for term in ("compared", "compare", "comparison", "сопостав", "сравн"))):
+        raise StylePackError("Image-to-scheme consistency requires PASS, an identified reviewer, and substantive evidence.")
+    return {
+        "schema_version": 1, "gate": "AUTHOR_CONFIRMED_CONSTRUCTION_GEOMETRY",
+        "request_id": request_id, "character_id": character_id,
+        "output_sha256": output_digest, "stage_id": stage_id, "view": expected_view,
+        "method_id": CONSTRUCTION_GEOMETRY_METHOD_ID, "method_version": CONSTRUCTION_GEOMETRY_VERSION,
+        "numeric_source": CONSTRUCTION_GEOMETRY_NUMERIC_SOURCE,
+        "receipt_path": str(receipt_path), "receipt_sha256": hashlib.sha256(receipt_path.read_bytes()).hexdigest(),
+        "approval_evidence": {"path": str(approval_path), "sha256": approval_hash, "approval_quote": quote},
+        "diagram": {"path": str(diagram_path), "sha256": diagram_hash},
+        "geometry_source": {"path": str(geometry_path), "sha256": geometry_hash},
+        "geometry_values": values, "metric_validation": "PASS",
+        "image_scheme_consistency": consistency,
+    }
 
 
 
@@ -70,6 +762,7 @@ def build_canvas_contract(args: argparse.Namespace) -> dict[str, object]:
             "framing": "SCENE_COMPOSITION",
             "target_pose_family": "NOT_APPLICABLE",
             "full_figure": False,
+            "body_visible": False,
             "subject_height_percent": None,
             "required_margins": "Preserve the crop/copy safe areas declared by scene_contract.",
             "vertical_stretch_forbidden": False,
@@ -83,6 +776,7 @@ def build_canvas_contract(args: argparse.Namespace) -> dict[str, object]:
         "framing": args.framing,
         "target_pose_family": args.target_pose_family,
         "full_figure": full_figure,
+        "body_visible": args.framing in {"FULL_BODY", "THREE_QUARTER", "HALF_BODY"},
         "subject_height_percent": [72, 88] if args.framing == "FULL_BODY" else [60, 88],
         "required_margins": "Visible headroom and floor/foot margin; do not stretch the figure to fill the canvas.",
         "vertical_stretch_forbidden": True,
@@ -149,7 +843,14 @@ def build_scene_contract(
         "accessory": getattr(args, "accessory_reference", []),
         "face variant": getattr(args, "face_variant_reference", []),
         "body variant": getattr(args, "body_variant_reference", []),
-        "auxiliary body": getattr(args, "aux_body", []),
+        # Anonymous scene subjects may use the selected library for gesture,
+        # while identity and permanent body-build references remain forbidden.
+        # The manager still resolves registry IDs, hashes, subject compatibility
+        # and full-resolution source reviews before accepting these attachments.
+        "auxiliary body": [
+            value for value in getattr(args, "aux_body", [])
+            if not re.fullmatch(r"BR_\d+=STAGING_ONLY", str(value).strip(), re.IGNORECASE)
+        ],
         "coverage front": getattr(args, "coverage_front_reference", ""),
         "coverage side": getattr(args, "coverage_side_reference", ""),
         "coverage back": getattr(args, "coverage_back_reference", ""),

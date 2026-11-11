@@ -72,17 +72,17 @@ task; root follows `REQUEST_FIDELITY.md` and continues or escalates diagnosis.
 
 ## Routing precedence
 
-Use `config/model_routes.json` as the role authority and
+Use `config/model_routes.json` as the StoryArt role authority and
 `docs/MODEL_PROFILES.md` for activation. Root retains its selected model and the
-user contract. Ordinary discovery, implementation, planning and result checks
-use Luna 6 High in default/worker/explorer with fork_turns="none". Mandatory
-read-only code review after machine checks uses sol_review, Sol 6.1 Medium;
-evidenced Luna failure permits sol_escalation, Sol 6.1 High. Record SOL_GATE
-before either Sol dispatch. Specialized Web roles retain their authorized
-contracts and never replace ordinary workers. Normally zero workers,
-one when useful, at most two independent workers. No full-history forks,
-nesting, or agents merely for generator/archive/CLI operations.
+user contract. Production: root Sol 6.1 Medium; ordinary bounded discovery,
+identity curation and implementation Sol 6.1 Low; complex call planning and
+independent visual/code review Sol 6.1 Medium; exceptional evidenced diagnosis
+Sol 6.1 High. High is never a routine fallback. Record SOL_GATE for independent
+code review and exceptional diagnosis. Explicit Web roles keep their own
+authorization and never replace ordinary workers. Normally zero workers, one
+when useful, at most two independent workers. Request fork_turns="none", no
+nesting or full transcripts. Luna 6 Low is an explicit experiment only; no
+automatic Luna or Astra selection. Confirm role configuration and available
+actual model telemetry before dependent work. Existing chats are not switched.
 Reuse source evidence only when hash, role, view, applicability and limitations
-match; inspect changed or uncovered sources. Packet ceilings return evidence
-to root and never terminate the user's image goal. This changes orchestration,
-not artistic, identity, safety or QA requirements.
+match; inspect changed or uncovered sources. Packet budgets do not end the task.

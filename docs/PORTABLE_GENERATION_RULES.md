@@ -1,5 +1,11 @@
 # StoryArt agent instructions
 
+New plans use [STYLE_RENDERING_CONTRACT.md](STYLE_RENDERING_CONTRACT.md): exact
+reviewed physical STYLE inputs are rendering authority independently of identity,
+body and clothes. Use comparative six-axis and visible-region style_review in the
+existing visual-review JSON; flags alone cannot grant STYLE/BODY_RENDERING_STYLE
+PASS. Historical snapshots and the direct one-step edit exception are preserved.
+
 Strict source-sex filtering applies before preview or viewing: male pose sources only for male targets, female only for female, using explicit reviewed labels. Unknown, mixed, neutral and opposite-sex pose labels are ineligible. No soft-role exception. Apply the full pre-view rule in `docs/REQUEST_FIDELITY.md`, including the current request's restrictions on style and other roles; missing labels are registry errors, never permission to inspect.
 
 Include `docs/REQUEST_FIDELITY.md` with this template and apply it in full before every generation and acceptance. It overrides older text-only clothing and previous-frame reuse permissions. Requested clothing from character files must be physically attached; all prohibitions persist through corrections and must pass visual review against the complete user contract.

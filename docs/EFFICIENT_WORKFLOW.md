@@ -13,12 +13,13 @@ It cannot itself change the model of an already running session.
 | --- | --- | --- |
 | Ordinary image production and integration | Sol 6.1 Medium root (`ROOT`) | Root retains the full user contract, choices, execution, recovery and acceptance. |
 | Deterministic lookups, CLI execution, cache reuse, registration | Root uses project tools directly | Reuse unchanged request-scoped results; retry only after a concrete error or changed input. |
-| Source discovery, implementation, call planning and result checks | Luna 6 High | `default`, `worker` or `explorer`; narrow packet without transcript. |
+| Source discovery, identity curation and ordinary implementation | Sol 6.1 Low | Registry role; narrow packet without transcript. |
+| Complex call planning and independent visual QA | Sol 6.1 Medium | CALL_PLANNER / VISUAL_QA; root retains acceptance. |
 | Mandatory independent review after machine checks | Sol 6.1 Medium | `sol_review` with recorded SOL_GATE; substantial code changes. |
-| Diagnosis after evidenced Luna failure | Sol 6.1 High | `sol_escalation` with recorded SOL_GATE; bounded diagnosis only. |
+| Exceptional diagnosis after evidenced complex fault or repair failure | Sol 6.1 High | `sol_escalation` with recorded SOL_GATE; bounded diagnosis only. |
 
 `config/model_routes.json` is the role authority; `MODEL_PROFILES.md` explains
-activation. The user routing correction of 2026-10-13 governs ordinary workers.
+activation. The current project-specific production route governs ordinary workers.
 Root retains its selected model; already running agents retain theirs.
 Specialized Web roles retain their own explicitly authorized contracts.
 
@@ -134,7 +135,25 @@ operation, but invalidate saved evidence when its source, profile revision,
 roles, prompt or user choice changes. Do not hide a failure by reusing an old
 PASS. Additional agents are never needed merely to run these commands.
 
+### Настройка самой работы со стилем
+
+Композицию, связное тело, кисти и фазы действия готовь по соответствующим сценариям основного `skills/storyart-orchestrator/SKILL.md` внутри того же прохода. Не добавляй отдельный anatomy-gate, повторный аудит или тестовый кадр; уточнение одной руки не разрешает менять защищённую позу. Неизменённые доказательства используй повторно.
+
+Удержание стиля выполняется внутри существующей подготовки: наблюдения выбранных источников → краткие указания о способе изображения → готовый вызов. Повторно используй эквивалентные source reviews с совпадающими хешем, ролью, просмотром, применимостью и ограничениями. Не добавляй отдельные документы, проверки, меню, поиски, калибровочные изображения или генерации ради настройки процесса.
+
+После READY выполняй только предусмотренную точную валидацию/start и исполнение. Стилевые уточнения готовятся до READY.
+
+В одном согласованном визуальном проходе сравни результат с исходным STYLE одновременно по форме, краям, свету/цвету, материалам и детализации, сохраняя независимые результаты identity/body/clothing QA. Запиши сравнения в существующий `style_review`; повторно открывай только неопределённую область. Совпадение палитры или лица не доказывает соответствия манере. Этот сценарий не является свидетельством измеренного улучшения качества.
+
+Рабочие сценарии первого кадра, конфликта фотографического референса, последовательных этапов и исправления дрейфа находятся в `skills/storyart-orchestrator/SKILL.md`, раздел «Удержание стиля до исполнения». Применяй подходящий сценарий в текущих шагах, без отдельного подготовительного цикла.
+
 ### One preparation request
+
+New plans use [STYLE_RENDERING_CONTRACT.md](STYLE_RENDERING_CONTRACT.md): reuse the
+selected source observations to materialize rendering authority before exact risk
+assessment. Complete comparative style findings during the existing coordinated
+visual pass and in its existing JSON. No extra image, reviewer, user approval or
+standalone style receipt is required. Historical immutable plans remain unchanged.
 
 Keep the current request's resolved character/profile, selected sources, exact
 menu answer and its provenance together in one UTF-8 JSON request file. Use
@@ -185,9 +204,9 @@ required semantic layers remain separately inspected and recorded.
 
 | Delegated image role | Requested model and effort | Limit |
 | --- | --- | --- |
-| `STYLE_LIBRARIAN` / `IDENTITY_CURATOR` | Registry role: Luna 6 High | Optional bounded source discovery; root resolves material ambiguity |
-| `CALL_PLANNER` | Registry role: Luna 6 High | Bounded exact-call planning |
-| `VISUAL_QA` / result checks | Registry role: Luna 6 High | Root retains final visual acceptance |
+| `STYLE_LIBRARIAN` / `IDENTITY_CURATOR` | Registry role: Sol 6.1 Low | Optional bounded source discovery; root resolves material ambiguity |
+| `CALL_PLANNER` | Registry role: Sol 6.1 Medium | Bounded exact-call planning |
+| `VISUAL_QA` / result checks | Registry role: Sol 6.1 Medium | Root retains final visual acceptance |
 | `GENERATOR_OPERATOR` / `REGISTRAR` | No agent; root executes sequentially | N/A |
 
 These are spawn requests, not a runtime scheduler or a way to switch the

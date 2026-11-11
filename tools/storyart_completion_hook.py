@@ -1,6 +1,6 @@
 """Codex Stop hook for the currently focused, chat-bound StoryArt image task.
 
-No generator calls, transcript parsing, source scanning, trust changes or guard
+No generator calls, source scanning, trust changes or guard
 mutation. A blocking Stop decision asks the existing agent to continue work.
 Codex must independently trust the hook definition before it is executed.
 """
@@ -97,7 +97,7 @@ def decide(event: dict, root: Path = ROOT) -> dict:
     if state.get("status") == "BLOCKED" and state.get("blocker_kind") in {"EXTERNAL", "SAFETY", "USER_INPUT"}:
         return {}
     try:
-        continuation = guard.completion_continuation(state)
+        continuation = guard.completion_continuation(state, path)
     except (guard.GuardError, OSError, ValueError, TypeError, KeyError, AttributeError) as error:
         return {"decision": "block", "reason": (
             f"StoryArt current request {state['request_id']} has an internal completion-state error: {error}. "

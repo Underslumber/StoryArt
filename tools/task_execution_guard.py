@@ -69,6 +69,85 @@ class GuardActionRequired(GuardError):
     """The task must produce the deliverable or report a blocker now."""
 
 
+def _validate_construction_dimension_guide_binding(
+    plan_path: Path,
+    plan: dict[str, object],
+    execution_call: dict[str, object],
+    stage_id: str,
+    selected_slots: list[object],
+) -> dict[str, object] | None:
+    """Independently revalidate the exact user-approved SIDE-only guide at execution readiness."""
+    binding = plan.get("construction_dimension_guide")
+    if binding is None:
+        return None
+    if not isinstance(binding, dict):
+        raise GuardError("REFERENCE_PLAN construction dimension guide binding is malformed.")
+    authorization_path = Path(str(binding.get("authorization_path", ""))).expanduser().resolve()
+    request_root = plan_path.parent.resolve()
+    try:
+        try:
+            from tools.style_pack_contracts import validate_construction_dimension_guide_authorization
+        except ImportError:
+            from style_pack_contracts import validate_construction_dimension_guide_authorization
+        current = validate_construction_dimension_guide_authorization(
+            authorization_path, request_root=request_root,
+            request_id=str(plan.get("request_id", "")), character_id=str(plan.get("character_id", "")),
+            stage_id="03_PHYSIQUE_SIDE",
+        )
+    except Exception as error:
+        raise GuardError(f"Cannot independently validate construction dimension guide authorization: {error}") from error
+    if current != binding:
+        raise GuardError("Construction dimension guide authorization/hash binding changed after plan preparation.")
+    startup = plan.get("startup_parameter_selection", {})
+    resolved = startup.get("resolved_parameters", {}) if isinstance(startup, dict) else {}
+    selections = execution_call.get("user_selections", {})
+    reference_policy = selections.get("reference_policy", {}) if isinstance(selections, dict) else {}
+    style_selection = selections.get("style", {}) if isinstance(selections, dict) else {}
+    if (resolved.get("fidelity") != 90 or str(resolved.get("aux_body_decision", "")).upper() != "SELECTED"
+            or not isinstance(reference_policy, dict) or str(reference_policy.get("choice", "")).upper() != "BODY_LIBRARY_ONLY"
+            or not isinstance(style_selection, dict) or str(style_selection.get("choice", "")).upper() != "PROJECT_STYLE:LORANDESORE"):
+        raise GuardError("Construction guide lacks the exact 90% LORANDESORE + selected BODY_REFERENCE_LIBRARY user consent.")
+    guide_path = Path(str(current["guide_path"])).resolve()
+    guide_slots = [slot for slot in selected_slots if isinstance(slot, dict)
+                   and Path(str(slot.get("path", ""))).expanduser().resolve() == guide_path]
+    if str(stage_id).upper() != "03_PHYSIQUE_SIDE":
+        if guide_slots:
+            raise GuardError("Construction dimension guide is attached outside 03_PHYSIQUE_SIDE.")
+        return None
+    if (len(guide_slots) != 1 or str(guide_slots[0].get("sha256", "")).lower() != current["guide_sha256"]
+            or {str(role).upper() for role in guide_slots[0].get("active_roles", [])} != {"COMPOSITION"}
+            or guide_slots[0].get("physically_attach") is not True):
+        raise GuardError("Exact SIDE stage does not physically attach the bound NO_SUBJECT guide as COMPOSITION.")
+    role_sets = [frozenset(str(role).upper() for role in slot.get("active_roles", []))
+                 for slot in selected_slots if isinstance(slot, dict)]
+    if (len(role_sets) != 4 or set(role_sets) != {
+            frozenset({"STYLE"}), frozenset({"FACE_IDENTITY_STAGE"}),
+            frozenset({"PHYSIQUE_FRONT_STAGE"}), frozenset({"COMPOSITION"}),
+    }):
+        raise GuardError("Exact SIDE stage must attach only STYLE, passed FACE, accepted FRONT, and the COMPOSITION guide.")
+    selected = plan.get("selected_references", {})
+    composition = selected.get("composition") if isinstance(selected, dict) else None
+    if (not isinstance(composition, dict) or Path(str(composition.get("path", ""))).resolve() != guide_path
+            or str(composition.get("sha256", "")).lower() != current["guide_sha256"]):
+        raise GuardError("REFERENCE_PLAN selected_references do not bind the exact approved guide as COMPOSITION.")
+    try:
+        try:
+            from tools import style_pack_manager as manager
+        except ImportError:
+            import style_pack_manager as manager
+        pack_path = Path(str(plan.get("pack_path", ""))).resolve()
+        style = str(plan.get("style_name", ""))
+        registered = manager.validate_plan_reference(manager.make_paths(pack_path.parent, style), str(guide_path), "COMPOSITION")
+    except Exception as error:
+        raise GuardError(f"Cannot independently revalidate registered SIDE guide: {error}") from error
+    if (registered.get("sha256") != current["guide_sha256"] or registered.get("subject_label") != "NO_SUBJECT"
+            or registered.get("subject_label_status") != "REVIEWED"
+            or str(registered.get("subject_label_sha256", "")).lower() != current["guide_sha256"]
+            or not str(registered.get("subject_label_evidence", "")).strip()):
+        raise GuardError("Registered SIDE guide lacks exact-hash reviewed NO_SUBJECT evidence.")
+    return current
+
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -406,14 +485,59 @@ def normalize_stage_key(stage: str | None) -> str:
     return re.sub(r"^\d+_", "", value)
 
 
+def _authorized_base_clothing_continuation(state: dict[str, object], plan: dict[str, object]) -> bool:
+    """Allow only the recorded single clothing pass after the intact accepted base."""
+    workflow = plan.get("generation_workflow")
+    if (not isinstance(workflow, dict) or workflow.get("mode") != "SINGLE_PASS"
+            or str(plan.get("generation_purpose", "")).upper() != "SCENE"
+            or str(plan.get("style_name", "")).upper() != "LORANDESORE"
+            or int(plan.get("fidelity", 0) or 0) != 90
+            or str(plan.get("character_id", "")).upper() != "CHAR_002"
+            or str(plan.get("auxiliary_body_reference_decision", "")).upper() != "SELECTED"):
+        return False
+    entries = required_stage_entries(state)
+    ids = [str(row.get("id", "")) for row in entries if isinstance(row, dict)]
+    if ids != [*CHARACTER_BASE_STAGES, "SINGLE_PASS"]:
+        return False
+    changes = [change for change in state.get("scope_changes", []) if isinstance(change, dict)]
+    additions = [stage for change in changes for stage in change.get("added_required_stages", [])]
+    if additions != ["SINGLE_PASS"]:
+        return False
+    for entry in entries[:len(CHARACTER_BASE_STAGES)]:
+        if entry.get("status") != "COMPLETED" or not entry.get("evidence") or not isinstance(entry.get("accepted_attempt_binding"), dict):
+            return False
+        try:
+            expected = validate_stage_attempt_binding(state, str(entry["id"]), entry["evidence"],
+                                                      allow_accepted_stage_replay=True)
+        except GuardError:
+            return False
+        if expected != entry["accepted_attempt_binding"]:
+            return False
+    authorization_path = str(plan.get("mandatory_clothes_authorization_path", "")).strip()
+    try:
+        try:
+            from tools import style_pack_manager as manager
+        except ImportError:
+            import style_pack_manager as manager
+        binding = manager.validate_mandatory_clothes_authorization(
+            authorization_path, request_id=str(plan.get("request_id", "")),
+            character_id=str(plan.get("character_id", "")), plan=plan,
+        )
+    except (GuardError, OSError, ValueError, RuntimeError):
+        return False
+    return plan.get("mandatory_clothes_authorization") == binding
+
+
 def reconcile_plan_required_stages(state: dict[str, object], plan: dict[str, object]) -> None:
     """Bring a base guard in line with its validated executable plan."""
     purpose = str(plan.get("generation_purpose", "")).strip().upper()
     previous_purpose = str(state.get("request_purpose", "")).strip().upper()
     if previous_purpose and previous_purpose != purpose:
-        raise GuardActionRequired(
-            "The request purpose changed after readiness; repair the guard and executable plan before continuing."
-        )
+        if not (previous_purpose == "CHARACTER_BASE" and purpose == "SCENE"
+                and _authorized_base_clothing_continuation(state, plan)):
+            raise GuardActionRequired(
+                "The request purpose changed after readiness; only the recorded same-request clothing SINGLE_PASS may follow the accepted five-stage CHARACTER_BASE."
+            )
     if purpose != "CHARACTER_BASE":
         state["request_purpose"] = purpose
         return
@@ -1022,8 +1146,87 @@ def _validate_request_local_style_manifest(plan: dict[str, object], slots: list[
             relative = file.relative_to(paths.pack.resolve())
         except ValueError as error:
             raise GuardError("Request-local STYLE reference escaped its selected style pack.") from error
-        if not has_positive_master_style_manifest_entry(paths, relative):
+        if not has_positive_master_style_manifest_entry(paths, relative, str(plan.get("request_id", ""))):
             raise GuardError(f"Request-local STYLE reference is no longer positive and generator-safe in the manifest: {file}")
+
+def validate_mandatory_clothes_call_binding(
+    plan: dict[str, object], selected_slots: Sequence[dict[str, object]],
+    request_folder: str | Path, approved_identity_root: Path | None, *,
+    actual_mode: str, actual_stage: str,
+) -> Path | None:
+    """Independently revalidate the exact opt-in CLOTHES source at guard readiness."""
+    authorization_path = str(plan.get("mandatory_clothes_authorization_path", "")).strip()
+    if not authorization_path:
+        return None
+    workflow = plan.get("generation_workflow")
+    if (not isinstance(workflow, dict) or str(workflow.get("mode", "")).upper() != "SINGLE_PASS"
+            or str(actual_mode).upper() != "SINGLE_PASS" or str(actual_stage).upper() != "SINGLE_PASS"):
+        raise GuardError("Mandatory CLOTHES consent is restricted to the actual SINGLE_PASS workflow and selected execution stage.")
+    try:
+        try:
+            from tools import style_pack_manager as manager
+        except ImportError:
+            import style_pack_manager as manager
+        binding = manager.validate_mandatory_clothes_authorization(
+            authorization_path, request_id=str(plan.get("request_id", "")),
+            character_id=str(plan.get("character_id", "")), plan=plan,
+        )
+        if plan.get("mandatory_clothes_authorization") != binding:
+            raise GuardError("Mandatory CLOTHES authorization binding differs from the stored request plan.")
+        source = Path(str(binding["source_path"])).resolve()
+        auth = Path(authorization_path).resolve()
+        if not auth.is_relative_to(Path(request_folder).resolve()) or not source.is_file() or file_sha256(source) != binding["source_sha256"]:
+            raise GuardError("Mandatory CLOTHES authorization or original source is outside this request or stale.")
+        character_paths = manager.make_paths(Path(str(plan.get("pack_path", ""))).resolve().parent,
+                                             str(plan.get("style_name", "")))
+        registered = manager.validate_plan_reference(character_paths, str(source), "CLOTHES",
+                                                     request_id=str(plan.get("request_id", "")))
+        matching = [row for row in manager.read_csv(character_paths.references)
+            if row.get("reference_id") == binding["reference_id"]
+            and row.get("stored_relative_path", "").replace("\\", "/")
+            == source.relative_to(character_paths.pack.resolve()).as_posix()]
+        row = matching[0] if len(matching) == 1 else {}
+        if (registered.get("sha256") != binding["source_sha256"] or len(matching) != 1
+                or row.get("status", "").upper() != "APPROVED"
+                or row.get("reference_scope", "").upper() != "REQUEST"
+                or row.get("request_id") != plan.get("request_id")
+                or row.get("primary_role", "").upper() != "CLOTHES_CORE"
+                or row.get("subject_label") != "MALE" or row.get("subject_label_status") != "REVIEWED"
+                or row.get("subject_label_sha256", "").lower() != binding["source_sha256"]
+                or row.get("source_sha256", "").lower() != binding["source_sha256"]
+                or row.get("generator_safe", "").upper() != "YES"
+                or row.get("user_approved", "").upper() != "YES"):
+            raise GuardError("Mandatory CLOTHES source is not the exact registered, approved, current-hash MALE request source.")
+        clothes_slots = [slot for slot in selected_slots if isinstance(slot, dict)
+            and Path(str(slot.get("path", ""))).expanduser().resolve() == source
+            and str(slot.get("sha256", "")).lower() == binding["source_sha256"]
+            and {str(role).upper() for role in slot.get("active_roles", [])} == {"CLOTHES"}
+            and slot.get("physically_attach") is True]
+        if (len(clothes_slots) != 1 or sum(1 for slot in selected_slots if isinstance(slot, dict)
+                and {str(role).upper() for role in slot.get("active_roles", [])} == {"CLOTHES"}) != 1):
+            raise GuardError("Mandatory CLOTHES readiness requires exactly one authorized physical CLOTHES slot.")
+        assembly_slots = [slot for slot in selected_slots if isinstance(slot, dict)
+            and Path(str(slot.get("path", ""))).expanduser().resolve() == Path(binding["assembly_path"]).resolve()
+            and str(slot.get("sha256", "")).lower() == binding["assembly_sha256"]]
+        selected_references = plan.get("selected_references", {})
+        approved_face = selected_references.get("primary_face", {}) if isinstance(selected_references, dict) else {}
+        if isinstance(approved_face, list):
+            approved_face = approved_face[0] if len(approved_face) == 1 else {}
+        face_slots = [slot for slot in selected_slots if isinstance(slot, dict) and isinstance(approved_face, dict)
+            and Path(str(slot.get("path", ""))).expanduser().resolve() == Path(str(approved_face.get("path", ""))).resolve()
+            and str(slot.get("sha256", "")).lower() == str(approved_face.get("sha256", "")).lower()]
+        if (len(assembly_slots) != 1 or len(face_slots) != 1 or not any(set(slot.get("active_roles", [])) & {"STYLE", "STYLE_SOFT"}
+                for slot in selected_slots if isinstance(slot, dict))):
+            raise GuardError("Mandatory CLOTHES call must preserve the approved assembly and selected STYLE slots.")
+        auth_record = json.loads(auth.read_text(encoding="utf-8"))
+        if approved_identity_root is None or Path(str(auth_record.get("character_profile_path", ""))).expanduser().resolve() != (approved_identity_root / "CHARACTER_PROFILE.yaml").resolve():
+            raise GuardError("Mandatory CLOTHES consent is bound to a different character profile path.")
+        return source
+    except GuardError:
+        raise
+    except (OSError, ValueError, RuntimeError) as error:
+        raise GuardError(f"Cannot independently validate mandatory CLOTHES source: {error}") from error
+
 
 def validate_reference_plan(
     path_value: str | Path,
@@ -1053,6 +1256,15 @@ def validate_reference_plan(
     recorded_call = plan.get("execution_call")
     if not isinstance(recorded_call, dict) or recorded_call != execution_call:
         raise GuardError("The materialized execution_call must exactly match the call saved in REFERENCE_PLAN.")
+    try:
+        if __package__:
+            from .style_rendering_contract import validate_style_contract, StylePackError as StyleContractError
+        else:
+            from style_rendering_contract import validate_style_contract, StylePackError as StyleContractError
+        validate_style_contract(plan, execution_call, check_files=True)
+    except (ValueError, StyleContractError) as error:
+        raise GuardError(str(error)) from error
+    validated_new_face_bindings: dict[Path, tuple[str, str]] = {}
     face_purpose = plan.get("new_face_reference_purpose")
     if face_purpose is not None:
         if not isinstance(face_purpose, dict) or face_purpose.get("mode") not in {"STYLE_SEED", "USER_IDENTITY_INTENT"}:
@@ -1095,19 +1307,19 @@ def validate_reference_plan(
                 if len(values) != 1 or not isinstance(values[0], dict):
                     raise GuardError(f"USER_IDENTITY_INTENT is missing its selected {key} record.")
                 selected_source = values[0]
-                path = Path(str(source.get("path", ""))).resolve()
+                face_source_path = Path(str(source.get("path", ""))).resolve()
                 digest = str(source.get("sha256", "")).lower()
-                normalized_path = str(path).casefold()
+                normalized_path = str(face_source_path).casefold()
                 if normalized_path in seen_source_paths:
                     raise GuardError("USER_IDENTITY_INTENT requires two distinct absolute FACE source paths.")
                 if digest in seen_source_hashes:
                     raise GuardError("USER_IDENTITY_INTENT requires two distinct FACE source SHA-256 hashes.")
                 seen_source_paths.add(normalized_path)
                 seen_source_hashes.add(digest)
-                if (Path(str(selected_source.get("path", ""))).resolve() != path
+                if (Path(str(selected_source.get("path", ""))).resolve() != face_source_path
                         or str(selected_source.get("sha256", "")).lower() != digest
                         or not re.fullmatch(r"[0-9a-f]{64}", digest)
-                        or not path.is_file() or file_sha256(path) != digest
+                        or not face_source_path.is_file() or file_sha256(face_source_path) != digest
                         or source.get("subject_label") not in {"MALE", "FEMALE"}
                         or source.get("subject_label_sha256") != digest
                         or selected_source.get("subject_label") != source.get("subject_label")
@@ -1116,8 +1328,9 @@ def validate_reference_plan(
                         or selected_source.get("face_reference_purpose") != "USER_IDENTITY_INTENT"
                         or selected_source.get("face_reference_purpose_scope") != "NEW_CHARACTER_BASE"
                         or str(source.get("purpose_evidence", "")).strip() != str(face_purpose.get("evidence", "")).strip()
-                        or str(path).casefold() in style_paths):
+                        or str(face_source_path).casefold() in style_paths):
                     raise GuardError(f"USER_IDENTITY_INTENT {key} path, hash, label, or independent STYLE binding differs.")
+                validated_new_face_bindings[face_source_path] = (digest, str(source["physical_slot_role"]))
             if seen != set(expected_keys):
                 raise GuardError("USER_IDENTITY_INTENT lacks both PRIMARY_FACE and SUPPORTING_FACE bindings.")
     recorded_selections = plan.get("user_selections")
@@ -1239,6 +1452,10 @@ def validate_reference_plan(
         selected_slots = execution_call.get("slots")
         if not isinstance(selected_slots, list):
             raise GuardError("Executable call has no exact physical slots for the user's style/reference choices.")
+        construction_guide_binding = _validate_construction_dimension_guide_binding(
+            path, plan, execution_call,
+            str(execution_call.get("stage_id") or stage or "SINGLE_PASS"), selected_slots,
+        )
         roles = {
             str(role).upper()
             for slot in selected_slots if isinstance(slot, dict)
@@ -1349,6 +1566,10 @@ def validate_reference_plan(
                 body_library = (workspace / "BODY_REFERENCE_LIBRARY").resolve()
             except (OSError, ValueError):
                 body_library = Path("<unresolved-body-library>")
+            authorized_clothes_path = validate_mandatory_clothes_call_binding(
+                plan, selected_slots, Path(path).resolve().parent, approved_identity_root,
+                actual_mode=mode, actual_stage=selected_stage,
+            )
             for slot in selected_slots:
                 if not isinstance(slot, dict):
                     raise GuardError("BODY_LIBRARY_ONLY contains an invalid physical slot.")
@@ -1357,7 +1578,20 @@ def validate_reference_plan(
                 is_library = slot_path.is_relative_to(body_library)
                 is_identity = approved_identity_root is not None and slot_path.is_relative_to(approved_identity_root)
                 is_style = bool(slot_roles) and slot_roles.issubset({"STYLE", "STYLE_SOFT"})
-                if not (is_library or is_identity or is_style or slot_path in validated_lineage_paths):
+                is_dimension_guide = bool(
+                    construction_guide_binding
+                    and selected_stage == "03_PHYSIQUE_SIDE"
+                    and slot_path == Path(str(construction_guide_binding["guide_path"])).resolve()
+                    and slot.get("sha256") == construction_guide_binding["guide_sha256"]
+                    and slot_roles == {"COMPOSITION"}
+                )
+                face_binding = validated_new_face_bindings.get(slot_path)
+                is_new_identity = bool(face_binding and face_binding[0] == slot.get("sha256")
+                                       and slot_roles == {face_binding[1]})
+                is_authorized_clothes = bool(authorized_clothes_path and slot_path == authorized_clothes_path
+                    and slot_roles == {"CLOTHES"}
+                    and str(slot.get("sha256", "")).lower() == file_sha256(authorized_clothes_path))
+                if not (is_library or is_identity or is_new_identity or is_style or is_dimension_guide or slot_path in validated_lineage_paths or is_authorized_clothes):
                     raise GuardError("BODY_LIBRARY_ONLY cannot attach optional non-library references outside validated stage lineage.")
     bindings: list[dict[str, object]] = []
     for slot in slots:
@@ -1543,10 +1777,391 @@ def verified_author_acceptance(state: dict[str, object]) -> dict[str, object] | 
         raise GuardError(f"Author-contract acceptance verification failed: {error}") from error
 
 
+def verified_author_scene_storage(path: Path, state: dict[str, object], receipt: Path) -> dict[str, object]:
+    try:
+        if __package__:
+            from .author_scene_completion import validate
+        else:
+            from author_scene_completion import validate
+        return validate(path, state, receipt)
+    except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError) as error:
+        raise GuardError(f"Author scene storage verification failed: {error}") from error
+
+
+def local_derivative_execution_snapshot(
+    attempt: dict[str, object], request_id: str,
+) -> dict[str, object]:
+    """Return the immutable plan snapshot bound to this exact SIDE attempt."""
+    snapshot = attempt.get("execution_snapshot")
+    required = {
+        "request_id": request_id,
+        "attempt_id": str(attempt.get("attempt_id", "")),
+        "request_purpose": "CHARACTER_BASE",
+        "execution_stage": "03_PHYSIQUE_SIDE",
+    }
+    if (not isinstance(snapshot, dict)
+            or any(snapshot.get(key) != value for key, value in required.items())
+            or not isinstance(snapshot.get("reference_plan_snapshot_path"), str)
+            or not snapshot.get("reference_plan_snapshot_path")
+            or not isinstance(snapshot.get("reference_plan_snapshot_sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", snapshot["reference_plan_snapshot_sha256"])):
+        raise GuardError("Local derivative requires the selected attempt's complete immutable execution snapshot.")
+    snapshot_path = Path(snapshot["reference_plan_snapshot_path"]).resolve()
+    if (not snapshot_path.is_file()
+            or file_sha256(snapshot_path) != snapshot["reference_plan_snapshot_sha256"].lower()):
+        raise GuardError("Local derivative selected-attempt execution snapshot is missing or has a stale plan hash.")
+    return snapshot
+
+
+DIRECT_EDIT_COMPLETION_SCOPE = "DIRECT_EDIT_CLOTHING_CONTINUATION"
+DIRECT_EDIT_COMPLETION_PERMISSION = "Разрешить исправить служебную проверку завершения"
+DIRECT_EDIT_COMPLETION_APPROVAL = "Утвердить эту обувь и сохранить комплект"
+DIRECT_EDIT_COMPLETION_CORRECTION = "нет, обувь мага!"
+DIRECT_EDIT_REOPEN_CORRECTION = "Обувь то где? Одежда утвердить, а на персонаже нужно добавить обувь"
+DIRECT_EDIT_CLEAN_TARGET_SHA256 = "62f552b844f9afc531cb50dc1e4fddeb9c4c497c06ec6aaf534f194497edb55c"
+DIRECT_EDIT_ROBE_DESIGN_SHA256 = "0388c11343e718be316b4bd9f47f8cc1b8ecccb217d2bd6965f29031324816c6"
+
+
+def _read_hash_bound_json(value: object, label: str) -> tuple[dict[str, object], Path, str]:
+    if not isinstance(value, dict):
+        raise GuardError(f"Direct-edit completion receipt is missing {label} binding.")
+    raw_path, raw_hash = value.get("path"), value.get("sha256")
+    if not isinstance(raw_path, str) or not raw_path or not isinstance(raw_hash, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", raw_hash):
+        raise GuardError(f"Direct-edit completion {label} path/hash is invalid.")
+    path = Path(raw_path).expanduser().resolve()
+    if not path.is_file() or file_sha256(path) != raw_hash.lower():
+        raise GuardError(f"Direct-edit completion {label} is missing or changed.")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise GuardError(f"Direct-edit completion {label} is not readable JSON: {error}") from error
+    if not isinstance(payload, dict):
+        raise GuardError(f"Direct-edit completion {label} must contain a JSON object.")
+    return payload, path, raw_hash.lower()
+
+
+def _verify_direct_edit_file_rows(rows: object, label: str) -> list[dict[str, str]]:
+    if not isinstance(rows, list) or not rows:
+        raise GuardError(f"Direct-edit completion receipt requires {label} hash bindings.")
+    checked: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise GuardError(f"Direct-edit completion {label} entry is malformed.")
+        raw_path, raw_hash = row.get("path"), row.get("sha256")
+        if not isinstance(raw_path, str) or not raw_path or not isinstance(raw_hash, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", raw_hash):
+            raise GuardError(f"Direct-edit completion {label} path/hash is invalid.")
+        path = Path(raw_path).expanduser().resolve()
+        key = str(path).casefold()
+        if key in seen or not path.is_file() or file_sha256(path) != raw_hash.lower():
+            raise GuardError(f"Direct-edit completion {label} is duplicated, missing, or changed: {path}")
+        seen.add(key)
+        checked.append({"path": str(path), "sha256": raw_hash.lower()})
+    return checked
+
+
+def validate_direct_edit_completion_receipt(
+    state: dict[str, object], stage: str, receipt_path: str | Path,
+    evidence_paths: Sequence[str] | None = None,
+) -> dict[str, object]:
+    """Verify the one authorized footwear edit as a supplement to its original SINGLE_PASS attempt.
+
+    This never creates or rewrites a provider attempt. The immutable guard baseline preserves the
+    original execution; separate hash-bound proof records the direct edit, approvals, native item,
+    and delivery. It applies only to this exact CHAR_002 clothing continuation at revision 12.
+    """
+    receipt_file = Path(receipt_path).expanduser().resolve()
+    assert_active_request_path(receipt_file)
+    request_folder = receipt_file.parent
+    if receipt_file.name != "DIRECT_EDIT_COMPLETION_RECEIPT.json":
+        raise GuardError("Direct-edit completion accepts only the canonical request receipt filename.")
+    try:
+        receipt = json.loads(receipt_file.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise GuardError(f"Direct-edit completion receipt cannot be read: {error}") from error
+    if not isinstance(receipt, dict):
+        raise GuardError("Direct-edit completion receipt must be a JSON object.")
+    request_id = str(state.get("request_id", ""))
+    if (receipt.get("schema_version") != 1
+            or receipt.get("scope") != DIRECT_EDIT_COMPLETION_SCOPE
+            or receipt.get("request_id") != request_id
+            or request_id != "despar-pre-transfer-kit-20261105"
+            or receipt.get("task_revision") != 12
+            or state.get("task_revision") != 12
+            or str(stage).upper() != "SINGLE_PASS"
+            or receipt.get("stage_id") != "SINGLE_PASS"
+            or receipt.get("character_id") != "CHAR_002"
+            or state.get("status") not in {"ACTIVE", "COMPLETE"}
+            or state.get("active_attempt")
+            or any(a.get("status") in {"ACTIVE", "UNKNOWN"} for a in state.get("attempts", []) if isinstance(a, dict))):
+        raise GuardError("Direct-edit completion is not bound to the exact active request, revision, stage, identity, or settled operation state.")
+    baseline_json, baseline_path, baseline_hash = _read_hash_bound_json(
+        {"path": receipt.get("guard_before_path"), "sha256": receipt.get("guard_before_sha256")},
+        "immutable guard baseline")
+    if baseline_path.parent != request_folder or baseline_path.name != "DIRECT_EDIT_COMPLETION_GUARD_BEFORE.json":
+        raise GuardError("Direct-edit completion baseline must be the immutable snapshot in this exact request folder.")
+    if (baseline_json.get("request_id") != request_id
+            or baseline_json.get("task_revision") != 12
+            or baseline_json.get("task_kind") != state.get("task_kind")):
+        raise GuardError("Direct-edit completion baseline belongs to another task or revision.")
+    base_stages = required_stage_entries(baseline_json)
+    current_stages = required_stage_entries(state)
+    if ([str(row.get("id", "")) for row in base_stages] != [*CHARACTER_BASE_STAGES, "SINGLE_PASS"]
+            or [row.get("status") for row in base_stages[:5]] != ["COMPLETED"] * 5
+            or base_stages[5].get("status") != "PENDING"
+            or [str(row.get("id", "")) for row in current_stages] != [*CHARACTER_BASE_STAGES, "SINGLE_PASS"]
+            or [row.get("status") for row in current_stages[:5]] != ["COMPLETED"] * 5
+            or current_stages[5].get("status") not in {"PENDING", "COMPLETED"}
+            or (state.get("status") == "COMPLETE" and current_stages[5].get("status") != "COMPLETED")):
+        raise GuardError("Direct-edit completion can close only the original five approved base stages plus its pending SINGLE_PASS continuation.")
+    correction_history = [event for event in baseline_json.get("events", [])
+                         if isinstance(event, dict) and event.get("event") == "USER_CORRECTION"
+                         and DIRECT_EDIT_REOPEN_CORRECTION in str(event.get("summary", ""))
+                         and str(event.get("stage", "")).upper() == "SINGLE_PASS"]
+    if not correction_history:
+        raise GuardError("Direct-edit completion baseline does not preserve the exact SINGLE_PASS footwear correction history.")
+    active_guard = Path(str(receipt.get("guard_path", ""))).expanduser().resolve()
+    if active_guard != receipt_file.parent / "EXECUTION_GUARD.json":
+        raise GuardError("Direct-edit completion receipt names a different active guard.")
+    original = receipt.get("original_attempt")
+    if not isinstance(original, dict) or not isinstance(original.get("attempt_id"), str):
+        raise GuardError("Direct-edit completion receipt has no original prepared attempt binding.")
+    attempts = [a for a in state.get("attempts", []) if isinstance(a, dict) and a.get("attempt_id") == original.get("attempt_id")]
+    if len(attempts) != 1:
+        raise GuardError("Direct-edit completion original attempt is absent or ambiguous.")
+    attempt = attempts[0]
+    baseline_attempts = [a for a in baseline_json.get("attempts", [])
+                         if isinstance(a, dict) and a.get("attempt_id") == original.get("attempt_id")]
+    if len(baseline_attempts) != 1 or baseline_attempts[0] != attempt:
+        raise GuardError("Direct-edit completion original prepared attempt or its history changed after the immutable baseline.")
+    snapshot = attempt.get("execution_snapshot")
+    artifact = attempt.get("provider_artifact")
+    result_evidence = attempt.get("result_evidence")
+    if (attempt.get("stage") != "SINGLE_PASS" or attempt.get("task_revision") != 11
+            or attempt.get("status") not in {"RESULT_AVAILABLE", "DELIVERED"}
+            or attempt.get("result_status") != "TEST"
+            or not isinstance(snapshot, dict) or not isinstance(artifact, dict)
+            or not isinstance(result_evidence, list) or not result_evidence
+            or snapshot.get("request_id") != request_id or snapshot.get("attempt_id") != attempt.get("attempt_id")
+            or snapshot.get("task_revision") != 11 or snapshot.get("stage") != "SINGLE_PASS"
+            or snapshot.get("guard_stage") != "SINGLE_PASS" or snapshot.get("execution_stage") != "SINGLE_PASS"
+            or artifact.get("path") != original.get("provider_path")
+            or str(artifact.get("sha256", "")).lower() != str(original.get("provider_sha256", "")).lower()
+            or not Path(str(artifact.get("path", ""))).is_file()
+            or file_sha256(Path(str(artifact.get("path", "")))) != str(artifact.get("sha256", "")).lower()):
+        raise GuardError("Direct-edit completion cannot prove the unchanged original SINGLE_PASS TEST attempt.")
+    if (artifact.get("result_status") != "TEST" or len(result_evidence) != 1
+            or len(artifact.get("registered_evidence", [])) != 1):
+        raise GuardError("Direct-edit completion original TEST output must retain its unique registered evidence copy.")
+    registered_evidence = artifact.get("registered_evidence", [])
+    if not isinstance(registered_evidence, list) or not registered_evidence:
+        raise GuardError("Direct-edit completion original provider result has no registered source evidence.")
+    for raw_evidence in [*result_evidence, *registered_evidence]:
+        evidence_path = Path(str(raw_evidence)).expanduser().resolve()
+        if (not evidence_path.is_file()
+                or file_sha256(evidence_path) != str(artifact.get("sha256", "")).lower()):
+            raise GuardError("Direct-edit completion original provider/registered evidence is missing or changed.")
+    plan_path = Path(str(snapshot.get("reference_plan_snapshot_path", ""))).expanduser().resolve()
+    if (plan_path != Path(str(original.get("plan_snapshot_path", ""))).expanduser().resolve()
+            or not plan_path.is_file() or file_sha256(plan_path) != str(original.get("plan_snapshot_sha256", "")).lower()
+            or file_sha256(plan_path) != str(snapshot.get("reference_plan_snapshot_sha256", "")).lower()):
+        raise GuardError("Direct-edit completion original executed-plan snapshot is missing or changed.")
+    if (not plan_path.is_relative_to(request_folder)
+            or not Path(str(artifact.get("path", ""))).resolve().is_relative_to(request_folder)):
+        raise GuardError("Direct-edit completion original prepared provider inputs must remain in this request folder.")
+    try:
+        plan_snapshot = json.loads(plan_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise GuardError(f"Direct-edit completion original plan snapshot cannot be read: {error}") from error
+    execution_call = snapshot.get("execution_call")
+    call_hash = hashlib.sha256(json.dumps(
+        execution_call, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")).hexdigest() if isinstance(execution_call, dict) else ""
+    if (not isinstance(plan_snapshot, dict) or plan_snapshot.get("request_id") != request_id
+            or plan_snapshot.get("generation_purpose") != "SCENE"
+            or not isinstance(execution_call, dict)
+            or plan_snapshot.get("execution_call") != execution_call
+            or execution_call.get("request_id") != request_id
+            or execution_call.get("stage_id") != "SINGLE_PASS"
+            or snapshot.get("execution_call_sha256") != call_hash
+            or snapshot.get("reference_binding") != attempt.get("reference_binding")
+            or not isinstance(snapshot.get("reference_binding"), dict)
+            or not isinstance(execution_call.get("prompt"), dict)
+            or snapshot.get("prompt_sha256") != execution_call["prompt"].get("text_sha256")):
+        raise GuardError("Direct-edit completion original plan is not the request's SCENE execution.")
+
+    permission, permission_path, permission_hash = _read_hash_bound_json(receipt.get("authorization"), "user permission")
+    if not permission_path.is_relative_to(request_folder):
+        raise GuardError("Direct-edit completion permission proof must be in this exact request folder.")
+    if (permission.get("request_id") != request_id
+            or permission.get("exact_answer") != DIRECT_EDIT_COMPLETION_PERMISSION
+            or permission.get("native_question_id") != "call_314032eba1e4425cadbf649e1e0d13ac"):
+        raise GuardError("Direct-edit completion lacks the exact user-authorized service-check repair permission.")
+    edit = receipt.get("direct_edit")
+    if not isinstance(edit, dict):
+        raise GuardError("Direct-edit completion receipt lacks direct-edit provenance.")
+    provenance, provenance_path, provenance_hash = _read_hash_bound_json(
+        {"path": edit.get("provenance_path"), "sha256": edit.get("provenance_sha256")}, "direct-edit provenance")
+    target_path = Path(str(edit.get("target_path", ""))).expanduser().resolve()
+    output_path = Path(str(edit.get("output_path", ""))).expanduser().resolve()
+    provider_output_path = Path(str(provenance.get("provider_output", ""))).expanduser().resolve()
+    if (provenance.get("request_id") != request_id
+            or provenance.get("latest_exact_correction") != DIRECT_EDIT_COMPLETION_CORRECTION
+            or str(provenance.get("target", "")).casefold() != str(target_path).casefold()
+            or provenance.get("target_sha256") != edit.get("target_sha256")
+            or str(provenance.get("output", "")).casefold() != str(output_path).casefold()
+            or provenance.get("sha256") != edit.get("output_sha256")
+            or str(edit.get("target_sha256", "")).lower() != DIRECT_EDIT_CLEAN_TARGET_SHA256
+            or not target_path.is_file() or file_sha256(target_path) != str(edit.get("target_sha256", "")).lower()
+            or not output_path.is_file() or file_sha256(output_path) != str(edit.get("output_sha256", "")).lower()
+            or not provider_output_path.is_file()
+            or file_sha256(provider_output_path) != str(edit.get("output_sha256", "")).lower()
+            or edit.get("latest_exact_correction") != DIRECT_EDIT_COMPLETION_CORRECTION):
+        raise GuardError("Direct-edit target, correction, provenance, or output hash does not match the actual footwear edit.")
+    if (not provenance_path.is_relative_to(request_folder) or not target_path.is_relative_to(request_folder)
+            or not output_path.is_relative_to(request_folder)):
+        raise GuardError("Direct-edit target, output, and provenance must be bound inside this exact request folder.")
+    if evidence_paths is not None and [str(Path(p).resolve()) for p in evidence_paths] != [str(output_path)]:
+        raise GuardError("Direct-edit SINGLE_PASS evidence must be the exact approved current footwear output.")
+    author_binding = receipt.get("author_approval")
+    if not isinstance(author_binding, dict):
+        raise GuardError("Direct-edit completion receipt lacks final author approval binding.")
+    approval, approval_path, approval_hash = _read_hash_bound_json(
+        {"path": author_binding.get("path"), "sha256": author_binding.get("sha256")},
+        "final author approval")
+    if not approval_path.is_relative_to(request_folder):
+        raise GuardError("Direct-edit author approval proof must be in this exact request folder.")
+    if (approval.get("request_id") != request_id or approval.get("status") != "APPROVED_BY_AUTHOR"
+            or approval.get("native_question_id") != "call_5de3ad84e79f4a6baf591db2c95faa7f"
+            or approval.get("exact_answer") != DIRECT_EDIT_COMPLETION_APPROVAL
+            or str(Path(str(approval.get("fit_path", ""))).resolve()).casefold() != str(output_path).casefold()
+            or str(approval.get("fit_sha256", "")).lower() != str(edit.get("output_sha256", "")).lower()
+            or str(approval.get("design_sha256", "")).lower() != DIRECT_EDIT_ROBE_DESIGN_SHA256
+            or author_binding.get("question_id") != approval.get("native_question_id")
+            or author_binding.get("quote") != approval.get("exact_answer")):
+        raise GuardError("Direct-edit completion lacks exact final author approval of this footwear and outfit.")
+    native = receipt.get("native_storage")
+    if not isinstance(native, dict):
+        raise GuardError("Direct-edit completion receipt lacks native outfit storage bindings.")
+    storage, storage_path, storage_hash = _read_hash_bound_json(
+        {"path": native.get("checks_path"), "sha256": native.get("checks_sha256")},
+        "native outfit storage proof")
+    if not storage_path.is_relative_to(request_folder):
+        raise GuardError("Direct-edit native storage proof must be in this exact request folder.")
+    manifest_path = Path(str(native.get("manifest_path", ""))).expanduser().resolve()
+    if (storage.get("character_id") != "CHAR_002"
+            or storage.get("item_id") != "ITEM_DESPAR_ROBE" or storage.get("version") != "1"
+            or storage.get("native_validation") != "PASS" or not storage.get("source_hashes_match")
+            or storage.get("actual_author_approval") != str(approval_path.name)
+            or str(storage.get("manifest", "")).casefold() != str(manifest_path).casefold()
+            or not manifest_path.is_file() or file_sha256(manifest_path) != str(native.get("manifest_sha256", "")).lower()):
+        raise GuardError("Direct-edit completion native ITEM_DESPAR_ROBE/v1 storage proof or manifest changed.")
+    if (storage.get("item_design", {}).get("sha256") != DIRECT_EDIT_ROBE_DESIGN_SHA256
+            or storage.get("item_scale_fit", {}).get("sha256") != str(edit.get("output_sha256", "")).lower()
+            or storage.get("profile_sha256") != str(native.get("profile_sha256", "")).lower()):
+        raise GuardError("Direct-edit completion native item does not bind the approved design, fit, and current profile.")
+    try:
+        try:
+            from tools import item_reference_manager
+        except ImportError:
+            import item_reference_manager
+        checked_item = item_reference_manager.validate_manifest(
+            Path(__file__).resolve().parent.parent, manifest_path,
+            style_name="LORANDESORE", character_id="CHAR_002")
+    except (OSError, ValueError, RuntimeError) as error:
+        raise GuardError(f"Native typed-item manager rejected the current approved outfit: {error}") from error
+    if (checked_item.get("item_id") != "ITEM_DESPAR_ROBE" or checked_item.get("version") != "1"
+            or checked_item.get("item_kind") != "CLOTHING"):
+        raise GuardError("Native typed-item manager resolved a different item, version, or role.")
+    profile_path = Path(str(native.get("profile_path", ""))).expanduser().resolve()
+    profile_hash = str(native.get("profile_sha256", "")).lower()
+    if (not profile_path.is_file() or not re.fullmatch(r"[0-9a-f]{64}", profile_hash)
+            or file_sha256(profile_path) != profile_hash
+            or "character_id: \"CHAR_002\"" not in profile_path.read_text(encoding="utf-8")):
+        raise GuardError("Direct-edit completion current confirmed CHAR_002 profile is missing or changed.")
+    assembly_path = Path(str(native.get("assembly_path", ""))).expanduser().resolve()
+    assembly_hash = str(native.get("assembly_sha256", "")).lower()
+    if (not assembly_path.is_file() or not re.fullmatch(r"[0-9a-f]{64}", assembly_hash)
+            or file_sha256(assembly_path) != assembly_hash):
+        raise GuardError("Direct-edit completion canonical CHAR_002 assembly is missing or changed.")
+    if (storage.get("profile") and str(Path(str(storage.get("profile"))).resolve()).casefold() != str(profile_path).casefold()):
+        raise GuardError("Direct-edit completion profile path differs from native storage evidence.")
+    base_proofs = _verify_direct_edit_file_rows(native.get("base_proofs"), "five approved character-base proofs")
+    role_files = _verify_direct_edit_file_rows(native.get("item_role_files"), "native typed-item role files")
+    if len(base_proofs) != 5 or len(role_files) < 2:
+        raise GuardError("Direct-edit completion requires five approved base proofs and both native item role files.")
+    approved_character_root = manifest_path.parents[4]
+    expected_base_paths = [
+        approved_character_root / "03_CHARACTER_REFERENCES" / "01_FACE" / "CHARACTER_FACE.png",
+        approved_character_root / "03_CHARACTER_REFERENCES" / "02_BODY" / "CHARACTER_BODY_FRONT.png",
+        approved_character_root / "03_CHARACTER_REFERENCES" / "02_BODY" / "CHARACTER_BODY_SIDE.png",
+        approved_character_root / "03_CHARACTER_REFERENCES" / "02_BODY" / "CHARACTER_BODY_BACK.png",
+        approved_character_root / "00_APPROVED_BASE" / "CHARACTER_ASSEMBLY_SHORTS.png",
+    ]
+    if (not approved_character_root.name.startswith("CHAR_002_")
+            or str(expected_base_paths[-1].resolve()).casefold() != str(assembly_path).casefold()
+            or [str(path.resolve()).casefold() for path in expected_base_paths]
+                != [row["path"].casefold() for row in base_proofs]):
+        raise GuardError("Direct-edit completion base proofs do not use CHAR_002's canonical approved role paths.")
+    baseline_base_hashes: list[str] = []
+    for row in base_stages[:5]:
+        stage_evidence_hashes = row.get("evidence_sha256")
+        if not isinstance(stage_evidence_hashes, dict) or len(stage_evidence_hashes) != 1:
+            raise GuardError("Direct-edit completion baseline stage must retain one hash-bound approved base artifact.")
+        stage_evidence_path, stage_evidence_hash = next(iter(stage_evidence_hashes.items()))
+        stage_image = Path(str(stage_evidence_path)).expanduser().resolve()
+        if (not stage_image.is_file() or not isinstance(stage_evidence_hash, str)
+                or file_sha256(stage_image) != stage_evidence_hash.lower()):
+            raise GuardError("Direct-edit completion baseline character-base stage evidence is missing or changed.")
+        baseline_base_hashes.append(stage_evidence_hash.lower())
+    if baseline_base_hashes != [row["sha256"] for row in base_proofs]:
+        raise GuardError("Direct-edit completion approved base role hashes differ from the immutable original stage evidence.")
+    expected_roles = {
+        str(Path(str(storage["item_design"]["path"])).resolve()): DIRECT_EDIT_ROBE_DESIGN_SHA256,
+        str(Path(str(storage["item_scale_fit"]["path"])).resolve()): str(edit["output_sha256"]).lower(),
+    }
+    if any(not any(row["path"] == path and row["sha256"] == digest for row in role_files)
+           for path, digest in expected_roles.items()):
+        raise GuardError("Direct-edit completion item-role proof set does not bind the actual approved design and current fit files.")
+    delivery_binding = receipt.get("delivery")
+    if not isinstance(delivery_binding, dict):
+        raise GuardError("Direct-edit completion receipt lacks visible delivery binding.")
+    delivery, delivery_path, delivery_hash = _read_hash_bound_json(
+        {"path": delivery_binding.get("path"), "sha256": delivery_binding.get("sha256")},
+        "visible delivery receipt")
+    if not delivery_path.is_relative_to(request_folder):
+        raise GuardError("Direct-edit delivery proof must be in this exact request folder.")
+    if (delivery.get("request_id") != request_id
+            or delivery.get("fit_sha256") != str(edit.get("output_sha256", "")).lower()
+            or delivery.get("native_validation") != "PASS" or not delivery.get("actual_delivery")):
+        raise GuardError("Direct-edit completion lacks the exact current outfit's visible delivery receipt.")
+    return {
+        "direct_edit_completion": True, "receipt_path": str(receipt_file), "receipt_sha256": file_sha256(receipt_file),
+        "request_id": request_id, "task_revision": 12, "attempt_id": str(attempt.get("attempt_id")),
+        "result_status": "TEST", "artifact_path": str(output_path), "artifact_sha256": str(edit["output_sha256"]).lower(),
+        "stage_evidence_path": str(output_path), "baseline_path": str(baseline_path), "baseline_sha256": baseline_hash,
+        "permission_path": str(permission_path), "permission_sha256": permission_hash,
+        "provenance_path": str(provenance_path), "provenance_sha256": provenance_hash,
+        "approval_path": str(approval_path), "approval_sha256": approval_hash,
+        "storage_path": str(storage_path), "storage_sha256": storage_hash,
+        "manifest_path": str(manifest_path), "manifest_sha256": str(native["manifest_sha256"]).lower(),
+        "profile_path": str(profile_path), "profile_sha256": profile_hash,
+        "assembly_path": str(assembly_path), "assembly_sha256": assembly_hash,
+        "base_proofs": base_proofs, "item_role_files": role_files,
+        "delivery_path": str(delivery_path), "delivery_sha256": delivery_hash,
+    }
+
+
 def validate_stage_attempt_binding(
-    state: dict[str, object], stage: str, evidence_paths: Sequence[str]
+    state: dict[str, object], stage: str, evidence_paths: Sequence[str],
+    local_derivative_receipt: str | Path | None = None,
+    *, allow_accepted_stage_replay: bool = False,
+    direct_edit_completion_receipt: str | Path | None = None,
 ) -> dict[str, object]:
     """Bind an image stage to its current executed, accepted provider result."""
+    if direct_edit_completion_receipt:
+        return validate_direct_edit_completion_receipt(
+            state, stage, direct_edit_completion_receipt, evidence_paths)
     accepted = verified_author_acceptance(state)
     if accepted:
         attempt = state["attempts"][-1]
@@ -1592,9 +2207,71 @@ def validate_stage_attempt_binding(
 
     candidates = [row for row in state.get("attempts", []) if matches_stage(row)]
     attempt = candidates[-1] if candidates else None
+    accepted_binding: dict[str, object] | None = None
+    if allow_accepted_stage_replay:
+        stage_rows = [row for row in required_stage_entries(state)
+                      if str(row.get("id", "")).upper() == str(stage).upper()]
+        candidate_binding = stage_rows[0].get("accepted_attempt_binding") if len(stage_rows) == 1 else None
+        accepted_binding = candidate_binding if isinstance(candidate_binding, dict) else None
+        accepted_attempt_id = accepted_binding.get("attempt_id") if isinstance(accepted_binding, dict) else None
+        accepted_attempts = [row for row in candidates if row.get("attempt_id") == accepted_attempt_id]
+        if (len(stage_rows) != 1 or stage_rows[0].get("status") != "COMPLETED"
+                or not isinstance(accepted_binding, dict) or len(accepted_attempts) != 1):
+            raise GuardError("Accepted-stage replay is allowed only for the exact already-completed stage attempt proof.")
+        attempt = accepted_attempts[0]
+        try:
+            accepted_revision = int(accepted_binding.get("task_revision", -1))
+            completed_revision = int(stage_rows[0].get("completed_task_revision", -2))
+        except (TypeError, ValueError):
+            raise GuardError("Completed stage has an invalid accepted attempt revision.") from None
+        if (accepted_revision != int(attempt.get("task_revision", -1))
+                or completed_revision != accepted_revision):
+            raise GuardError("Completed stage no longer binds the accepted attempt's original revision.")
+        snapshot = attempt.get("execution_snapshot")
+        reference_binding = attempt.get("reference_binding")
+        call = snapshot.get("execution_call") if isinstance(snapshot, dict) else None
+        if (not isinstance(snapshot, dict) or not isinstance(reference_binding, dict)
+                or not isinstance(call, dict)
+                or snapshot.get("request_id") != state.get("request_id")
+                or snapshot.get("attempt_id") != attempt.get("attempt_id")
+                or snapshot.get("task_revision") != accepted_revision
+                or normalize_stage_key(str(snapshot.get("execution_stage", ""))) != stage_key
+                or normalize_stage_key(str(snapshot.get("stage", ""))) != stage_key
+                or normalize_stage_key(str(snapshot.get("guard_stage", ""))) != stage_key
+                or normalize_stage_key(str(attempt.get("stage", ""))) != stage_key
+                or snapshot.get("reference_binding") != reference_binding):
+            raise GuardError("Completed stage execution snapshot or reference dependency binding is inconsistent.")
+        call_hash = hashlib.sha256(json.dumps(
+            call, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")).hexdigest()
+        prompt = call.get("prompt")
+        if (snapshot.get("execution_call_sha256") != call_hash
+                or reference_binding.get("execution_call_sha256") != call_hash
+                or not isinstance(prompt, dict)
+                or snapshot.get("prompt_sha256") != reference_binding.get("prompt_sha256")
+                or snapshot.get("prompt_sha256") != prompt.get("text_sha256")):
+            raise GuardError("Completed stage call or prompt no longer matches its accepted dependency binding.")
+        plan_snapshot_path = snapshot.get("reference_plan_snapshot_path")
+        plan_snapshot_hash = snapshot.get("reference_plan_snapshot_sha256")
+        if (not isinstance(plan_snapshot_path, str) or not plan_snapshot_path
+                or not isinstance(plan_snapshot_hash, str)
+                or not re.fullmatch(r"[0-9a-f]{64}", plan_snapshot_hash)
+                or not Path(plan_snapshot_path).is_file()
+                or file_sha256(Path(plan_snapshot_path)) != plan_snapshot_hash.lower()):
+            raise GuardError("Completed stage's immutable reference/dependency snapshot is missing or changed.")
+        try:
+            plan_snapshot = json.loads(Path(plan_snapshot_path).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise GuardError(f"Completed stage's immutable reference snapshot cannot be read: {error}") from error
+        if (not isinstance(plan_snapshot, dict)
+                or plan_snapshot.get("request_id") != state.get("request_id")
+                or str(plan_snapshot.get("generation_purpose", "")).upper() != "CHARACTER_BASE"
+                or plan_snapshot.get("execution_call") != call):
+            raise GuardError("Completed stage's immutable reference snapshot belongs to another request or purpose.")
+    attempt_revision = int(attempt.get("task_revision", -1)) if isinstance(attempt, dict) else -1
     if (
         not isinstance(attempt, dict)
-        or int(attempt.get("task_revision", -1)) != revision
+        or (attempt_revision != revision and not allow_accepted_stage_replay)
         or attempt.get("status") not in {"RESULT_AVAILABLE", "DELIVERED"}
         or attempt.get("result_status") not in {"STAGING", "TEST"}
     ):
@@ -1619,6 +2296,73 @@ def validate_stage_attempt_binding(
     ):
         raise GuardError(f"Image stage {stage} provider artifact binding is stale or inconsistent; recover registration.")
     normalized_evidence = [str(Path(item).resolve()) for item in evidence_paths]
+    if local_derivative_receipt:
+        receipt_path = Path(local_derivative_receipt).expanduser().resolve()
+        try:
+            try:
+                from tools.style_pack_contracts import validate_local_derivative_receipt
+            except ImportError:
+                from style_pack_contracts import validate_local_derivative_receipt
+            receipt_data = json.loads(receipt_path.read_text(encoding="utf-8"))
+            checked = validate_local_derivative_receipt(
+                receipt_path,
+                request_root=receipt_path.parent,
+                request_id=str(state.get("request_id", "")),
+                character_id="NEW",
+                stage_id=stage,
+                output=Path(str(receipt_data.get("output_image", ""))),
+                guard_path=receipt_path.parent / "EXECUTION_GUARD.json",
+                attempt_id=str(attempt.get("attempt_id", "")),
+                allow_accepted_stage_replay=allow_accepted_stage_replay,
+            )
+        except Exception as error:
+            raise GuardError(f"Local derivative stage proof is invalid: {error}") from error
+        derived = attempt.get("derived_artifact")
+        derived_binding = checked.get("derived_artifact", {})
+        recorded_derived_evidence = attempt.get("derived_evidence", [])
+        if (not isinstance(derived, dict) or derived != checked
+                or not isinstance(derived_binding, dict)
+                or not isinstance(recorded_derived_evidence, list)
+                or normalized_evidence != [str(Path(str(item)).resolve()) for item in recorded_derived_evidence]
+                or len(normalized_evidence) != 1
+                or not Path(normalized_evidence[0]).resolve().is_relative_to(receipt_path.parent.resolve())
+                or not Path(normalized_evidence[0]).is_file()
+                or file_sha256(Path(normalized_evidence[0])) != str(derived_binding.get("sha256", "")).lower()):
+            raise GuardError("Stage evidence does not match the separately registered local derivative proof.")
+        try:
+            try:
+                from tools import style_pack_manager as manager
+            except ImportError:
+                import style_pack_manager as manager
+            snapshot = local_derivative_execution_snapshot(attempt, str(state.get("request_id", "")))
+            snapshot_path = Path(str(snapshot["reference_plan_snapshot_path"])).resolve()
+            plan = json.loads(snapshot_path.read_text(encoding="utf-8"))
+            pack_path = Path(str(plan.get("pack_path", ""))).resolve()
+            paths = manager.make_paths(pack_path.parent, str(plan.get("style_name", "")))
+            rows = [row for row in manager.read_csv(paths.generation_manifest)
+                    if row.get("request_id") == str(state.get("request_id", ""))
+                    and f"[ATTEMPT_ID={attempt.get('attempt_id', '')}]" in row.get("notes", "")]
+            if (len(rows) != 1 or rows[0].get("status", "").upper() not in {"STAGING", "TEST"}
+                    or manager.generation_qa_evidence(rows[0]) is None
+                    or manager.generation_qa_evidence(rows[0]).get("local_derivative") != checked):
+                raise GuardError("Local derivative stage has no replayable non-rejected native QA record.")
+        except GuardError:
+            raise
+        except Exception as error:
+            raise GuardError(f"Local derivative QA replay failed during stage completion: {error}") from error
+        replay_binding = {
+            "attempt_id": str(attempt.get("attempt_id", "")),
+            "task_revision": attempt_revision,
+            "result_status": str(attempt.get("result_status", "")),
+            "artifact_path": artifact_path,
+            "artifact_sha256": artifact_hash,
+            "derived_artifact": checked,
+            "stage_evidence_path": normalized_evidence[0],
+            "stage_evidence_sha256": file_sha256(Path(normalized_evidence[0])),
+        }
+        if allow_accepted_stage_replay and accepted_binding != replay_binding:
+            raise GuardError("Completed local derivative stage binding changed from its accepted attempt proof.")
+        return replay_binding
     if (
         len(normalized_evidence) != 1
         or normalized_evidence != registered_paths
@@ -1629,14 +2373,17 @@ def validate_stage_attempt_binding(
         raise GuardError(
             f"Image stage {stage} evidence must be one registered artifact with the exact executed provider artifact hash."
         )
-    return {
+    replay_binding = {
         "attempt_id": str(attempt.get("attempt_id", "")),
-        "task_revision": revision,
+        "task_revision": attempt_revision,
         "result_status": str(attempt.get("result_status", "")),
             "artifact_path": artifact_path,
             "stage_evidence_path": normalized_evidence[0],
         "artifact_sha256": artifact_hash,
     }
+    if allow_accepted_stage_replay and accepted_binding != replay_binding:
+        raise GuardError("Completed stage binding changed from its exact accepted attempt proof.")
+    return replay_binding
 
 
 def cycle_elapsed_seconds(state: dict[str, object], now: datetime) -> float:
@@ -1809,7 +2556,7 @@ def validate_current_stage_output_authority(
             )
 
 
-def completion_block_reason(state: dict[str, object]) -> str | None:
+def completion_block_reason(state: dict[str, object], guard_path: Path | None = None) -> str | None:
     """Return why the locked task is not complete, without trusting status text."""
     if state.get("recovery"):
         return "Finish the recorded repair before claiming completion."
@@ -1827,16 +2574,51 @@ def completion_block_reason(state: dict[str, object]) -> str | None:
     if state.get("request_purpose") == "CHARACTER_BASE" or executed_base:
         entries = required_stage_entries(state)
         actual_ids = [str(row.get("id", "")) for row in entries if isinstance(row, dict)]
-        if len(actual_ids) != len(entries) or actual_ids != list(CHARACTER_BASE_STAGES):
+        prefix = list(CHARACTER_BASE_STAGES)
+        tail = actual_ids[len(prefix):] if actual_ids[:len(prefix)] == prefix else None
+        scope_additions = {
+            str(stage).strip()
+            for change in state.get("scope_changes", []) if isinstance(change, dict)
+            for stage in change.get("added_required_stages", [])
+        }
+        continuation_is_recorded = (
+            tail == ["SINGLE_PASS"] and scope_additions == {"SINGLE_PASS"}
+            and sum(1 for change in state.get("scope_changes", []) if isinstance(change, dict)
+                    and "SINGLE_PASS" in change.get("added_required_stages", [])) == 1
+        )
+        if (len(actual_ids) != len(entries) or actual_ids[:len(prefix)] != prefix
+                or len(actual_ids) != len(set(actual_ids))
+                or (actual_ids[len(prefix):] and not continuation_is_recorded)
+                or (not actual_ids[len(prefix):] and "SINGLE_PASS" in scope_additions)):
             missing = [stage_id for stage_id in CHARACTER_BASE_STAGES if stage_id not in actual_ids]
             return (
-                "CHARACTER_BASE guard is missing or misordering the five required stages"
+                "CHARACTER_BASE guard is missing or misordering the five required stages; preserve the exact five-stage prefix and permit only one recorded SINGLE_PASS clothing continuation after it"
                 + (f": {', '.join(missing)}" if missing else "")
                 + "; reconcile it with the executed plan and continue the incomplete stages."
             )
     pending = pending_required_stages(state)
     if pending:
         return "Task completion is forbidden while required stages remain pending: " + ", ".join(pending)
+    storage = state.get("author_scene_storage")
+    if storage:
+        if guard_path is None:
+            return "Author scene completion requires the actual guard path."
+        try:
+            receipt = Path(str(storage["receipt_path"]))
+            checked = verified_author_scene_storage(guard_path, state, receipt)
+            stage = required_stage_entries(state)[0]
+            expected = {"author_scene_storage": True, **checked}
+            if (storage != checked or stage.get("accepted_attempt_binding") != expected
+                    or stage.get("completed_task_revision") != state.get("task_revision")
+                    or stage.get("evidence") != [checked["approved_scene_path"]]
+                    or state.get("latest_delivered_attempt_id") != checked["attempt_id"]
+                    or state.get("latest_delivered_result_status") != "APPROVED_SCENE"
+                    or not state.get("delivered_result_at")
+                    or state["attempts"][-1].get("status") != "DELIVERED"):
+                return "Author scene storage completion binding changed."
+        except (GuardError, KeyError, TypeError, IndexError) as error:
+            return str(error)
+        return None
     if is_project_image_generation(state):
         for entry in required_stage_entries(state):
             if entry.get("status") != "COMPLETED":
@@ -1858,8 +2640,28 @@ def completion_block_reason(state: dict[str, object]) -> str | None:
                     return str(error)
                 continue
             try:
+                derivative = binding.get("derived_artifact")
+                is_local_side_replay = (
+                    str(entry.get("id", "")).upper() == "03_PHYSIQUE_SIDE"
+                    and isinstance(derivative, dict)
+                    and derivative.get("kind") == "LOCAL_DETERMINISTIC_FOREFOOT_CORRECTION"
+                    and isinstance(derivative.get("receipt_path"), str)
+                )
                 expected_binding = validate_stage_attempt_binding(
-                    state, str(entry.get("id", "")), stage_evidence
+                    state, str(entry.get("id", "")), stage_evidence,
+                    str(derivative["receipt_path"]) if is_local_side_replay else None,
+                    allow_accepted_stage_replay=bool(
+                        isinstance(binding.get("attempt_id"), str)
+                        and any(isinstance(attempt, dict)
+                            and attempt.get("attempt_id") == binding.get("attempt_id")
+                            and isinstance(attempt.get("execution_snapshot"), dict)
+                            and attempt["execution_snapshot"].get("request_purpose") == "CHARACTER_BASE"
+                            for attempt in state.get("attempts", []))
+                    ),
+                    direct_edit_completion_receipt=(
+                        str(binding.get("receipt_path"))
+                        if binding.get("direct_edit_completion") is True else None
+                    ),
                 )
             except GuardError as error:
                 return str(error)
@@ -1868,8 +2670,19 @@ def completion_block_reason(state: dict[str, object]) -> str | None:
                 or int(binding.get("task_revision", -1)) != int(entry.get("completed_task_revision", -2))
             ):
                 return f"Completed image stage {entry.get('id')} is not bound to an accepted current-revision attempt; continue the stage."
+            if binding.get("direct_edit_completion") is True:
+                delivered = state.get("direct_edit_completion_delivery")
+                if not isinstance(delivered, dict) or delivered.get("receipt_sha256") != binding.get("receipt_sha256"):
+                    return "Direct-edit clothing continuation requires its matching RESULT_DELIVERED checkpoint before COMPLETE."
             artifact_path = str(Path(str(binding.get("artifact_path", ""))).expanduser().resolve())
             artifact_hash = str(binding.get("artifact_sha256", "")).lower()
+            derived_artifact = binding.get("derived_artifact")
+            stage_evidence_hash = (
+                str(derived_artifact.get("derived_artifact", {}).get("sha256", "")).lower()
+                if isinstance(derived_artifact, dict)
+                and isinstance(derived_artifact.get("derived_artifact"), dict)
+                else artifact_hash
+            )
             if (
                 len(stage_evidence) != 1
                 or str(Path(str(stage_evidence[0])).expanduser().resolve()) != str(
@@ -1879,7 +2692,8 @@ def completion_block_reason(state: dict[str, object]) -> str | None:
                 or not Path(artifact_path).is_file()
                 or file_sha256(Path(artifact_path)) != artifact_hash
                 or not Path(str(binding.get("stage_evidence_path", ""))).is_file()
-                or file_sha256(Path(str(binding.get("stage_evidence_path", "")))) != artifact_hash
+                or not stage_evidence_hash
+                or file_sha256(Path(str(binding.get("stage_evidence_path", "")))) != stage_evidence_hash
             ):
                 return f"Completed stage evidence no longer matches its accepted executed result for {entry.get('id')}; review or continue."
             for raw_path in stage_evidence:
@@ -1897,6 +2711,23 @@ def completion_block_reason(state: dict[str, object]) -> str | None:
         delivery = state.get("author_contract_delivery", {})
         if not accepted or delivery.get("generation_id") != accepted["generation_id"] or not delivery.get("delivery_evidence") or delivery.get("receipt_sha256") != accepted["receipt_sha256"]:
             return "Author-contract TEST acceptance requires its own RESULT_DELIVERED receipt."
+        return None
+    direct_completion_stages = [
+        row for row in required_stage_entries(state)
+        if row.get("status") == "COMPLETED"
+        and isinstance(row.get("accepted_attempt_binding"), dict)
+        and row["accepted_attempt_binding"].get("direct_edit_completion") is True
+    ]
+    if direct_completion_stages:
+        if len(direct_completion_stages) != 1 or direct_completion_stages[0].get("id") != "SINGLE_PASS":
+            return "Only the exact SINGLE_PASS clothing continuation can use direct-edit completion delivery."
+        stage_binding = direct_completion_stages[0]["accepted_attempt_binding"]
+        delivery = state.get("direct_edit_completion_delivery")
+        if (not isinstance(delivery, dict)
+                or delivery.get("receipt_sha256") != stage_binding.get("receipt_sha256")
+                or delivery.get("receipt_path") != stage_binding.get("receipt_path")
+                or not delivery.get("delivery_evidence") or not state.get("delivered_result_at")):
+            return "Direct-edit clothing completion requires its exact separate RESULT_DELIVERED receipt."
         return None
     if is_project_image_generation(state):
         latest = next(
@@ -1925,9 +2756,9 @@ def completion_block_reason(state: dict[str, object]) -> str | None:
     return None
 
 
-def continuation_guidance(state: dict[str, object]) -> dict[str, object]:
+def continuation_guidance(state: dict[str, object], guard_path: Path | None = None) -> dict[str, object]:
     """Expose an advisory next action so callers continue instead of guessing."""
-    reason = completion_block_reason(state)
+    reason = completion_block_reason(state, guard_path)
     can_complete = reason is None
     if can_complete:
         action = "COMPLETE_NOW"
@@ -1966,9 +2797,9 @@ def continuation_guidance(state: dict[str, object]) -> dict[str, object]:
     return {"action": action, "can_complete": can_complete, "reason": reason or "All locked deliverables are complete."}
 
 
-def completion_continuation(state: dict[str, object]) -> dict[str, object]:
+def completion_continuation(state: dict[str, object], guard_path: Path | None = None) -> dict[str, object]:
     """Public read-only alias used by the completion hook and status clients."""
-    return continuation_guidance(state)
+    return continuation_guidance(state, guard_path)
 
 
 def execution_focus_binding(thread_id: str) -> dict[str, object] | None:
@@ -2022,11 +2853,17 @@ def checkpoint(
     outcome: str | None = None,
     reconciliation_evidence: str = "",
     provider_operation_receipt: str = "",
+    local_derivative_receipt: str | Path | None = None,
+    direct_edit_completion_receipt: str | Path | None = None,
     now: datetime | None = None,
 ) -> dict[str, object]:
     state = load_guard(path)
     moment = now or utc_now()
     event = event.upper()
+    if local_derivative_receipt and event not in {"VISIBLE_RESULT", "STAGE_COMPLETED"}:
+        raise GuardError("--local-derivative-receipt is supported only for verified visible-result and stage-completion checkpoints.")
+    if direct_edit_completion_receipt and event not in {"STAGE_COMPLETED", "RESULT_DELIVERED"}:
+        raise GuardError("--direct-edit-completion-receipt is supported only for its stage-completion and delivery checkpoints.")
     if not is_project_image_generation(state) and not attempt_id and isinstance(state.get("active_attempt"), dict):
         attempt_id = str(state["active_attempt"].get("attempt_id", ""))
     if not summary.strip():
@@ -2035,7 +2872,35 @@ def checkpoint(
     applied_invariant_changes: dict[str, dict[str, str | None]] = {}
     correction_binding: dict[str, str] = {}
 
-    if event == "AUTHOR_CONTRACT_ACCEPTED":
+    if event == "AUTHOR_SCENE_STORED":
+        if state.get("status") not in {"ACTIVE", "COMPLETE"} or len(evidence) != 1:
+            raise GuardError("Author scene storage requires an active request and one verified receipt.")
+        checked = verified_author_scene_storage(path, state, Path(evidence[0]))
+        if state.get("author_scene_storage"):
+            if state["author_scene_storage"] != checked:
+                raise GuardError("Author scene storage cannot replace a different completion receipt.")
+            return state
+        if state.get("status") != "ACTIVE":
+            raise GuardError("A completed request cannot acquire a new author scene acceptance.")
+        attempt = state["attempts"][-1]
+        attempt["status"] = "DELIVERED"
+        attempt["result_status"] = "APPROVED_SCENE"
+        attempt["delivered_at"] = iso_time(moment)
+        state["active_attempt"] = None
+        state["execution_started_at"] = None
+        state["author_scene_storage"] = checked
+        entry = required_stage_entries(state)[0]
+        entry.update({"status": "COMPLETED", "completed_at": iso_time(moment),
+                      "completed_task_revision": state["task_revision"],
+                      "evidence": [checked["approved_scene_path"]],
+                      "evidence_sha256": {checked["approved_scene_path"]: checked["output_sha256"]},
+                      "accepted_attempt_binding": {"author_scene_storage": True, **checked}})
+        state["delivered_result_at"] = iso_time(moment)
+        state["latest_delivered_attempt_id"] = checked["attempt_id"]
+        state["latest_delivered_result_status"] = "APPROVED_SCENE"
+        state["phase"] = "AUTHOR_SCENE_STORED"
+        state["next_required_action"] = "COMPLETE_OR_BLOCKER"
+    elif event == "AUTHOR_CONTRACT_ACCEPTED":
         if state.get("status") != "ACTIVE" or state.get("recovery") or len(evidence) != 1:
             raise GuardError("Author-contract acceptance requires an active repaired request and one registered receipt.")
         receipt_path = Path(evidence[0]).resolve()
@@ -2487,7 +3352,8 @@ def checkpoint(
         state.pop("watchdog_triggered_at", None)
     elif event == "VISIBLE_RESULT":
         active = _matching_attempt(state, str(attempt_id or ""))
-        if active.get("status") not in {"ACTIVE", "UNKNOWN"}:
+        derivative_mode = bool(local_derivative_receipt)
+        if active.get("status") not in ({"ACTIVE", "UNKNOWN", "RESULT_AVAILABLE"} if derivative_mode else {"ACTIVE", "UNKNOWN"}):
             raise GuardError("VISIBLE_RESULT requires an active or UNKNOWN attempt.")
         late_after_stop = active.get("status") == "UNKNOWN" or state.get("status") == "STOPPED"
         evidence_paths = [str(Path(item).resolve()) for item in evidence]
@@ -2510,12 +3376,52 @@ def checkpoint(
         else:
             active["status"] = "RESULT_AVAILABLE"
             active["result_status"] = status_value
-            active["result_evidence"] = evidence_paths
+            if derivative_mode:
+                active["derived_evidence"] = evidence_paths
+            else:
+                active["result_evidence"] = evidence_paths
             active["result_available_at"] = iso_time(moment)
         # Keep the exact provider artifact attached to the executed-call snapshot.
         # Registration can then retry against this artifact without reopening generation.
+        derivative_proof: dict[str, object] | None = None
+        if derivative_mode:
+            try:
+                receipt_file = Path(local_derivative_receipt).expanduser().resolve()
+                receipt_data = json.loads(receipt_file.read_text(encoding="utf-8"))
+                try:
+                    from tools.style_pack_contracts import validate_local_derivative_receipt
+                except ImportError:
+                    from style_pack_contracts import validate_local_derivative_receipt
+                derivative_proof = validate_local_derivative_receipt(
+                    receipt_file,
+                    request_root=Path(path).resolve().parent,
+                    request_id=str(state.get("request_id", "")),
+                    character_id="NEW",
+                    stage_id=str(active.get("stage", "")),
+                    output=Path(str(receipt_data.get("output_image", ""))),
+                    guard_path=Path(path),
+                    attempt_id=str(active.get("attempt_id", "")),
+                )
+            except Exception as error:
+                raise GuardError(f"VISIBLE_RESULT local derivative proof failed validation: {error}") from error
+            derived = derivative_proof.get("derived_artifact", {})
+            if (len(evidence_paths) != 1 or not isinstance(derived, dict)
+                    or not Path(evidence_paths[0]).resolve().is_relative_to(Path(path).resolve().parent)
+                    or not Path(evidence_paths[0]).is_file()
+                    or file_sha256(Path(evidence_paths[0])) != str(derived.get("sha256", "")).lower()):
+                raise GuardError("VISIBLE_RESULT evidence must be the exact hash-bound local derivative.")
         registered_artifact_hash = file_sha256(Path(evidence_paths[0])) if evidence_paths else ""
         previous_artifact = active.get("provider_artifact")
+        if derivative_proof is not None:
+            provider = derivative_proof.get("provider_artifact", {})
+            if (not isinstance(previous_artifact, dict) or not isinstance(provider, dict)
+                    or Path(str(previous_artifact.get("path", ""))).resolve() != Path(str(provider.get("path", ""))).resolve()
+                    or str(previous_artifact.get("sha256", "")).lower() != str(provider.get("sha256", "")).lower()
+                    or not Path(str(provider.get("path", ""))).is_file()
+                    or file_sha256(Path(str(provider.get("path", "")))) != str(provider.get("sha256", "")).lower()):
+                raise GuardError("Local derivative cannot replace or alter the original provider artifact binding.")
+            active["derived_artifact"] = derivative_proof
+            active["derived_evidence"] = evidence_paths
         if isinstance(previous_artifact, dict):
             previous_path = Path(str(previous_artifact.get("path", ""))).expanduser()
             previous_hash = str(previous_artifact.get("sha256", "")).lower()
@@ -2523,16 +3429,21 @@ def checkpoint(
                 not previous_path.is_file()
                 or not previous_hash
                 or file_sha256(previous_path) != previous_hash
-                or registered_artifact_hash != previous_hash
+                or (derivative_proof is None and registered_artifact_hash != previous_hash)
             ):
                 raise GuardError("VISIBLE_RESULT registration does not match the original ARTIFACT_RECEIVED path/hash.")
-            active["provider_artifact"] = {
-                **previous_artifact,
-                "result_status": status_value,
-                "available_at": iso_time(moment),
-                "registered_evidence": evidence_paths,
-            }
-        else:
+            if derivative_proof is not None:
+                active["provider_artifact"] = dict(previous_artifact)
+                active["derived_artifact"] = derivative_proof
+                active["derived_evidence"] = evidence_paths
+            else:
+                active["provider_artifact"] = {
+                    **previous_artifact,
+                    "result_status": status_value,
+                    "available_at": iso_time(moment),
+                    "registered_evidence": evidence_paths,
+                }
+        elif derivative_proof is None:
             active["provider_artifact"] = {
                 "path": evidence_paths[0] if evidence_paths else "",
                 "sha256": registered_artifact_hash,
@@ -2546,6 +3457,7 @@ def checkpoint(
         state["available_results"] = [*state.get("available_results", []), {
             "attempt_id": active["attempt_id"], "status": status_value,
             "evidence": evidence_paths, "available_at": iso_time(moment), "late": late_after_stop,
+            **({"derived_artifact": derivative_proof} if derivative_proof is not None else {}),
         }]
         state["active_attempt"] = None
         timestamp = iso_time(moment)
@@ -2565,8 +3477,39 @@ def checkpoint(
         state.pop("watchdog_reason", None)
         state.pop("watchdog_triggered_at", None)
     elif event == "RESULT_DELIVERED":
+        prior_direct_binding = state.get("direct_edit_completion_delivery")
+        stage_row = next((row for row in required_stage_entries(state)
+                          if row.get("id") == "SINGLE_PASS"), None)
+        stage_binding = stage_row.get("accepted_attempt_binding") if isinstance(stage_row, dict) else None
+        direct_receipt = direct_edit_completion_receipt or (
+            str(stage_binding.get("receipt_path"))
+            if isinstance(stage_binding, dict) and stage_binding.get("direct_edit_completion") is True else ""
+        )
+        if direct_receipt:
+            if state.get("status") != "ACTIVE":
+                raise GuardError("Direct-edit RESULT_DELIVERED cannot mutate a stopped or completed request.")
+            if (not isinstance(stage_row, dict) or stage_row.get("status") != "COMPLETED"
+                    or not isinstance(stage_binding, dict) or stage_binding.get("direct_edit_completion") is not True):
+                raise GuardError("Direct-edit RESULT_DELIVERED requires its already validated SINGLE_PASS stage checkpoint.")
+            verified = validate_direct_edit_completion_receipt(
+                state, "SINGLE_PASS", direct_receipt, stage_row.get("evidence", []))
+            if not delivery_evidence or any(not str(item).strip() for item in delivery_evidence):
+                raise GuardError("Direct-edit RESULT_DELIVERED requires an actual UI message/link receipt.")
+            state["direct_edit_completion_delivery"] = {
+                "receipt_path": verified["receipt_path"], "receipt_sha256": verified["receipt_sha256"],
+                "delivery_evidence": [str(item).strip() for item in delivery_evidence],
+                "delivered_at": iso_time(moment),
+            }
+            state["delivered_result_at"] = iso_time(moment)
+            state["phase"] = "RESULT_DELIVERED"
+            state["next_required_action"] = "COMPLETE_OR_BLOCKER"
+            prior_direct_binding = state["direct_edit_completion_delivery"]
+        else:
+            prior_direct_binding = None
         accepted = verified_author_acceptance(state)
-        if accepted:
+        if prior_direct_binding:
+            pass
+        elif accepted:
             if attempt_id and attempt_id != accepted["attempt_id"]:
                 raise GuardError("Delivery attempt differs from accepted original artifact.")
             if not delivery_evidence or any(not str(item).strip() for item in delivery_evidence):
@@ -2917,7 +3860,10 @@ def checkpoint(
             raise GuardError(f"Required stage is already completed: {entry.get('id')}")
         evidence_paths = validate_stage_evidence(state, evidence)
         stage_attempt_binding = (
-            validate_stage_attempt_binding(state, str(entry.get("id", "")), evidence_paths)
+            validate_stage_attempt_binding(
+                state, str(entry.get("id", "")), evidence_paths, local_derivative_receipt,
+                direct_edit_completion_receipt=direct_edit_completion_receipt,
+            )
             if is_project_image_generation(state) else None
         )
         if is_physique_stage(str(entry.get("id"))):
@@ -3004,7 +3950,7 @@ def checkpoint(
         state["blocker"] = summary.strip()
         state["blocker_kind"] = kind
     elif event == "COMPLETE":
-        completion_error = completion_block_reason(state)
+        completion_error = completion_block_reason(state, path)
         if completion_error:
             if state.get("recovery") or state.get("active_attempt") or any(
                 a.get("status") == "UNKNOWN" for a in state.get("attempts", [])
@@ -3053,12 +3999,18 @@ def checkpoint(
         event_details["safe_routes_exhausted"] = safe_routes_exhausted
     if attempt_id:
         event_details["attempt_id"] = attempt_id
+    if direct_edit_completion_receipt:
+        event_details["direct_edit_completion_receipt"] = str(Path(direct_edit_completion_receipt).resolve())
     if event == "EXECUTION_STARTED":
         event_details["attempt_id"] = str(attempt_id or state["active_attempt"]["attempt_id"])
         event_details["reference_binding"] = state["attempts"][-1].get("reference_binding")
     if event == "VISIBLE_RESULT":
         event_details["attempt_id"] = str(attempt_id)
         event_details["result_status"] = str(result_status or "AVAILABLE").upper()
+        event_attempt = next((row for row in state.get("attempts", [])
+                              if isinstance(row, dict) and row.get("attempt_id") == attempt_id), None)
+        if isinstance(event_attempt, dict) and isinstance(event_attempt.get("derived_artifact"), dict):
+            event_details["derived_artifact"] = event_attempt["derived_artifact"]
     if event == "RESULT_DELIVERED":
         event_details["delivery_evidence"] = list(delivery_evidence)
     if event in {"ATTEMPT_UNKNOWN", "ATTEMPT_RECONCILED", "ATTEMPT_REFUSED", "STOP", "CANCEL", "USER_AUTHORIZED_REPLACEMENT"}:
@@ -3071,6 +4023,15 @@ def checkpoint(
     if event == "ATTEMPT_REJECTED":
         event_details["attempt_id"] = str(attempt_id)
         event_details["outcome"] = "QA_REJECTED"
+    if event in {"USER_CORRECTION", "STAGE_REOPENED"} and state.get("author_scene_storage"):
+        try:
+            if __package__:
+                from .author_scene_completion import retire
+            else:
+                from author_scene_completion import retire
+            retire(path, state, event, iso_time(moment))
+        except (OSError, ValueError) as error:
+            raise GuardError(f"Cannot archive the previous author scene completion: {error}") from error
     append_event(state, event, summary, moment, **event_details)
     atomic_write_json(path, state)
     if event in {"COMPLETE", "USER_CORRECTION", "STAGE_REOPENED"} and state.get("owner_chat_id"):
@@ -3105,7 +4066,7 @@ def guard_status(path: Path, now: datetime | None = None) -> dict[str, object]:
     reason = evaluate_limits(state, moment)
     if reason:
         persist_watchdog_state(path, state, reason, moment)
-    state["continuation"] = continuation_guidance(state)
+    state["continuation"] = continuation_guidance(state, path)
     return state
 
 
@@ -3177,13 +4138,15 @@ def make_parser() -> argparse.ArgumentParser:
             "READY_FOR_EXECUTION", "CALL_VALIDATED", "EXECUTION_STARTED", "VISIBLE_RESULT", "RESULT_DELIVERED",
             "ATTEMPT_REJECTED", "ATTEMPT_REFUSED", "ATTEMPT_UNKNOWN", "ATTEMPT_RECONCILED", "USER_AUTHORIZED_REPLACEMENT", "STOP", "CANCEL",
             "ESCALATION_ORCHESTRATOR_RECORDED", "USER_CORRECTION", "STAGE_COMPLETED", "STAGE_REOPENED",
-            "BLOCKER", "COMPLETE", "RECOVERY_REQUIRED", "RECOVERY_RESOLVED", "ARTIFACT_RECEIVED", "AUTHOR_CONTRACT_ACCEPTED",
+            "BLOCKER", "COMPLETE", "RECOVERY_REQUIRED", "RECOVERY_RESOLVED", "ARTIFACT_RECEIVED", "AUTHOR_CONTRACT_ACCEPTED", "AUTHOR_SCENE_STORED",
         ),
     )
     check.add_argument("--summary", required=True)
     check.add_argument("--reference-plan", help="Executable REFERENCE_PLAN whose current prompt and source hashes are bound at readiness/start.")
     check.add_argument("--attempt-id", help="Durable provider/operator attempt identifier returned by EXECUTION_STARTED.")
     check.add_argument("--provider-operation-receipt", default="", help="Optional durable provider job/operation receipt.")
+    check.add_argument("--local-derivative-receipt", default="", help="Opt-in hash-bound local derivative proof for a scoped VISIBLE_RESULT or STAGE_COMPLETED checkpoint.")
+    check.add_argument("--direct-edit-completion-receipt", default="", help="Opt-in hash-bound proof for the exact authorized completed clothing direct edit; valid only for its SINGLE_PASS STAGE_COMPLETED and RESULT_DELIVERED checkpoints.")
     check.add_argument("--result-status", choices=("TEST", "STAGING", "REJECTED"))
     check.add_argument("--outcome", help="Durable operation outcome for refusal, timeout reconciliation, or rejection.")
     check.add_argument("--delivery-evidence", action="append", default=[], help="Actual user-visible delivery receipt/link.")
@@ -3322,6 +4285,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 outcome=args.outcome,
                 reconciliation_evidence=args.reconciliation_evidence,
                 provider_operation_receipt=args.provider_operation_receipt,
+                local_derivative_receipt=args.local_derivative_receipt,
+                direct_edit_completion_receipt=args.direct_edit_completion_receipt,
             )
         else:
             state = guard_status(Path(args.state))

@@ -907,6 +907,8 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         self._start_call(guard, plan_path, call)
         state = json.loads(guard.read_text(encoding="utf-8"))
         self.assertEqual(state["active_attempt"]["execution_snapshot"]["execution_call"]["new_face_reference_purpose"], binding)
+        self.assertEqual(state["active_attempt"]["reference_binding"]["path"], str(plan_path.resolve()))
+        self.assertEqual(state["active_attempt"]["reference_binding"]["sha256"], hashlib.sha256(plan_path.read_bytes()).hexdigest())
 
         from tools import style_pack_manager as manager
         default_binding = manager.new_face_reference_purpose_binding(
@@ -1076,8 +1078,38 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         if body_decision == "SELECTED":
             args.extend(("--aux-body-selection-note", "No reviewed reusable body reference is relevant to this artifact scene."))
         self._cli("style_pack_manager.py", *args, succeeds=succeeds)
+        self._last_preparation_tokens = args
         plan_path = guard.parent / "REFERENCE_PLAN.json"
         return guard, plan_path
+
+    def test_generation_request_cli_binds_numbered_style_before_risk_assessment(self):
+        request_id = "style-wrapper-numbered"
+        options = (
+            "OPTION_1=Recommended 90% fidelity; select BODY_REFERENCE_LIBRARY",
+            "OPTION_2=Contextual 90% fidelity; decline BODY_REFERENCE_LIBRARY",
+            "OPTION_3=Contextual 70% fidelity; decline BODY_REFERENCE_LIBRARY",
+        )
+        guard, plan_path = self._prepare_scene(request_id, 70, startup_mode="USER_CONFIRMATION",
+            startup_choice="OPTION_3", startup_choice_quote="3", startup_options=options)
+        request = self.workspace / "request.json"
+        from tools import generation_request as frontend
+        prepared_args = frontend.manager.build_parser().parse_args([str(v) for v in self._last_preparation_tokens])
+        known = {action.dest: action for action in frontend._prepare_parser()._actions}
+        request.write_text(json.dumps({k: v for k, v in vars(prepared_args).items()
+                                      if k in known and (known[k].required or v != known[k].default)}, default=str), encoding="utf-8")
+        call_file = self.workspace / "call.json"
+        call_file.write_text(json.dumps({"prompt_text": "Render the requested synthetic artifact scene.",
+            "reference_ratings": [{"path": str(self.style_reference), "active_roles": ["STYLE"],
+                "content_and_reference_risk": "D2", "use_impact": "0D", "reason_ru": "Synthetic reviewed style source."}]}), encoding="utf-8")
+        self._cli("generation_request.py", "--request-file", request, "--call-file", call_file, "--finalize-only")
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        call = plan["execution_call"]
+        self.assertIn("image slot(s) 1", call["prompt"]["text"])
+        self.assertEqual(call["prompt"]["text"].count("[STYLE_RENDERING_AUTHORITY]"), 1)
+        self.assertTrue(call["prompt"]["text"].endswith("Render the requested synthetic artifact scene."))
+        risk = json.loads(Path(call["risk_assessment"]["path"]).read_text(encoding="utf-8"))
+        self.assertEqual(risk["original_prompt"]["text"], call["prompt"]["text"])
+        self._start_call(guard, plan_path, call)  # Actual independent guard exact-call validation, no provider.
 
     def test_prepare_generation_requires_exact_selected_source_review(self):
         matrix_pool = self.style_pack / "01_WORK" / "STYLE_CROPS"
@@ -1604,6 +1636,19 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
                 ],
             },
         }
+        executed_plan = json.loads(Path(snapshot["reference_plan_snapshot_path"]).read_text(encoding="utf-8"))
+        if executed_plan.get("style_rendering_contract") is not None:
+            from tools.style_rendering_contract import CRITERIA, required_style_regions
+            # Synthetic review data only; this does not assert real visual quality.
+            report["style_review"] = {
+                "status": "PASS",
+                "sources": [{k: source[k] for k in ("path", "sha256")}
+                            for source in executed_plan["style_rendering_contract"]["sources"]],
+                "criteria": {key: {"status": "PASS", "evidence": f"Synthetic fixture compares {key} with the exact STYLE source."}
+                             for key in CRITERIA},
+                "regions": {key: {"status": "PASS", "evidence": f"Synthetic fixture compares visible {key} with the exact STYLE source."}
+                            for key in required_style_regions(executed_plan, snapshot["execution_stage"])},
+            }
         path = self.workspace / f"{attempt_id}-{output.stem}-visual-review.json"
         path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         return "--visual-review-json", path
@@ -1859,7 +1904,8 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         corrected_call = self._resolve_and_prepare_call(
             request_id, guard, plan_path, "Revise the observatory scene as a winter folklore genre composition.",
         )
-        self.assertEqual(corrected_call["prompt"]["text"], "Revise the observatory scene as a winter folklore genre composition.")
+        self.assertTrue(corrected_call["prompt"]["text"].startswith("[STYLE_RENDERING_AUTHORITY]"))
+        self.assertTrue(corrected_call["prompt"]["text"].endswith("Revise the observatory scene as a winter folklore genre composition."))
         corrected_state = json.loads(guard.read_text(encoding="utf-8"))
         executed_snapshot = corrected_state["attempts"][-1]["execution_snapshot"]
         self.assertNotEqual(hashlib.sha256(plan_path.read_bytes()).hexdigest(), executed_snapshot["reference_binding"]["sha256"])
