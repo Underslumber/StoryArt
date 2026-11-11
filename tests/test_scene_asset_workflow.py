@@ -192,7 +192,7 @@ class SceneContractTests(unittest.TestCase):
             "body_reference": "body.png",
             "pose_reference": "pose.png",
             "clothes_reference": "clothes.png",
-            "aux_body": ["BR_0007=STAGING_ONLY"],
+            "aux_body": ["BR_0007=BODY_BUILD_TARGET"],
             "coverage_front_reference": "coverage-front.png",
             "coverage_side_reference": "coverage-side.png",
             "coverage_back_reference": "coverage-back.png",
@@ -201,6 +201,13 @@ class SceneContractTests(unittest.TestCase):
             with self.subTest(field=field):
                 with self.assertRaisesRegex(StylePackError, "forbids character reference families"):
                     build_scene_contract(scene_args(**{field: value}), "SCENE", "NONE")
+
+    def test_anonymous_scene_accepts_only_library_staging_mode(self) -> None:
+        contract = build_scene_contract(scene_args(aux_body=["BR_10469=STAGING_ONLY"]), "SCENE", "NONE")
+        self.assertFalse(contract["has_character"])
+        for value in ("BR_10469=CAMERA_ONLY", "BR_10469=BODY_BUILD_TARGET", "STAGING_ONLY", "BR_10469=STAGING_ONLY=BODY_BUILD_TARGET"):
+            with self.subTest(value=value), self.assertRaisesRegex(StylePackError, "forbids character reference families"):
+                build_scene_contract(scene_args(aux_body=[value]), "SCENE", "NONE")
 
     def test_character_free_scene_still_rejects_approved_character_assembly(self) -> None:
         with self.assertRaisesRegex(StylePackError, "forbids character reference families"):

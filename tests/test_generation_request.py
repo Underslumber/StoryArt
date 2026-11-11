@@ -250,7 +250,7 @@ def test_finalizer_renders_prompt_before_assessment_and_preserves_phase_order(mo
         return Namespace(handler=prepare, prompt_text="placeholder", prompt_text_file="", risk_assessment="")
 
     monkeypatch.setattr(request, "_parsed_manager_command", parsed)
-    monkeypatch.setattr(request.manager, "render_confirmed_prompt", lambda plan, text: events.append("render") or "rendered:" + text)
+    monkeypatch.setattr(request.manager, "render_confirmed_prompt", lambda plan, text, **kwargs: events.append("render") or "rendered:" + text)
     class RiskParser:
         def parse_args(self, tokens):
             assert tokens[tokens.index("--text") + 1] == "rendered:raw"
@@ -575,7 +575,7 @@ def test_actual_risk_writer_uses_fresh_file_and_late_rejection_preserves_old_ris
             return Namespace(handler=lambda ns: print(f"REFERENCE_MANIFEST={manifest}"))
         return Namespace(handler=lambda ns: (_ for _ in ()).throw(request.manager.StylePackError("late prepare-call rejection")))
     monkeypatch.setattr(request, "_parsed_manager_command", parsed)
-    monkeypatch.setattr(request.manager, "render_confirmed_prompt", lambda plan, text: text)
+    monkeypatch.setattr(request.manager, "render_confirmed_prompt", lambda plan, text, **kwargs: text)
     with pytest.raises(request.manager.StylePackError, match="late prepare-call rejection"):
         request._finalize_call(Namespace(style_name="S", workspace=tmp_path, request_id="r"), {
             "prompt_text": "A quiet landscape.", "stage_id": "STAGE_1", "reference_ratings": [],

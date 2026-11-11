@@ -344,7 +344,7 @@ def _finalize_call(args: argparse.Namespace, call_input: dict[str, Any]) -> str:
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
     except (OSError, KeyError, json.JSONDecodeError, TypeError) as exc:
         raise manager.StylePackError(f"Cannot read resolved call inputs: {exc}") from exc
-    prompt = manager.render_confirmed_prompt(plan, _exact_prompt(call_input))
+    prompt = manager.render_confirmed_prompt(plan, _exact_prompt(call_input), slots=manifest.get("slots"))
     _validate_call_evidence(call_input, plan, manifest)
     specs = _risk_specs(manifest, call_input.get("reference_ratings", []))
     risk_module_parser = risk_assessor.build_parser()

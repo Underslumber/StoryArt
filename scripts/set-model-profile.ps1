@@ -26,7 +26,7 @@ function Assert-RouteKeys($Object, [string[]]$Expected, [string]$Name) {
     }
 }
 Assert-RouteKeys $routes.profiles @('6.1', '5.6', '6') 'profiles'
-Assert-RouteKeys $routes.roles @('ROOT', 'DEFAULT_WORKER', 'STYLE_LIBRARIAN', 'IDENTITY_CURATOR', 'CALL_PLANNER', 'VISUAL_QA', 'ESCALATION_ORCHESTRATOR', 'CODE_IMPLEMENTER', 'CODE_REVIEW') 'roles'
+Assert-RouteKeys $routes.roles @('ROOT', 'DEFAULT_WORKER', 'STYLE_LIBRARIAN', 'IDENTITY_CURATOR', 'CALL_PLANNER', 'VISUAL_QA', 'ESCALATION_ORCHESTRATOR', 'CODE_IMPLEMENTER', 'CODE_REVIEW', 'WEB_IMAGE') 'roles'
 Assert-RouteKeys $routes.experiments @('ROUTINE_ROOT', 'MECHANICAL_WORKER') 'experiments'
 $routeSettings = @()
 foreach ($entry in $routes.profiles.PSObject.Properties) {

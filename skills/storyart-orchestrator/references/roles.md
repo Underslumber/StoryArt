@@ -14,6 +14,8 @@ call/time/word budget from `docs/EFFICIENT_WORKFLOW.md`.
 
 ## STYLE_LIBRARIAN
 
+- Return concrete rendering traits and limitations of the selected sources; distinguish observed pixels from the written profile. Do not extend reference search or use a generic painterly vocabulary. Follow the applicable style-retention scenario in the main skill.
+
 - Start from the written style profile and existing matrix. Resolve only missing
   source locations; reuse the request's existing context.
 - Inspect selected originals for required roles, or reuse equivalent recorded
@@ -32,6 +34,10 @@ call/time/word budget from `docs/EFFICIENT_WORKFLOW.md`.
 - Remain read-only. Do not redesign the character or approve a permanent identity change.
 
 ## CALL_PLANNER
+
+- Follow the main skill's composition/body/action-phase sequence and narrow-correction scenario. Preserve the full contract separately from the latest quote and protected pose. Do not turn a hypothesis into a user constraint, infer handedness from screen sides, rotate palms for counting, or replace wrist mechanics with digit count. Explicit local-edit authorization is required; preparation does not grant it.
+
+- Apply the main skill's initial-render, photo-conflict, stage-continuity or drift-correction scenario. Translate source findings into the existing authority block and one short prompt using actual image-slot roles. Initial prompts describe construction; corrections address the evidenced cause while preserving all other requirements. Do not duplicate the authority block, stack synonyms or introduce calls/sources/stages.
 
 - Combine the locked goal, selected style, identity sources, requested composition, attachment
   limit, current risk report, and active `REFERENCE_PLAN.json`.
@@ -100,17 +106,17 @@ references, change QA, call the generator, or modify infrastructure.
 
 ## Routing precedence
 
-Use `config/model_routes.json` as the role authority and
+Use `config/model_routes.json` as the StoryArt role authority and
 `docs/MODEL_PROFILES.md` for activation. Root retains its selected model and the
-user contract. Ordinary discovery, implementation, planning and result checks
-use Luna 6 High in default/worker/explorer with fork_turns="none". Mandatory
-read-only code review after machine checks uses sol_review, Sol 6.1 Medium;
-evidenced Luna failure permits sol_escalation, Sol 6.1 High. Record SOL_GATE
-before either Sol dispatch. Specialized Web roles retain their authorized
-contracts and never replace ordinary workers. Normally zero workers,
-one when useful, at most two independent workers. No full-history forks,
-nesting, or agents merely for generator/archive/CLI operations.
+user contract. Production: root Sol 6.1 Medium; ordinary bounded discovery,
+identity curation and implementation Sol 6.1 Low; complex call planning and
+independent visual/code review Sol 6.1 Medium; exceptional evidenced diagnosis
+Sol 6.1 High. High is never a routine fallback. Record SOL_GATE for independent
+code review and exceptional diagnosis. Explicit Web roles keep their own
+authorization and never replace ordinary workers. Normally zero workers, one
+when useful, at most two independent workers. Request fork_turns="none", no
+nesting or full transcripts. Luna 6 Low is an explicit experiment only; no
+automatic Luna or Astra selection. Confirm role configuration and available
+actual model telemetry before dependent work. Existing chats are not switched.
 Reuse source evidence only when hash, role, view, applicability and limitations
-match; inspect changed or uncovered sources. Packet ceilings return evidence
-to root and never terminate the user's image goal. This changes orchestration,
-not artistic, identity, safety or QA requirements.
+match; inspect changed or uncovered sources. Packet budgets do not end the task.

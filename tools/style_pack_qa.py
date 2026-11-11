@@ -11,10 +11,16 @@ from pathlib import Path
 
 try:
     from tools.style_pack_common import StylePackError
-    from tools.style_pack_contracts import anthropometric_qa_violations, parse_limb_qa_evidence
+    from tools.style_pack_contracts import (
+        anthropometric_qa_violations, parse_limb_qa_evidence,
+        validate_construction_geometry_receipt as validate_construction_geometry_receipt_data,
+    )
 except ModuleNotFoundError:  # Direct execution from tools/
     from style_pack_common import StylePackError
-    from style_pack_contracts import anthropometric_qa_violations, parse_limb_qa_evidence
+    from style_pack_contracts import (
+        anthropometric_qa_violations, parse_limb_qa_evidence,
+        validate_construction_geometry_receipt as validate_construction_geometry_receipt_data,
+    )
 
 
 ITEM_QA_COMMON = (
@@ -332,7 +338,71 @@ def evaluate_generation_qa(
         "CONTACT_CONSTRAINTS": getattr(args, "qa_contact_constraints", "NOT_CHECKED"),
     })
     required_names = sorted(set(required))
+    if getattr(args, "_validated_construction_geometry", None) is not None:
+        raise StylePackError("Private construction geometry claims are ignored; provide --construction-geometry-receipt for full hash-bound validation.")
+    construction_receipt = str(getattr(args, "construction_geometry_receipt", "") or "").strip()
+    construction_geometry = None
+    if construction_receipt:
+        plan_path = Path(str(getattr(args, "reference_plan", ""))).expanduser().resolve()
+        request_id = str(plan.get("request_id", ""))
+        character_id = str(plan.get("character_id", ""))
+        output_path = Path(str(getattr(args, "image", ""))).expanduser().resolve()
+        if (not plan_path.is_file() or plan_path.parent.name != request_id
+                or not output_path.is_file() or not request_id or not character_id):
+            raise StylePackError("Construction geometry receipt requires the actual image and bound request reference plan.")
+        try:
+            on_disk_plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise StylePackError(f"Cannot read the bound plan for construction geometry QA: {error}") from error
+        if (not isinstance(on_disk_plan, dict) or on_disk_plan.get("request_id") != request_id
+                or on_disk_plan.get("character_id") != character_id):
+            raise StylePackError("Construction geometry request or character does not match the bound reference plan file.")
+        construction_geometry = validate_construction_geometry_receipt_data(
+            Path(construction_receipt), request_root=plan_path.parent,
+            request_id=request_id, character_id=character_id, output=output_path,
+            stage_id=stage_id, plan=plan,
+        )
+    if construction_geometry is not None:
+        if (not isinstance(construction_geometry, dict)
+                or construction_geometry.get("gate") != "AUTHOR_CONFIRMED_CONSTRUCTION_GEOMETRY"
+                or construction_geometry.get("method_id") != "AUTHOR_CONFIRMED_CONSTRUCTION_GEOMETRY"
+                or construction_geometry.get("method_version") != "1"
+                or construction_geometry.get("numeric_source") != "AUTHOR_CONFIRMED_CONSTRUCTION_NOT_VISIBLE_MEASUREMENT"
+                or construction_geometry.get("metric_validation") != "PASS"
+                or construction_geometry.get("stage_id") != stage_id):
+            raise StylePackError("Construction geometry must be validated and bound to this exact method and stage before QA evaluation.")
+        contract = plan.get("character_base_contract")
+        eligible_stages = {"02_PHYSIQUE_FRONT", "03_PHYSIQUE_SIDE", "04_PHYSIQUE_BACK", "05_CHARACTER_ASSEMBLY"}
+        if (
+            plan.get("generation_purpose") != "CHARACTER_BASE"
+            or not isinstance(contract, dict)
+            or contract.get("age_group") != "ADULT"
+            or stage_id not in eligible_stages
+            or not {"BODY_PROPORTIONS", "LIMB_PROPORTIONS"}.issubset(required_names)
+        ):
+            raise StylePackError("Construction geometry is restricted to canonical adult CHARACTER_BASE body stages.")
+        numeric_statuses = {
+            "BODY_PROPORTIONS": qa_values["BODY_PROPORTIONS"],
+            "LIMB_PROPORTIONS": qa_values["LIMB_PROPORTIONS"],
+        }
+        if any(status == "FAIL" for status in numeric_statuses.values()):
+            raise StylePackError("Construction geometry cannot waive an explicit BODY_PROPORTIONS or LIMB_PROPORTIONS FAIL.")
+        if any(status not in {"PASS", "NOT_CHECKED"} for status in numeric_statuses.values()):
+            raise StylePackError("Construction geometry requires numeric proportion layers to be PASS or NOT_CHECKED.")
+        replaced = [name for name, status in numeric_statuses.items() if status == "NOT_CHECKED"]
+        if not replaced:
+            raise StylePackError("Construction geometry receipt is unnecessary when both numeric proportion layers already PASS.")
+        required_names = sorted((set(required_names) - set(replaced)) | {"AUTHOR_CONFIRMED_CONSTRUCTION_GEOMETRY"})
+        qa_values["AUTHOR_CONFIRMED_CONSTRUCTION_GEOMETRY"] = "PASS"
+        setattr(args, "_construction_geometry_numeric_results", numeric_statuses)
     typed_item_qa_names = set(ITEM_QA_COMMON) | set(ITEM_QA_CLOTHING)
+    if int(plan.get("schema_version", 0)) >= 7 and plan.get("style_rendering_contract") is not None:
+        # Source-comparative evidence from the existing visual review is authoritative.
+        # A CLI PASS cannot overwrite a failed or unperformed comparative review.
+        for name, attr in (("STYLE", "visual_style_status"), ("BODY_RENDERING_STYLE", "visual_body_style_status")):
+            if name in required_names:
+                observed = getattr(args, attr, "NOT_CHECKED")
+                qa_values[name] = "FAIL" if qa_values.get(name) == "FAIL" or observed == "FAIL" else observed
     missing = [
         name for name in required_names
         if (semantic_qa or name in qa_values or name in typed_item_qa_names)

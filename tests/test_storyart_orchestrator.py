@@ -39,16 +39,16 @@ class StoryArtOrchestratorTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def test_project_config_template_uses_sol_medium_root_luna_high_workers(self):
+    def test_project_config_template_uses_sol_medium_root_sol_low_workers(self):
         config_path = ROOT / "config" / "codex.project.example.toml"
         config_text = config_path.read_text(encoding="utf-8")
         config = tomllib.loads(config_text)
 
         self.assertEqual(config["model"], "gpt-6.1-sol")
         self.assertEqual(config["model_reasoning_effort"], "medium")
-        self.assertEqual(config["agents"]["default_subagent_model"], "gpt-6-luna")
-        self.assertEqual(config["agents"]["default_subagent_reasoning_effort"], "high")
-        allowed_models = {"gpt-6.1-sol", "gpt-6-luna"}
+        self.assertEqual(config["agents"]["default_subagent_model"], "gpt-6.1-sol")
+        self.assertEqual(config["agents"]["default_subagent_reasoning_effort"], "low")
+        allowed_models = {"gpt-6.1-sol"}
         configured_models = {config["model"], config["agents"]["default_subagent_model"]}
         self.assertLessEqual(configured_models, allowed_models)
 
@@ -117,7 +117,7 @@ class StoryArtOrchestratorTests(unittest.TestCase):
         self.assertIn("fidelity and BODY_REFERENCE_LIBRARY still", adapter)
         self.assertIn("Never inherit those choices from another chat or profile", adapter)
 
-    def test_routing_keeps_root_control_and_luna_high_workers(self):
+    def test_routing_keeps_root_control_and_explicit_sol_efforts(self):
         routing_paths = (
             ROOT / "docs" / "EFFICIENT_WORKFLOW.md",
             ROOT / "skills" / "storyart-orchestrator" / "SKILL.md",
@@ -129,9 +129,33 @@ class StoryArtOrchestratorTests(unittest.TestCase):
                 self.assertIn("Sol 6.1 Medium", path.read_text(encoding="utf-8"))
 
         workflow = (ROOT / "docs" / "EFFICIENT_WORKFLOW.md").read_text(encoding="utf-8")
-        self.assertIn("Luna 6 High", workflow)
+        self.assertIn("Sol 6.1 Low", workflow)
         self.assertIn("`sol_review` with recorded SOL_GATE", workflow)
-        self.assertIn("| `VISUAL_QA` / result checks | Registry role: Luna 6 High |", workflow)
+        self.assertIn("| `VISUAL_QA` / result checks | Registry role: Sol 6.1 Medium |", workflow)
+
+    def test_actual_dispatch_uses_distinct_production_role_efforts(self):
+        self.initialize()
+        for role, effort in (("STYLE_LIBRARIAN", "low"), ("IDENTITY_CURATOR", "low"),
+                             ("CALL_PLANNER", "medium"), ("VISUAL_QA", "medium")):
+            handoff = orchestrator.dispatch_handoff(
+                self.state_path, role, f"Bounded {role} evidence review", [str(self.guard_path)], [], [], "", "",
+            )
+            self.assertEqual(handoff["execution_profile"], {"model": "gpt-6.1-sol", "reasoning_effort": effort})
+
+    def test_production_switcher_accepts_web_role_and_preserves_other_settings(self):
+        import shutil
+        shell = shutil.which("pwsh")
+        if shell is None:
+            self.skipTest("PowerShell is unavailable on this platform")
+        path = self.request_root / "project.toml"
+        path.write_text((ROOT / "config/codex.project.example.toml").read_text(encoding="utf-8") + '\n# preserve-marker\n', encoding="utf-8")
+        result = subprocess.run([shell, "-NoProfile", "-File", str(ROOT / "scripts/set-model-profile.ps1"),
+                                 "6.1", "-ConfigPath", str(path)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        changed = tomllib.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(changed["agents"]["default_subagent_model"], "gpt-6.1-sol")
+        self.assertEqual(changed["agents"]["default_subagent_reasoning_effort"], "low")
+        self.assertIn("# preserve-marker", path.read_text(encoding="utf-8"))
 
     def initialize(self):
         return orchestrator.initialize_state(self.state_path, self.guard_path)

@@ -8,8 +8,8 @@
         "reasoning_effort": "medium"
       },
       "default_agent": {
-        "model": "gpt-6-luna",
-        "reasoning_effort": "high"
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "low"
       }
     },
     "5.6": {
@@ -39,32 +39,32 @@
       "reasoning_effort": "medium"
     },
     "DEFAULT_WORKER": {
-      "model": "gpt-6-luna",
-      "reasoning_effort": "high"
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "low"
     },
     "STYLE_LIBRARIAN": {
-      "model": "gpt-6-luna",
-      "reasoning_effort": "high"
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "low"
     },
     "IDENTITY_CURATOR": {
-      "model": "gpt-6-luna",
-      "reasoning_effort": "high"
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "low"
     },
     "CALL_PLANNER": {
-      "model": "gpt-6-luna",
-      "reasoning_effort": "high"
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "medium"
     },
     "VISUAL_QA": {
-      "model": "gpt-6-luna",
-      "reasoning_effort": "high"
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "medium"
     },
     "ESCALATION_ORCHESTRATOR": {
       "model": "gpt-6.1-sol",
       "reasoning_effort": "high"
     },
     "CODE_IMPLEMENTER": {
-      "model": "gpt-6-luna",
-      "reasoning_effort": "high"
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "low"
     },
     "CODE_REVIEW": {
       "model": "gpt-6.1-sol",
@@ -82,7 +82,7 @@
     },
     "MECHANICAL_WORKER": {
       "model": "gpt-6-luna",
-      "reasoning_effort": "high"
+      "reasoning_effort": "low"
     }
   }
 }

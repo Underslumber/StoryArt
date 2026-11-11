@@ -25,6 +25,15 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 try:
+    from tools.style_rendering_contract import (
+        build_style_contract, render_style_authority, validate_style_contract, validate_style_review,
+    )
+except ModuleNotFoundError:
+    from style_rendering_contract import (
+        build_style_contract, render_style_authority, validate_style_contract, validate_style_review,
+    )
+
+try:
     from tools.style_pack_startup import (
         STARTUP_CHOICES, _normalized_menu_text, body_library_decision_supported,
         explicit_custom_profile, menu_selection_fields, parse_startup_option_descriptions,
@@ -63,7 +72,11 @@ try:
     from tools.style_pack_common import StylePackError
     from tools.style_pack_contracts import (
         ANTHROPOMETRIC_QA_LIMITS, DEFAULT_ASPECT_BY_ORIENTATION, SCENE_KINDS, SCENE_OUTPUT_USES,
-        STANDARD_ASPECT_RATIOS, anthropometric_qa_violations, build_body_proportion_contract,
+        STANDARD_ASPECT_RATIOS, CONSTRUCTION_GEOMETRY_METHOD_ID, CONSTRUCTION_GEOMETRY_NUMERIC_SOURCE,
+        CONSTRUCTION_GEOMETRY_VERSION, LOCAL_DERIVATIVE_KIND, anthropometric_qa_violations,
+        validate_local_derivative_receipt,
+        validate_construction_dimension_guide_authorization, validate_mandatory_clothes_authorization, build_body_proportion_contract,
+        validate_construction_geometry_receipt as validate_construction_geometry_receipt_data,
         build_canvas_contract, build_scene_contract, build_scene_prompt_source_contract,
         normalize_aspect_ratio, parse_head_height_contract, parse_limb_qa_evidence,
     )
@@ -71,7 +84,11 @@ except ModuleNotFoundError:  # Direct execution as python tools\style_pack_manag
     from style_pack_common import StylePackError
     from style_pack_contracts import (
         ANTHROPOMETRIC_QA_LIMITS, DEFAULT_ASPECT_BY_ORIENTATION, SCENE_KINDS, SCENE_OUTPUT_USES,
-        STANDARD_ASPECT_RATIOS, anthropometric_qa_violations, build_body_proportion_contract,
+        STANDARD_ASPECT_RATIOS, CONSTRUCTION_GEOMETRY_METHOD_ID, CONSTRUCTION_GEOMETRY_NUMERIC_SOURCE,
+        CONSTRUCTION_GEOMETRY_VERSION, LOCAL_DERIVATIVE_KIND, anthropometric_qa_violations,
+        validate_local_derivative_receipt,
+        validate_construction_dimension_guide_authorization, validate_mandatory_clothes_authorization, build_body_proportion_contract,
+        validate_construction_geometry_receipt as validate_construction_geometry_receipt_data,
         build_canvas_contract, build_scene_contract, build_scene_prompt_source_contract,
         normalize_aspect_ratio, parse_head_height_contract, parse_limb_qa_evidence,
     )
@@ -149,6 +166,7 @@ QA_LAYER_NAMES = {
     "ANATOMY_REVIEW", "VISIBLE_DEFECTS", "PROMPT_ADHERENCE",
     "ATTACHMENTS", "CANVAS", "STAGE_LAYER", "FACE_GEOMETRY", "BODY_SILHOUETTE",
     "BODY_PROPORTIONS", "LIMB_PROPORTIONS", "STYLE", "BODY_RENDERING_STYLE",
+    "AUTHOR_CONFIRMED_CONSTRUCTION_GEOMETRY",
     "EXPRESSION", "NEUTRAL_BACKDROP", "FRONT_VIEW", "SIDE_VIEW", "BACK_VIEW",
     "SAFE_COVERAGE", "CLOTHING_TOPOLOGY", "MULTIVIEW_CONSISTENCY", "CLOTHING",
     "POSE_CONTACTS", "CAMERA", "LIGHTING", "BACKGROUND", "COMPOSITION",
@@ -259,6 +277,8 @@ REFERENCE_FIELDS = (
     "primary_role",
     "secondary_roles",
     "character_id",
+    "reference_scope",
+    "request_id",
     "anatomy_compatibility",
     "anatomy_evidence_source",
     "subject_label",
@@ -348,6 +368,10 @@ class StylePaths:
     @property
     def references(self) -> Path:
         return self.pack / "02_LOCAL_ONLY_DO_NOT_UPLOAD" / "LOGS" / "PRELIMINARY_REFERENCE_MANIFEST.csv"
+
+    @property
+    def style_references(self) -> Path:
+        return self.pack / "02_LOCAL_ONLY_DO_NOT_UPLOAD" / "LOGS" / "STYLE_REFERENCE_MANIFEST.csv"
 
     @property
     def duplicates(self) -> Path:
@@ -985,13 +1009,19 @@ def local_asset_status(relative: Path, is_image: bool) -> tuple[str, bool]:
 
 def manifest_role_files(pack: Path, role: str) -> list[str]:
     found: set[str] = set()
-    for manifest in pack.rglob("*.csv"):
+    # Historical copies and attachment logs are not current style registries.
+    for manifest in (
+        pack / "02_LOCAL_ONLY_DO_NOT_UPLOAD/LOGS/PRELIMINARY_REFERENCE_MANIFEST.csv",
+        pack / "03_UPLOAD_TO_WEB/00_PROJECT_MANIFEST.csv",
+    ):
         try:
             rows = read_csv(manifest)
         except (OSError, UnicodeError, csv.Error):
             continue
         for row in rows:
             if row.get("primary_role", "").upper() != role:
+                continue
+            if role in {"MASTER_STYLE", "ANCHOR_STYLE"} and not is_style_reference_row(row):
                 continue
             status = row.get("status", "").upper()
             if status in {"REJECTED", "DUPLICATE"}:
@@ -1000,6 +1030,172 @@ def manifest_role_files(pack: Path, role: str) -> list[str]:
             if filename:
                 found.add(filename)
     return sorted(found, key=str.casefold)
+
+
+_SCOPE_SENTINELS = {"", "NONE", "UNKNOWN", "N/A", "NA", "-", "NULL"}
+_NONSTYLE_REFERENCE_ROLES = {"CHARACTER_FACE", "CHARACTER_BODY", "CHARACTER", "CONTINUITY", "APPROVED_FRAME"}
+_CHARACTER_REFERENCE_NAME = re.compile(r"(?:^|[_\\-])(?:CHARACTER_FACE|CHARACTER_BODY)(?:[_\\-]|$)", re.I)
+_REQUEST_LOCAL_MARKERS = re.compile(
+    r"request[ -]local|current[ -]request|current[ -]chat|request[ -]only|not reusable|one[ -]time support",
+    re.I,
+)
+
+
+def _has_meaningful_scope_value(value: object) -> bool:
+    return str(value or "").strip().upper() not in _SCOPE_SENTINELS
+
+
+def effective_reference_scope(row: dict[str, object]) -> str:
+    """Resolve current and legacy ownership metadata without trusting STYLE overrides."""
+    explicit = str(row.get("reference_scope", "") or "").strip().upper()
+    role = str(row.get("primary_role", "") or "").strip().upper()
+    request_id = _has_meaningful_scope_value(row.get("request_id"))
+    char_id = _has_meaningful_scope_value(row.get("character_id"))
+    lineage_text = " ".join(
+        str(row.get(key, "") or "")
+        for key in ("filename", "stored_relative_path", "source_filename", "use_for", "do_not_use_for", "notes")
+    )
+    if request_id or explicit == "REQUEST" or _REQUEST_LOCAL_MARKERS.search(lineage_text):
+        return "REQUEST"
+    if char_id or explicit == "CHARACTER" or role in _NONSTYLE_REFERENCE_ROLES or _CHARACTER_REFERENCE_NAME.search(lineage_text):
+        return "CHARACTER"
+    if explicit in {"STYLE", "CHARACTER", "REQUEST"}:
+        return explicit
+    return "STYLE"
+
+
+def is_style_reference_row(row: dict[str, object]) -> bool:
+    return effective_reference_scope(row) == "STYLE"
+
+
+def _scoped_pack_file(paths: StylePaths, stored: str) -> Path | None:
+    relative = Path(stored)
+    if relative.is_absolute() or ".." in relative.parts or not relative.parts:
+        return None
+    if any(part.upper() in {"00_PENDING", "TEST", "DRAFT", "STAGING", "REJECTED"} for part in relative.parts):
+        return None
+    candidate = paths.pack / relative
+    return candidate if is_relative_to(candidate, paths.pack) else None
+
+
+def _general_style_source_hashes(rows: list[dict[str, str]]) -> set[str]:
+    # A shared artist original may legitimately have request-specific crops.
+    # Independent positive style provenance keeps that original in the style pool.
+    return {
+        str(row.get("source_sha256", "")).lower()
+        for row in rows
+        if is_style_reference_row(row)
+        and row.get("primary_role", "").upper() not in {"", "UNCLASSIFIED"}
+        and row.get("status", "").upper() in {"APPROVED", "ANCHOR", "TEST"}
+        and row.get("generator_safe", "").upper() == "YES"
+        and re.fullmatch(r"[0-9a-fA-F]{64}", str(row.get("source_sha256", "")))
+    }
+
+
+def build_nonstyle_scope_index(paths: StylePaths) -> tuple[set[str], set[str]]:
+    scoped_paths: set[str] = set()
+    scoped_hashes: set[str] = set()
+    rows = read_csv(paths.references)
+    general_origins = _general_style_source_hashes(rows)
+    for row in rows:
+        if is_style_reference_row(row):
+            continue
+        stored = str(row.get("stored_relative_path", "") or "").replace("\\", "/")
+        if not stored:
+            continue
+        scoped_paths.add(stored.casefold())
+        stored_file = _scoped_pack_file(paths, stored)
+        if stored_file and stored_file.is_file() and stored_file.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
+            stored_hash = sha256(stored_file)
+            if stored_hash not in general_origins:
+                scoped_hashes.add(stored_hash)
+        origin_hash = str(row.get("source_sha256", "")).lower()
+        if re.fullmatch(r"[0-9a-f]{64}", origin_hash) and origin_hash not in general_origins:
+            scoped_hashes.add(origin_hash)
+    return scoped_paths, scoped_hashes
+
+
+def is_nonstyle_style_asset(
+    paths: StylePaths,
+    file: Path,
+    relative: Path | None = None,
+    scope_index: tuple[set[str], set[str]] | None = None,
+) -> bool:
+    relative = relative or (file.relative_to(paths.pack) if is_relative_to(file, paths.pack) else Path(file.name))
+    if _CHARACTER_REFERENCE_NAME.search(relative.as_posix()):
+        return True
+    index = scope_index or build_nonstyle_scope_index(paths)
+    if relative.as_posix().casefold() in index[0]:
+        return True
+    if index[1] and file.is_file() and file.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
+        return sha256(file) in index[1]
+    return False
+
+
+def reference_binding_for_asset(paths: StylePaths, file: Path) -> dict[str, str] | None:
+    stored_path = ""
+    if file.is_file() and is_relative_to(file, paths.pack):
+        stored_path = file.relative_to(paths.pack).as_posix().casefold()
+    current_hash = sha256(file) if file.is_file() and file.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS else ""
+    rows = read_csv(paths.references)
+    general_origins = _general_style_source_hashes(rows)
+    # Exact ownership wins over a same-byte sibling, independent of ledger order.
+    for row in rows:
+        row_path = str(row.get("stored_relative_path", "") or "").replace("\\", "/").casefold()
+        if stored_path and row_path == stored_path and not is_style_reference_row(row):
+            return row
+    for row in rows:
+        if is_style_reference_row(row):
+            continue
+        row_path = str(row.get("stored_relative_path", "") or "").replace("\\", "/").casefold()
+        row_file = _scoped_pack_file(paths, str(row.get("stored_relative_path", "") or "").replace("\\", "/"))
+        if (
+            current_hash and current_hash not in general_origins and row_file and row_file.is_file()
+            and sha256(row_file) == current_hash
+        ) or (
+            current_hash and current_hash == str(row.get("source_sha256", "")).lower()
+            and current_hash not in general_origins
+        ):
+            return row
+    return None
+
+
+def request_local_asset_matches(paths: StylePaths, file: Path, request_id: str) -> bool:
+    binding = reference_binding_for_asset(paths, file)
+    return bool(
+        binding
+        and effective_reference_scope(binding) == "REQUEST"
+        and str(binding.get("request_id", "")).strip() == request_id.strip()
+    )
+
+
+def write_reference_manifests(paths: StylePaths, rows: list[dict[str, object]]) -> None:
+    """Keep the complete ownership ledger and write its style-only projection."""
+    fields = list(REFERENCE_FIELDS)
+    for row in rows:
+        for key in row:
+            if key not in fields:
+                fields.append(key)
+    write_csv(paths.references, fields, rows)
+    write_csv(paths.style_references, fields, [{**row, "reference_scope": "STYLE"} for row in rows if is_style_reference_row(row)])
+
+
+def request_local_style_row_matches(paths: StylePaths, relative: Path, request_id: str) -> bool:
+    if not _has_meaningful_scope_value(request_id):
+        return False
+    stored_path = relative.as_posix()
+    matches = [
+        row for row in read_csv(paths.references)
+        if row.get("stored_relative_path", "").replace("\\", "/") == stored_path
+    ]
+    return (
+        len(matches) == 1
+        and effective_reference_scope(matches[0]) == "REQUEST"
+        and str(matches[0].get("request_id", "")).strip() == request_id.strip()
+        and matches[0].get("primary_role", "").upper() == "MASTER_STYLE"
+        and matches[0].get("status", "").upper() == "TEST"
+        and matches[0].get("generator_safe", "").upper() == "YES"
+    )
 
 
 def active_style_calibration_summary(pack: Path) -> dict[str, object]:
@@ -1037,9 +1233,12 @@ def build_style_context(paths: StylePaths, requested_role: str, positive_only: b
     positive_local_role_counts: dict[str, int] = {}
     status_counts: dict[str, int] = {}
     file_type_counts: dict[str, int] = {}
+    nonstyle_scope_index = build_nonstyle_scope_index(paths)
 
     for file in sorted((path for path in pack.rglob("*") if path.is_file()), key=lambda path: str(path).casefold()):
         relative = file.relative_to(pack)
+        if is_nonstyle_style_asset(paths, file, relative, nonstyle_scope_index):
+            continue
         layer = relative.parts[0] if relative.parts else "ROOT"
         is_image = file.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
         file_type = "IMAGE" if is_image else "DOCUMENT"
@@ -1091,7 +1290,12 @@ def build_style_context(paths: StylePaths, requested_role: str, positive_only: b
     if work_root.is_dir():
         for child in sorted(work_root.iterdir(), key=lambda path: path.name.casefold()):
             if child.is_dir():
-                image_count = count_images(child)
+                image_count = sum(
+                    1 for image in child.rglob("*")
+                    if image.is_file()
+                    and image.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+                    and not is_nonstyle_style_asset(paths, image, image.relative_to(pack), nonstyle_scope_index)
+                )
                 if image_count:
                     work_collection_counts[child.name] = image_count
     style_pool_count = work_collection_counts.get("STYLE_CROPS", 0) or len(master_files) or positive_local_role_counts.get("STYLE", 0)
@@ -2083,6 +2287,7 @@ def validate_resolved_slot_compatibility(
     target = target_block.get("target", {}) if isinstance(target_block, dict) else {}
     planned_compatibility = target_block.get("references", []) if isinstance(target_block, dict) else []
     roles = [str(role).upper() for role in slot.get("active_roles", [])]
+    roles = [re.sub(r"^BR_\d+:", "", role) for role in roles]
     role_aliases = {
         "PRIMARY_FACE": "FACE",
         "SUPPORTING_FACE": "STYLE",
@@ -2159,11 +2364,13 @@ def validate_resolved_slot_compatibility(
             if (
                 request_local.get("reference_scope") != "CURRENT_REQUEST_ONLY"
                 or request_local.get("permanent_anchor") is not False
-                or not has_positive_master_style_manifest_entry(paths, relative)
+                or not has_positive_master_style_manifest_entry(paths, relative, str(plan.get("request_id", "")))
             ):
                 raise StylePackError(
                     f"Attached STYLE reference is no longer a valid request-local candidate: {file}"
                 )
+        elif "STYLE" in {str(role).upper() for role in slot.get("active_roles", [])} and is_nonstyle_style_asset(paths, file):
+            raise StylePackError(f"Attached STYLE reference is character- or request-scoped: {file}")
         elif style_formation_status(paths) != "FORMED":
             raise StylePackError(
                 f"Attached STYLE reference uses an unformed style-pack source without a current-request candidate marker: {file}"
@@ -2175,7 +2382,8 @@ def validate_resolved_slot_compatibility(
     manifest_digest = ""
     if in_body_library:
         try:
-            _, body_rows = load_body_reference_manifest(paths.workspace)
+            body_library, body_rows = load_body_reference_manifest(paths.workspace)
+            manifest_path = body_library / "BODY_REFERENCE_MANIFEST.csv"
             body_row = next(
                 (item for item in body_rows if item.get("generator_path") and (body_library / item["generator_path"]).resolve() == file),
                 None,
@@ -2447,6 +2655,7 @@ def validate_reference_policy_slots(paths: StylePaths, plan: dict[str, object], 
             raise StylePackError("NO_REFERENCES conflicts with attached slots.")
         return
     additional, library = [], []
+    authorized_guide_slot = validate_construction_dimension_guide_call(paths, plan, call, required=False)
     user_evidence = plan.get("user_reference_evidence", [])
     def is_user_attachment(slot: dict[str, object]) -> bool:
         if "SUBJECT" in {str(role).upper() for role in slot.get("active_roles", [])}:
@@ -2514,12 +2723,29 @@ def validate_reference_policy_slots(paths: StylePaths, plan: dict[str, object], 
     for slot in slots:
         file = Path(str(slot["path"])).resolve()
         roles = set(slot.get("active_roles", []))
+        face_intent = plan.get("new_face_reference_purpose", {})
+        required_new_face = (
+            plan.get("character_id") == "NEW" and plan.get("generation_purpose") == "CHARACTER_BASE"
+            and face_intent.get("mode") == "USER_IDENTITY_INTENT"
+            and face_intent.get("scope") == "NEW_CHARACTER_BASE" and bool(face_intent.get("evidence"))
+            and roles in ({"PRIMARY_FACE"}, {"SUPPORTING_FACE"})
+            and any(
+                Path(str(source.get("path", ""))).resolve() == file
+                and source.get("sha256") == slot.get("sha256")
+                and source.get("physical_slot_role") in roles
+                for source in face_intent.get("sources", []) if isinstance(source, dict)
+            )
+        )
         if identity_root and is_relative_to(file, identity_root):
             continue
+        elif required_new_face and policy in {"BODY_LIBRARY_ONLY", "PROJECT_STYLE_ONLY"}:
+            continue  # Explicitly requested NEW identity is mandatory, like an approved character's FACE.
         elif is_relative_to(file, (paths.workspace / BODY_LIBRARY_NAME).resolve()):
             library.append(slot)
         elif roles and roles.issubset({"STYLE", "STYLE_SOFT"}):
             continue  # Style consent is independently bound.
+        elif authorized_guide_slot and file == Path(str(authorized_guide_slot["path"])).resolve() and roles == {"COMPOSITION"}:
+            continue  # One exact user-authorized NO_SUBJECT SIDE dimension guide only.
         else:
             additional.append(slot)
     if policy == "PROJECT_STYLE_ONLY":
@@ -2528,11 +2754,76 @@ def validate_reference_policy_slots(paths: StylePaths, plan: dict[str, object], 
         if selections["style"]["choice"] != f"PROJECT_STYLE:{paths.style_name}" or not has_style or len(inherited) != len(additional) or library:
             raise StylePackError("PROJECT_STYLE_ONLY permits only selected project STYLE and required character identity slots.")
         return
+    clothes_consent = None
+    consent_path = str(plan.get("mandatory_clothes_authorization_path", "")).strip()
+    if consent_path:
+        workflow = plan.get("generation_workflow")
+        if (not isinstance(workflow, dict) or str(workflow.get("mode", "")).upper() != "SINGLE_PASS"
+                or str(call.get("stage_id", "")).upper() != "SINGLE_PASS"):
+            raise StylePackError("Mandatory CLOTHES consent is restricted to the actual SINGLE_PASS workflow and call stage.")
+        clothes_consent = validate_mandatory_clothes_authorization(
+            consent_path, request_id=str(plan.get("request_id", "")),
+            character_id=str(plan.get("character_id", "")), plan=plan,
+        )
+        matches = [slot for slot in slots if isinstance(slot, dict)
+                   and Path(str(slot.get("path", ""))).expanduser().resolve() == Path(clothes_consent["source_path"]).resolve()
+                   and {str(role).upper() for role in slot.get("active_roles", [])} == {"CLOTHES"}
+                   and str(slot.get("sha256", "")).lower() == clothes_consent["source_sha256"]
+                   and slot.get("physically_attach") is True]
+        if len(matches) != 1 or sum(1 for slot in slots if isinstance(slot, dict)
+                and {str(role).upper() for role in slot.get("active_roles", [])} == {"CLOTHES"}) != 1:
+            raise StylePackError("Mandatory CLOTHES consent requires exactly one physical CLOTHES slot bound to its original source.")
+        registered = validate_plan_reference(paths, clothes_consent["source_path"], "CLOTHES", request_id=str(plan.get("request_id", "")))
+        rows = [row for row in read_csv(paths.references)
+                if row.get("reference_id") == clothes_consent["reference_id"]
+                and row.get("stored_relative_path", "").replace("\\", "/") == Path(clothes_consent["source_path"]).resolve().relative_to(paths.pack.resolve()).as_posix()]
+        row = rows[0] if len(rows) == 1 else {}
+        if (registered.get("sha256") != clothes_consent["source_sha256"] or len(rows) != 1
+                or row.get("status", "").upper() != "APPROVED"
+                or row.get("reference_scope", "").upper() != "REQUEST"
+                or row.get("request_id") != str(plan.get("request_id", ""))
+                or row.get("primary_role", "").upper() != "CLOTHES_CORE"
+                or row.get("subject_label") != "MALE" or row.get("subject_label_status") != "REVIEWED"
+                or row.get("subject_label_sha256", "").lower() != clothes_consent["source_sha256"]
+                or row.get("source_sha256", "").lower() != clothes_consent["source_sha256"]
+                or row.get("generator_safe", "").upper() != "YES" or row.get("user_approved", "").upper() != "YES"):
+            raise StylePackError("Mandatory CLOTHES source is not the exact current-hash approved request registry asset.")
+        recorded = plan.get("mandatory_clothes_authorization")
+        if not isinstance(recorded, dict) or recorded != clothes_consent:
+            raise StylePackError("Mandatory CLOTHES authorization binding changed after plan preparation.")
+        current_identity_paths = identity_paths_for_plan(paths, plan)
+        canonical_character_root = character_folder(current_identity_paths, str(plan.get("character_id", ""))).resolve()
+        canonical_profile = canonical_character_root / "CHARACTER_PROFILE.yaml"
+        approved_assembly = plan.get("selected_references", {}).get("character_assembly", {})
+        if isinstance(approved_assembly, list):
+            approved_assembly = approved_assembly[0] if len(approved_assembly) == 1 else {}
+        if (Path(str(plan.get("mandatory_clothes_authorization", {}).get("assembly_path", ""))).resolve()
+                != Path(str(approved_assembly.get("path", ""))).resolve()
+                or str(approved_assembly.get("sha256", "")).lower() != clothes_consent["assembly_sha256"]
+                or Path(str(json.loads(Path(consent_path).read_text(encoding="utf-8")).get("character_profile_path", ""))).resolve()
+                != canonical_profile.resolve()):
+            raise StylePackError("Mandatory CLOTHES consent does not bind the current canonical profile and approved assembly identity.")
+        required_assembly = [slot for slot in slots if isinstance(slot, dict)
+            and Path(str(slot.get("path", ""))).expanduser().resolve() == Path(clothes_consent["assembly_path"]).resolve()
+            and str(slot.get("sha256", "")).lower() == clothes_consent["assembly_sha256"]]
+        approved_face = plan.get("selected_references", {}).get("primary_face", {})
+        if isinstance(approved_face, list):
+            approved_face = approved_face[0] if len(approved_face) == 1 else {}
+        required_face = [slot for slot in slots if isinstance(slot, dict) and isinstance(approved_face, dict)
+            and Path(str(slot.get("path", ""))).expanduser().resolve() == Path(str(approved_face.get("path", ""))).resolve()
+            and str(slot.get("sha256", "")).lower() == str(approved_face.get("sha256", "")).lower()]
+        if len(required_assembly) != 1 or len(required_face) != 1 or not any(
+                set(slot.get("active_roles", [])) & {"STYLE", "STYLE_SOFT"} for slot in slots if isinstance(slot, dict)):
+            raise StylePackError("Mandatory CLOTHES call must preserve the authorized assembly, approved face, and selected STYLE physical slots.")
     if policy == "BODY_LIBRARY_ONLY":
         if str(plan.get("startup_parameter_selection", {}).get("resolved_parameters", {}).get("aux_body_decision", "")).upper() != "SELECTED":
             raise StylePackError("BODY_LIBRARY_ONLY requires the user's explicit request-level BODY_REFERENCE_LIBRARY selection.")
         inherited = [slot for slot in additional if inherits_reference_policy(slot)]
-        if len(inherited) != len(additional):
+        authorized_clothes = ([slot for slot in additional if clothes_consent
+            and Path(str(slot.get("path", ""))).expanduser().resolve() == Path(clothes_consent["source_path"]).resolve()
+            and {str(role).upper() for role in slot.get("active_roles", [])} == {"CLOTHES"}
+            and str(slot.get("sha256", "")).lower() == clothes_consent["source_sha256"]]) if clothes_consent else []
+        if len(inherited) + len(authorized_clothes) != len(additional) or len(authorized_clothes) > 1:
             raise StylePackError("BODY_LIBRARY_ONLY permits the selected BODY_REFERENCE_LIBRARY and mandatory approved character identity slots only.")
         return
     if policy == "APPROVED_CHARACTER_REFERENCES":
@@ -2544,6 +2835,123 @@ def validate_reference_policy_slots(paths: StylePaths, plan: dict[str, object], 
     if policy in {"USER_ATTACHED_REFERENCES", "APPROVED_PLUS_USER_REFERENCES"}:
         if not additional or not all(is_user_attachment(slot) or inherits_reference_policy(slot) for slot in additional):
             raise StylePackError("User-reference policy requires actual non-style, non-library attachments with matching source hash and chat/message provenance.")
+
+
+def validate_construction_dimension_guide_call(
+    paths: StylePaths,
+    plan: dict[str, object],
+    call: dict[str, object],
+    *,
+    required: bool = True,
+) -> dict[str, object] | None:
+    """Recheck the user-authorized guide at the manager's exact-call boundary."""
+    binding = plan.get("construction_dimension_guide")
+    if binding is None:
+        if required:
+            raise StylePackError("REFERENCE_PLAN has no construction dimension guide binding.")
+        return None
+    if not isinstance(binding, dict):
+        raise StylePackError("REFERENCE_PLAN construction dimension guide binding is malformed.")
+    authorization_path = Path(str(binding.get("authorization_path", ""))).expanduser().resolve()
+    request_root = paths.generations / "00_PENDING" / str(plan.get("request_id", ""))
+    try:
+        current = validate_construction_dimension_guide_authorization(
+            authorization_path, request_root=request_root, request_id=str(plan.get("request_id", "")),
+            character_id=str(plan.get("character_id", "")), stage_id="03_PHYSIQUE_SIDE",
+        )
+    except StylePackError:
+        raise
+    if current != binding:
+        raise StylePackError("Construction dimension guide authorization changed after plan preparation.")
+    startup = plan.get("startup_parameter_selection", {})
+    resolved_parameters = startup.get("resolved_parameters", {}) if isinstance(startup, dict) else {}
+    selections = call.get("user_selections", {})
+    reference_policy = selections.get("reference_policy", {}) if isinstance(selections, dict) else {}
+    style_selection = selections.get("style", {}) if isinstance(selections, dict) else {}
+    if (resolved_parameters.get("fidelity") != 90
+            or str(resolved_parameters.get("aux_body_decision", "")).upper() != "SELECTED"
+            or not isinstance(reference_policy, dict) or str(reference_policy.get("choice", "")).upper() != "BODY_LIBRARY_ONLY"
+            or not isinstance(style_selection, dict) or str(style_selection.get("choice", "")).upper() != "PROJECT_STYLE:LORANDESORE"):
+        raise StylePackError("The bound guide call no longer matches the exact 90% LORANDESORE + selected BODY_REFERENCE_LIBRARY user choice.")
+    stage = str(call.get("stage_id", "")).upper()
+    matches = [
+        slot for slot in call.get("slots", [])
+        if isinstance(slot, dict)
+        and Path(str(slot.get("path", ""))).expanduser().resolve() == Path(str(current["guide_path"]))
+    ]
+    if stage != "03_PHYSIQUE_SIDE":
+        if matches:
+            raise StylePackError("Construction dimension guide is restricted to the exact 03_PHYSIQUE_SIDE call.")
+        return None
+    if (len(matches) != 1 or str(matches[0].get("sha256", "")).lower() != current["guide_sha256"]
+            or {str(role).upper() for role in matches[0].get("active_roles", [])} != {"COMPOSITION"}
+            or matches[0].get("physically_attach") is not True):
+        raise StylePackError("Exact SIDE call does not physically bind the authorized dimension guide as COMPOSITION.")
+    slot_roles = [frozenset(str(role).upper() for role in slot.get("active_roles", []))
+                  for slot in call.get("slots", []) if isinstance(slot, dict)]
+    if (len(slot_roles) != 4 or set(slot_roles) != {
+            frozenset({"STYLE"}), frozenset({"FACE_IDENTITY_STAGE"}),
+            frozenset({"PHYSIQUE_FRONT_STAGE"}), frozenset({"COMPOSITION"}),
+    }):
+        raise StylePackError("SIDE dimension-guide call must contain exactly STYLE, passed FACE, accepted FRONT, and COMPOSITION guide slots.")
+    try:
+        registered = validate_plan_reference(paths, str(current["guide_path"]), "COMPOSITION")
+    except (OSError, ValueError) as error:
+        raise StylePackError(f"Cannot revalidate registered construction dimension guide: {error}") from error
+    if (registered.get("sha256") != current["guide_sha256"]
+            or registered.get("subject_label") != "NO_SUBJECT"
+            or registered.get("subject_label_status") != "REVIEWED"
+            or str(registered.get("subject_label_sha256", "")).lower() != current["guide_sha256"]
+            or not str(registered.get("subject_label_evidence", "")).strip()):
+        raise StylePackError("Registered SIDE dimension guide lacks current-hash reviewed NO_SUBJECT metadata.")
+    return matches[0]
+
+
+def bind_construction_dimension_guide_to_side_workflow(
+    workflow: dict[str, object], binding: dict[str, object], attachment_limit: int,
+) -> dict[str, object]:
+    """Replace the SIDE FACE+FRONT pack with separate sources and the exact authorized guide."""
+    stages = workflow.get("stages")
+    matches = [stage for stage in stages if isinstance(stage, dict)
+               and str(stage.get("stage_id", "")).upper() == "03_PHYSIQUE_SIDE"] if isinstance(stages, list) else []
+    if workflow.get("mode") != "MULTI_STAGE" or len(matches) != 1:
+        raise StylePackError("Authorized dimension guide requires the exact MULTI_STAGE 03_PHYSIQUE_SIDE workflow.")
+    side = matches[0]
+    slots = side.get("slots")
+    if not isinstance(slots, list):
+        raise StylePackError("SIDE workflow has no physical slot list for the authorized dimension guide.")
+    packed = [(index, slot) for index, slot in enumerate(slots)
+              if isinstance(slot, dict) and slot.get("planned_targeted_pack")
+              and slot.get("targeted_pack_sources") == ["01_FACE_IDENTITY", "02_PHYSIQUE_FRONT"]]
+    if len(packed) != 1:
+        raise StylePackError("SIDE workflow lacks the exact FACE+FRONT targeted pack placeholder to replace with two physical references.")
+    index, _ = packed[0]
+    face_front_slots = [
+        {"path": f"<STAGE_OUTPUT:{stage_id}>", "sha256": f"STAGE_OUTPUT:{stage_id}",
+         "stage_role": role, "active_roles": [role], "physically_attach": True,
+         "generated_stage_output": True}
+        for stage_id, role in (("01_FACE_IDENTITY", "FACE_IDENTITY_STAGE"),
+                               ("02_PHYSIQUE_FRONT", "PHYSIQUE_FRONT_STAGE"))
+    ]
+    guide_slot = {
+        "path": str(binding["guide_path"]), "sha256": str(binding["guide_sha256"]),
+        "stage_role": "COMPOSITION", "active_roles": ["COMPOSITION"], "physically_attach": True,
+    }
+    slots[index:index + 1] = face_front_slots + [guide_slot]
+    side["attachments_used"] = len(slots)
+    if len(slots) != 4 or attachment_limit < 4 or int(side.get("attachment_limit", 0)) < 4 or any(
+        isinstance(stage, dict) and str(stage.get("stage_id", "")).upper() != "03_PHYSIQUE_SIDE"
+        and any(isinstance(slot, dict) and Path(str(slot.get("path", ""))).resolve() == Path(str(binding["guide_path"])).resolve()
+                for slot in stage.get("slots", []))
+        for stage in stages
+    ):
+        raise StylePackError("SIDE guide binding must be the only four-reference attachment exception and stay side-specific.")
+    roles = {frozenset(str(role).upper() for role in slot.get("active_roles", []))
+             for slot in slots if isinstance(slot, dict)}
+    if roles != {frozenset({"STYLE"}), frozenset({"FACE_IDENTITY_STAGE"}),
+                 frozenset({"PHYSIQUE_FRONT_STAGE"}), frozenset({"COMPOSITION"})}:
+        raise StylePackError("SIDE dimension-guide workflow must contain exactly STYLE, passed FACE, accepted FRONT, and guide references.")
+    return workflow
 
 
 def validate_character_base_executable_prompt(prompt: str, contract: object) -> None:
@@ -2636,7 +3044,9 @@ def command_prepare_call(args: argparse.Namespace) -> None:
             raise StylePackError(f"Cannot read exact prompt text: {error}") from error
     if not prompt_text.strip():
         raise StylePackError("--prompt-text or --prompt-text-file must provide the exact call prompt.")
-    prompt_text = render_confirmed_prompt(plan, prompt_text)
+    resolved_for_prompt = getattr(args, "_resolved_call_snapshot", None)
+    prompt_slots = resolved_for_prompt.get("slots") if isinstance(resolved_for_prompt, dict) else None
+    prompt_text = render_confirmed_prompt(plan, prompt_text, slots=prompt_slots)
     validate_character_base_executable_prompt(prompt_text, plan.get("character_base_contract"))
     original_plan_bytes = plan_path.read_bytes()
     original_plan_hash = hashlib.sha256(original_plan_bytes).hexdigest()
@@ -2714,6 +3124,7 @@ def command_prepare_call(args: argparse.Namespace) -> None:
         resolved_stage_outputs=resolved_snapshot["stage_outputs"] if reuse_resolved_slots else None,
     )
     call["user_selections"] = user_selections
+    validate_style_contract(plan, call, check_files=True)
     scene_prompt_sources = plan.get("scene_prompt_sources", {})
     if scene_prompt_sources:
         call["prompt_source_metadata"] = {
@@ -3041,6 +3452,41 @@ def new_face_intent_semantic_alias(role: str, purpose_binding: object) -> str | 
     return None
 
 
+def _confirmed_empty_pose_atlas(args: argparse.Namespace) -> bool:
+    """Allow an honest empty target pool, never a self-reported empty pool."""
+    workspace_value = getattr(args, "workspace", None)
+    target = str(getattr(args, "target_anatomy", "")).upper()
+    note = str(getattr(args, "aux_body_selection_note", "")).strip()
+    if not workspace_value or target not in {"MALE_ANATOMY", "FEMALE_ANATOMY"} or len(note) < 20:
+        return False
+    workspace = Path(workspace_value).resolve()
+    registry_path = workspace / "config" / "body_reference_types.json"
+    if not registry_path.is_file():
+        return False
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        if registry.get("active_auxiliary_type") != "POSE_ATLAS":
+            return False
+        spec = registry["types"]["POSE_ATLAS"]
+        library = workspace / "BODY_REFERENCE_LIBRARY" / "POSE_ATLAS"
+        if (spec.get("enabled") is not True or spec.get("authority") != "SOFT_POSE_ONLY"
+                or (workspace / str(spec.get("root", ""))).resolve() != library
+                or (workspace / str(spec.get("manifest", ""))).resolve() != library / "BODY_REFERENCE_MANIFEST.csv"):
+            return False
+        try:
+            from tools.pose_reference_manager import validate_library, reference_context
+        except ModuleNotFoundError:
+            from pose_reference_manager import validate_library, reference_context
+        catalog = validate_library(library)
+        context = reference_context(library, target_anatomy=target)
+        return (catalog.get("status") == "CATALOG_COMPLETE"
+                and catalog.get("catalog_sources", 0) > 0
+                and context.get("target_anatomy") == target
+                and context.get("view_count") == 0 and context.get("groups") == [])
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise StylePackError(f"Cannot verify the empty target POSE_ATLAS pool: {error}") from error
+
+
 def validate_prompt_only_body_library_review(args: argparse.Namespace) -> None:
     """Require complete relevant BODY library review before dropping a selected visual source."""
     if not getattr(args, "prompt_only_physique", False):
@@ -3049,6 +3495,8 @@ def validate_prompt_only_body_library_review(args: argparse.Namespace) -> None:
         return
     reviewed = int(getattr(args, "body_library_candidates_reviewed", 0))
     total = int(getattr(args, "body_library_relevant_candidates_total", 0))
+    if total == 0 and reviewed == 0 and _confirmed_empty_pose_atlas(args):
+        return
     if total <= 0:
         raise StylePackError(
             "Prompt-only physique with BODY_REFERENCE_LIBRARY selected requires a positive "
@@ -3068,7 +3516,7 @@ def style_name_is_explicitly_mentioned(style_name: str, quote: str) -> bool:
     return bool(normalized_style and normalized_style in normalized_quote)
 
 
-def has_positive_master_style_manifest_entry(paths: StylePaths, relative: Path) -> bool:
+def has_positive_master_style_manifest_entry(paths: StylePaths, relative: Path, request_id: str = "") -> bool:
     if tuple(relative.parts[:2]) != ("01_WORK", "STYLE_CROPS") or len(relative.parts) != 3:
         return False
     if not relative.name.upper().startswith("MASTER_STYLE_"):
@@ -3080,6 +3528,7 @@ def has_positive_master_style_manifest_entry(paths: StylePaths, relative: Path) 
     ]
     return (
         len(matches) == 1
+        and (is_style_reference_row(matches[0]) or request_local_style_row_matches(paths, relative, request_id))
         and matches[0].get("primary_role", "").upper() == "MASTER_STYLE"
         and matches[0].get("status", "").upper() == "TEST"
         and matches[0].get("generator_safe", "").upper() == "YES"
@@ -3094,8 +3543,18 @@ def validate_plan_reference(
     allow_curated_body_contour: bool = False,
     allow_request_local_style_candidate: bool = False,
     allow_user_subject_source: bool = False,
+    request_id: str = "",
 ) -> dict[str, object]:
     file = resolve_existing_file(value, paths)
+    matching_request_id = request_id.strip()
+    if label.upper() == "STYLE" and is_nonstyle_style_asset(paths, file):
+        relative_scope_match = (
+            allow_request_local_style_candidate
+            and is_relative_to(file, paths.pack)
+            and request_local_style_row_matches(paths, file.relative_to(paths.pack), matching_request_id)
+        )
+        if not relative_scope_match:
+            raise StylePackError(f"STYLE cannot use a character- or request-scoped reference: {file}")
     contour_root = (
         paths.workspace
         / "BODY_REFERENCE_LIBRARY"
@@ -3132,7 +3591,7 @@ def validate_plan_reference(
             and label == "STYLE"
             and "STYLE" in roles
             and status == "POSITIVE_CANDIDATE"
-            and has_positive_master_style_manifest_entry(paths, relative)
+            and has_positive_master_style_manifest_entry(paths, relative, matching_request_id)
         )
         if style_formation_status(paths) != "FORMED" and not request_local_style_candidate and not (label == "SUBJECT" and allow_user_subject_source):
             raise StylePackError(
@@ -3150,6 +3609,8 @@ def validate_plan_reference(
                 raise StylePackError(
                     f"{label} cannot use an unregistered, rejected, staging, or non-approved generation as a positive reference: {file}"
                 )
+            if label == "STYLE" and character_asset.get("asset_role") != "SKETCH":
+                raise StylePackError(f"STYLE cannot use a character-bound {character_asset.get('asset_role', 'asset')} reference: {file}")
             if character_asset.get("asset_role") == "SKETCH":
                 if label != "STYLE":
                     raise StylePackError(f"{label} cannot use a useful sketch as identity, anatomy, clothing, or scene ground truth: {file}")
@@ -3821,6 +4282,29 @@ def generation_qa_evidence(row: dict[str, str]) -> dict[str, object] | None:
         ).hexdigest()
     ):
         return None
+    derivative = contract.get("local_derivative")
+    if derivative is not None:
+        if not isinstance(derivative, dict):
+            return None
+        try:
+            replayed_derivative = validate_local_derivative_receipt(
+                Path(str(derivative.get("receipt_path", ""))),
+                request_root=Path(str(derivative.get("guard_path", ""))).resolve().parent,
+                request_id=str(row.get("request_id", "")),
+                character_id=str(row.get("character_id", "")),
+                stage_id=str(contract.get("stage_id", "")),
+                output=Path(str(derivative.get("derived_artifact", {}).get("path", ""))),
+                guard_path=Path(str(derivative.get("guard_path", ""))),
+                attempt_id=str(derivative.get("attempt_id", "")),
+                allow_accepted_stage_replay=True,
+            )
+        except (OSError, ValueError, RuntimeError, KeyError, StylePackError):
+            return None
+        replayed_output = replayed_derivative.get("derived_artifact", {}) if isinstance(replayed_derivative, dict) else {}
+        if (replayed_derivative != derivative or evidence.get("local_derivative") != derivative
+                or not isinstance(replayed_output, dict)
+                or str(replayed_output.get("sha256", "")).lower() != sha256(style_file)):
+            return None
     visual_review = contract["visual_review"]
     plan_snapshot_data: dict[str, object] = {}
     try:
@@ -3858,6 +4342,38 @@ def generation_qa_evidence(row: dict[str, str]) -> dict[str, object] | None:
         return None
     expected_failed = sorted(name for name, result in qa_results.items() if result == "FAIL")
     if evidence.get("qa_failed") != expected_failed:
+        return None
+    has_construction_gate = "AUTHOR_CONFIRMED_CONSTRUCTION_GEOMETRY" in qa_results
+    construction = contract.get("construction_geometry")
+    numeric_results = contract.get("numeric_qa_results")
+    if has_construction_gate:
+        if (qa_results.get("AUTHOR_CONFIRMED_CONSTRUCTION_GEOMETRY") != "PASS"
+                or not isinstance(construction, dict)
+                or not isinstance(numeric_results, dict)
+                or set(numeric_results) != {"BODY_PROPORTIONS", "LIMB_PROPORTIONS"}
+                or any(value not in {"PASS", "NOT_CHECKED"} for value in numeric_results.values())
+                or all(value == "PASS" for value in numeric_results.values())
+                or "BODY_PROPORTIONS" in qa_results and numeric_results["BODY_PROPORTIONS"] != "PASS"
+                or "LIMB_PROPORTIONS" in qa_results and numeric_results["LIMB_PROPORTIONS"] != "PASS"):
+            return None
+        request_id = str(plan_snapshot_data.get("request_id", ""))
+        character_id = str(plan_snapshot_data.get("character_id", ""))
+        receipt_path = Path(str(construction.get("receipt_path", ""))).resolve()
+        request_root = next((parent for parent in receipt_path.parents
+                             if parent.name == request_id and parent.parent.name == "00_PENDING"), None)
+        if not request_root:
+            return None
+        try:
+            replayed = validate_construction_geometry_receipt(
+                receipt_path, request_root=request_root, request_id=request_id,
+                character_id=character_id, output=style_file,
+                stage_id=str(contract.get("stage_id", "")), plan=plan_snapshot_data,
+            )
+        except (StylePackError, OSError, ValueError):
+            return None
+        if replayed != construction:
+            return None
+    elif construction is not None or numeric_results is not None:
         return None
     return evidence
 
@@ -4364,6 +4880,29 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
 
     resolved_user_selections = startup_interaction.get("resolved_user_selections", {})
     selected_style_choice = str(resolved_user_selections.get("style", "")).upper()
+    construction_guide_binding: dict[str, object] | None = None
+    construction_guide_record: dict[str, object] | None = None
+    if args.construction_guide_authorization:
+        try:
+            construction_guide_binding = validate_construction_dimension_guide_authorization(
+                Path(args.construction_guide_authorization), request_root=request_folder,
+                request_id=request_id, character_id=character_id, stage_id="03_PHYSIQUE_SIDE",
+            )
+        except StylePackError:
+            raise
+        if (purpose != "CHARACTER_BASE" or character_id != "NEW" or args.fidelity != 90
+                or selected_style_choice != "PROJECT_STYLE:LORANDESORE"
+                or str(resolved_user_selections.get("reference_policy", "")).upper() != "BODY_LIBRARY_ONLY"
+                or args.aux_body_decision.upper() != "SELECTED"
+                or "selected BODY_REFERENCE_LIBRARY" not in str(construction_guide_binding["authorization_scope"])):
+            raise StylePackError("The dimension-guide exception requires this exact 90% LORANDESORE + selected BODY_REFERENCE_LIBRARY NEW CHARACTER_BASE consent.")
+        construction_guide_record = validate_plan_reference(paths, str(construction_guide_binding["guide_path"]), "COMPOSITION")
+        if (construction_guide_record.get("sha256") != construction_guide_binding["guide_sha256"]
+                or construction_guide_record.get("subject_label") != "NO_SUBJECT"
+                or construction_guide_record.get("subject_label_status") != "REVIEWED"
+                or str(construction_guide_record.get("subject_label_sha256", "")).lower() != construction_guide_binding["guide_sha256"]
+                or not str(construction_guide_record.get("subject_label_evidence", "")).strip()):
+            raise StylePackError("Registered dimension guide lacks current-hash reviewed NO_SUBJECT metadata.")
     allow_character_default_style = (
         selected_style_choice == "GENERATOR_DEFAULT"
         and bool(re.fullmatch(r"CHAR_\d+", character_id))
@@ -4386,6 +4925,7 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
                     and bool(str(startup_interaction.get("confirmed_style_name", "")).strip())
                     and style_slug(str(startup_interaction.get("confirmed_style_name", ""))) == style_slug(paths.style_name)
                 ),
+                request_id=str(args.request_id),
             )
             for value in args.style_reference
         ]
@@ -4534,6 +5074,11 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
             allow_curated_body_contour=character_free_scene and category == "POSE",
         )
 
+    if construction_guide_record is not None:
+        if "composition" in selected or args.composition_reference:
+            raise StylePackError("The authorized dimension guide cannot be combined with another COMPOSITION reference.")
+        selected["composition"] = construction_guide_record
+
     if args.clothes_reference and is_relative_to(Path(str(selected["clothes"]["path"])), identity_paths.generations):
         wardrobe = registered_approved_character_asset(identity_paths, Path(str(selected["clothes"]["path"])))
         if not wardrobe or wardrobe.get("asset_role") != "WARDROBE" or wardrobe.get("character_id") != character_id:
@@ -4641,7 +5186,15 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
             is_new_character,
             technical_test=purpose == "TECHNICAL_TEST",
         )
-    generation_workflow = build_generation_workflow(args, selected, auxiliary_body_references)
+    workflow_selected = {
+        key: value for key, value in selected.items()
+        if not (construction_guide_binding and key == "composition")
+    }
+    generation_workflow = build_generation_workflow(args, workflow_selected, auxiliary_body_references)
+    if construction_guide_binding:
+        generation_workflow = bind_construction_dimension_guide_to_side_workflow(
+            generation_workflow, construction_guide_binding, args.attachment_limit,
+        )
     style_calibration = load_style_calibration_evidence(
         args.style_calibration_state,
         required=args.require_style_calibration,
@@ -4652,9 +5205,21 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
     plan_path = request_folder / "REFERENCE_PLAN.json"
     if plan_path.exists():
         raise StylePackError(f"Reference plan already exists and will not be overwritten: {plan_path}")
+    mandatory_clothes_binding = None
+    mandatory_clothes_authorization_path = str(getattr(args, "mandatory_clothes_authorization", "") or "").strip()
+    if mandatory_clothes_authorization_path:
+        if purpose != "SCENE" or character_id == "NEW" or args.fidelity != 90 or args.aux_body_decision.upper() != "SELECTED":
+            raise StylePackError("Mandatory CLOTHES authorization is restricted to the exact selected 90% named-character scene.")
+        mandatory_clothes_binding = validate_mandatory_clothes_authorization(
+            mandatory_clothes_authorization_path, request_id=request_id, character_id=character_id,
+            plan={"request_id": request_id, "character_id": character_id,
+                  "generation_purpose": purpose, "style_name": context["style_name"]},
+        )
+        if Path(str(args.clothes_reference)).expanduser().resolve() != Path(mandatory_clothes_binding["source_path"]).resolve():
+            raise StylePackError("Mandatory CLOTHES authorization requires the exact selected original garment source.")
     plan = {
-        "schema_version": 6,
-        "semantic_qa_schema": 4,
+        "schema_version": 8,
+        "semantic_qa_schema": 5,
         "gate_status": "PREPARED_AWAITING_EXECUTABLE_CALL",
         "created_at": iso_now(),
         "style_name": context["style_name"],
@@ -4750,6 +5315,9 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
             ]
         ),
         "selected_references": selected,
+        "mandatory_clothes_authorization_path": str(Path(mandatory_clothes_authorization_path).resolve()) if mandatory_clothes_binding else "",
+        "mandatory_clothes_authorization": mandatory_clothes_binding,
+        "construction_dimension_guide": construction_guide_binding,
         "selected_source_reviews": selected_source_reviews,
         "auxiliary_body_reference_decision": args.aux_body_decision.upper(),
         "prompt_only_physique": bool(args.prompt_only_physique),
@@ -4775,6 +5343,7 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
             "primary_deliverable": execution_guard["primary_deliverable"],
         },
     }
+    plan["style_rendering_contract"] = build_style_contract(plan)
     if purpose == "CHARACTER_BASE":
         kit_name = safe_component(args.character_name or request_id, "character")
         kit_folder = request_folder / "CHARACTER_KITS" / f"TEMP_{kit_name}"
@@ -5335,6 +5904,7 @@ def command_init(args: argparse.Namespace) -> None:
 
     ensure_csv(paths.inventory, INVENTORY_FIELDS)
     ensure_csv(paths.references, REFERENCE_FIELDS)
+    ensure_csv(paths.style_references, REFERENCE_FIELDS)
     ensure_csv(paths.duplicates, ("duplicate_source_id", "canonical_source_id", "sha256", "stored_relative_path", "notes"))
     ensure_csv(paths.upload_manifest, REFERENCE_FIELDS)
     ensure_csv(paths.generation_manifest, GENERATION_FIELDS)
@@ -5358,6 +5928,8 @@ def command_init(args: argparse.Namespace) -> None:
     print("STATUS=INITIALIZED_REVIEW_REQUIRED")
     if args.source:
         ingest_source(paths, Path(args.source), recursive=not args.non_recursive)
+    else:
+        write_reference_manifests(paths, read_csv(paths.references))
 
 
 def discover_images(source: Path, recursive: bool) -> list[Path]:
@@ -5374,7 +5946,15 @@ def sanitize_relative_path(relative: Path) -> Path:
     return Path(*parts, filename) if parts else Path(filename)
 
 
-def ingest_source(paths: StylePaths, source: Path, recursive: bool = True) -> None:
+def ingest_source(
+    paths: StylePaths,
+    source: Path,
+    recursive: bool = True,
+    *,
+    reference_scope: str = "STYLE",
+    request_id: str = "",
+    character_id: str = "",
+) -> None:
     require_initialized(paths)
     source = source.resolve()
     if not source.is_dir():
@@ -5385,6 +5965,11 @@ def ingest_source(paths: StylePaths, source: Path, recursive: bool = True) -> No
     images = discover_images(source, recursive)
     if not images:
         raise StylePackError(f"No supported images found in {source}")
+    reference_scope = reference_scope.upper()
+    if reference_scope not in {"STYLE", "CHARACTER", "REQUEST"}:
+        raise StylePackError("--reference-scope must be STYLE, CHARACTER, or REQUEST.")
+    if reference_scope == "REQUEST" and not _has_meaningful_scope_value(request_id):
+        raise StylePackError("REQUEST-scoped ingest requires a meaningful --request-id.")
 
     inventory = read_csv(paths.inventory)
     references = read_csv(paths.references)
@@ -5398,6 +5983,7 @@ def ingest_source(paths: StylePaths, source: Path, recursive: bool = True) -> No
     added = 0
     skipped = 0
     duplicate_count = 0
+    scope_index = build_nonstyle_scope_index(paths)
     for source_file in images:
         file_hash = sha256(source_file)
         key = (str(source_file), file_hash)
@@ -5410,6 +5996,32 @@ def ingest_source(paths: StylePaths, source: Path, recursive: bool = True) -> No
         relative = sanitize_relative_path(source_file.relative_to(source))
         stored = copy_unique(source_file, paths.pack / "00_SOURCE_ORIGINALS" / relative)
         stored_relative = stored.relative_to(paths.pack).as_posix()
+        row_scope = effective_reference_scope({
+            "reference_scope": reference_scope,
+            "request_id": request_id,
+            "character_id": character_id,
+            "primary_role": "UNCLASSIFIED",
+            "filename": source_file.name,
+            "stored_relative_path": stored_relative,
+        })
+        existing_binding = reference_binding_for_asset(paths, source_file) if scope_index[0] or scope_index[1] else None
+        approved_character_asset = (
+            registered_approved_character_asset(paths, source_file)
+            if is_relative_to(source_file, paths.generations)
+            else None
+        )
+        if existing_binding:
+            row_scope = effective_reference_scope(existing_binding)
+        if approved_character_asset:
+            row_scope = "CHARACTER"
+        row_character_id = character_id
+        if existing_binding and _has_meaningful_scope_value(existing_binding.get("character_id")):
+            row_character_id = existing_binding.get("character_id", "")
+        if approved_character_asset:
+            row_character_id = str(approved_character_asset.get("character_id", row_character_id) or row_character_id)
+        row_request_id = request_id
+        if existing_binding and effective_reference_scope(existing_binding) == "REQUEST":
+            row_request_id = str(existing_binding.get("request_id", "") or "")
         image_format, width, height = image_info(stored)
         canonical = canonical_by_hash.get(file_hash, "")
         status = "DUPLICATE" if canonical else "REVIEW_REQUIRED"
@@ -5450,7 +6062,9 @@ def ingest_source(paths: StylePaths, source: Path, recursive: bool = True) -> No
                 "stored_relative_path": stored_relative,
                 "primary_role": "UNCLASSIFIED",
                 "secondary_roles": "",
-                "character_id": "",
+                "character_id": row_character_id,
+                "reference_scope": row_scope,
+                "request_id": row_request_id,
                 "source_filename": source_file.name,
                 "source_sha256": file_hash,
                 "crop_box": "",
@@ -5471,7 +6085,7 @@ def ingest_source(paths: StylePaths, source: Path, recursive: bool = True) -> No
         added += 1
 
     write_csv(paths.inventory, INVENTORY_FIELDS, inventory)
-    write_csv(paths.references, REFERENCE_FIELDS, references)
+    write_reference_manifests(paths, references)
     write_csv(paths.duplicates, ("duplicate_source_id", "canonical_source_id", "sha256", "stored_relative_path", "notes"), duplicates)
 
     metadata = load_metadata(paths)
@@ -5494,7 +6108,57 @@ def command_ingest(args: argparse.Namespace) -> None:
     source_text = args.source or str(metadata.get("source_directory", ""))
     if not source_text:
         raise StylePackError("No source directory supplied and none is recorded in pack metadata.")
-    ingest_source(paths, Path(source_text), recursive=not args.non_recursive)
+    ingest_source(
+        paths,
+        Path(source_text),
+        recursive=not args.non_recursive,
+        reference_scope=getattr(args, "reference_scope", "STYLE") or "STYLE",
+        request_id=getattr(args, "request_id", "") or "",
+        character_id=getattr(args, "character_id", "") or "",
+    )
+
+
+def command_repair_reference_scopes(args: argparse.Namespace) -> None:
+    paths = make_paths(args.workspace, args.style_name)
+    require_initialized(paths)
+    rows = read_csv(paths.references)
+    changes: list[dict[str, object]] = []
+    for row in rows:
+        old_scope = str(row.get("reference_scope", "") or "").strip().upper()
+        old_request = str(row.get("request_id", "") or "")
+        scope = effective_reference_scope(row)
+        row["reference_scope"] = scope
+        changes.append({
+            "reference_id": row.get("reference_id", ""),
+            "stored_relative_path": row.get("stored_relative_path", ""),
+            "previous_scope": old_scope,
+            "reference_scope": scope,
+            "request_id": old_request,
+            "changed": old_scope != scope,
+        })
+    changed = sum(bool(change["changed"]) for change in changes)
+    if args.apply:
+        write_reference_manifests(paths, rows)
+    result = {
+        "style_name": paths.style_name,
+        "mode": "APPLY" if args.apply else "DRY_RUN",
+        "rows_total": len(rows),
+        "rows_changed": changed,
+        "style_rows": sum(effective_reference_scope(row) == "STYLE" for row in rows),
+        "excluded_rows": sum(effective_reference_scope(row) != "STYLE" for row in rows),
+        "changes": changes,
+        "style_manifest": str(paths.style_references),
+        "written": bool(args.apply),
+    }
+    if args.json:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    else:
+        print(f"MODE={result['mode']}")
+        print(f"ROWS_TOTAL={len(rows)}")
+        print(f"ROWS_CHANGED={changed}")
+        print(f"STYLE_ROWS={result['style_rows']}")
+        print(f"EXCLUDED_ROWS={result['excluded_rows']}")
+        print(f"STATUS={'REFERENCE_SCOPES_REPAIRED' if args.apply else 'REFERENCE_SCOPE_REPAIR_PREVIEW'}")
 
 
 def resolve_existing_file(value: str, paths: StylePaths) -> Path:
@@ -5549,6 +6213,64 @@ def command_classify(args: argparse.Namespace) -> None:
 
     source_file = resolve_existing_file(args.file, paths)
     provenance_file = resolve_existing_file(args.source_reference, paths) if args.source_reference else source_file
+    reference_scope = str(getattr(args, "reference_scope", "STYLE") or "STYLE").strip().upper()
+    request_id = str(getattr(args, "request_id", "") or "").strip()
+    if reference_scope not in {"STYLE", "CHARACTER", "REQUEST"}:
+        raise StylePackError("--reference-scope must be STYLE, CHARACTER, or REQUEST.")
+    proposed_scope = effective_reference_scope({
+        "reference_scope": reference_scope,
+        "request_id": request_id,
+        "character_id": getattr(args, "character_id", ""),
+        "primary_role": role,
+        "filename": source_file.name,
+        "stored_relative_path": str(source_file),
+        "use_for": args.use_for,
+        "do_not_use_for": args.do_not_use_for,
+        "notes": args.notes,
+    })
+    bound_character_id = str(getattr(args, "character_id", "") or "")
+    # Inherit ownership for every role, including ordinary face/expression crops.
+    # Otherwise changing the role alone launders a scoped source into STYLE.
+    for candidate in (source_file, provenance_file):
+        inherited = reference_binding_for_asset(paths, candidate)
+        approved_asset = registered_approved_character_asset(paths, candidate)
+        if inherited:
+            inherited_scope = effective_reference_scope(inherited)
+            inherited_request = str(inherited.get("request_id", "") or "").strip()
+            if inherited_scope == "REQUEST":
+                if request_id and request_id != inherited_request:
+                    raise StylePackError("Cannot rebind a request-scoped source to a different request.")
+                request_id = inherited_request
+                proposed_scope = "REQUEST"
+            elif proposed_scope == "STYLE":
+                proposed_scope = inherited_scope
+            inherited_character = str(inherited.get("character_id", "") or "")
+            if _has_meaningful_scope_value(inherited_character):
+                if _has_meaningful_scope_value(bound_character_id) and bound_character_id != inherited_character:
+                    raise StylePackError("Cannot rebind a character-scoped source to a different character.")
+                bound_character_id = inherited_character
+        if approved_asset:
+            if proposed_scope == "STYLE":
+                proposed_scope = "CHARACTER"
+            owner = str(approved_asset.get("character_id", "") or "")
+            if _has_meaningful_scope_value(owner):
+                if _has_meaningful_scope_value(bound_character_id) and bound_character_id != owner:
+                    raise StylePackError("Cannot combine approved assets belonging to different characters.")
+                bound_character_id = owner
+    if reference_scope == "STYLE" and proposed_scope != "STYLE" and role in {"MASTER_STYLE", "ANCHOR_STYLE"}:
+        raise StylePackError(f"Cannot promote or register {proposed_scope}-scoped material as {role}.")
+    if role in {"MASTER_STYLE", "ANCHOR_STYLE"} and proposed_scope == "CHARACTER":
+        raise StylePackError(f"Cannot register CHARACTER-scoped material as {role}.")
+    if proposed_scope == "REQUEST" and not _has_meaningful_scope_value(request_id):
+        raise StylePackError("REQUEST-scoped classification requires a meaningful --request-id.")
+    if role in {"MASTER_STYLE", "ANCHOR_STYLE"}:
+        for candidate in {source_file, provenance_file}:
+            if is_nonstyle_style_asset(paths, candidate):
+                same_request_material = proposed_scope == "REQUEST" and request_id and request_local_asset_matches(paths, candidate, request_id)
+                if not same_request_material:
+                    raise StylePackError(f"Cannot promote a character- or request-scoped source to {role}: {candidate}")
+            if registered_approved_character_asset(paths, candidate):
+                raise StylePackError(f"Cannot register an approved character asset as {role}: {candidate}")
     crop_box = parse_crop_box(args.crop_box)
     destination_root = (
         paths.pack / "02_LOCAL_ONLY_DO_NOT_UPLOAD" / "REJECTED"
@@ -5567,7 +6289,9 @@ def command_classify(args: argparse.Namespace) -> None:
             "stored_relative_path": destination.relative_to(paths.pack).as_posix(),
             "primary_role": role,
             "secondary_roles": ";".join(item.upper() for item in args.secondary_role),
-            "character_id": args.character_id,
+            "character_id": bound_character_id,
+            "reference_scope": proposed_scope,
+            "request_id": request_id,
             "anatomy_compatibility": args.anatomy_compatibility.upper(),
             "anatomy_evidence_source": args.anatomy_evidence_source,
             "source_filename": provenance_file.name,
@@ -5590,7 +6314,7 @@ def command_classify(args: argparse.Namespace) -> None:
             "subject_label_status": "REVIEWED" if subject_label != "UNKNOWN" else "UNKNOWN",
         }
     )
-    write_csv(paths.references, REFERENCE_FIELDS, references)
+    write_reference_manifests(paths, references)
     print(f"REFERENCE_ID={reference_id}")
     print(f"FILE={destination}")
     print(f"ROLE={role}")
@@ -5610,9 +6334,10 @@ def command_finalize(args: argparse.Namespace) -> None:
         and row.get("user_approved") == "YES"
         and row.get("generator_safe") == "YES"
         and row.get("primary_role") in ROLES
+        and is_style_reference_row(row)
     ]
     if not selected:
-        raise StylePackError("No user-approved, generator-safe references are ready for finalization.")
+        raise StylePackError("No user-approved, generator-safe STYLE references are ready for finalization.")
 
     upload = paths.pack / "03_UPLOAD_TO_WEB"
     upload_rows: list[dict[str, object]] = []
@@ -5748,8 +6473,11 @@ def write_generation_qa_evidence(
     stage_id: str,
     qa_required: Sequence[str],
     qa_results: dict[str, str],
+    construction_geometry: dict[str, object] | None = None,
+    numeric_qa_results: dict[str, str] | None = None,
     status: str,
     visual_review: dict[str, object],
+    local_derivative: dict[str, object] | None = None,
 ) -> Path:
     """Emit immutable plan/contract snapshots only after evaluated required QA at any fidelity."""
     evidence_path = style_file.with_suffix(style_file.suffix + ".qa-evidence.json")
@@ -5764,6 +6492,9 @@ def write_generation_qa_evidence(
         "stage_id": stage_id,
         "expected_qa_layers": sorted(qa_required),
         "qa_results": {name: qa_results[name] for name in sorted(qa_required)},
+        "numeric_qa_results": numeric_qa_results,
+        "construction_geometry": construction_geometry,
+        "local_derivative": local_derivative,
         "visual_review": visual_review,
         "visual_review_sha256": hashlib.sha256(
             json.dumps(visual_review, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -5778,6 +6509,7 @@ def write_generation_qa_evidence(
         "qa_contract_sha256": sha256(contract_path),
         "visual_review_sha256": contract["visual_review_sha256"],
         "visual_review": visual_review,
+        "local_derivative": local_derivative,
         "qa_failed": sorted(name for name, result in qa_results.items() if result == "FAIL"),
     }
     evidence_path.write_text(json.dumps(receipt, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
@@ -5941,6 +6673,13 @@ def validate_visual_review(
         raise StylePackError("Prompt-adherence PASS conflicts with a failed explicit constraint.")
     if adherence["status"] == "FAIL" and not failed_constraints:
         raise StylePackError("Prompt-adherence FAIL requires at least one failed explicit constraint.")
+    if int(plan.get("schema_version", 0)) >= 7 and (
+        not isinstance(executed_call, dict) or plan.get("execution_call") != executed_call
+    ):
+        raise StylePackError(
+            "STYLE review requires the plan execution_call to match the immutable executed attempt."
+        )
+    validate_style_review(plan, report, stage_id)
     return report
 
 
@@ -6132,6 +6871,111 @@ def command_accept_author_contract(args: argparse.Namespace) -> None:
     print(f"ACCEPTANCE_RECEIPT={receipt_path}")
 
 
+def validate_construction_geometry_receipt(
+    receipt_path: Path,
+    *,
+    request_root: Path,
+    request_id: str,
+    character_id: str,
+    output: Path,
+    stage_id: str,
+    plan: dict[str, object],
+) -> dict[str, object]:
+    """Replay the receipt contract and authorize each referenced file in the active request."""
+    result = validate_construction_geometry_receipt_data(
+        receipt_path,
+        request_root=request_root,
+        request_id=request_id,
+        character_id=character_id,
+        output=output,
+        stage_id=stage_id,
+        plan=plan,
+    )
+    for raw_path in (
+        result["receipt_path"], result["approval_evidence"]["path"],
+        result["diagram"]["path"], result["geometry_source"]["path"],
+    ):
+        assert_active_request_path(Path(str(raw_path)))
+    return result
+
+
+def verified_local_derivative_result_available(
+    guard_state: dict[str, object],
+    attempt_id: str,
+    proof: dict[str, object] | None,
+) -> bool:
+    """Recognize only a resumed, still-current original result for derivative registration."""
+    if (not isinstance(proof, dict) or proof.get("kind") != LOCAL_DERIVATIVE_KIND
+            or proof.get("request_id") != guard_state.get("request_id")
+            or proof.get("attempt_id") != attempt_id
+            or proof.get("stage_id") != "03_PHYSIQUE_SIDE"
+            or proof.get("character_id") != "NEW"
+            or guard_state.get("phase") != "PREFLIGHT"
+            or guard_state.get("next_required_action") != "PREFLIGHT_OR_EXECUTION"
+            or guard_state.get("status") != "ACTIVE"
+            or guard_state.get("active_attempt") is not None):
+        return False
+    attempts = guard_state.get("attempts")
+    if not isinstance(attempts, list):
+        return False
+    matches = [row for row in attempts if isinstance(row, dict) and row.get("attempt_id") == attempt_id]
+    latest_id = next((row.get("attempt_id") for row in reversed(attempts) if isinstance(row, dict)), None)
+    if len(matches) != 1 or latest_id != attempt_id:
+        return False
+    attempt = matches[0]
+    revision = guard_state.get("task_revision")
+    if (attempt.get("status") != "RESULT_AVAILABLE"
+            or not isinstance(revision, int) or isinstance(revision, bool)
+            or attempt.get("task_revision") != revision
+            or attempt.get("stage") != "03_PHYSIQUE_SIDE"):
+        return False
+    events = guard_state.get("events")
+    if not isinstance(events, list):
+        return False
+    visible_indexes = [index for index, event in enumerate(events)
+                       if isinstance(event, dict) and event.get("event") == "VISIBLE_RESULT"
+                       and event.get("attempt_id") == attempt_id]
+    if not visible_indexes:
+        return False
+    latest_visible_index = max(visible_indexes)
+    if not any(isinstance(event, dict) and event.get("event") == "USER_RESUMED"
+               for event in events[latest_visible_index + 1:]):
+        return False
+    snapshot = attempt.get("execution_snapshot")
+    provider = attempt.get("provider_artifact")
+    proof_provider = proof.get("provider_artifact")
+    if (not isinstance(snapshot, dict) or not isinstance(provider, dict)
+            or not isinstance(proof_provider, dict)
+            or snapshot.get("request_id") != guard_state.get("request_id")
+            or snapshot.get("attempt_id") != attempt_id
+            or snapshot.get("request_purpose") != "CHARACTER_BASE"
+            or snapshot.get("execution_stage") != "03_PHYSIQUE_SIDE"
+            or snapshot.get("provider_artifact") != provider
+            or provider.get("path") != proof_provider.get("path")
+            or str(provider.get("sha256", "")).lower() != str(proof_provider.get("sha256", "")).lower()):
+        return False
+    provider_path = Path(str(provider.get("path", ""))).resolve()
+    provider_hash = str(provider.get("sha256", "")).lower()
+    if not provider_path.is_file() or sha256(provider_path) != provider_hash:
+        return False
+    result_rows = [row for row in guard_state.get("available_results", [])
+                   if isinstance(row, dict) and row.get("attempt_id") == attempt_id]
+    if len(result_rows) != 1:
+        return False
+    available = result_rows[0]
+    available_evidence = available.get("evidence")
+    attempt_evidence = attempt.get("result_evidence")
+    return bool(
+        not available.get("late")
+        and available.get("status") == attempt.get("result_status")
+        and attempt.get("result_status") in {"STAGING", "TEST"}
+        and isinstance(available_evidence, list)
+        and available_evidence == [str(provider_path)]
+        and isinstance(attempt_evidence, list)
+        and attempt_evidence == [str(provider_path)]
+    )
+
+
 def command_record_generation(args: argparse.Namespace) -> None:
     paths = make_paths(args.workspace, args.style_name)
     ensure_generation_library(paths)
@@ -6154,6 +6998,8 @@ def command_record_generation(args: argparse.Namespace) -> None:
         ) from error
     if guard_state.get("request_id") != request_id:
         raise StylePackError(f"Generated image at {output_reference} cannot be registered because the execution guard belongs to another request.")
+    local_derivative_arg = str(getattr(args, "local_derivative_receipt", "") or "").strip()
+    local_derivative_proof: dict[str, object] | None = None
     matching_attempt = next(
         (row for row in guard_state.get("attempts", []) if isinstance(row, dict) and row.get("attempt_id") == args.attempt_id),
         None,
@@ -6163,6 +7009,20 @@ def command_record_generation(args: argparse.Namespace) -> None:
         raise StylePackError(
             f"Generated image at {output_reference} cannot be registered because --attempt-id does not identify an active, UNKNOWN, or already-visible request attempt."
         )
+    if local_derivative_arg:
+        try:
+            local_derivative_proof = validate_local_derivative_receipt(
+                Path(local_derivative_arg).expanduser(),
+                request_root=execution_guard_path.parent,
+                request_id=request_id,
+                character_id=str(args.character_id),
+                stage_id=str(matching_attempt.get("stage", "")),
+                output=image,
+                guard_path=execution_guard_path,
+                attempt_id=args.attempt_id,
+            )
+        except (OSError, ValueError, RuntimeError, StylePackError) as error:
+            raise StylePackError(f"Local derivative receipt validation failed: {error}") from error
     if attempt_status == "RESULT_AVAILABLE":
         evidence = matching_attempt.get("result_evidence", [])
         available_result = next(
@@ -6188,6 +7048,10 @@ def command_record_generation(args: argparse.Namespace) -> None:
                     return True
                 if evidence_path.is_file() and sha256(evidence_path) == sha256(image):
                     return True
+                if local_derivative_proof is not None:
+                    provider_binding = local_derivative_proof.get("provider_artifact", {})
+                    if isinstance(provider_binding, dict) and evidence_path == Path(str(provider_binding.get("path", ""))).resolve():
+                        return evidence_path.is_file() and sha256(evidence_path) == str(provider_binding.get("sha256", "")).lower()
             return False
 
         def matches_reconciled_evidence() -> bool:
@@ -6201,6 +7065,10 @@ def command_record_generation(args: argparse.Namespace) -> None:
                 evidence_path = Path(str(item)).resolve()
                 if evidence_path == image.resolve() and str(digest).lower() == sha256(image):
                     return True
+                if local_derivative_proof is not None:
+                    provider_binding = local_derivative_proof.get("provider_artifact", {})
+                    if isinstance(provider_binding, dict) and evidence_path == Path(str(provider_binding.get("path", ""))).resolve() and str(digest).lower() == str(provider_binding.get("sha256", "")).lower():
+                        return evidence_path.is_file() and sha256(evidence_path) == str(digest).lower()
             return False
 
         ordinary_available = (
@@ -6248,10 +7116,14 @@ def command_record_generation(args: argparse.Namespace) -> None:
                 or (available_result.get("late") is True and matching_attempt.get("reconciliation", {}).get("outcome") == "AVAILABLE")
             )
         )
+        verified_local_derivative_available = verified_local_derivative_result_available(
+            guard_state, args.attempt_id, local_derivative_proof,
+        )
         if not (
             latest_attempt_id == args.attempt_id
             and guard_state.get("active_attempt") is None
-            and (ordinary_available or reconciled_available or historical_correction_available)
+            and (ordinary_available or reconciled_available or historical_correction_available
+                 or verified_local_derivative_available)
             and matches_evidence(evidence)
             and matches_evidence(available_result.get("evidence") if isinstance(available_result, dict) else None)
             and (not reconciled_available or matches_reconciled_evidence())
@@ -6299,7 +7171,15 @@ def command_record_generation(args: argparse.Namespace) -> None:
     provider_artifact = execution_snapshot.get("provider_artifact")
     if isinstance(provider_artifact, dict):
         artifact_path = Path(str(provider_artifact.get("path", ""))).resolve()
-        if (
+        if local_derivative_proof is not None:
+            original = local_derivative_proof.get("provider_artifact", {})
+            if (not isinstance(original, dict)
+                    or artifact_path != Path(str(original.get("path", ""))).resolve()
+                    or str(provider_artifact.get("sha256", "")).lower() != str(original.get("sha256", "")).lower()
+                    or not artifact_path.is_file()
+                    or sha256(artifact_path) != str(original.get("sha256", "")).lower()):
+                raise StylePackError("Local derivative does not preserve the original provider artifact path/hash.")
+        elif (
             not artifact_path.is_file()
             or str(provider_artifact.get("sha256", "")).lower() != sha256(artifact_path)
             or sha256(image) != str(provider_artifact.get("sha256", "")).lower()
@@ -6349,8 +7229,11 @@ def command_record_generation(args: argparse.Namespace) -> None:
     qa_required: list[str] = []
     qa_failed: list[str] = []
     qa_results: dict[str, str] = {}
+    construction_geometry: dict[str, object] | None = None
     if args.reference_plan:
         reference_plan_path, plan = validate_reference_plan_for_recording(paths, str(registration_plan_arg), args.fidelity)
+        args.reference_plan = str(reference_plan_path.resolve())
+        args.image = str(image.resolve())
         if plan.get("request_id") != request_id:
             raise StylePackError(f"Generated image at {output_reference} cannot be registered because the reference plan belongs to a different request.")
         executed_call = plan.get("execution_call")
@@ -6421,7 +7304,28 @@ def command_record_generation(args: argparse.Namespace) -> None:
             args.visual_anatomy_status = visual_review["anatomy_review"]["status"]
             args.visual_defects_status = visual_review["visible_defect_review"]["status"]
             args.visual_prompt_status = visual_review["prompt_adherence"]["status"]
+            if plan.get("style_rendering_contract") is not None and int(plan.get("schema_version", 0)) >= 7:
+                style_review = visual_review["style_review"]
+                args.visual_style_status = style_review["status"]
+                args.visual_body_style_status = style_review.get("regions", {}).get("body", {}).get("status", "NOT_CHECKED")
+            construction_receipt = str(getattr(args, "construction_geometry_receipt", "") or "").strip()
+            if construction_receipt:
+                construction_geometry = validate_construction_geometry_receipt(
+                    Path(construction_receipt),
+                    request_root=paths.generations / "00_PENDING" / request_id,
+                    request_id=request_id,
+                    character_id=str(plan.get("character_id", args.character_id)),
+                    output=image,
+                    stage_id=executed_stage.upper(),
+                    plan=plan,
+                )
             qa_failed, stage_id, qa_required, qa_results = evaluate_generation_qa(plan, args, include_results=True)
+            if local_derivative_proof is not None:
+                numeric_results = getattr(args, "_construction_geometry_numeric_results", None)
+                if (not isinstance(construction_geometry, dict)
+                        or not isinstance(numeric_results, dict)
+                        or numeric_results != {"BODY_PROPORTIONS": "NOT_CHECKED", "LIMB_PROPORTIONS": "NOT_CHECKED"}):
+                    raise StylePackError("Local derivative registration must retain its scoped construction receipt with numeric body and limb measurements NOT_CHECKED.")
             if stage_id.upper() != str(execution_snapshot.get("execution_stage", "")).upper():
                 raise StylePackError(
                     f"Recorded --stage-id {stage_id} does not match the executable stage in the attempt snapshot {execution_snapshot.get('execution_stage', '')}."
@@ -6480,7 +7384,7 @@ def command_record_generation(args: argparse.Namespace) -> None:
             or generation_qa_evidence(prior_record) is None
         ):
             raise StylePackError("This available attempt already has a different or unverifiable generation record.")
-        if not already_visible:
+        if not already_visible or local_derivative_arg:
             try:
                 prior_workflow = plan.get("generation_workflow", {}) if isinstance(plan, dict) else {}
                 prior_multistage = isinstance(prior_workflow, dict) and prior_workflow.get("mode") == "MULTI_STAGE"
@@ -6491,6 +7395,7 @@ def command_record_generation(args: argparse.Namespace) -> None:
                     attempt_id=args.attempt_id,
                     result_status=prior_record["status"],
                     evidence=[str(prior_file if prior_multistage else prior_archive)],
+                    local_derivative_receipt=local_derivative_arg,
                 )
             except ExecutionGuardError as error:
                 raise StylePackError(f"Generation was recorded, but visible-result checkpoint still needs recovery: {error}") from error
@@ -6548,8 +7453,11 @@ def command_record_generation(args: argparse.Namespace) -> None:
             stage_id=stage_id,
             qa_required=qa_required,
             qa_results=qa_results,
+            construction_geometry=construction_geometry,
+            numeric_qa_results=getattr(args, "_construction_geometry_numeric_results", None),
             status=status,
             visual_review=visual_review,
+            local_derivative=local_derivative_proof,
         )
         qa_evidence = str(qa_evidence_path)
         qa_binding = qa_manifest_digests(style_file, qa_evidence_path)
@@ -6576,7 +7484,7 @@ def command_record_generation(args: argparse.Namespace) -> None:
         typography_mode=str(scene_contract.get("typography_policy", "")),
         notes=combined_notes,
     )
-    if not already_visible:
+    if not already_visible or local_derivative_arg:
         try:
             generation_workflow = plan.get("generation_workflow", {}) if isinstance(plan, dict) else {}
             multistage_result = isinstance(generation_workflow, dict) and generation_workflow.get("mode") == "MULTI_STAGE"
@@ -6587,6 +7495,7 @@ def command_record_generation(args: argparse.Namespace) -> None:
                 attempt_id=args.attempt_id,
                 result_status=status,
                 evidence=[str(style_file if multistage_result else archive_file)],
+                local_derivative_receipt=local_derivative_arg,
             )
         except ExecutionGuardError as error:
             raise StylePackError(f"Generation was recorded, but visible-result checkpoint failed: {error}") from error
@@ -6839,7 +7748,7 @@ def assert_profile_plan_current(paths: StylePaths, plan: dict[str, object]) -> N
         raise StylePackError("Confirmed character profile or approved asset provenance changed since preparation; prepare a new plan.")
 
 
-def render_confirmed_prompt(plan: dict[str, object], prompt_text: str) -> str:
+def render_confirmed_prompt(plan: dict[str, object], prompt_text: str, *, slots: list[dict] | None = None) -> str:
     """Materialize confirmed character and typed-item constraints before risk assessment."""
     confirmed = plan.get("confirmed_character_profile")
     rendered = prompt_text
@@ -6866,7 +7775,7 @@ def render_confirmed_prompt(plan: dict[str, object], prompt_text: str) -> str:
         item_block = "\n".join(lines)
         if item_block not in rendered:
             rendered = rendered.rstrip() + "\n\n" + item_block
-    return rendered
+    return render_style_authority(plan, rendered, slots)
 
 
 def command_approve_character(args: argparse.Namespace) -> None:
@@ -7486,6 +8395,7 @@ def command_validate(args: argparse.Namespace) -> None:
     expected_csv = {
         paths.inventory: INVENTORY_FIELDS,
         paths.references: REFERENCE_FIELDS,
+        paths.style_references: REFERENCE_FIELDS,
         paths.upload_manifest: REFERENCE_FIELDS,
         paths.generation_manifest: GENERATION_FIELDS,
         paths.character_registry: CHARACTER_FIELDS,
@@ -7494,7 +8404,13 @@ def command_validate(args: argparse.Namespace) -> None:
         header = csv_header(path)
         if not header:
             errors.append(f"Missing or empty manifest: {path}")
-        elif list(fields) != header:
+        elif path in {paths.references, paths.style_references} and not set(fields).issubset(set(header)):
+            errors.append(f"Missing required manifest columns: {path}")
+        elif path == paths.upload_manifest:
+            legacy_fields = [field for field in REFERENCE_FIELDS if field not in {"reference_scope", "request_id"}]
+            if not set(legacy_fields).issubset(header):
+                errors.append(f"Missing required manifest columns: {path}")
+        elif path not in {paths.references, paths.style_references} and list(fields) != header:
             errors.append(f"Unexpected manifest schema: {path}")
 
     inventory = read_csv(paths.inventory)
@@ -7677,7 +8593,21 @@ def build_parser() -> argparse.ArgumentParser:
     add_common_style_arguments(ingest_parser)
     ingest_parser.add_argument("--source", help="Source reference directory; defaults to the directory recorded during init.")
     ingest_parser.add_argument("--non-recursive", action="store_true", help="Read only files directly inside the source directory.")
+    ingest_parser.add_argument("--reference-scope", choices=("STYLE", "CHARACTER", "REQUEST"), default="STYLE")
+    ingest_parser.add_argument("--request-id", default="", help="Required with REQUEST scope; binds the imported records to this request.")
+    ingest_parser.add_argument("--character-id", default="", help="Optional character binding for imported records.")
     ingest_parser.set_defaults(handler=command_ingest)
+
+    repair_scope_parser = subparsers.add_parser(
+        "repair-reference-scopes",
+        help="Preview or apply legacy reference scope annotations and the style-only manifest projection.",
+    )
+    add_common_style_arguments(repair_scope_parser)
+    scope_mode = repair_scope_parser.add_mutually_exclusive_group()
+    scope_mode.add_argument("--dry-run", dest="apply", action="store_false", help="Preview classifications without writing (default).")
+    scope_mode.add_argument("--apply", dest="apply", action="store_true", help="Write scope annotations and the style-only projection.")
+    repair_scope_parser.set_defaults(handler=command_repair_reference_scopes, apply=False)
+    repair_scope_parser.add_argument("--json", action="store_true")
 
     classify_parser = subparsers.add_parser("classify", help="Copy a visually reviewed reference into a role folder and manifest it.")
     add_common_style_arguments(classify_parser)
@@ -7688,6 +8618,8 @@ def build_parser() -> argparse.ArgumentParser:
     classify_parser.add_argument("--source-reference", help="Original source image when --file is a crop or repair.")
     classify_parser.add_argument("--crop-box", default="", help="Deterministic crop provenance: left,top,right,bottom.")
     classify_parser.add_argument("--character-id", default="")
+    classify_parser.add_argument("--reference-scope", choices=("STYLE", "CHARACTER", "REQUEST"), default="STYLE")
+    classify_parser.add_argument("--request-id", default="", help="Required with REQUEST scope; binds this asset to its request.")
     classify_parser.add_argument("--anatomy-compatibility", default="UNKNOWN", help="Reviewed anatomy role compatibility, e.g. MALE_ANATOMY; FEMALE_ANATOMY; ANDROGYNOUS_ANATOMY.")
     classify_parser.add_argument("--anatomy-evidence-source", default="UNKNOWN", help="Review evidence supporting anatomy compatibility metadata.")
     classify_parser.add_argument("--subject-label", choices=("MALE", "FEMALE", "NO_SUBJECT", "UNKNOWN"), default="UNKNOWN", help="Directly reviewed subject label bound to the copied image hash; never inferred from a filename.")
@@ -7715,6 +8647,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_common_style_arguments(prepare_parser)
     prepare_parser.add_argument("--request-id", required=True)
+    prepare_parser.add_argument("--mandatory-clothes-authorization", default="", help="Opt-in exact hash-bound authorization for the request's mandatory CLOTHES source.")
     prepare_parser.add_argument("--user-reference-evidence-json", default="", help="User attachment provenance list bound to exact source bytes and current chat; supports user-selected SUBJECT slots.")
     prepare_parser.add_argument(
         "--startup-selection-mode",
@@ -7915,6 +8848,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="AUTO uses one pass when possible; any SCENE that overflows attachments requires an explicitly requested MULTI_STAGE workflow with user authorization.",
     )
     prepare_parser.add_argument("--style-reference", action="append", default=[], help="Local overall rendering reference; repeat if needed.")
+    prepare_parser.add_argument(
+        "--construction-guide-authorization", default="",
+        help="Narrow author authorization file for one hash-bound NO_SUBJECT SIDE dimension guide on NEW CHARACTER_BASE only.",
+    )
     prepare_parser.add_argument("--primary-face", default="")
     prepare_parser.add_argument("--supporting-face", default="")
     prepare_parser.add_argument(
@@ -8038,6 +8975,8 @@ def build_parser() -> argparse.ArgumentParser:
     record_parser.add_argument("--reference-plan", required=True, help="Executable plan prepared by prepare-call for this exact request.")
     record_parser.add_argument("--stage-id", default="", help="Required for a MULTI_STAGE plan, for example 02_BODY_POSE.")
     record_parser.add_argument("--visual-review-json", required=True, help="Required full-resolution visual review bound to request, attempt, output, prompt, and executed plan hashes.")
+    record_parser.add_argument("--local-derivative-receipt", default="", help="Opt-in, hash-bound receipt for one verified current-request local derivative; provider bytes and ordinary QA remain unchanged.")
+    record_parser.add_argument("--construction-geometry-receipt", default="", help="Opt-in, separately approved construction-geometry acceptance receipt for a canonical adult CHARACTER_BASE body stage; does not turn numeric image measurements into PASS.")
     record_parser.add_argument("--qa-attachments", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
     record_parser.add_argument("--qa-canvas", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")
     record_parser.add_argument("--qa-stage-layer", choices=("PASS", "FAIL", "NOT_CHECKED"), default="NOT_CHECKED")

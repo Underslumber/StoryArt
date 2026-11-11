@@ -1,17 +1,27 @@
 # StoryArt template: entrypoint rules
 
-## Subagent routing authority — 2026-10-13
+New reference plans use `docs/STYLE_RENDERING_CONTRACT.md`: selected hash-bound
+STYLE sources govern rendering separately from identity/body/clothes, and the
+existing visual-review JSON records comparative criteria and visible regions.
+Do not grant style PASS from palette or face likeness alone. Preserve historical
+immutable plans and the direct one-step edit exception; no automatic calibration.
 
-Ordinary discovery, analysis, implementation, debugging and result checks use
-only `default`, `worker` or `explorer`, `gpt-6-luna`, effort `high`, and
-`fork_turns="none"`. Root keeps the user-selected model. These rules override
-older Sol worker recommendations below. Already running agents retain their
-model. Sol is allowed only as `sol_review` for mandatory independent read-only
-review after machine checks, `sol_escalation` after evidenced Luna failure, or
-by direct user request. Before Sol dispatch record `SOL_GATE` with role, reason,
-evidence, scope and limits. Check role configuration before dispatch and actual
-model telemetry when available. Specialized `web_image` and `web_advisor` retain
-their own contracts only for explicitly authorized Web tasks.
+## Subagent routing authority
+
+Use `config/model_routes.json` as the StoryArt role authority and
+`docs/MODEL_PROFILES.md` for activation. Root retains its selected model and the
+user contract. Production: root Sol 6.1 Medium; ordinary bounded discovery,
+identity curation and implementation Sol 6.1 Low; complex call planning and
+independent visual/code review Sol 6.1 Medium; exceptional evidenced diagnosis
+Sol 6.1 High. High is never a routine fallback. Record SOL_GATE for independent
+code review and exceptional diagnosis. Explicit Web roles keep their own
+authorization and never replace ordinary workers. Normally zero workers, one
+when useful, at most two independent workers. Request fork_turns="none", no
+nesting or full transcripts. Luna 6 Low is an explicit experiment only; no
+automatic Luna or Astra selection. Confirm role configuration and available
+actual model telemetry before dependent work. Existing chats are not switched.
+Reuse source evidence only when hash, role, view, applicability and limitations
+match; inspect changed or uncovered sources. Packet budgets do not end the task.
 
 This is a compact routing file. The complete preserved portable requirements
 are in `docs/PORTABLE_GENERATION_RULES.md`. Read only the task-relevant
@@ -165,11 +175,9 @@ step; counters trigger diagnosis/escalation but do not cap the task.
 `config/model_routes.json` is the authoritative StoryArt role registry;
 `docs/MODEL_PROFILES.md` describes activation. Apply the production profile with
 `.\scripts\set-model-profile.ps1 6.1`: root `gpt-6.1-sol` Medium, default worker
-`gpt-6-luna` High. Ordinary call planning and result checks use Luna High;
-mandatory independent review uses `sol_review` Medium after machine checks,
-and escalation requires evidenced Luna failure and `sol_escalation` High.
-Record SOL_GATE before either Sol dispatch. Existing chats retain
-their running model; do not infer role models from the root's family.
+`gpt-6.1-sol` Low. CALL_PLANNER and independent VISUAL_QA/CODE_REVIEW use
+Medium; exceptional evidenced diagnosis uses High. Record SOL_GATE for code
+review and exceptional diagnosis; existing chats retain their running model.
 
 Root owns the full user contract, accepted choices, exact call, continued
 recovery and final acceptance. Normally use zero workers; one for useful bounded
@@ -179,7 +187,7 @@ independent-review gates. Reuse valid selected-source evidence and resolver
 results; re-read only changed or uncovered inputs. Never send a full transcript
 to a worker. Packet budgets do not end the user goal.
 
-Luna 6 High is the ordinary worker route. Specialized Web roles retain their
+Luna 6 Low is an explicit experiment only, never a production fallback. Specialized Web roles retain their
 own authorized contracts; they are never ordinary-worker fallbacks. Use
 existing guard/provider timestamps to measure the whole request through QA and
 delivery; include failures and worker cost, separate user waits, and label
