@@ -113,3 +113,9 @@ venv/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Explicitly requested source collection; keep other user collections private.
+!/SODABABYX_SOURCE_COLLECTION/
+!/SODABABYX_SOURCE_COLLECTION/**/
+!/SODABABYX_SOURCE_COLLECTION/**
+!/tools/reference_knowledge_ui.html

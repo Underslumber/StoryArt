@@ -12,7 +12,9 @@ from tools import style_pack_manager as manager
 
 class StyleReferenceScopeTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.temp = tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[1] / "work")
+        work_dir = Path(__file__).resolve().parents[1] / "work"
+        work_dir.mkdir(parents=True, exist_ok=True)
+        self.temp = tempfile.TemporaryDirectory(dir=work_dir)
         self.addCleanup(self.temp.cleanup)
         self.paths = manager.make_paths(Path(self.temp.name), "TEST_STYLE")
         manager.command_init(Namespace(

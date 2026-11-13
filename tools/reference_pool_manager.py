@@ -67,6 +67,13 @@ def categorize(pool, r):
  return list(dict.fromkeys(x for x in categories if x in c["categories"])) or ["OTHER"]
 def records(pool: str):
  c=cfg()[pool]; base=(ROOT/c["root"]).resolve(); kind=c["adapter"]
+ if kind=="shape_fit":
+  from tools.shape_fit_reference_pool import catalog_records
+  base,out=catalog_records(ROOT,pool)
+  for r in out:
+   # These labels are searchable facets; the source's full sheet remains intact.
+   r["tags"]=list(dict.fromkeys(list(r.get("tags",[]))+[v.get("label","") for v in r.get("variants",[]) if v.get("label")]))
+  return base,out
  if kind=="pose_atlas":
   from tools.pose_reference_manager import localize_group, reference_context
   data=read_json(base/"POSE_GROUPS.json"); out=[]
@@ -106,6 +113,16 @@ def records(pool: str):
 def validate_pool(pool, deep=False, loaded=None):
  base,rs=loaded or records(pool); ids=[r["id"] for r in rs]; issues=[]
  if len(ids)!=len(set(ids)): issues.append("duplicate_ids")
+ if cfg()[pool]["adapter"]=="shape_fit":
+  for r in rs:
+   if r.get("record_binding_status")!="CURRENT": issues.append("source_review_binding:"+str(r["id"]))
+   if r.get("subject_label_status")=="CONFIRMED":
+    try: p=safe(base,r["relative_path"])
+    except Exception: issues.append("unsafe_path:"+str(r["id"])); continue
+    if not p.is_file(): issues.append("missing_file:"+str(r["id"]))
+    elif sha(p)!=r["sha256"]: issues.append("stale_hash:"+str(r["id"]))
+  expected=cfg()[pool].get("count",len(rs))
+  return {"pool":pool,"status":"VALID" if not issues and len(rs)==expected else "ISSUES","records":len(rs),"expected":expected,"issues":issues}
  for r in rs:
   try: p=safe(base,r["relative_path"])
   except Exception: issues.append("unsafe_path:"+str(r["id"])); continue
@@ -139,17 +156,37 @@ def validate_pool(pool, deep=False, loaded=None):
  return {"pool":pool,"status":"VALID" if not issues and len(rs)==c["count"] else "ISSUES","records":len(rs),"expected":c["count"],"issues":issues}
 def search(pools,query="",tag="",subject="",limit=20,category=""):
  result={}; q=query.casefold(); wanted=category.upper()
+ knowledge={}; knowledge_status="MISSING"; knowledge_notice=""
+ knowledge_root=ROOT/"work/reference-knowledge-20261113"
+ if (knowledge_root/"DATABASE.json").is_file():
+  from tools.reference_knowledge import load
+  try:
+   knowledge={x["key"]:x for x in load(knowledge_root)["records"]}
+   knowledge_status="CURRENT"
+  except (ValueError,OSError,KeyError) as e:
+   knowledge_status="STALE"; knowledge_notice=str(e)
  for pool in pools:
   _,rs=records(pool); hits=[]
   for r in rs:
+   info=knowledge.get(pool+":"+r["id"],{})
+   if info.get("sha256")!=r.get("sha256"): info={}
    if wanted and wanted not in r.get("categories",[]): continue
-   if q and q not in (r["id"]+" "+r["title"]+" "+" ".join(map(str,r.get("tags",[])))).casefold(): continue
+   haystack=(r["id"]+" "+r["title"]+" "+" ".join(map(str,r.get("tags",[])))+" "+info.get("search_text","")).casefold()
+   if q and not all(word in haystack for word in q.split()): continue
    if tag and tag.casefold() not in " ".join(map(str,r.get("tags",[])+r.get("groups",[]))).casefold(): continue
    if subject and r["subject_label"]!=subject: continue
-   hits.append(public_record(pool,r))
+   item=public_record(pool,r)
+   if info:
+    item["discovery"]={k:info[k] for k in ("key","description","description_basis","use_for","limitations","missing_checks","verification")}
+    if ("relative_path" in item and info.get("preview_allowed") and
+        info.get("subject")==r.get("subject_label") and info.get("overview")):
+     item["discovery"]["overview"]={**info["overview"],"path":str(safe(knowledge_root,info["overview"]["path"]))}
+   hits.append(item)
   result[pool]=hits
  all_hits=[r for rows in result.values() for r in rows]
- return {"category":wanted or "ALL","total":len(all_hits),"by_source":{p:len(rows) for p,rows in result.items()},"records":all_hits[:limit]}
+ return {"category":wanted or "ALL","total":len(all_hits),"by_source":{p:len(rows) for p,rows in result.items()},"records":all_hits[:limit],
+         "knowledge_status":knowledge_status,"knowledge_notice":knowledge_notice,
+         "knowledge_next_action":"NONE" if knowledge_status=="CURRENT" else "scripts/storyart.ps1 reference_knowledge build"}
 
 def category_summary(pools=None):
  pools=pools or list(cfg()); definitions=category_cfg()["categories"]
@@ -188,12 +225,20 @@ def build_index(output: Path):
  output.parent.mkdir(parents=True,exist_ok=True); output.write_text(html_doc,encoding="utf-8")
  return {"path":str(output.resolve()),"records":len(data),"categories":len(definitions),"embedded_images":False}
 
-def select(pool,ident,role,subject=""):
+def select(pool,ident,role,subject="",variant=""):
+ if cfg()[pool].get("adapter")=="shape_fit":
+  from tools.shape_fit_reference_pool import ShapeFitError, select_candidate
+  try: return select_candidate(ROOT,pool,ident,role,subject,variant)
+  except ShapeFitError as e: raise PoolError(str(e)) from e
  c=cfg()[pool]; base,rs=records(pool); matches=[r for r in rs if r["id"]==ident]
  if pool=="DRAWING_GUIDES" and not matches:
   raise PoolError("candidate is not a current curated source/crop ID")
  if len(matches)!=1: raise PoolError("candidate ID missing or duplicated")
  r=matches[0]
+ if c.get("adapter")=="shape_fit":
+  from tools.shape_fit_reference_pool import ShapeFitError, select_candidate
+  try: return select_candidate(ROOT,pool,ident,role,subject,variant)
+  except ShapeFitError as e: raise PoolError(str(e)) from e
  if role not in c["roles"] or (r.get("role") and role!=r["role"]): raise PoolError("role is not allowed by source contract")
  if pool=="PINTEREST_SKETCH":
   if r.get("record_binding_status")!="CURRENT": raise PoolError("candidate/source/review binding is stale")
@@ -251,7 +296,7 @@ def main():
  ca=sp.add_parser("categories"); ca.add_argument("--pool",action="append",choices=cfg().keys())
  se=sp.add_parser("search"); se.add_argument("--pool",action="append",choices=cfg().keys()); se.add_argument("--category",choices=category_cfg()["categories"]); se.add_argument("--query",default=""); se.add_argument("--tag",default=""); se.add_argument("--subject",choices=["MALE","FEMALE"]); se.add_argument("--limit",type=int,default=20)
  va=sp.add_parser("validate"); va.add_argument("--pool",choices=cfg().keys())
- ss=sp.add_parser("select"); ss.add_argument("--pool",required=True,choices=cfg().keys()); ss.add_argument("--id",required=True); ss.add_argument("--role",required=True); ss.add_argument("--subject",default=""); ss.add_argument("--output",type=Path,required=True)
+ ss=sp.add_parser("select"); ss.add_argument("--pool",required=True,choices=cfg().keys()); ss.add_argument("--id",required=True); ss.add_argument("--role",required=True); ss.add_argument("--subject",default=""); ss.add_argument("--variant",default=""); ss.add_argument("--output",type=Path,required=True)
  bi=sp.add_parser("build-index"); bi.add_argument("--output",type=Path,required=True)
  a=ap.parse_args()
  try:
@@ -267,7 +312,7 @@ def main():
    print(json.dumps(out,ensure_ascii=False,indent=2)); return 1 if any(x["status"]!="VALID" for x in out) else 0
   elif a.cmd=="build-index": out=build_index(a.output)
   else:
-   out=select(a.pool,a.id,a.role,a.subject); a.output.parent.mkdir(parents=True,exist_ok=True); a.output.write_text(json.dumps(out,ensure_ascii=False,indent=2),encoding="utf-8")
+   out=select(a.pool,a.id,a.role,a.subject,a.variant); a.output.parent.mkdir(parents=True,exist_ok=True); a.output.write_text(json.dumps(out,ensure_ascii=False,indent=2),encoding="utf-8")
   print(json.dumps(out,ensure_ascii=False,indent=2)); return 0
  except Exception as e: print(json.dumps({"error":str(e)},ensure_ascii=False)); return 2
 if __name__=="__main__": sys.exit(main())

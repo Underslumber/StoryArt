@@ -1,0 +1,3898 @@
+{
+  "schema_version": 1,
+  "pool": "SODABABYX",
+  "coverage": "CURATED_SELECTION_NOT_FULL_ARCHIVE",
+  "source_profile": "https://x.com/sodababyx",
+  "priority": [
+    "BODY_SHAPE",
+    "BODY_PART_SHAPE",
+    "FABRIC_FIT",
+    "POSE_ACTION"
+  ],
+  "style_influence": "FORBIDDEN",
+  "records": [
+    {
+      "id": "SODA_HWss9-yWIAALWyJ",
+      "title_ru": "Конструкция женского торса",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2119837500738867468",
+      "source_image_url": "https://pbs.twimg.com/media/HWss9-yWIAALWyJ?format=jpg&name=orig",
+      "local_path": "originals/HWss9-yWIAALWyJ.jpg",
+      "sha256": "8d626ad794da391c19215f4ba500aa983acc1d8117cd4832534cee97c8dd022b",
+      "width": 1235,
+      "height": 1274,
+      "bytes": 225318,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "8d626ad794da391c19215f4ba500aa983acc1d8117cd4832534cee97c8dd022b",
+      "subject_label": "FEMALE",
+      "published_on": "2026-11-09",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "priority": 1,
+      "categories": [
+        "BODY_SHAPE",
+        "BODY_PART_SHAPE"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "PETITE",
+          "label": "Petite",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "HOURGLASS",
+          "label": "Hourglass",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "ATHLETIC",
+          "label": "Athletic",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "CHUBBY",
+          "label": "Chubby",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SLIM",
+          "label": "Slim",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "FULL",
+          "label": "Full",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "8d626ad794da391c19215f4ba500aa983acc1d8117cd4832534cee97c8dd022b",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Шесть фронтальных торсов: ширина плеч, сужение талии, объём живота и бёдер; плечевой пояс и таз показаны конструктивными линиями.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Шесть фронтальных торсов: ширина плеч, сужение талии, объём живота и бёдер; плечевой пояс и таз показаны конструктивными линиями.",
+        "limitations": "Нет спины, профиля, рук и голеней. Формы стилизованы; условные линии не являются измерениями.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Конструкция женского торса",
+        "BODY_SHAPE",
+        "BODY_PART_SHAPE",
+        "Petite",
+        "Hourglass",
+        "Athletic",
+        "Chubby",
+        "Slim",
+        "Full"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HWdxwmwWkAA6-ta",
+      "title_ru": "Форма груди и посадка бюстгальтера",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2118787238527947107",
+      "source_image_url": "https://pbs.twimg.com/media/HWdxwmwWkAA6-ta?format=jpg&name=orig",
+      "local_path": "originals/HWdxwmwWkAA6-ta.jpg",
+      "sha256": "0d4933f21b1439ff640cebcf0f4f9ab2796506d036d7b9e5cc79217f29cedf0a",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 211388,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "0d4933f21b1439ff640cebcf0f4f9ab2796506d036d7b9e5cc79217f29cedf0a",
+      "subject_label": "FEMALE",
+      "published_on": "2026-11-06",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "priority": 1,
+      "categories": [
+        "BODY_PART_SHAPE",
+        "FABRIC_FIT"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE",
+        "CLOTHING_FIT_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "ROUND",
+          "label": "Round",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "TEARDROP",
+          "label": "Teardrop",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SIDE_SET",
+          "label": "Side-set",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "WIDE",
+          "label": "Wide",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "CLOSE_SET",
+          "label": "Close-set",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "ASYMMETRICAL",
+          "label": "Asymmetrical",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "0d4933f21b1439ff640cebcf0f4f9ab2796506d036d7b9e5cc79217f29cedf0a",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Шесть фронтальных примеров женской груди в бюстгальтере; различаются распределение объёма, промежуток, асимметрия и линия верхнего края чашки.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Шесть фронтальных примеров женской груди в бюстгальтере; различаются распределение объёма, промежуток, асимметрия и линия верхнего края чашки.",
+        "limitations": "Видна поддержанная бельём форма, а не свободная форма тела. Геометрия пояса и реальное давление чашки не измерены.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Форма груди и посадка бюстгальтера",
+        "BODY_PART_SHAPE",
+        "FABRIC_FIT",
+        "Round",
+        "Teardrop",
+        "Side-set",
+        "Wide",
+        "Close-set",
+        "Asymmetrical"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HTY-RreW0AE5mtx",
+      "title_ru": "Пять форм бёдер в три четверти",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2104938417255579804",
+      "source_image_url": "https://pbs.twimg.com/media/HTY-RreW0AE5mtx?format=jpg&name=orig",
+      "local_path": "originals/HTY-RreW0AE5mtx.jpg",
+      "sha256": "bc59e760be74bfaee2f4004ea419b3cebc3d8747fdc03ef09d7e3dfed3220a78",
+      "width": 1600,
+      "height": 800,
+      "bytes": 157395,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "bc59e760be74bfaee2f4004ea419b3cebc3d8747fdc03ef09d7e3dfed3220a78",
+      "subject_label": "FEMALE",
+      "published_on": "2026-09-29",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "user_supplied_link": true,
+      "priority": 1,
+      "categories": [
+        "BODY_PART_SHAPE"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "SLENDER",
+          "label": "Slender",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "PEAR",
+          "label": "Pear",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "ATHLETIC",
+          "label": "Athletic",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "CHUBBY",
+          "label": "Chubby",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "HOURGLASS",
+          "label": "Hourglass",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "bc59e760be74bfaee2f4004ea419b3cebc3d8747fdc03ef09d7e3dfed3220a78",
+      "subject_label_evidence": "ROOT_SUBJECT_REVIEW_2026-11-13: Женская конструкция таза/бёдер в ракурсе ¾; узкая талия, варианты женского контура таза. Не переносить на мужское тело.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Контур таза и верхней части бёдер, ширина, округлость и переход талии. Пунктир показывает скрытую поверхность.",
+        "limitations": "Фрагменты без однозначной маркировки пола источника. Пока только текстовый каталог; не прикреплять к генерации.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Пять форм бёдер в три четверти",
+        "BODY_PART_SHAPE",
+        "Slender",
+        "Pear",
+        "Athletic",
+        "Chubby",
+        "Hourglass"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HTWL-olWoAAHCA9",
+      "title_ru": "Восемь вариантов мужского торса",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2104742383678001579",
+      "source_image_url": "https://pbs.twimg.com/media/HTWL-olWoAAHCA9?format=jpg&name=orig",
+      "local_path": "originals/HTWL-olWoAAHCA9.jpg",
+      "sha256": "3dc1baeb45ab30f043cb8669be90016d5e065cfc15bcafc5cecfe2aa8c954459",
+      "width": 1028,
+      "height": 1529,
+      "bytes": 194994,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "3dc1baeb45ab30f043cb8669be90016d5e065cfc15bcafc5cecfe2aa8c954459",
+      "subject_label": "MALE",
+      "published_on": "2026-09-29",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "priority": 1,
+      "categories": [
+        "BODY_SHAPE",
+        "BODY_PART_SHAPE"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "STOCKY",
+          "label": "Stocky",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SLENDER",
+          "label": "Slender",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "FULL_BUILD",
+          "label": "Full Build",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "ATHLETIC",
+          "label": "Athletic",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MUSCULAR",
+          "label": "Muscular",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SOFT_BUILD",
+          "label": "Soft Build",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "BROAD_MUSCULAR",
+          "label": "Broad & Muscular",
+          "position": 7,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "LEAN_DEFINED",
+          "label": "Lean & Defined",
+          "position": 8,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "3dc1baeb45ab30f043cb8669be90016d5e065cfc15bcafc5cecfe2aa8c954459",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Мужские торсы с разной шириной плеч, массой грудных мышц, толщиной рук и объёмом живота.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Мужские торсы с разной шириной плеч, массой грудных мышц, толщиной рук и объёмом живота.",
+        "limitations": "Нижняя часть тела обрезана; названия пересекаются по смыслу и не задают точных пропорций.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Восемь вариантов мужского торса",
+        "BODY_SHAPE",
+        "BODY_PART_SHAPE",
+        "Stocky",
+        "Slender",
+        "Full Build",
+        "Athletic",
+        "Muscular",
+        "Soft Build",
+        "Broad & Muscular",
+        "Lean & Defined"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HSdImK_WoAIlODw",
+      "title_ru": "Пять контуров ягодиц со спины",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2100727597730554254",
+      "source_image_url": "https://pbs.twimg.com/media/HSdImK_WoAIlODw?format=jpg&name=orig",
+      "local_path": "originals/HSdImK_WoAIlODw.jpg",
+      "sha256": "f3300fa4d23417af7002ffa31c5d12e88a3f4641aca323bbe85b48ac0409affd",
+      "width": 1600,
+      "height": 768,
+      "bytes": 225741,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "f3300fa4d23417af7002ffa31c5d12e88a3f4641aca323bbe85b48ac0409affd",
+      "subject_label": "FEMALE",
+      "published_on": "2026-09-18",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "priority": 1,
+      "categories": [
+        "BODY_PART_SHAPE",
+        "FABRIC_FIT"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE",
+        "CLOTHING_FIT_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "V_BUM",
+          "label": "V-Bum",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "CHERRY_BUM",
+          "label": "Cherry Bum",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "H_BUM",
+          "label": "H-Bum",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "TRAPEZE_BUM",
+          "label": "Trapeze Bum",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "HEART_BUM",
+          "label": "Heart Bum",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "f3300fa4d23417af7002ffa31c5d12e88a3f4641aca323bbe85b48ac0409affd",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Женские фигуры со спины в двухчастном купальнике; пунктир отделяет контур ягодиц от края ткани.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Женские фигуры со спины в двухчастном купальнике; пунктир отделяет контур ягодиц от края ткани.",
+        "limitations": "Нестандартизованные названия автора; нет профильной глубины. Не переносить вырез купальника при выборе только формы тела.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Пять контуров ягодиц со спины",
+        "BODY_PART_SHAPE",
+        "FABRIC_FIT",
+        "V-Bum",
+        "Cherry Bum",
+        "H-Bum",
+        "Trapeze Bum",
+        "Heart Bum"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HQij288WgAAPQG9",
+      "title_ru": "Три мужских торса в три четверти",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2092102196359790876",
+      "source_image_url": "https://pbs.twimg.com/media/HQij288WgAAPQG9?format=jpg&name=orig",
+      "local_path": "originals/HQij288WgAAPQG9.jpg",
+      "sha256": "c5bbc509de235869306be5d164ade5326e4b62572007b4cf11f4a5cecd7deb22",
+      "width": 995,
+      "height": 593,
+      "bytes": 77389,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "c5bbc509de235869306be5d164ade5326e4b62572007b4cf11f4a5cecd7deb22",
+      "subject_label": "MALE",
+      "published_on": "2026-08-25",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "user_supplied_link": true,
+      "priority": 1,
+      "categories": [
+        "BODY_SHAPE",
+        "BODY_PART_SHAPE"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "LEAN",
+          "label": "Lean",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "FULL",
+          "label": "Full",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MUSCULAR",
+          "label": "Muscular",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "c5bbc509de235869306be5d164ade5326e4b62572007b4cf11f4a5cecd7deb22",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Три мужские фигуры: худощавая, полная и мускулистая; различаются объём живота, грудь и руки. Названия вариантов описательные, назначены при разборе.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Три мужские фигуры: худощавая, полная и мускулистая; различаются объём живота, грудь и руки. Названия вариантов описательные, назначены при разборе.",
+        "limitations": "Ноги отсутствуют. Публикация 25 августа новее повторного листа HPz9Dz_XwAAa0zX от 16 августа; состав и детализация рисунка те же, поэтому выбран свежий источник по поправке автора.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Три мужских торса в три четверти",
+        "BODY_SHAPE",
+        "BODY_PART_SHAPE",
+        "Lean",
+        "Full",
+        "Muscular"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HVXXHTIWMAACmZg",
+      "title_ru": "Семь вариаций женского телосложения",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2113832130526564783",
+      "source_image_url": "https://pbs.twimg.com/media/HVXXHTIWMAACmZg?format=jpg&name=orig",
+      "local_path": "originals/HVXXHTIWMAACmZg.jpg",
+      "sha256": "636ed1d72201f15e20470a4b6e00869339e8e060bce43e055069925725b7b42c",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 232316,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "636ed1d72201f15e20470a4b6e00869339e8e060bce43e055069925725b7b42c",
+      "subject_label": "FEMALE",
+      "published_on": "2026-10-24",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "priority": 1,
+      "categories": [
+        "BODY_SHAPE"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "PETITE",
+          "label": "Petite",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "TALL_SLENDER",
+          "label": "Tall & Slender",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "ATHLETIC",
+          "label": "Athletic",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "HOURGLASS",
+          "label": "Hourglass",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "CHUBBY",
+          "label": "Chubby",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "FULL_BUST",
+          "label": "Full Bust",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "PEAR_SHAPE",
+          "label": "Pear Shape",
+          "position": 7,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "636ed1d72201f15e20470a4b6e00869339e8e060bce43e055069925725b7b42c",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Одна близкая постановка руки на бедре помогает сравнить плечи, талию, грудь и бёдра в семи вариациях.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Одна близкая постановка руки на бедре помогает сравнить плечи, талию, грудь и бёдра в семи вариациях.",
+        "limitations": "Ноги обрезаны; не делать вывод о полных пропорциях или росте. Белая блузка скрывает часть формы тела.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Семь вариаций женского телосложения",
+        "BODY_SHAPE",
+        "Petite",
+        "Tall & Slender",
+        "Athletic",
+        "Hourglass",
+        "Chubby",
+        "Full Bust",
+        "Pear Shape"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HVcdkVuWkAAneff",
+      "title_ru": "Шесть форм живота",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2114191067423609151",
+      "source_image_url": "https://pbs.twimg.com/media/HVcdkVuWkAAneff?format=jpg&name=orig",
+      "local_path": "originals/HVcdkVuWkAAneff.jpg",
+      "sha256": "818e6882bee1c9296fae72bb3e13171348dfdf306d6fe7dd9a5d95b84255bbfd",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 134653,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "818e6882bee1c9296fae72bb3e13171348dfdf306d6fe7dd9a5d95b84255bbfd",
+      "subject_label": "NEUTRAL",
+      "published_on": "2026-10-25",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "priority": 1,
+      "categories": [
+        "BODY_PART_SHAPE"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "SLIM",
+          "label": "Slim",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "TONED",
+          "label": "Toned",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SOFT",
+          "label": "Soft",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "ROUND",
+          "label": "Round",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "CHUBBY",
+          "label": "Chubby",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "FULL",
+          "label": "Full",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "818e6882bee1c9296fae72bb3e13171348dfdf306d6fe7dd9a5d95b84255bbfd",
+      "subject_label_evidence": "ROOT_SUBJECT_REVIEW_2026-11-13: Изолированные формы живота без половых признаков; переносить только локальную форму, сохраняя пол и пропорции персонажа.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Разная выпуклость нижнего живота, боковые складки и выраженность пресса в одинаковой фронтальной проекции.",
+        "limitations": "Фрагмент не имеет явной маркировки пола; не угадывать её по талии. До подтверждения только текстовый выбор формы.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Шесть форм живота",
+        "BODY_PART_SHAPE",
+        "Slim",
+        "Toned",
+        "Soft",
+        "Round",
+        "Chubby",
+        "Full"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HVw4xO5XYAAurBA",
+      "title_ru": "Восемь форм мужского живота и пресса",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2115628464715743260",
+      "source_image_url": "https://pbs.twimg.com/media/HVw4xO5XYAAurBA?format=jpg&name=orig",
+      "local_path": "originals/HVw4xO5XYAAurBA.jpg",
+      "sha256": "971e89f8f4afd5427165c56812d2c0fbe76483c1b1687ed4de0ece34449481b1",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 208329,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "971e89f8f4afd5427165c56812d2c0fbe76483c1b1687ed4de0ece34449481b1",
+      "subject_label": "MALE",
+      "published_on": "2026-10-29",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "priority": 1,
+      "categories": [
+        "BODY_PART_SHAPE"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "LEAN",
+          "label": "Lean",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "CHUBBY",
+          "label": "Chubby",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MUSCULAR",
+          "label": "Muscular",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SLIM",
+          "label": "Slim",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "ATHLETIC",
+          "label": "Athletic",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "FULL",
+          "label": "Full",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "DEFINED",
+          "label": "Defined",
+          "position": 7,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "HEAVY_MUSCLE",
+          "label": "Heavy Muscle",
+          "position": 8,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "971e89f8f4afd5427165c56812d2c0fbe76483c1b1687ed4de0ece34449481b1",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Мужские торсы с разной массой живота, рельефом пресса и боковых мышц; видна связь грудной клетки с талией.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Мужские торсы с разной массой живота, рельефом пресса и боковых мышц; видна связь грудной клетки с талией.",
+        "limitations": "Рельеф условный; не переносить рисованные линии и тени как разметку реального тела. Lean/Athletic и Muscular/Defined близки.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Восемь форм мужского живота и пресса",
+        "BODY_PART_SHAPE",
+        "Lean",
+        "Chubby",
+        "Muscular",
+        "Slim",
+        "Athletic",
+        "Full",
+        "Defined",
+        "Heavy Muscle"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HWEqIdaWUAE0zaq",
+      "title_ru": "Пять схем свободной формы груди",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2117019722243781073",
+      "source_image_url": "https://pbs.twimg.com/media/HWEqIdaWUAE0zaq?format=jpg&name=orig",
+      "local_path": "originals/HWEqIdaWUAE0zaq.jpg",
+      "sha256": "25e933f5d0bf0ed2ed2c59d4a5110b3814557fc5423ef69ab62c07c46ccd0fde",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 184787,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "25e933f5d0bf0ed2ed2c59d4a5110b3814557fc5423ef69ab62c07c46ccd0fde",
+      "subject_label": "FEMALE",
+      "published_on": "2026-11-02",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "priority": 1,
+      "categories": [
+        "BODY_PART_SHAPE"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "ROUND",
+          "label": "Round",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "TEARDROP",
+          "label": "Teardrop",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "WIDE_SET",
+          "label": "Wide-set",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "ASYMMETRICAL",
+          "label": "Asymmetrical",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "PENDULOUS",
+          "label": "Pendulous",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "25e933f5d0bf0ed2ed2c59d4a5110b3814557fc5423ef69ab62c07c46ccd0fde",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Схематические женские торсы: распределение объёма выше/ниже, расстояние между формами, асимметрия и направление свисания.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Схематические женские торсы: распределение объёма выше/ниже, расстояние между формами, асимметрия и направление свисания.",
+        "limitations": "Нет боковой проекции, размеров и поведения при движении. Красные линии конструктивные, не часть внешности персонажа.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Пять схем свободной формы груди",
+        "BODY_PART_SHAPE",
+        "Round",
+        "Teardrop",
+        "Wide-set",
+        "Asymmetrical",
+        "Pendulous"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HV7IUuGWYAA66oe",
+      "title_ru": "Четыре объёма ягодиц в три четверти со спины",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2116349243564724287",
+      "source_image_url": "https://pbs.twimg.com/media/HV7IUuGWYAA66oe?format=jpg&name=orig",
+      "local_path": "originals/HV7IUuGWYAA66oe.jpg",
+      "sha256": "300aee1f933324a8a4419fd3c4b6f366bf7d823abde6f100963fc786f8b972f0",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 200513,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "300aee1f933324a8a4419fd3c4b6f366bf7d823abde6f100963fc786f8b972f0",
+      "subject_label": "FEMALE",
+      "published_on": "2026-10-31",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "priority": 1,
+      "categories": [
+        "BODY_PART_SHAPE"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "SMALL",
+          "label": "Small",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MEDIUM",
+          "label": "Medium",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "LARGE",
+          "label": "Large",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "EXTRA_LARGE",
+          "label": "Extra Large",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "300aee1f933324a8a4419fd3c4b6f366bf7d823abde6f100963fc786f8b972f0",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Женская фигура в одной близкой постановке: возрастает объём ягодиц и меняется натяжение юбки.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Женская фигура в одной близкой постановке: возрастает объём ягодиц и меняется натяжение юбки.",
+        "limitations": "Юбка скрывает поверхность; это сравнение силуэта и объёма, а не чистый анатомический шаблон. Не копировать гиперболизацию автоматически.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Четыре объёма ягодиц в три четверти со спины",
+        "BODY_PART_SHAPE",
+        "Small",
+        "Medium",
+        "Large",
+        "Extra Large"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HUJ_LtPWEAABgfH",
+      "title_ru": "Девять примеров формы стоп",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2108387452255670493",
+      "source_image_url": "https://pbs.twimg.com/media/HUJ_LtPWEAABgfH?format=jpg&name=orig",
+      "local_path": "originals/HUJ_LtPWEAABgfH.jpg",
+      "sha256": "a4adaddc87de0cd1c88a072dc0b2843539511df8d692713fb3d946adf3aaa82c",
+      "width": 1205,
+      "height": 1305,
+      "bytes": 170542,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "a4adaddc87de0cd1c88a072dc0b2843539511df8d692713fb3d946adf3aaa82c",
+      "subject_label": "NEUTRAL",
+      "published_on": "2026-10-09",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "priority": 1,
+      "categories": [
+        "BODY_PART_SHAPE"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "SIDE_PLANTED",
+          "label": "Side planted",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "FRONT_PAIR",
+          "label": "Front pair",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "REAR_PAIR",
+          "label": "Rear pair",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "CROSSED_ANKLES",
+          "label": "Crossed ankles",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SOLE",
+          "label": "Sole",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "THREE_QUARTER_PAIR",
+          "label": "Three-quarter pair",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "RAISED_HEEL",
+          "label": "Raised heel",
+          "position": 7,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SIDE_PAIR",
+          "label": "Side pair",
+          "position": 8,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "FRONT_RELAXED",
+          "label": "Front relaxed",
+          "position": 9,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "a4adaddc87de0cd1c88a072dc0b2843539511df8d692713fb3d946adf3aaa82c",
+      "subject_label_evidence": "ROOT_SUBJECT_REVIEW_2026-11-13: Изолированные стопы и голени; учебные ракурсы без признаков пола.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Стопы спереди, сбоку, сзади и со стороны подошвы; свод, пятка, пальцы и подъём пятки.",
+        "limitations": "Пол источника неизвестен. Изолированные стопы не подтверждают всю позу и равновесие тела.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Девять примеров формы стоп",
+        "BODY_PART_SHAPE",
+        "Side planted",
+        "Front pair",
+        "Rear pair",
+        "Crossed ankles",
+        "Sole",
+        "Three-quarter pair",
+        "Raised heel",
+        "Side pair",
+        "Front relaxed"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HWuXCLeXAAA2gCe",
+      "title_ru": "Шесть форм нижней части тела со спины",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2119954536072626346",
+      "source_image_url": "https://pbs.twimg.com/media/HWuXCLeXAAA2gCe?format=jpg&name=orig",
+      "local_path": "originals/HWuXCLeXAAA2gCe.jpg",
+      "sha256": "85df30c703752e47f4cbba5bfc6c5e280becd9c0068e3355002660b4928dc672",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 195066,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-11-10",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "85df30c703752e47f4cbba5bfc6c5e280becd9c0068e3355002660b4928dc672",
+      "subject_label": "FEMALE",
+      "priority": 1,
+      "categories": [
+        "BODY_PART_SHAPE"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "PEAR",
+          "label": "Pear",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "ATHLETIC",
+          "label": "Athletic",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SLIM",
+          "label": "Slim",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "FULL",
+          "label": "Full",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "HIP_DIPS",
+          "label": "Hip Dips",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "HOURGLASS",
+          "label": "Hourglass",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "85df30c703752e47f4cbba5bfc6c5e280becd9c0068e3355002660b4928dc672",
+      "subject_label_evidence": "ROOT_SUBJECT_REVIEW_2026-11-13: Женская конструкция таза и ног со спины: варианты pear/athletic/slim/full/hip dips/hourglass.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Ягодицы, бёдра, колени и голени со спины: шесть силуэтов с конструктивными контурами объёма.",
+        "limitations": "Изолированная нижняя часть тела; пол не подтверждён. Конструктивная разметка не переносится как рисовка.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Шесть форм нижней части тела со спины",
+        "BODY_PART_SHAPE",
+        "Pear",
+        "Athletic",
+        "Slim",
+        "Full",
+        "Hip Dips",
+        "Hourglass"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HSSQKXvXwAAUknl",
+      "title_ru": "Пять форм руки и плечевого пояса",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2099961843104034916",
+      "source_image_url": "https://pbs.twimg.com/media/HSSQKXvXwAAUknl?format=jpg&name=orig",
+      "local_path": "originals/HSSQKXvXwAAUknl.jpg",
+      "sha256": "d42d22237a36d1d1a1e29db933309a1a3ceaec7934eac3319d77144e94de6045",
+      "width": 1534,
+      "height": 1025,
+      "bytes": 211047,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-09-15",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "d42d22237a36d1d1a1e29db933309a1a3ceaec7934eac3319d77144e94de6045",
+      "subject_label": "NEUTRAL",
+      "priority": 1,
+      "categories": [
+        "BODY_PART_SHAPE",
+        "ANATOMY"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "1",
+          "label": "1",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "2",
+          "label": "2",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "3",
+          "label": "3",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "4",
+          "label": "4",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "5",
+          "label": "5",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "d42d22237a36d1d1a1e29db933309a1a3ceaec7934eac3319d77144e94de6045",
+      "subject_label_evidence": "ROOT_SUBJECT_REVIEW_2026-11-13: Изолированная рука: пять степеней мышечного объёма. Пол владельца не задан; локальная форма не задаёт пол персонажа.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Пять пронумерованных вариантов открытой руки от плеча до кисти; заметно различаются наружный контур и объём плеча и верхней части руки.",
+        "limitations": "Номера не объяснены, а локальная рука и плечо не дают достоверной метки пола. Нет масштаба, иных ракурсов и чёткой привязки вариантов к конкретным анатомическим критериям; подписи не следует толковать как точные типы.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Пять форм руки и плечевого пояса",
+        "BODY_PART_SHAPE",
+        "ANATOMY",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HR4mAd5W0AQfyAK",
+      "title_ru": "Кисти: жесты, захваты и положение пальцев",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2098156273137029487",
+      "source_image_url": "https://pbs.twimg.com/media/HR4mAd5W0AQfyAK?format=jpg&name=orig",
+      "local_path": "originals/HR4mAd5W0AQfyAK.jpg",
+      "sha256": "6dc98a49f5e62f6125427fc0ce2fb178025aae9a91f8f649011227c24f63baf8",
+      "width": 1064,
+      "height": 1478,
+      "bytes": 194714,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-09-10",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "6dc98a49f5e62f6125427fc0ce2fb178025aae9a91f8f649011227c24f63baf8",
+      "subject_label": "NEUTRAL",
+      "priority": 1,
+      "categories": [
+        "BODY_PART_SHAPE",
+        "HANDS_FINGERS"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "WHOLE_SHEET",
+          "label": "Whole sheet",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "6dc98a49f5e62f6125427fc0ce2fb178025aae9a91f8f649011227c24f63baf8",
+      "subject_label_evidence": "ROOT_SUBJECT_REVIEW_2026-11-13: Изолированные кисти, пальцы и контакт кистей; пол не задан.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Лист кистей: сжатый кулак, расслабленные и разведённые пальцы, большой палец вверх, указательный жест, кольцо из большого и указательного пальцев, захваты ткани и раскрытая ладонь. Показаны разные ракурсы и сгибы пальцев.",
+        "limitations": "Изолированные кисти без подтверждённого пола; предплечья показаны частично. Содержит несколько отдельных жестов, Whole sheet означает просмотр всего листа, не один жест. Красные линии и рисовка не переносятся.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Кисти: жесты, захваты и положение пальцев",
+        "BODY_PART_SHAPE",
+        "HANDS_FINGERS",
+        "Whole sheet"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HRn9G4FboAACp0P",
+      "title_ru": "Разные телосложения и возрастные типы фигур",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2096985549311463705",
+      "source_image_url": "https://pbs.twimg.com/media/HRn9G4FboAACp0P?format=jpg&name=orig",
+      "local_path": "originals/HRn9G4FboAACp0P.jpg",
+      "sha256": "cbe2562e666070f25caae64c9dd83b5d0c024aa7d8a2ef650cdd78f28f8b603d",
+      "width": 1122,
+      "height": 1402,
+      "bytes": 223154,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-09-07",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "cbe2562e666070f25caae64c9dd83b5d0c024aa7d8a2ef650cdd78f28f8b603d",
+      "subject_label": "MIXED",
+      "priority": 1,
+      "categories": [
+        "BODY_SHAPE",
+        "BODY_PART_SHAPE"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "CHUBBY_GUY",
+          "label": "Chubby Guy",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "LANKY_GUY",
+          "label": "Lanky Guy",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "VERY_YOUNG_BOY",
+          "label": "Very Young Boy",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "LANKY_OLD_MAN",
+          "label": "Lanky Old Man",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "BURLY_BRUISER",
+          "label": "Burly Bruiser",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "VERY_HEAVY_SET_GUY",
+          "label": "Very Heavy-Set Guy",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SLIM_BROAD_SHOULDERED",
+          "label": "Slim, Broad-Shouldered",
+          "position": 7,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SLIM_PRE_TEEN",
+          "label": "Slim Pre-Teen",
+          "position": 8,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "AMAZON_WARRIOR",
+          "label": "Amazon Warrior",
+          "position": 9,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SHORT_AND_STOUT",
+          "label": "Short and Stout",
+          "position": 10,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "BENT_BACK_CRONE",
+          "label": "Bent-Back Crone",
+          "position": 11,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "VERY_YOUNG_GIRL",
+          "label": "Very Young Girl",
+          "position": 12,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "QUARANTINED",
+      "subject_label_sha256": "cbe2562e666070f25caae64c9dd83b5d0c024aa7d8a2ef650cdd78f28f8b603d",
+      "subject_label_evidence": "ROOT_SUBJECT_REVIEW_2026-11-13: На листе мужские, женские и неоднозначные схематические фигуры. Классификация только по отдельным карточкам и подписям.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Сравнительная подборка фигур с разной шириной плеч, массой туловища, пропорциями конечностей и возрастным видом. На листе присутствуют мужские и женские персонажи, а также явно юные фигуры.",
+        "limitations": "Смешаны пол, возраст, ростовая подача, позы и одежда; общей стандартизованной камеры и масштаба нет. Метка UNKNOWN обязательна для всего смешанного листа. Не выбирать отдельного персонажа из него как идентичность; не делать выводы о возрасте или пропорциях из соседства фигур.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Разные телосложения и возрастные типы фигур",
+        "BODY_SHAPE",
+        "BODY_PART_SHAPE",
+        "Chubby Guy",
+        "Lanky Guy",
+        "Very Young Boy",
+        "Lanky Old Man",
+        "Burly Bruiser",
+        "Very Heavy-Set Guy",
+        "Slim, Broad-Shouldered",
+        "Slim Pre-Teen",
+        "Amazon Warrior",
+        "Short and Stout",
+        "Bent-Back Crone",
+        "Very Young Girl"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HRPRvj2WIAI6H_-",
+      "title_ru": "Учебный лист форм губ и раскрытия рта",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2095248875112079696",
+      "source_image_url": "https://pbs.twimg.com/media/HRPRvj2WIAI6H_-?format=jpg&name=orig",
+      "local_path": "originals/HRPRvj2WIAI6H_-.jpg",
+      "sha256": "c5163c35c8c8e15c91f998614209239b7705af283d3c40befa0466d6efdddfaa",
+      "width": 1122,
+      "height": 1402,
+      "bytes": 128710,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-09-02",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "c5163c35c8c8e15c91f998614209239b7705af283d3c40befa0466d6efdddfaa",
+      "subject_label": "NEUTRAL",
+      "priority": 1,
+      "categories": [
+        "BODY_PART_SHAPE",
+        "FACE_EXPRESSION",
+        "ANATOMY"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "MOUTH_01",
+          "label": "Mouth 01",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOUTH_02",
+          "label": "Mouth 02",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOUTH_03",
+          "label": "Mouth 03",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOUTH_04",
+          "label": "Mouth 04",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOUTH_05",
+          "label": "Mouth 05",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOUTH_06",
+          "label": "Mouth 06",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOUTH_07",
+          "label": "Mouth 07",
+          "position": 7,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOUTH_08",
+          "label": "Mouth 08",
+          "position": 8,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOUTH_09",
+          "label": "Mouth 09",
+          "position": 9,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOUTH_10",
+          "label": "Mouth 10",
+          "position": 10,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOUTH_11",
+          "label": "Mouth 11",
+          "position": 11,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOUTH_12",
+          "label": "Mouth 12",
+          "position": 12,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOUTH_13",
+          "label": "Mouth 13",
+          "position": 13,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOUTH_14",
+          "label": "Mouth 14",
+          "position": 14,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOUTH_15",
+          "label": "Mouth 15",
+          "position": 15,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOUTH_16",
+          "label": "Mouth 16",
+          "position": 16,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOUTH_17",
+          "label": "Mouth 17",
+          "position": 17,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOUTH_18",
+          "label": "Mouth 18",
+          "position": 18,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "c5163c35c8c8e15c91f998614209239b7705af283d3c40befa0466d6efdddfaa",
+      "subject_label_evidence": "ROOT_SUBJECT_REVIEW_2026-11-13: Изолированные губы/рот и мимические состояния; лицо и пол не заданы.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "18 вариантов контура губ и раскрытия рта, сетка 6 рядов по 3: закрытые губы, улыбка, открытый рот, видимые зубы и язык. Нумерация слева направо сверху вниз; названия Mouth NN служебные.",
+        "limitations": "Изображения изолированы от лица и контекста; выражения, зубной ряд и гиперболизация рисунка не задают личность или эмоцию персонажа. Не переносить штрих, палитру и манеру рисования.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Учебный лист форм губ и раскрытия рта",
+        "BODY_PART_SHAPE",
+        "FACE_EXPRESSION",
+        "ANATOMY",
+        "Mouth 01",
+        "Mouth 02",
+        "Mouth 03",
+        "Mouth 04",
+        "Mouth 05",
+        "Mouth 06",
+        "Mouth 07",
+        "Mouth 08",
+        "Mouth 09",
+        "Mouth 10",
+        "Mouth 11",
+        "Mouth 12",
+        "Mouth 13",
+        "Mouth 14",
+        "Mouth 15",
+        "Mouth 16",
+        "Mouth 17",
+        "Mouth 18"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HQtL1igWkAAu0Qp",
+      "title_ru": "Фронтальная мускулистая фигура с раскрытыми руками",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2092849903537881510",
+      "source_image_url": "https://pbs.twimg.com/media/HQtL1igWkAAu0Qp?format=png&name=orig",
+      "local_path": "originals/HQtL1igWkAAu0Qp.png",
+      "sha256": "7295ff0d3f6b257001955e4a0578a5388874525608a2bb2f92a3480658f52109",
+      "width": 543,
+      "height": 734,
+      "bytes": 367447,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-08-27",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "7295ff0d3f6b257001955e4a0578a5388874525608a2bb2f92a3480658f52109",
+      "subject_label": "MALE",
+      "priority": 1,
+      "categories": [
+        "BODY_SHAPE",
+        "BODY_PART_SHAPE",
+        "POSE_ACTION"
+      ],
+      "allowed_roles": [
+        "BODY_SHAPE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "WHOLE_FIGURE",
+          "label": "Whole figure",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "7295ff0d3f6b257001955e4a0578a5388874525608a2bb2f92a3480658f52109",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Одна обнажённая фронтальная анатомическая фигура с выраженной мускулатурой торса и конечностей; руки разведены, ладони раскрыты, ноги поставлены перекрёстно.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Одна обнажённая фронтальная анатомическая фигура с выраженной мускулатурой торса и конечностей; руки разведены, ладони раскрыты, ноги поставлены перекрёстно.",
+        "limitations": "Это одиночный, гипертрофированно мускулистый пример, не сравнительная таблица форм и не нейтральная пропорция. Несимметричная опора влияет на силуэт ног и равновесие; пропорции и мышечный рельеф не переносить как профиль персонажа.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Фронтальная мускулистая фигура с раскрытыми руками",
+        "BODY_SHAPE",
+        "BODY_PART_SHAPE",
+        "POSE_ACTION",
+        "Whole figure"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HVHkWMpWQAAG5ww",
+      "title_ru": "Восемь вариантов посадки верха купальника",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2112720829402268018",
+      "source_image_url": "https://pbs.twimg.com/media/HVHkWMpWQAAG5ww?format=jpg&name=orig",
+      "local_path": "originals/HVHkWMpWQAAG5ww.jpg",
+      "sha256": "cede1e098cff1b83aa4aebfb89086caae2ed8f39010a8211301dc65393bf03bf",
+      "width": 765,
+      "height": 1024,
+      "bytes": 119412,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "cede1e098cff1b83aa4aebfb89086caae2ed8f39010a8211301dc65393bf03bf",
+      "subject_label": "FEMALE",
+      "published_on": "2026-10-21",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "priority": 2,
+      "categories": [
+        "FABRIC_FIT",
+        "CLOTHING"
+      ],
+      "allowed_roles": [
+        "CLOTHING_FIT_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "TRIANGLE",
+          "label": "Triangle",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "HALTER",
+          "label": "Halter",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "UNDERWIRE",
+          "label": "Underwire",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "BANDEAU",
+          "label": "Bandeau",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "PLUNGE",
+          "label": "Plunge",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "PUSH_UP",
+          "label": "Push-up",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SPORTY",
+          "label": "Sporty",
+          "position": 7,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MICRO_TINY",
+          "label": "Micro / Tiny",
+          "position": 8,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "cede1e098cff1b83aa4aebfb89086caae2ed8f39010a8211301dc65393bf03bf",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Различаются точки подвеса, подгрудная линия, покрытие чашкой, расстояние между краями и положение бретелей.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Различаются точки подвеса, подгрудная линия, покрытие чашкой, расстояние между краями и положение бретелей.",
+        "limitations": "Нет спины и движения; изображение не доказывает реальную поддержку. Не менять согласованное покрытие или тип купальника по одному референсу.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Восемь вариантов посадки верха купальника",
+        "FABRIC_FIT",
+        "CLOTHING",
+        "Triangle",
+        "Halter",
+        "Underwire",
+        "Bandeau",
+        "Plunge",
+        "Push-up",
+        "Sporty",
+        "Micro / Tiny"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HW7c0kxXsAAh1hJ",
+      "title_ru": "Двенадцать вариантов облегания боди и белья",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2120875329292022153",
+      "source_image_url": "https://pbs.twimg.com/media/HW7c0kxXsAAh1hJ?format=jpg&name=orig",
+      "local_path": "originals/HW7c0kxXsAAh1hJ.jpg",
+      "sha256": "56812be8266b1a39241e109e8ebf2ff7474e531891b4fd7539a470c8897026fb",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 212410,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "56812be8266b1a39241e109e8ebf2ff7474e531891b4fd7539a470c8897026fb",
+      "subject_label": "FEMALE",
+      "published_on": "2026-11-12",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "priority": 2,
+      "categories": [
+        "FABRIC_FIT",
+        "CLOTHING"
+      ],
+      "allowed_roles": [
+        "CLOTHING_FIT_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "SWEETHEART_BODYSUIT",
+          "label": "Sweetheart Bodysuit",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "RIBBON_HALTER",
+          "label": "Ribbon Halter",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "ASYMMETRIC_WRAP",
+          "label": "Asymmetric Wrap",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "LACE_UP_CORSET",
+          "label": "Lace-up Corset",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MESH_SHOULDER",
+          "label": "Mesh Shoulder",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SQUARE_NECK_BODYSUIT",
+          "label": "Square-neck Bodysuit",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "CROSS_WAIST_SET",
+          "label": "Cross-waist Set",
+          "position": 7,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "KEYHOLE_HALTER",
+          "label": "Keyhole Halter",
+          "position": 8,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "PUFF_SLEEVE_TOP",
+          "label": "Puff-sleeve Top",
+          "position": 9,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "DEEP_V_BODYSUIT",
+          "label": "Deep V Bodysuit",
+          "position": 10,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SPORTY_ZIP",
+          "label": "Sporty Zip",
+          "position": 11,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "LACE_TRIM_SET",
+          "label": "Lace-trim Set",
+          "position": 12,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "56812be8266b1a39241e109e8ebf2ff7474e531891b4fd7539a470c8897026fb",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: На близких женских торсах сравниваются вырезы, чашки, шнуровка, бретели, поперечные ленты и прилегание к талии.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "На близких женских торсах сравниваются вырезы, чашки, шнуровка, бретели, поперечные ленты и прилегание к талии.",
+        "limitations": "Главное — геометрия контакта и края. Чёрный цвет, блики, линии и дизайн целиком не переносятся; динамические складки почти не показаны.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Двенадцать вариантов облегания боди и белья",
+        "FABRIC_FIT",
+        "CLOTHING",
+        "Sweetheart Bodysuit",
+        "Ribbon Halter",
+        "Asymmetric Wrap",
+        "Lace-up Corset",
+        "Mesh Shoulder",
+        "Square-neck Bodysuit",
+        "Cross-waist Set",
+        "Keyhole Halter",
+        "Puff-sleeve Top",
+        "Deep V Bodysuit",
+        "Sporty Zip",
+        "Lace-trim Set"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HWAOcSlXcAA01L3",
+      "title_ru": "Посадка спортивной одежды в разных положениях",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2116707811363373129",
+      "source_image_url": "https://pbs.twimg.com/media/HWAOcSlXcAA01L3?format=jpg&name=orig",
+      "local_path": "originals/HWAOcSlXcAA01L3.jpg",
+      "sha256": "45556ac1832753ce4f6249b97e9e5d0dc64c1ef6ffedb8d6815d86cfbf26a15d",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 211751,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "45556ac1832753ce4f6249b97e9e5d0dc64c1ef6ffedb8d6815d86cfbf26a15d",
+      "subject_label": "FEMALE",
+      "published_on": "2026-11-01",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "priority": 2,
+      "categories": [
+        "FABRIC_FIT",
+        "CLOTHING",
+        "POSE_ACTION"
+      ],
+      "allowed_roles": [
+        "CLOTHING_FIT_REFERENCE",
+        "POSE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "TANK_BIKER_SHORTS",
+          "label": "Tank + Biker Shorts",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "LONG_SLEEVE_FLARED_LEGGINGS",
+          "label": "Long Sleeve + Flared Leggings",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "ATHLETIC_ROMPER",
+          "label": "Athletic Romper",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SWEATSHIRT_SKIRT",
+          "label": "Sweatshirt + Skirt",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "LONGLINE_TOP_CAPRIS",
+          "label": "Longline Top + Capris",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "TRACK_JACKET_PANTS",
+          "label": "Track Jacket + Pants",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "45556ac1832753ce4f6249b97e9e5d0dc64c1ef6ffedb8d6815d86cfbf26a15d",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Шесть женских фигур: натяжение на груди и бёдрах, складки свободных рукавов, облегание при поднятой руке, сидении и развороте.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Шесть женских фигур: натяжение на груди и бёдрах, складки свободных рукавов, облегание при поднятой руке, сидении и развороте.",
+        "limitations": "Фигуры не являются ракурсами одной позы. Сумка, ракетка, лицо и спортивный комплект не становятся обязательными предметами сцены.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Посадка спортивной одежды в разных положениях",
+        "FABRIC_FIT",
+        "CLOTHING",
+        "POSE_ACTION",
+        "Tank + Biker Shorts",
+        "Long Sleeve + Flared Leggings",
+        "Athletic Romper",
+        "Sweatshirt + Skirt",
+        "Longline Top + Capris",
+        "Track Jacket + Pants"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HUEb_TFXEAE1Uvy",
+      "title_ru": "Двенадцать вариантов посадки топов",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2107996914423882226",
+      "source_image_url": "https://pbs.twimg.com/media/HUEb_TFXEAE1Uvy?format=jpg&name=orig",
+      "local_path": "originals/HUEb_TFXEAE1Uvy.jpg",
+      "sha256": "a0bcdc378a6e7ea533d9100373427ffa28f784b71a5dc1f4576cdda6b67dca0a",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 265256,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "a0bcdc378a6e7ea533d9100373427ffa28f784b71a5dc1f4576cdda6b67dca0a",
+      "subject_label": "FEMALE",
+      "published_on": "2026-10-08",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "priority": 2,
+      "categories": [
+        "FABRIC_FIT",
+        "CLOTHING"
+      ],
+      "allowed_roles": [
+        "CLOTHING_FIT_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "SQUARE_NECK_CROP",
+          "label": "Square Neck Crop",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "COWL_NECK_CAMI",
+          "label": "Cowl Neck Cami",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "PEASANT_CROP",
+          "label": "Peasant Crop",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "DENIM_CORSET",
+          "label": "Denim Corset",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "WRAP_TOP",
+          "label": "Wrap Top",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "PUFF_SLEEVE_CROP",
+          "label": "Puff Sleeve Crop",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "HALTER_VEST",
+          "label": "Halter Vest",
+          "position": 7,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "LACE_TRIM_CAMI",
+          "label": "Lace Trim Cami",
+          "position": 8,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "OFF_SHOULDER",
+          "label": "Off Shoulder",
+          "position": 9,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "BUSTIER_TOP",
+          "label": "Bustier Top",
+          "position": 10,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "TIE_FRONT_TOP",
+          "label": "Tie Front Top",
+          "position": 11,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "TWIST_BANDEAU",
+          "label": "Twist Bandeau",
+          "position": 12,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "a0bcdc378a6e7ea533d9100373427ffa28f784b71a5dc1f4576cdda6b67dca0a",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Провисание cowl, сборка по резинке, натяжение к узлу, перекрёстный запах, опора чашек и проймы.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Провисание cowl, сборка по резинке, натяжение к узлу, перекрёстный запах, опора чашек и проймы.",
+        "limitations": "Все примеры фронтальные и на близкой фигуре. Цвет и шейдинг не являются выбранным стилем.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Двенадцать вариантов посадки топов",
+        "FABRIC_FIT",
+        "CLOTHING",
+        "Square Neck Crop",
+        "Cowl Neck Cami",
+        "Peasant Crop",
+        "Denim Corset",
+        "Wrap Top",
+        "Puff Sleeve Crop",
+        "Halter Vest",
+        "Lace Trim Cami",
+        "Off Shoulder",
+        "Bustier Top",
+        "Tie Front Top",
+        "Twist Bandeau"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HTwGU_iXAAAxsff",
+      "title_ru": "Посадка плиссированной юбки при движении",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2106565688840102359",
+      "source_image_url": "https://pbs.twimg.com/media/HTwGU_iXAAAxsff?format=jpg&name=orig",
+      "local_path": "originals/HTwGU_iXAAAxsff.jpg",
+      "sha256": "4e92afe6c389e7f95bc51f94853895add8f3be2ab7ce64735ecd57dc7cc409e4",
+      "width": 853,
+      "height": 1280,
+      "bytes": 155460,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "4e92afe6c389e7f95bc51f94853895add8f3be2ab7ce64735ecd57dc7cc409e4",
+      "subject_label": "FEMALE",
+      "published_on": "2026-10-04",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "priority": 2,
+      "categories": [
+        "FABRIC_FIT",
+        "CLOTHING"
+      ],
+      "allowed_roles": [
+        "CLOTHING_FIT_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "FRONT_NEUTRAL",
+          "label": "Front Neutral",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "REAR_NEUTRAL",
+          "label": "Rear Neutral",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "HIP_SHIFT",
+          "label": "Hip Shift",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "WALKING",
+          "label": "Walking",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SIDE_TWIST",
+          "label": "Side Twist",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "STEP_UP",
+          "label": "Step Up",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SIDE_SIT",
+          "label": "Side Sit",
+          "position": 7,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "KNEELING",
+          "label": "Kneeling",
+          "position": 8,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "ONE_KNEE_UP",
+          "label": "One Knee Up",
+          "position": 9,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "CROSS_LEGGED",
+          "label": "Cross-Legged",
+          "position": 10,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "LOW_CROUCH",
+          "label": "Low Crouch",
+          "position": 11,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SPIN",
+          "label": "Spin",
+          "position": 12,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "4e92afe6c389e7f95bc51f94853895add8f3be2ab7ce64735ecd57dc7cc409e4",
+      "subject_label_evidence": "ROOT_SUBJECT_REVIEW_2026-11-13: Юбка на женской конструкции таза и ног; Neutral в подписи означает стойку, а не пол.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Двенадцать состояний подола: наклон таза, шаг, скручивание, опора коленом, сидение, присед и вращение.",
+        "limitations": "Шарнирный манекен без подтверждённого пола; не выдавать за женскую позу. Только текстовая справка до соответствующей классификации.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Посадка плиссированной юбки при движении",
+        "FABRIC_FIT",
+        "CLOTHING",
+        "Front Neutral",
+        "Rear Neutral",
+        "Hip Shift",
+        "Walking",
+        "Side Twist",
+        "Step Up",
+        "Side Sit",
+        "Kneeling",
+        "One Knee Up",
+        "Cross-Legged",
+        "Low Crouch",
+        "Spin"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HUUXQLWXkAAwtWx",
+      "title_ru": "Посадка восьми вариантов белья со спины",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2109117573979619659",
+      "source_image_url": "https://pbs.twimg.com/media/HUUXQLWXkAAwtWx?format=jpg&name=orig",
+      "local_path": "originals/HUUXQLWXkAAwtWx.jpg",
+      "sha256": "a766d0956ad8b4e5ee81c6feaf5550767d9ea3ae89a8c56250990b934c2c279e",
+      "width": 1063,
+      "height": 1600,
+      "bytes": 152723,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-10-11",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "a766d0956ad8b4e5ee81c6feaf5550767d9ea3ae89a8c56250990b934c2c279e",
+      "subject_label": "FEMALE",
+      "priority": 2,
+      "categories": [
+        "FABRIC_FIT",
+        "CLOTHING"
+      ],
+      "allowed_roles": [
+        "CLOTHING_FIT_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "SILK",
+          "label": "Silk",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "COTTON",
+          "label": "Cotton",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SPANDEX",
+          "label": "Spandex",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "BAMBOO",
+          "label": "Bamboo",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MICROFIBER",
+          "label": "Microfiber",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "VISCOSE",
+          "label": "Viscose",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "POLYAMIDE",
+          "label": "Polyamide",
+          "position": 7,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "POLYESTER",
+          "label": "Polyester",
+          "position": 8,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "a766d0956ad8b4e5ee81c6feaf5550767d9ea3ae89a8c56250990b934c2c279e",
+      "subject_label_evidence": "ROOT_SUBJECT_REVIEW_2026-11-13: Посадка белья на женском тазе со спины, различия тканей.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Вид со спины: пояс, края пройм, степень покрытия ягодиц и складки свободных шорт.",
+        "limitations": "Сравниваются одновременно крой и материал; подписи не доказывают свойства тканей. Не переносить блики, цвет и шейдинг.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Посадка восьми вариантов белья со спины",
+        "FABRIC_FIT",
+        "CLOTHING",
+        "Silk",
+        "Cotton",
+        "Spandex",
+        "Bamboo",
+        "Microfiber",
+        "Viscose",
+        "Polyamide",
+        "Polyester"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HT1aRcGWYAE_Q5-",
+      "title_ru": "Посадка восьми вариантов белья спереди",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2106939487804961238",
+      "source_image_url": "https://pbs.twimg.com/media/HT1aRcGWYAE_Q5-?format=jpg&name=orig",
+      "local_path": "originals/HT1aRcGWYAE_Q5-.jpg",
+      "sha256": "ef484cd42a7447281010250d4cc3fec907b5ecdc469ba911f6abc9ba36ea8c11",
+      "width": 1031,
+      "height": 1525,
+      "bytes": 224107,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-10-05",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "ef484cd42a7447281010250d4cc3fec907b5ecdc469ba911f6abc9ba36ea8c11",
+      "subject_label": "FEMALE",
+      "priority": 2,
+      "categories": [
+        "FABRIC_FIT",
+        "CLOTHING"
+      ],
+      "allowed_roles": [
+        "CLOTHING_FIT_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "SILK",
+          "label": "Silk",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "COTTON",
+          "label": "Cotton",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SPANDEX",
+          "label": "Spandex",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "BAMBOO",
+          "label": "Bamboo",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MICROFIBER",
+          "label": "Microfiber",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "VISCOSE",
+          "label": "Viscose",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "POLYAMIDE",
+          "label": "Polyamide",
+          "position": 7,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "POLYESTER",
+          "label": "Polyester",
+          "position": 8,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "ef484cd42a7447281010250d4cc3fec907b5ecdc469ba911f6abc9ba36ea8c11",
+      "subject_label_evidence": "ROOT_SUBJECT_REVIEW_2026-11-13: Посадка женского белья спереди на женской конструкции таза.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Фронтальная посадка пояса, вырезов и свободных/облегающих участков на тазе. Дополняет заднюю проекцию.",
+        "limitations": "Крой и материал меняются вместе; нельзя приписывать разницу только ткани. Пол фрагмента не подтверждён; рисовка не переносится.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Посадка восьми вариантов белья спереди",
+        "FABRIC_FIT",
+        "CLOTHING",
+        "Silk",
+        "Cotton",
+        "Spandex",
+        "Bamboo",
+        "Microfiber",
+        "Viscose",
+        "Polyamide",
+        "Polyester"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HT5RgavWQAAswEQ",
+      "title_ru": "Девять вариантов посадки коротких шорт",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2107211315269841182",
+      "source_image_url": "https://pbs.twimg.com/media/HT5RgavWQAAswEQ?format=jpg&name=orig",
+      "local_path": "originals/HT5RgavWQAAswEQ.jpg",
+      "sha256": "b6182b11274bcae05eb21fbe8469d645552d6798ae01e52a975976806f40366a",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 305355,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-10-05",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "b6182b11274bcae05eb21fbe8469d645552d6798ae01e52a975976806f40366a",
+      "subject_label": "FEMALE",
+      "priority": 2,
+      "categories": [
+        "FABRIC_FIT",
+        "CLOTHING"
+      ],
+      "allowed_roles": [
+        "CLOTHING_FIT_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "SPORTY",
+          "label": "Sporty",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "PAPERBAG",
+          "label": "Paperbag",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "LEATHER",
+          "label": "Leather",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "PLAID",
+          "label": "Plaid",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "DENIM",
+          "label": "Denim",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "COTTON",
+          "label": "Cotton",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "HIGH_WAIST",
+          "label": "High-Waist",
+          "position": 7,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "RIPPED",
+          "label": "Ripped",
+          "position": 8,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "COLORED",
+          "label": "Colored",
+          "position": 9,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "b6182b11274bcae05eb21fbe8469d645552d6798ae01e52a975976806f40366a",
+      "subject_label_evidence": "ROOT_SUBJECT_REVIEW_2026-11-13: Шорты на женском тазе: выраженные женские пропорции талии и бёдер.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Высота талии, сборка пояса, натяжение у застёжки и паха, отвороты и прилегание к бёдрам.",
+        "limitations": "Без задней проекции; цвет, фактура и дизайн не задают стиль. Изолированный фрагмент не подтверждает пол.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Девять вариантов посадки коротких шорт",
+        "FABRIC_FIT",
+        "CLOTHING",
+        "Sporty",
+        "Paperbag",
+        "Leather",
+        "Plaid",
+        "Denim",
+        "Cotton",
+        "High-Waist",
+        "Ripped",
+        "Colored"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HSHAPBDbsAA97OP",
+      "title_ru": "Шесть вариантов складок и поведения рукава при сгибе",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2099226611459481770",
+      "source_image_url": "https://pbs.twimg.com/media/HSHAPBDbsAA97OP?format=jpg&name=orig",
+      "local_path": "originals/HSHAPBDbsAA97OP.jpg",
+      "sha256": "535b2cced4567ee9aa0301abe3c5c65c5306ba22a5a3ebddc34942e17074bdb0",
+      "width": 1121,
+      "height": 1403,
+      "bytes": 239850,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-09-13",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "535b2cced4567ee9aa0301abe3c5c65c5306ba22a5a3ebddc34942e17074bdb0",
+      "subject_label": "NEUTRAL",
+      "priority": 2,
+      "categories": [
+        "FABRIC_FIT",
+        "CLOTHING"
+      ],
+      "allowed_roles": [
+        "CLOTHING_FIT_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "THICK",
+          "label": "Thick",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "THIN",
+          "label": "Thin",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SMOOTH",
+          "label": "Smooth",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SOFT",
+          "label": "Soft",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "STIFF",
+          "label": "Stiff",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "STRETCHY",
+          "label": "Stretchy",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "535b2cced4567ee9aa0301abe3c5c65c5306ba22a5a3ebddc34942e17074bdb0",
+      "subject_label_evidence": "ROOT_SUBJECT_REVIEW_2026-11-13: Изолированные согнутые рукава, только складки/толщина ткани; пол владельца не задан.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Одинаково согнутая рука в рукаве показана с разной массой и характером складок около локтя и вдоль сгиба; лист полезен для сравнительного поведения материала/рукава.",
+        "limitations": "Для Thick/Thin не вполне ясно, обозначена ли толщина материала, рукава или руки; материал, крой, масштаб и натяжение не заданы. Вырезанным фрагментам нельзя приписывать пол. Это совет по поведению рукава, не по стилю рендеринга.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Шесть вариантов складок и поведения рукава при сгибе",
+        "FABRIC_FIT",
+        "CLOTHING",
+        "Thick",
+        "Thin",
+        "Smooth",
+        "Soft",
+        "Stiff",
+        "Stretchy"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HSx49nLXUAA-zFL",
+      "title_ru": "Четыре женские позы: колени, сидение, разворот и наклон",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2102188164353782074",
+      "source_image_url": "https://pbs.twimg.com/media/HSx49nLXUAA-zFL?format=jpg&name=orig",
+      "local_path": "originals/HSx49nLXUAA-zFL.jpg",
+      "sha256": "21493baed8ec1fb806934d12d8d8ce60e8ff790b7c8017f416eb65b259b3bd5d",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 141186,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "21493baed8ec1fb806934d12d8d8ce60e8ff790b7c8017f416eb65b259b3bd5d",
+      "subject_label": "FEMALE",
+      "published_on": "2026-09-22",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "priority": 3,
+      "categories": [
+        "POSE_ACTION"
+      ],
+      "allowed_roles": [
+        "POSE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "FRONT_KNEEL",
+          "label": "Front Kneel",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "OVER_THE_SHOULDER",
+          "label": "Over the Shoulder",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SIDE_SIT",
+          "label": "Side Sit",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "COY_LEAN",
+          "label": "Coy Lean",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "21493baed8ec1fb806934d12d8d8ce60e8ff790b7c8017f416eb65b259b3bd5d",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Схематические женские фигуры с грудью, тазом, суставными маркерами и линией позвоночника; четыре разных постановки.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Схематические женские фигуры с грудью, тазом, суставными маркерами и линией позвоночника; четыре разных постановки.",
+        "limitations": "Front Kneel требует отдельной проверки согласованности голеней и коленей; круги суставов сами по себе не подтверждают анатомию. Не переносить пропорции.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Четыре женские позы: колени, сидение, разворот и наклон",
+        "POSE_ACTION",
+        "Front Kneel",
+        "Over the Shoulder",
+        "Side Sit",
+        "Coy Lean"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HStGNRuWMAAbQIR",
+      "title_ru": "Шесть стоячих женских поз",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2101850850247197062",
+      "source_image_url": "https://pbs.twimg.com/media/HStGNRuWMAAbQIR?format=jpg&name=orig",
+      "local_path": "originals/HStGNRuWMAAbQIR.jpg",
+      "sha256": "0923eaface3060d83300b70cdf7bc96349cc4dfd64a13636b41526a0168cdc39",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 114278,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "0923eaface3060d83300b70cdf7bc96349cc4dfd64a13636b41526a0168cdc39",
+      "subject_label": "FEMALE",
+      "published_on": "2026-09-21",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "user_supplied_link": true,
+      "priority": 3,
+      "categories": [
+        "POSE_ACTION"
+      ],
+      "allowed_roles": [
+        "POSE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "HIP_SHIFT",
+          "label": "Hip Shift",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "OVERHEAD_STRETCH",
+          "label": "Overhead Stretch",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "STEP_FORWARD",
+          "label": "Step Forward",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "HANDS_BEHIND",
+          "label": "Hands Behind",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SIDE_LEAN",
+          "label": "Side Lean",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "OVER_THE_SHOULDER",
+          "label": "Over the Shoulder",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "0923eaface3060d83300b70cdf7bc96349cc4dfd64a13636b41526a0168cdc39",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Шесть женских манекенов: перенос веса, потягивание, шаг, руки за спиной, боковой наклон и разворот спиной.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Шесть женских манекенов: перенос веса, потягивание, шаг, руки за спиной, боковой наклон и разворот спиной.",
+        "limitations": "Не комплект ракурсов одной позы. Пальцы и опоры схематичны; проверять всю кинематическую цепь в целевом кадре.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Шесть стоячих женских поз",
+        "POSE_ACTION",
+        "Hip Shift",
+        "Overhead Stretch",
+        "Step Forward",
+        "Hands Behind",
+        "Side Lean",
+        "Over the Shoulder"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HStlgx2WoAAz1X_",
+      "title_ru": "Девять мужских героических поз",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2101930426285662321",
+      "source_image_url": "https://pbs.twimg.com/media/HStlgx2WoAAz1X_?format=jpg&name=orig",
+      "local_path": "originals/HStlgx2WoAAz1X_.jpg",
+      "sha256": "473cdb9f48d4823172292811dabbe6e48af11226d8c8e737da1a951c21772425",
+      "width": 1103,
+      "height": 1426,
+      "bytes": 223093,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "review_binding_sha256": "473cdb9f48d4823172292811dabbe6e48af11226d8c8e737da1a951c21772425",
+      "subject_label": "MALE",
+      "published_on": "2026-09-21",
+      "date_evidence": "Requested X profile/post DOM, observed 2026-11-13",
+      "priority": 3,
+      "categories": [
+        "POSE_ACTION"
+      ],
+      "allowed_roles": [
+        "POSE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "HOVER",
+          "label": "Hover",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "LANDING",
+          "label": "Landing",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "UPWARD_FLIGHT",
+          "label": "Upward Flight",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "LEAP",
+          "label": "Leap",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "REAR_STAND",
+          "label": "Rear Stand",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "ARMS_CROSSED",
+          "label": "Arms Crossed",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "DIAGONAL_FLIGHT",
+          "label": "Diagonal Flight",
+          "position": 7,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "FORWARD_STANCE",
+          "label": "Forward Stance",
+          "position": 8,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "FORWARD_DIVE",
+          "label": "Forward Dive",
+          "position": 9,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "473cdb9f48d4823172292811dabbe6e48af11226d8c8e737da1a951c21772425",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Мужская мускулистая фигура: полёт, приземление, прыжок, стойки спереди и со спины; имена назначены по видимой композиции.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Мужская мускулистая фигура: полёт, приземление, прыжок, стойки спереди и со спины; имена назначены по видимой композиции.",
+        "limitations": "Плащ, мускулатура, костюм и сине-красная палитра не переносятся. Воздушные позы нельзя выдавать за устойчивые наземные опоры.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Девять мужских героических поз",
+        "POSE_ACTION",
+        "Hover",
+        "Landing",
+        "Upward Flight",
+        "Leap",
+        "Rear Stand",
+        "Arms Crossed",
+        "Diagonal Flight",
+        "Forward Stance",
+        "Forward Dive"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HUg7sveWcAEYWQj",
+      "title_ru": "Шесть женских поз: присед, сидение и растяжка",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2110002077564801088",
+      "source_image_url": "https://pbs.twimg.com/media/HUg7sveWcAEYWQj?format=jpg&name=orig",
+      "local_path": "originals/HUg7sveWcAEYWQj.jpg",
+      "sha256": "988a33aeb0f06cade5b41dca5780ec17373a00dbbbd9bfbd49d9dedcde611ee3",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 169140,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-10-13",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "988a33aeb0f06cade5b41dca5780ec17373a00dbbbd9bfbd49d9dedcde611ee3",
+      "subject_label": "FEMALE",
+      "priority": 3,
+      "categories": [
+        "POSE_ACTION"
+      ],
+      "allowed_roles": [
+        "POSE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "BALANCED_SQUAT",
+          "label": "Balanced Squat",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "RAISED_KNEE_SIT",
+          "label": "Raised Knee Sit",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "PRONE_REST",
+          "label": "Prone Rest",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "FORWARD_LEAN",
+          "label": "Forward Lean",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "OVERHEAD_CURVE",
+          "label": "Overhead Curve",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SIDE_KNEEL",
+          "label": "Side Kneel",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "988a33aeb0f06cade5b41dca5780ec17373a00dbbbd9bfbd49d9dedcde611ee3",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Женские манекены с суставными отметками; присед с опорой рукой, сидение с поднятым коленом, лёжа на животе, наклон и растяжка.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Женские манекены с суставными отметками; присед с опорой рукой, сидение с поднятым коленом, лёжа на животе, наклон и растяжка.",
+        "limitations": "Не комплект ракурсов одной позы; опоры, голени и кисти требуют проверки в целевом кадре.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Шесть женских поз: присед, сидение и растяжка",
+        "POSE_ACTION",
+        "Balanced Squat",
+        "Raised Knee Sit",
+        "Prone Rest",
+        "Forward Lean",
+        "Overhead Curve",
+        "Side Kneel"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HTTmt_9WYAAZUTv",
+      "title_ru": "Двенадцать женских героических поз",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2104560612407685252",
+      "source_image_url": "https://pbs.twimg.com/media/HTTmt_9WYAAZUTv?format=png&name=orig",
+      "local_path": "originals/HTTmt_9WYAAZUTv.png",
+      "sha256": "6fd3cf4c2dbb095ab4a49ae3def52cba5c6def71561c2c1ad0586a3096c5c45d",
+      "width": 572,
+      "height": 863,
+      "bytes": 580227,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-09-28",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "6fd3cf4c2dbb095ab4a49ae3def52cba5c6def71561c2c1ad0586a3096c5c45d",
+      "subject_label": "FEMALE",
+      "priority": 3,
+      "categories": [
+        "POSE_ACTION"
+      ],
+      "allowed_roles": [
+        "POSE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "HERO_LANDING",
+          "label": "Hero Landing",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "KAMEHAMEHA",
+          "label": "Kamehameha",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SHIELD_GUARD",
+          "label": "Shield Guard",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SUPER_FLIGHT",
+          "label": "Super Flight",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "READY_STANCE",
+          "label": "Ready Stance",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "WEB_CROUCH",
+          "label": "Web Crouch",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "UPPERCUT",
+          "label": "Uppercut",
+          "position": 7,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "RESCUE_REACH",
+          "label": "Rescue Reach",
+          "position": 8,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "POWER_UP",
+          "label": "Power Up",
+          "position": 9,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "VICTORY_FIST",
+          "label": "Victory Fist",
+          "position": 10,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "AIR_KICK",
+          "label": "Air Kick",
+          "position": 11,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "HERO_TURN",
+          "label": "Hero Turn",
+          "position": 12,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "6fd3cf4c2dbb095ab4a49ae3def52cba5c6def71561c2c1ad0586a3096c5c45d",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Женские манекены: приземление, защита, полёт, удар и протянутая к камере рука.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Женские манекены: приземление, защита, полёт, удар и протянутая к камере рука.",
+        "limitations": "Невысокое исходное разрешение; кисти и суставы условны. Щит не становится обязательным предметом.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Двенадцать женских героических поз",
+        "POSE_ACTION",
+        "Hero Landing",
+        "Kamehameha",
+        "Shield Guard",
+        "Super Flight",
+        "Ready Stance",
+        "Web Crouch",
+        "Uppercut",
+        "Rescue Reach",
+        "Power Up",
+        "Victory Fist",
+        "Air Kick",
+        "Hero Turn"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HTOlxkoWwAAMk59",
+      "title_ru": "Двенадцать женских драматических поз",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2104207727098528143",
+      "source_image_url": "https://pbs.twimg.com/media/HTOlxkoWwAAMk59?format=jpg&name=orig",
+      "local_path": "originals/HTOlxkoWwAAMk59.jpg",
+      "sha256": "dd11daa09a57c00b796a8e5218cb1d2b61bdb06cb28ca087ba961ac6fc028497",
+      "width": 853,
+      "height": 1280,
+      "bytes": 137872,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-09-27",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "dd11daa09a57c00b796a8e5218cb1d2b61bdb06cb28ca087ba961ac6fc028497",
+      "subject_label": "FEMALE",
+      "priority": 3,
+      "categories": [
+        "POSE_ACTION"
+      ],
+      "allowed_roles": [
+        "POSE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "MASTERMIND",
+          "label": "Mastermind",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SINISTER_LAUGH",
+          "label": "Sinister Laugh",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "COMMAND",
+          "label": "Command",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "POWER_STANCE",
+          "label": "Power Stance",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SCHEMING_LEAN",
+          "label": "Scheming Lean",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "THREATENING_POINT",
+          "label": "Threatening Point",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SHADOW_CROUCH",
+          "label": "Shadow Crouch",
+          "position": 7,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "COLD_APPLAUSE",
+          "label": "Cold Applause",
+          "position": 8,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "VICTORY_CLAIM",
+          "label": "Victory Claim",
+          "position": 9,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "BACK_TURN",
+          "label": "Back Turn",
+          "position": 10,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "MOCKING_BOW",
+          "label": "Mocking Bow",
+          "position": 11,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "FINAL_SCHEME",
+          "label": "Final Scheme",
+          "position": 12,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "dd11daa09a57c00b796a8e5218cb1d2b61bdb06cb28ca087ba961ac6fc028497",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Женские манекены с жестами командования, угрозы, поклона, хлопков, приседа и поворота спиной.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Женские манекены с жестами командования, угрозы, поклона, хлопков, приседа и поворота спиной.",
+        "limitations": "Силуэты разных поз; не переносить выражение личности или постоянные пропорции. Проверять баланс и руки.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Двенадцать женских драматических поз",
+        "POSE_ACTION",
+        "Mastermind",
+        "Sinister Laugh",
+        "Command",
+        "Power Stance",
+        "Scheming Lean",
+        "Threatening Point",
+        "Shadow Crouch",
+        "Cold Applause",
+        "Victory Claim",
+        "Back Turn",
+        "Mocking Bow",
+        "Final Scheme"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HS2RQ-KWkAAUFcS",
+      "title_ru": "Четыре женские позы с разворотом и опорой",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2102496436407456107",
+      "source_image_url": "https://pbs.twimg.com/media/HS2RQ-KWkAAUFcS?format=jpg&name=orig",
+      "local_path": "originals/HS2RQ-KWkAAUFcS.jpg",
+      "sha256": "80e9db72fe5aef70c6f0007c58d36199bd4a368de4a31c44e0b0244d833d5aea",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 155154,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-09-22",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "80e9db72fe5aef70c6f0007c58d36199bd4a368de4a31c44e0b0244d833d5aea",
+      "subject_label": "FEMALE",
+      "priority": 3,
+      "categories": [
+        "POSE_ACTION"
+      ],
+      "allowed_roles": [
+        "POSE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "SEATED_TURN",
+          "label": "Seated Turn",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "HIP_SHIFT",
+          "label": "Hip Shift",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "SUPPORTED_SIT",
+          "label": "Supported Sit",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "STANDING_TWIST",
+          "label": "Standing Twist",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "80e9db72fe5aef70c6f0007c58d36199bd4a368de4a31c44e0b0244d833d5aea",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Два варианта сидения и два стояния, поворот грудной клетки и таза, контакт рук с полом или бедром.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Два варианта сидения и два стояния, поворот грудной клетки и таза, контакт рук с полом или бедром.",
+        "limitations": "Похожие названия в других листах не делают геометрию одинаковой; проверять взаимосвязь конечностей и опор.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Четыре женские позы с разворотом и опорой",
+        "POSE_ACTION",
+        "Seated Turn",
+        "Hip Shift",
+        "Supported Sit",
+        "Standing Twist"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HS1Lx_nWYAAvR8s",
+      "title_ru": "Четыре женские позы: колени, растяжка, спина и полулёжа",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2102419933196136548",
+      "source_image_url": "https://pbs.twimg.com/media/HS1Lx_nWYAAvR8s?format=jpg&name=orig",
+      "local_path": "originals/HS1Lx_nWYAAvR8s.jpg",
+      "sha256": "3976e113da426a54bf7ce2036f32bc584f26db4ebeb284ac4acc9669f5f055bd",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 141104,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-09-22",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "3976e113da426a54bf7ce2036f32bc584f26db4ebeb284ac4acc9669f5f055bd",
+      "subject_label": "FEMALE",
+      "priority": 3,
+      "categories": [
+        "POSE_ACTION"
+      ],
+      "allowed_roles": [
+        "POSE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "SOFT_KNEEL",
+          "label": "Soft Kneel",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "FLOOR_STRETCH",
+          "label": "Floor Stretch",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "BACK_GLANCE",
+          "label": "Back Glance",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "RECLINED_TURN",
+          "label": "Reclined Turn",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "3976e113da426a54bf7ce2036f32bc584f26db4ebeb284ac4acc9669f5f055bd",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Колени с руками у груди, боковая растяжка на полу, вид со спины и сидение с вытянутой ногой.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Колени с руками у груди, боковая растяжка на полу, вид со спины и сидение с вытянутой ногой.",
+        "limitations": "В растяжке сильное перспективное сокращение и перекрытие ног; не использовать суставные кружки как доказательство корректности анатомии.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Четыре женские позы: колени, растяжка, спина и полулёжа",
+        "POSE_ACTION",
+        "Soft Kneel",
+        "Floor Stretch",
+        "Back Glance",
+        "Reclined Turn"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HSnlz3aWQAArOHH",
+      "title_ru": "Шесть стоячих поз: скрещённые ноги, баланс и жест рукой",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2101463409560531321",
+      "source_image_url": "https://pbs.twimg.com/media/HSnlz3aWQAArOHH?format=jpg&name=orig",
+      "local_path": "originals/HSnlz3aWQAArOHH.jpg",
+      "sha256": "cfd3888845e32c8cd2d2f6a908401bd7497433fd2b0fa06964dcb236d0314d0a",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 131821,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-09-20",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "cfd3888845e32c8cd2d2f6a908401bd7497433fd2b0fa06964dcb236d0314d0a",
+      "subject_label": "FEMALE",
+      "priority": 3,
+      "categories": [
+        "POSE_ACTION"
+      ],
+      "allowed_roles": [
+        "POSE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "CROSSOVER",
+          "label": "Crossover",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "BENT_LEG",
+          "label": "Bent Leg",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "CASUAL_FLAMINGO",
+          "label": "Casual Flamingo",
+          "position": 3,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "BLOCKED",
+          "label": "Blocked",
+          "position": 4,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "CASUAL",
+          "label": "Casual",
+          "position": 5,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "CASUAL_LEG",
+          "label": "Casual Leg",
+          "position": 6,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "cfd3888845e32c8cd2d2f6a908401bd7497433fd2b0fa06964dcb236d0314d0a",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Один лист с шестью фронтальными фигурами и различными переносами веса: перекрёстная постановка ног, согнутое колено, опора на одну ногу, рука поднята или отведена. Суставные маркеры и линии корпуса помогают видеть взаимное положение частей тела.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Один лист с шестью фронтальными фигурами и различными переносами веса: перекрёстная постановка ног, согнутое колено, опора на одну ногу, рука поднята или отведена. Суставные маркеры и линии корпуса помогают видеть взаимное положение частей тела.",
+        "limitations": "Фигуры стилизованные и близки по типу сложения; различия в основном позовые. Метки суставов не заменяют проверки анатомии, равновесия и всего тела в целевом ракурсе. Не источник стиля или идентичности.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Шесть стоячих поз: скрещённые ноги, баланс и жест рукой",
+        "POSE_ACTION",
+        "Crossover",
+        "Bent Leg",
+        "Casual Flamingo",
+        "Blocked",
+        "Casual",
+        "Casual Leg"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HRaFAxoawAAIMMT",
+      "title_ru": "Фигура с предметом в сильном перспективном сокращении",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2096008934960013504",
+      "source_image_url": "https://pbs.twimg.com/media/HRaFAxoawAAIMMT?format=jpg&name=orig",
+      "local_path": "originals/HRaFAxoawAAIMMT.jpg",
+      "sha256": "34cfca60689f0ad4fd77a3fc19acb85f1a29171e50c4ed680b8c24e1102a1aa8",
+      "width": 915,
+      "height": 1719,
+      "bytes": 127979,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-09-04",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "34cfca60689f0ad4fd77a3fc19acb85f1a29171e50c4ed680b8c24e1102a1aa8",
+      "subject_label": "NEUTRAL",
+      "priority": 3,
+      "categories": [
+        "POSE_ACTION"
+      ],
+      "allowed_roles": [
+        "POSE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "WHOLE_FIGURE",
+          "label": "Whole figure",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "34cfca60689f0ad4fd77a3fc19acb85f1a29171e50c4ed680b8c24e1102a1aa8",
+      "subject_label_evidence": "ROOT_SUBJECT_REVIEW_2026-11-13: Бесполый геометрический манекен в перспективе с предметом. Не является подтверждённой мужской или женской позой.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Одна манекенная фигура с оружием в сильном перспективном сокращении вдоль вынесенной к камере руки. Крупный передний план кисти и предмета, торс и ноги удаляются в глубину.",
+        "limitations": "Нейтральный манекен без подтверждённого пола; оружие частично закрывает кисть. Не переносить предмет и перспективные искажения как постоянные пропорции тела.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Фигура с предметом в сильном перспективном сокращении",
+        "POSE_ACTION",
+        "Whole figure"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HRVEzLkbgAArl2H",
+      "title_ru": "Две позы с направленным оружием",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2095657480072179935",
+      "source_image_url": "https://pbs.twimg.com/media/HRVEzLkbgAArl2H?format=jpg&name=orig",
+      "local_path": "originals/HRVEzLkbgAArl2H.jpg",
+      "sha256": "7c3869f9455c336ed52c4281f94c932714614df3a271641976394373b5efba41",
+      "width": 1541,
+      "height": 1020,
+      "bytes": 134756,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-09-03",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "7c3869f9455c336ed52c4281f94c932714614df3a271641976394373b5efba41",
+      "subject_label": "MALE",
+      "priority": 3,
+      "categories": [
+        "POSE_ACTION",
+        "HANDS_FINGERS"
+      ],
+      "allowed_roles": [
+        "POSE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "VARIANT_01",
+          "label": "Пистолет направлен к зрителю",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        },
+        {
+          "id": "VARIANT_02",
+          "label": "Пистолет поднят возле головы",
+          "position": 2,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "7c3869f9455c336ed52c4281f94c932714614df3a271641976394373b5efba41",
+      "subject_label_evidence": "ROOT_SUBJECT_REVIEW_2026-11-13: Два мужских торса с плоскими грудными мышцами, широкими плечами и руками; хват и направление предмета.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Две схематичные фигуры по грудь с пистолетом: кисть с оружием направлена к зрителю и оружие поднято возле головы. Контуры плеча, предплечья и пальцев показаны отдельно.",
+        "limitations": "Пистолет частично закрывает кисть и при ракурсе к зрителю сильно сокращён перспективой; нижняя часть тела не показана. Предмет и сцену не переносить автоматически; поза требует отдельной проверки всей цепи руки и плечевого пояса. Пол не подтверждён; предыдущая женская маркировка снята при проверке root.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Две позы с направленным оружием",
+        "POSE_ACTION",
+        "HANDS_FINGERS",
+        "Пистолет направлен к зрителю",
+        "Пистолет поднят возле головы"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    },
+    {
+      "id": "SODA_HQXj6KeXwAAfhpy",
+      "title_ru": "Женская фигура в развороте три четверти со спины",
+      "source_profile": "https://x.com/sodababyx",
+      "post_url": "https://x.com/sodababyx/status/2091328196444672213",
+      "source_image_url": "https://pbs.twimg.com/media/HQXj6KeXwAAfhpy?format=jpg&name=orig",
+      "local_path": "originals/HQXj6KeXwAAfhpy.jpg",
+      "sha256": "02041a4c5656725d2e7ec39ce38309ae66f9c0b9e8bd4d640ebfa5020be927ce",
+      "width": 1206,
+      "height": 1574,
+      "bytes": 82587,
+      "review_status": "REVIEWED_WITH_LIMITATIONS",
+      "rights_status": "UNVERIFIED_LOCAL_REFERENCE_ONLY",
+      "published_on": "2026-08-23",
+      "date_evidence": "UTC publication date derived from the observed X post ID (Snowflake timestamp)",
+      "intake": "USER_SUPPLIED_LINK_2026-11-13",
+      "user_supplied_link": true,
+      "review_binding_sha256": "02041a4c5656725d2e7ec39ce38309ae66f9c0b9e8bd4d640ebfa5020be927ce",
+      "subject_label": "FEMALE",
+      "priority": 3,
+      "categories": [
+        "POSE_ACTION",
+        "BODY_PART_SHAPE"
+      ],
+      "allowed_roles": [
+        "POSE_REFERENCE"
+      ],
+      "variants": [
+        {
+          "id": "WHOLE_FIGURE",
+          "label": "Whole figure",
+          "position": 1,
+          "location_rule": "Слева направо, сверху вниз; исходник целиком, без вырезки."
+        }
+      ],
+      "subject_label_status": "CONFIRMED",
+      "subject_label_sha256": "02041a4c5656725d2e7ec39ce38309ae66f9c0b9e8bd4d640ebfa5020be927ce",
+      "subject_label_evidence": "FULL_RESOLUTION_INTAKE_REVIEW_2026-11-13: Одна почти полнофигурная женская манекенная фигура показана со спины в развороте три четверти: различимы плечевой пояс, линия спины, таз, ягодицы и ноги; голова повёрнута в сторону.",
+      "review": {
+        "view": "FULL_RESOLUTION",
+        "observations": "Одна почти полнофигурная женская манекенная фигура показана со спины в развороте три четверти: различимы плечевой пояс, линия спины, таз, ягодицы и ноги; голова повёрнута в сторону.",
+        "limitations": "Одна постановка, не шаблон вариаций телосложения. Ракурс и контрапост меняют видимый объём таза и ног; рука/кисть у бедра частично сливаются с контуром. Использовать как позу и проекцию, не как профиль пропорций или идентичности.",
+        "scope": "Intake classification and applicability; not character, style, or per-call approval."
+      },
+      "tags": [
+        "Женская фигура в развороте три четверти со спины",
+        "POSE_ACTION",
+        "BODY_PART_SHAPE",
+        "Whole figure"
+      ],
+      "style_influence": "FORBIDDEN",
+      "generation_eligible": false,
+      "source_character_id": "UNKNOWN",
+      "forbidden_roles": [
+        "STYLE",
+        "FACE",
+        "IDENTITY",
+        "BODY_BUILD_TARGET",
+        "PERMANENT_PROPORTIONS"
+      ]
+    }
+  ]
+}

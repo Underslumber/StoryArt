@@ -1,0 +1,5612 @@
+{
+  "schema_version": 1,
+  "purpose": "DISCOVERY_ONLY",
+  "manifest_sha256": "f783f833b99a3e18de26c39834e32940dbb462e80e2f17158c2f7880a0db102a",
+  "source_manifest": "SINGLES_MANIFEST.json",
+  "records": [
+    {
+      "topic": "abdomen",
+      "topic_ru": "Живот и пресс",
+      "priority": 1,
+      "subject_label": "MALE",
+      "page": 1,
+      "path": "collages/abdomen__MALE__p01.jpg",
+      "sha256": "bbc51c9a45d6807df8439ef9d17f82a6a21333c2997b0379ad7c96fb567a1417",
+      "width": 1600,
+      "height": 1090,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HVw4xO5XYAAurBA__01_LEAN",
+          "name_ru": "Подтянутое телосложение",
+          "label": "Lean",
+          "variant_id": "LEAN",
+          "single_path": "singles/01_body-shape/abdomen/SODA_HVw4xO5XYAAurBA__01_LEAN.png",
+          "sha256": "2f0cf8338bf14323a791a234ceb6fb516087cd3d7941a9d066b40b7fb8a889da",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Живот и пресс",
+            "форма части тела",
+            "живот",
+            "пресс",
+            "Подтянутое телосложение",
+            "Lean"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HVw4xO5XYAAurBA__02_CHUBBY",
+          "name_ru": "Пухлое телосложение",
+          "label": "Chubby",
+          "variant_id": "CHUBBY",
+          "single_path": "singles/01_body-shape/abdomen/SODA_HVw4xO5XYAAurBA__02_CHUBBY.png",
+          "sha256": "286f26daf23ae916b426600ff8fd281f58ccf9961ab776398d3c7f574bcfe17c",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Живот и пресс",
+            "форма части тела",
+            "живот",
+            "пресс",
+            "Пухлое телосложение",
+            "Chubby"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HVw4xO5XYAAurBA__03_MUSCULAR",
+          "name_ru": "Мускулистое телосложение",
+          "label": "Muscular",
+          "variant_id": "MUSCULAR",
+          "single_path": "singles/01_body-shape/abdomen/SODA_HVw4xO5XYAAurBA__03_MUSCULAR.png",
+          "sha256": "d573c399be9968e5faa2b75f7d2f3f51344684f3a6ba63369aa2898dcc9e20b8",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Живот и пресс",
+            "форма части тела",
+            "живот",
+            "пресс",
+            "Мускулистое телосложение",
+            "Muscular"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HVw4xO5XYAAurBA__04_SLIM",
+          "name_ru": "Стройное телосложение",
+          "label": "Slim",
+          "variant_id": "SLIM",
+          "single_path": "singles/01_body-shape/abdomen/SODA_HVw4xO5XYAAurBA__04_SLIM.png",
+          "sha256": "bb38676db5132376d37308857662f9ffff7c6945bc475e5e8ac05cd11e033760",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Живот и пресс",
+            "форма части тела",
+            "живот",
+            "пресс",
+            "Стройное телосложение",
+            "Slim"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HVw4xO5XYAAurBA__05_ATHLETIC",
+          "name_ru": "Атлетичное телосложение",
+          "label": "Athletic",
+          "variant_id": "ATHLETIC",
+          "single_path": "singles/01_body-shape/abdomen/SODA_HVw4xO5XYAAurBA__05_ATHLETIC.png",
+          "sha256": "da26b4d2d1ee7d884cbf6a9ee87908201dfb4420e380b88ea86fc07fa768aa36",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Живот и пресс",
+            "форма части тела",
+            "живот",
+            "пресс",
+            "Атлетичное телосложение",
+            "Athletic"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HVw4xO5XYAAurBA__06_FULL",
+          "name_ru": "Полное телосложение",
+          "label": "Full",
+          "variant_id": "FULL",
+          "single_path": "singles/01_body-shape/abdomen/SODA_HVw4xO5XYAAurBA__06_FULL.png",
+          "sha256": "d6569b8481ea3e1c7f12e16423f92c746f2a955095ce2cf8ef4d5de4ce749daa",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Живот и пресс",
+            "форма части тела",
+            "живот",
+            "пресс",
+            "Полное телосложение",
+            "Full"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HVw4xO5XYAAurBA__07_DEFINED",
+          "name_ru": "Рельефная форма",
+          "label": "Defined",
+          "variant_id": "DEFINED",
+          "single_path": "singles/01_body-shape/abdomen/SODA_HVw4xO5XYAAurBA__07_DEFINED.png",
+          "sha256": "993c00e0992b01e3e0d200c21e28190b9aaecda4651561c5216137cbf6047899",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Живот и пресс",
+            "форма части тела",
+            "живот",
+            "пресс",
+            "Рельефная форма",
+            "Defined"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HVw4xO5XYAAurBA__08_HEAVY_MUSCLE",
+          "name_ru": "Выраженная мускулатура",
+          "label": "Heavy Muscle",
+          "variant_id": "HEAVY_MUSCLE",
+          "single_path": "singles/01_body-shape/abdomen/SODA_HVw4xO5XYAAurBA__08_HEAVY_MUSCLE.png",
+          "sha256": "0abd3ff392071a32b661ba7dad6c1f645118a8b7b334f426ee3f8e64274d90be",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Живот и пресс",
+            "форма части тела",
+            "живот",
+            "пресс",
+            "Выраженная мускулатура",
+            "Heavy Muscle"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "abdomen",
+      "topic_ru": "Живот и пресс",
+      "priority": 1,
+      "subject_label": "NEUTRAL",
+      "page": 1,
+      "path": "collages/abdomen__NEUTRAL__p01.jpg",
+      "sha256": "05530aa5d89511a428ff203d3b0d31f035123d5cb546e279ed05c583a154bbb8",
+      "width": 1600,
+      "height": 1090,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HVcdkVuWkAAneff__01_SLIM",
+          "name_ru": "Стройное телосложение",
+          "label": "Slim",
+          "variant_id": "SLIM",
+          "single_path": "singles/01_body-shape/abdomen/SODA_HVcdkVuWkAAneff__01_SLIM.png",
+          "sha256": "773b30fa4dec8dc119cffc62c823a002393129da5acf0d17cfbdf5834b1cc1f7",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Живот и пресс",
+            "форма части тела",
+            "живот",
+            "Стройное телосложение",
+            "Slim"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HVcdkVuWkAAneff__02_TONED",
+          "name_ru": "Подтянутое телосложение",
+          "label": "Toned",
+          "variant_id": "TONED",
+          "single_path": "singles/01_body-shape/abdomen/SODA_HVcdkVuWkAAneff__02_TONED.png",
+          "sha256": "6a2bd3f515e3e6d7b555345e2b06e17b0c1beb814a5066ae5b4fd84762ebe73d",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Живот и пресс",
+            "форма части тела",
+            "живот",
+            "Подтянутое телосложение",
+            "Toned"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HVcdkVuWkAAneff__03_SOFT",
+          "name_ru": "Мягкая форма",
+          "label": "Soft",
+          "variant_id": "SOFT",
+          "single_path": "singles/01_body-shape/abdomen/SODA_HVcdkVuWkAAneff__03_SOFT.png",
+          "sha256": "0e42dc55f567f47ef4ffc1f5c93240a907527caf4adcbbbda4bf8432332c18f7",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Живот и пресс",
+            "форма части тела",
+            "живот",
+            "Мягкая форма",
+            "Soft"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HVcdkVuWkAAneff__04_ROUND",
+          "name_ru": "Округлая форма",
+          "label": "Round",
+          "variant_id": "ROUND",
+          "single_path": "singles/01_body-shape/abdomen/SODA_HVcdkVuWkAAneff__04_ROUND.png",
+          "sha256": "81bd0db04af4f13ff05c183675bb9f7f17e4cafbf96ac1a904d414b06b7ded71",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Живот и пресс",
+            "форма части тела",
+            "живот",
+            "Округлая форма",
+            "Round"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HVcdkVuWkAAneff__05_CHUBBY",
+          "name_ru": "Пухлое телосложение",
+          "label": "Chubby",
+          "variant_id": "CHUBBY",
+          "single_path": "singles/01_body-shape/abdomen/SODA_HVcdkVuWkAAneff__05_CHUBBY.png",
+          "sha256": "66827bf1c6043c4abba01f330845ca0e768ffa3f5e1c7a7d87f35fda5a6eaffb",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Живот и пресс",
+            "форма части тела",
+            "живот",
+            "Пухлое телосложение",
+            "Chubby"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HVcdkVuWkAAneff__06_FULL",
+          "name_ru": "Полное телосложение",
+          "label": "Full",
+          "variant_id": "FULL",
+          "single_path": "singles/01_body-shape/abdomen/SODA_HVcdkVuWkAAneff__06_FULL.png",
+          "sha256": "dc2ab56d8ea9f0145497076a3c241cd1fc095a538807385b5b912dcf0fac3519",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Живот и пресс",
+            "форма части тела",
+            "живот",
+            "Полное телосложение",
+            "Full"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "anatomy",
+      "topic_ru": "Фигура целиком",
+      "priority": 1,
+      "subject_label": "MALE",
+      "page": 1,
+      "path": "collages/anatomy__MALE__p01.jpg",
+      "sha256": "b25db6f3baa834b7a32dfd2d0d10c846f2a1781b9f20168024b1556ffd9d3c52",
+      "width": 400,
+      "height": 620,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HQtL1igWkAAu0Qp__01_WHOLE_FIGURE",
+          "name_ru": "Фигура целиком",
+          "label": "Whole figure",
+          "variant_id": "WHOLE_FIGURE",
+          "single_path": "singles/01_body-shape/anatomy/SODA_HQtL1igWkAAu0Qp__01_WHOLE_FIGURE.png",
+          "sha256": "4382ef3d25ba9600a54d061fe0d2c45fa699ad466f67a21e2ba77d40eb7db7d1",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Фигура целиком",
+            "телосложение",
+            "форма части тела",
+            "поза",
+            "фигура целиком",
+            "Whole figure"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "arms",
+      "topic_ru": "Руки",
+      "priority": 1,
+      "subject_label": "NEUTRAL",
+      "page": 1,
+      "path": "collages/arms__NEUTRAL__p01.jpg",
+      "sha256": "5860635653b9ea3d1154f01f8705a05c2822dd7613a3ea6cd662c6df935bf77a",
+      "width": 1600,
+      "height": 1090,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HSSQKXvXwAAUknl__01_1",
+          "name_ru": "1",
+          "label": "1",
+          "variant_id": "1",
+          "single_path": "singles/01_body-shape/arms/SODA_HSSQKXvXwAAUknl__01_1.png",
+          "sha256": "fb0e9d6c0bd95f1170c8bfee1158ef750001b253cca35319910b0acff273a517",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Руки",
+            "форма части тела",
+            "анатомическая форма",
+            "рука",
+            "плечевой пояс",
+            "1"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HSSQKXvXwAAUknl__02_2",
+          "name_ru": "2",
+          "label": "2",
+          "variant_id": "2",
+          "single_path": "singles/01_body-shape/arms/SODA_HSSQKXvXwAAUknl__02_2.png",
+          "sha256": "c134bbe282f3bb927f0d79d89fb6f32789f63d88d2ddcd869b3e9a5780985127",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Руки",
+            "форма части тела",
+            "анатомическая форма",
+            "рука",
+            "плечевой пояс",
+            "2"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HSSQKXvXwAAUknl__03_3",
+          "name_ru": "3",
+          "label": "3",
+          "variant_id": "3",
+          "single_path": "singles/01_body-shape/arms/SODA_HSSQKXvXwAAUknl__03_3.png",
+          "sha256": "9b53744f99cd6139bd18156aae9b056e0ce657b0ddfcf21600cf955f2e026318",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Руки",
+            "форма части тела",
+            "анатомическая форма",
+            "рука",
+            "плечевой пояс",
+            "3"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HSSQKXvXwAAUknl__04_4",
+          "name_ru": "4",
+          "label": "4",
+          "variant_id": "4",
+          "single_path": "singles/01_body-shape/arms/SODA_HSSQKXvXwAAUknl__04_4.png",
+          "sha256": "98c35375c696cfbce73abc36ff7209fabb90005c5f14cc1cf0022d36c52d6c7a",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Руки",
+            "форма части тела",
+            "анатомическая форма",
+            "рука",
+            "плечевой пояс",
+            "4"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HSSQKXvXwAAUknl__05_5",
+          "name_ru": "5",
+          "label": "5",
+          "variant_id": "5",
+          "single_path": "singles/01_body-shape/arms/SODA_HSSQKXvXwAAUknl__05_5.png",
+          "sha256": "2b6add77f540c1877ad77b62fae1d1039320743dafff56a02e29590889ed830f",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Руки",
+            "форма части тела",
+            "анатомическая форма",
+            "рука",
+            "плечевой пояс",
+            "5"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "body-build",
+      "topic_ru": "Телосложение",
+      "priority": 1,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/body-build__FEMALE__p01.jpg",
+      "sha256": "1cf220d0830162ef6339524aab394862ac71c503b349aad8645511ab975e58f5",
+      "width": 1600,
+      "height": 1090,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HVXXHTIWMAACmZg__01_PETITE",
+          "name_ru": "Миниатюрное телосложение",
+          "label": "Petite",
+          "variant_id": "PETITE",
+          "single_path": "singles/01_body-shape/body-build/SODA_HVXXHTIWMAACmZg__01_PETITE.png",
+          "sha256": "69c9246a9360036f553b819f1ad97ee7fa48b52b883957b13eeb49c9f2d3267e",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Телосложение",
+            "телосложение",
+            "Миниатюрное телосложение",
+            "Petite"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HVXXHTIWMAACmZg__02_TALL_SLENDER",
+          "name_ru": "Высокое и стройное телосложение",
+          "label": "Tall & Slender",
+          "variant_id": "TALL_SLENDER",
+          "single_path": "singles/01_body-shape/body-build/SODA_HVXXHTIWMAACmZg__02_TALL_SLENDER.png",
+          "sha256": "d0208cb029c4015b5e67b21d9b7269059e0a355bfb527b2b36fe69e50a0e456e",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Телосложение",
+            "телосложение",
+            "Высокое и стройное телосложение",
+            "Tall & Slender"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HVXXHTIWMAACmZg__03_ATHLETIC",
+          "name_ru": "Атлетичное телосложение",
+          "label": "Athletic",
+          "variant_id": "ATHLETIC",
+          "single_path": "singles/01_body-shape/body-build/SODA_HVXXHTIWMAACmZg__03_ATHLETIC.png",
+          "sha256": "f2bd817544045da54c518ad9284e4df6c39febb4a72886238e08ef46078b7263",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Телосложение",
+            "телосложение",
+            "Атлетичное телосложение",
+            "Athletic"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HVXXHTIWMAACmZg__04_HOURGLASS",
+          "name_ru": "Фигура типа «песочные часы»",
+          "label": "Hourglass",
+          "variant_id": "HOURGLASS",
+          "single_path": "singles/01_body-shape/body-build/SODA_HVXXHTIWMAACmZg__04_HOURGLASS.png",
+          "sha256": "eb784c02106e22444d4f836656ef45773bcaecf1218ec5c061650300c6989952",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Телосложение",
+            "телосложение",
+            "Фигура типа «песочные часы»",
+            "Hourglass"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HVXXHTIWMAACmZg__05_CHUBBY",
+          "name_ru": "Пухлое телосложение",
+          "label": "Chubby",
+          "variant_id": "CHUBBY",
+          "single_path": "singles/01_body-shape/body-build/SODA_HVXXHTIWMAACmZg__05_CHUBBY.png",
+          "sha256": "a44df61eb2529e2c3620e95d22eebdf2102be0eb4ef3b9346b3d2ec294bb6755",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Телосложение",
+            "телосложение",
+            "Пухлое телосложение",
+            "Chubby"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HVXXHTIWMAACmZg__06_FULL_BUST",
+          "name_ru": "Пышная грудь",
+          "label": "Full Bust",
+          "variant_id": "FULL_BUST",
+          "single_path": "singles/01_body-shape/body-build/SODA_HVXXHTIWMAACmZg__06_FULL_BUST.png",
+          "sha256": "8f0ca534cd90662c4ef66e7c437863c7c1749266d178f5ff0dcc8203cf3da378",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Телосложение",
+            "телосложение",
+            "Пышная грудь",
+            "Full Bust"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HVXXHTIWMAACmZg__07_PEAR_SHAPE",
+          "name_ru": "Грушевидная форма",
+          "label": "Pear Shape",
+          "variant_id": "PEAR_SHAPE",
+          "single_path": "singles/01_body-shape/body-build/SODA_HVXXHTIWMAACmZg__07_PEAR_SHAPE.png",
+          "sha256": "6feb0d2d2222d3828cc4566169c22a40f2a1948497fa90ef2859a8ea7aca46f8",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Телосложение",
+            "телосложение",
+            "Грушевидная форма",
+            "Pear Shape"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "body-build-age",
+      "topic_ru": "Телосложение и возраст",
+      "priority": 1,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/body-build-age__FEMALE__p01.jpg",
+      "sha256": "11a8da3bf2fda82ff2384a895d8c5b6c21ddf70422c86c78262ea139b57a1adc",
+      "width": 1200,
+      "height": 620,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HRn9G4FboAACp0P__09_AMAZON_WARRIOR",
+          "name_ru": "Амазонка-воительница",
+          "label": "Amazon Warrior",
+          "variant_id": "AMAZON_WARRIOR",
+          "single_path": "singles/01_body-shape/body-build-age/SODA_HRn9G4FboAACp0P__09_AMAZON_WARRIOR.png",
+          "sha256": "1f27736cbf94c96e5d9b479cbc82119b29911d7de93fa62aa3ddf74f611d4c29",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Телосложение и возраст",
+            "телосложение",
+            "форма части тела",
+            "возрастные типы фигур",
+            "Амазонка-воительница",
+            "Amazon Warrior"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HRn9G4FboAACp0P__11_BENT_BACK_CRONE",
+          "name_ru": "Пожилая сутулая женщина",
+          "label": "Bent-Back Crone",
+          "variant_id": "BENT_BACK_CRONE",
+          "single_path": "singles/01_body-shape/body-build-age/SODA_HRn9G4FboAACp0P__11_BENT_BACK_CRONE.png",
+          "sha256": "5053cca47d704721ec8e9892370fd2eab10139da0f7396c0af79396f63c0cc0f",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Телосложение и возраст",
+            "телосложение",
+            "форма части тела",
+            "возрастные типы фигур",
+            "Пожилая сутулая женщина",
+            "пожилая женщина",
+            "Bent-Back Crone"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HRn9G4FboAACp0P__12_VERY_YOUNG_GIRL",
+          "name_ru": "Девочка младшего возраста",
+          "label": "Very Young Girl",
+          "variant_id": "VERY_YOUNG_GIRL",
+          "single_path": "singles/01_body-shape/body-build-age/SODA_HRn9G4FboAACp0P__12_VERY_YOUNG_GIRL.png",
+          "sha256": "612cc772a40c148fd2b9e9823a50bcce59dda550cf3f5f5f0a4c0a7d35c9ed92",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Телосложение и возраст",
+            "телосложение",
+            "форма части тела",
+            "возрастные типы фигур",
+            "Девочка младшего возраста",
+            "ребёнок",
+            "девочка",
+            "Very Young Girl"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "body-build-age",
+      "topic_ru": "Телосложение и возраст",
+      "priority": 1,
+      "subject_label": "MALE",
+      "page": 1,
+      "path": "collages/body-build-age__MALE__p01.jpg",
+      "sha256": "6aa6ce5bdb5a0492fbcf19bc029cc4e67eeb66563adf620b2f620e7fb134c19c",
+      "width": 1600,
+      "height": 1090,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HRn9G4FboAACp0P__01_CHUBBY_GUY",
+          "name_ru": "Пухлый мужчина",
+          "label": "Chubby Guy",
+          "variant_id": "CHUBBY_GUY",
+          "single_path": "singles/01_body-shape/body-build-age/SODA_HRn9G4FboAACp0P__01_CHUBBY_GUY.png",
+          "sha256": "7f1fc5a07791edd5a9d085af34e046b9439affa7b41982a0ef9c79d890b94e6c",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Телосложение и возраст",
+            "телосложение",
+            "форма части тела",
+            "возрастные типы фигур",
+            "Пухлый мужчина",
+            "мужчина",
+            "Chubby Guy"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HRn9G4FboAACp0P__02_LANKY_GUY",
+          "name_ru": "Худощавый мужчина",
+          "label": "Lanky Guy",
+          "variant_id": "LANKY_GUY",
+          "single_path": "singles/01_body-shape/body-build-age/SODA_HRn9G4FboAACp0P__02_LANKY_GUY.png",
+          "sha256": "3f85d336fc863fc3636437a9fb74951dd66264c51003e181a34eff53b7e2d09e",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Телосложение и возраст",
+            "телосложение",
+            "форма части тела",
+            "возрастные типы фигур",
+            "Худощавый мужчина",
+            "мужчина",
+            "Lanky Guy"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HRn9G4FboAACp0P__03_VERY_YOUNG_BOY",
+          "name_ru": "Мальчик младшего возраста",
+          "label": "Very Young Boy",
+          "variant_id": "VERY_YOUNG_BOY",
+          "single_path": "singles/01_body-shape/body-build-age/SODA_HRn9G4FboAACp0P__03_VERY_YOUNG_BOY.png",
+          "sha256": "8af5a3bb6f3bcdd9bdf9e1359c47b7015c21d6324fbb035e501af7076c5cd7ad",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Телосложение и возраст",
+            "телосложение",
+            "форма части тела",
+            "возрастные типы фигур",
+            "Мальчик младшего возраста",
+            "ребёнок",
+            "мальчик",
+            "Very Young Boy"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HRn9G4FboAACp0P__04_LANKY_OLD_MAN",
+          "name_ru": "Худощавый пожилой мужчина",
+          "label": "Lanky Old Man",
+          "variant_id": "LANKY_OLD_MAN",
+          "single_path": "singles/01_body-shape/body-build-age/SODA_HRn9G4FboAACp0P__04_LANKY_OLD_MAN.png",
+          "sha256": "82033b43186bd7f590773233ce4ed21db3906ffe343af054f571a8746113caad",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Телосложение и возраст",
+            "телосложение",
+            "форма части тела",
+            "возрастные типы фигур",
+            "Худощавый пожилой мужчина",
+            "пожилой",
+            "мужчина",
+            "Lanky Old Man"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HRn9G4FboAACp0P__05_BURLY_BRUISER",
+          "name_ru": "Крепкий боец",
+          "label": "Burly Bruiser",
+          "variant_id": "BURLY_BRUISER",
+          "single_path": "singles/01_body-shape/body-build-age/SODA_HRn9G4FboAACp0P__05_BURLY_BRUISER.png",
+          "sha256": "19b046bc048d01961eeb86e03538d8b790ea5e080f86d46d930470b477822bc3",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Телосложение и возраст",
+            "телосложение",
+            "форма части тела",
+            "возрастные типы фигур",
+            "Крепкий боец",
+            "Burly Bruiser"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HRn9G4FboAACp0P__06_VERY_HEAVY_SET_GUY",
+          "name_ru": "Очень полный мужчина",
+          "label": "Very Heavy-Set Guy",
+          "variant_id": "VERY_HEAVY_SET_GUY",
+          "single_path": "singles/01_body-shape/body-build-age/SODA_HRn9G4FboAACp0P__06_VERY_HEAVY_SET_GUY.png",
+          "sha256": "9fd7dcc4da6ca6aef79fcd60892cdbc993732122cd80acf60a1798c2cc6c796d",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Телосложение и возраст",
+            "телосложение",
+            "форма части тела",
+            "возрастные типы фигур",
+            "Очень полный мужчина",
+            "мужчина",
+            "Very Heavy-Set Guy"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HRn9G4FboAACp0P__07_SLIM_BROAD_SHOULDERED",
+          "name_ru": "Стройная фигура с широкими плечами",
+          "label": "Slim, Broad-Shouldered",
+          "variant_id": "SLIM_BROAD_SHOULDERED",
+          "single_path": "singles/01_body-shape/body-build-age/SODA_HRn9G4FboAACp0P__07_SLIM_BROAD_SHOULDERED.png",
+          "sha256": "637e5e31cc8c7340c47f27fd9dc80179c72cfe45996dcddefcd6e9ccb0913699",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Телосложение и возраст",
+            "телосложение",
+            "форма части тела",
+            "возрастные типы фигур",
+            "Стройная фигура с широкими плечами",
+            "Slim, Broad-Shouldered"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "body-build-age",
+      "topic_ru": "Телосложение и возраст",
+      "priority": 1,
+      "subject_label": "NEUTRAL",
+      "page": 1,
+      "path": "collages/body-build-age__NEUTRAL__p01.jpg",
+      "sha256": "0a6b764cb3b52899f13341795aef155257420389c41abf3800ff07e86510bee7",
+      "width": 800,
+      "height": 620,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HRn9G4FboAACp0P__08_SLIM_PRE_TEEN",
+          "name_ru": "Стройный ребёнок доподросткового возраста",
+          "label": "Slim Pre-Teen",
+          "variant_id": "SLIM_PRE_TEEN",
+          "single_path": "singles/01_body-shape/body-build-age/SODA_HRn9G4FboAACp0P__08_SLIM_PRE_TEEN.png",
+          "sha256": "34fc1b65357ce2bf9535f7e52f85478c619113183fec4116869b5566b6f59948",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Телосложение и возраст",
+            "телосложение",
+            "форма части тела",
+            "возрастные типы фигур",
+            "Стройный ребёнок доподросткового возраста",
+            "ребёнок",
+            "до подросткового возраста",
+            "Slim Pre-Teen"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HRn9G4FboAACp0P__10_SHORT_AND_STOUT",
+          "name_ru": "Невысокая коренастая фигура",
+          "label": "Short and Stout",
+          "variant_id": "SHORT_AND_STOUT",
+          "single_path": "singles/01_body-shape/body-build-age/SODA_HRn9G4FboAACp0P__10_SHORT_AND_STOUT.png",
+          "sha256": "388fc38d2020d57204fdc995eacd588e4a25972674a96a1445a725b94c9facb3",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Телосложение и возраст",
+            "телосложение",
+            "форма части тела",
+            "возрастные типы фигур",
+            "Невысокая коренастая фигура",
+            "Short and Stout"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "bust",
+      "topic_ru": "Грудь",
+      "priority": 1,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/bust__FEMALE__p01.jpg",
+      "sha256": "4fd97b1fb3b1c5d5c302fce42b3c6f30f22600173e82a1a49fdb5c5e27845d5e",
+      "width": 1600,
+      "height": 1560,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HWdxwmwWkAA6-ta__01_ROUND",
+          "name_ru": "Округлая форма",
+          "label": "Round",
+          "variant_id": "ROUND",
+          "single_path": "singles/01_body-shape/bust/SODA_HWdxwmwWkAA6-ta__01_ROUND.png",
+          "sha256": "8748b4e0c8240c5d8b185c7d81082f9682cd6d50042d4a75f207f096461c94ba",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Грудь",
+            "форма части тела",
+            "посадка одежды",
+            "грудь",
+            "Округлая форма",
+            "Round"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HWdxwmwWkAA6-ta__02_TEARDROP",
+          "name_ru": "Каплевидная форма",
+          "label": "Teardrop",
+          "variant_id": "TEARDROP",
+          "single_path": "singles/01_body-shape/bust/SODA_HWdxwmwWkAA6-ta__02_TEARDROP.png",
+          "sha256": "b3da486e4e5dbba73d395763d3d419256ad08b4c187f7a91e43b4b0e2757a25f",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Грудь",
+            "форма части тела",
+            "посадка одежды",
+            "грудь",
+            "Каплевидная форма",
+            "Teardrop"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HWdxwmwWkAA6-ta__03_SIDE_SET",
+          "name_ru": "Широко расставленные",
+          "label": "Side-set",
+          "variant_id": "SIDE_SET",
+          "single_path": "singles/01_body-shape/bust/SODA_HWdxwmwWkAA6-ta__03_SIDE_SET.png",
+          "sha256": "572a8695d61e255b77f830e3dc5f0d6944b04be3df74297845d949b1b39204fa",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Грудь",
+            "форма части тела",
+            "посадка одежды",
+            "грудь",
+            "Широко расставленные",
+            "Side-set"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HWdxwmwWkAA6-ta__04_WIDE",
+          "name_ru": "Широко расположенные",
+          "label": "Wide",
+          "variant_id": "WIDE",
+          "single_path": "singles/01_body-shape/bust/SODA_HWdxwmwWkAA6-ta__04_WIDE.png",
+          "sha256": "ce27f4f2fe3692f62514a0dd4bfcfcf8c3e223e04acf75295b454558e89581f6",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Грудь",
+            "форма части тела",
+            "посадка одежды",
+            "грудь",
+            "Широко расположенные",
+            "Wide"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HWdxwmwWkAA6-ta__05_CLOSE_SET",
+          "name_ru": "Близко расположенные",
+          "label": "Close-set",
+          "variant_id": "CLOSE_SET",
+          "single_path": "singles/01_body-shape/bust/SODA_HWdxwmwWkAA6-ta__05_CLOSE_SET.png",
+          "sha256": "36863d6d2df0a998102992a0e661d2334950a4a4ed5a473483cb47f99563bf81",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Грудь",
+            "форма части тела",
+            "посадка одежды",
+            "грудь",
+            "Близко расположенные",
+            "Close-set"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HWdxwmwWkAA6-ta__06_ASYMMETRICAL",
+          "name_ru": "Асимметричная форма",
+          "label": "Asymmetrical",
+          "variant_id": "ASYMMETRICAL",
+          "single_path": "singles/01_body-shape/bust/SODA_HWdxwmwWkAA6-ta__06_ASYMMETRICAL.png",
+          "sha256": "886c2809827a5acd010c731f726d00ff6e80f958e87ef740eea1bd56f0a045a8",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Грудь",
+            "форма части тела",
+            "посадка одежды",
+            "грудь",
+            "Асимметричная форма",
+            "Asymmetrical"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HWEqIdaWUAE0zaq__01_ROUND",
+          "name_ru": "Округлая форма",
+          "label": "Round",
+          "variant_id": "ROUND",
+          "single_path": "singles/01_body-shape/bust/SODA_HWEqIdaWUAE0zaq__01_ROUND.png",
+          "sha256": "cb0af169f79d92db02e864acd6d12cce66b20575b6260e53e4fef5cc7e3395e9",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Грудь",
+            "форма части тела",
+            "грудь",
+            "Округлая форма",
+            "Round"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HWEqIdaWUAE0zaq__02_TEARDROP",
+          "name_ru": "Каплевидная форма",
+          "label": "Teardrop",
+          "variant_id": "TEARDROP",
+          "single_path": "singles/01_body-shape/bust/SODA_HWEqIdaWUAE0zaq__02_TEARDROP.png",
+          "sha256": "a6ce38ca4cbe47d4561322247d4e8f095343be5c90d43c77491d1e8843f77e9c",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Грудь",
+            "форма части тела",
+            "грудь",
+            "Каплевидная форма",
+            "Teardrop"
+          ]
+        },
+        {
+          "cell": 9,
+          "id": "SODA_HWEqIdaWUAE0zaq__03_WIDE_SET",
+          "name_ru": "Широко расставленные",
+          "label": "Wide-set",
+          "variant_id": "WIDE_SET",
+          "single_path": "singles/01_body-shape/bust/SODA_HWEqIdaWUAE0zaq__03_WIDE_SET.png",
+          "sha256": "9f163fb80609936ea1581e80ee831129f1663ecfa8262725d83ec8002c46add6",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Грудь",
+            "форма части тела",
+            "грудь",
+            "Широко расставленные",
+            "Wide-set"
+          ]
+        },
+        {
+          "cell": 10,
+          "id": "SODA_HWEqIdaWUAE0zaq__04_ASYMMETRICAL",
+          "name_ru": "Асимметричная форма",
+          "label": "Asymmetrical",
+          "variant_id": "ASYMMETRICAL",
+          "single_path": "singles/01_body-shape/bust/SODA_HWEqIdaWUAE0zaq__04_ASYMMETRICAL.png",
+          "sha256": "ddfe789e4b34a64dee6b520c8b475b0f7528539caa4d116f7770c98b31945e0c",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Грудь",
+            "форма части тела",
+            "грудь",
+            "Асимметричная форма",
+            "Asymmetrical"
+          ]
+        },
+        {
+          "cell": 11,
+          "id": "SODA_HWEqIdaWUAE0zaq__05_PENDULOUS",
+          "name_ru": "Свисающая форма",
+          "label": "Pendulous",
+          "variant_id": "PENDULOUS",
+          "single_path": "singles/01_body-shape/bust/SODA_HWEqIdaWUAE0zaq__05_PENDULOUS.png",
+          "sha256": "c2a16c8ed5d76e1ad1de75176b933fef7e01f33bc27f31fbe2ad507b61beeab6",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Грудь",
+            "форма части тела",
+            "грудь",
+            "Свисающая форма",
+            "Pendulous"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "feet",
+      "topic_ru": "Стопы",
+      "priority": 1,
+      "subject_label": "NEUTRAL",
+      "page": 1,
+      "path": "collages/feet__NEUTRAL__p01.jpg",
+      "sha256": "521d2695101db2ed3327f66d28caa56179ce6fd6270510782835963015ed9ec6",
+      "width": 1600,
+      "height": 1560,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HUJ_LtPWEAABgfH__01_SIDE_PLANTED",
+          "name_ru": "Стопа сбоку с опорой",
+          "label": "Side planted",
+          "variant_id": "SIDE_PLANTED",
+          "single_path": "singles/01_body-shape/feet/SODA_HUJ_LtPWEAABgfH__01_SIDE_PLANTED.png",
+          "sha256": "5545c73f5097d2126df4720655743273f12257e2c71ca35b9ccf44bab26b47fd",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Стопы",
+            "форма части тела",
+            "стопы",
+            "Стопа сбоку с опорой",
+            "Side planted"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HUJ_LtPWEAABgfH__02_FRONT_PAIR",
+          "name_ru": "Пара стоп спереди",
+          "label": "Front pair",
+          "variant_id": "FRONT_PAIR",
+          "single_path": "singles/01_body-shape/feet/SODA_HUJ_LtPWEAABgfH__02_FRONT_PAIR.png",
+          "sha256": "edff2dfc2106ad18fe59af57a465fd2c2f1075e95d13fd917831e3bf4ea753e0",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Стопы",
+            "форма части тела",
+            "стопы",
+            "Пара стоп спереди",
+            "Front pair"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HUJ_LtPWEAABgfH__03_REAR_PAIR",
+          "name_ru": "Пара стоп сзади",
+          "label": "Rear pair",
+          "variant_id": "REAR_PAIR",
+          "single_path": "singles/01_body-shape/feet/SODA_HUJ_LtPWEAABgfH__03_REAR_PAIR.png",
+          "sha256": "beee4b8af60e984f6e624de59b0b962bb330bda149e1f7de075a4215a73ddd37",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Стопы",
+            "форма части тела",
+            "стопы",
+            "Пара стоп сзади",
+            "Rear pair"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HUJ_LtPWEAABgfH__04_CROSSED_ANKLES",
+          "name_ru": "Скрещённые лодыжки",
+          "label": "Crossed ankles",
+          "variant_id": "CROSSED_ANKLES",
+          "single_path": "singles/01_body-shape/feet/SODA_HUJ_LtPWEAABgfH__04_CROSSED_ANKLES.png",
+          "sha256": "6a1b377151ab712066f2468bc8b1fe038e55ba187089c70708c1a0ac3dce9e63",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Стопы",
+            "форма части тела",
+            "стопы",
+            "Скрещённые лодыжки",
+            "Crossed ankles"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HUJ_LtPWEAABgfH__05_SOLE",
+          "name_ru": "Подошва",
+          "label": "Sole",
+          "variant_id": "SOLE",
+          "single_path": "singles/01_body-shape/feet/SODA_HUJ_LtPWEAABgfH__05_SOLE.png",
+          "sha256": "957f19857c58d56914526c9bdc1e4681a449741be7838798622317ba7005251f",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Стопы",
+            "форма части тела",
+            "стопы",
+            "Подошва",
+            "Sole"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HUJ_LtPWEAABgfH__06_THREE_QUARTER_PAIR",
+          "name_ru": "Пара стоп в ракурсе три четверти",
+          "label": "Three-quarter pair",
+          "variant_id": "THREE_QUARTER_PAIR",
+          "single_path": "singles/01_body-shape/feet/SODA_HUJ_LtPWEAABgfH__06_THREE_QUARTER_PAIR.png",
+          "sha256": "0cd1369ced1054ebb40b6649e83c43e7e926703a513cf72d2c66948ce5418eba",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Стопы",
+            "форма части тела",
+            "стопы",
+            "Пара стоп в ракурсе три четверти",
+            "Three-quarter pair"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HUJ_LtPWEAABgfH__07_RAISED_HEEL",
+          "name_ru": "Поднятая пятка",
+          "label": "Raised heel",
+          "variant_id": "RAISED_HEEL",
+          "single_path": "singles/01_body-shape/feet/SODA_HUJ_LtPWEAABgfH__07_RAISED_HEEL.png",
+          "sha256": "c207fbb3cb3388721b308f38597e4abcb44202f8ca9fee80f25ca78dea11fbe2",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Стопы",
+            "форма части тела",
+            "стопы",
+            "Поднятая пятка",
+            "Raised heel"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HUJ_LtPWEAABgfH__08_SIDE_PAIR",
+          "name_ru": "Пара стоп сбоку",
+          "label": "Side pair",
+          "variant_id": "SIDE_PAIR",
+          "single_path": "singles/01_body-shape/feet/SODA_HUJ_LtPWEAABgfH__08_SIDE_PAIR.png",
+          "sha256": "38a4df747eaa5dbe7edc8e2bdeb5e8a0197d35aaba54333894e643c917bbef9d",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Стопы",
+            "форма части тела",
+            "стопы",
+            "Пара стоп сбоку",
+            "Side pair"
+          ]
+        },
+        {
+          "cell": 9,
+          "id": "SODA_HUJ_LtPWEAABgfH__09_FRONT_RELAXED",
+          "name_ru": "Расслабленная постановка спереди",
+          "label": "Front relaxed",
+          "variant_id": "FRONT_RELAXED",
+          "single_path": "singles/01_body-shape/feet/SODA_HUJ_LtPWEAABgfH__09_FRONT_RELAXED.png",
+          "sha256": "c5cde564f30ade6c66bb6115c70543d42b3096d9e28d1a2a072801bd50f5064b",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Стопы",
+            "форма части тела",
+            "стопы",
+            "Расслабленная постановка спереди",
+            "Front relaxed"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "glutes",
+      "topic_ru": "Ягодицы",
+      "priority": 1,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/glutes__FEMALE__p01.jpg",
+      "sha256": "becce8e9760371d28da4d768e7780a8fe65ec711b6409e8307ebc772aabca976",
+      "width": 1600,
+      "height": 1560,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HSdImK_WoAIlODw__01_V_BUM",
+          "name_ru": "V-образный контур ягодиц",
+          "label": "V-Bum",
+          "variant_id": "V_BUM",
+          "single_path": "singles/01_body-shape/glutes/SODA_HSdImK_WoAIlODw__01_V_BUM.png",
+          "sha256": "e54508b1f2e77745d3cfb1781ca36917871c2c73d3d0fac7f4b9323732aa6171",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Ягодицы",
+            "форма части тела",
+            "посадка одежды",
+            "ягодицы",
+            "V-образный контур ягодиц",
+            "V-Bum"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HSdImK_WoAIlODw__02_CHERRY_BUM",
+          "name_ru": "Ягодицы типа Cherry",
+          "label": "Cherry Bum",
+          "variant_id": "CHERRY_BUM",
+          "single_path": "singles/01_body-shape/glutes/SODA_HSdImK_WoAIlODw__02_CHERRY_BUM.png",
+          "sha256": "7dfafb3f79c8e53915466b6bbad8e8f7dc8a0e9a6d09d3a670126cde701aa3e5",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Ягодицы",
+            "форма части тела",
+            "посадка одежды",
+            "ягодицы",
+            "Ягодицы типа Cherry",
+            "Cherry Bum"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HSdImK_WoAIlODw__03_H_BUM",
+          "name_ru": "H-образный контур ягодиц",
+          "label": "H-Bum",
+          "variant_id": "H_BUM",
+          "single_path": "singles/01_body-shape/glutes/SODA_HSdImK_WoAIlODw__03_H_BUM.png",
+          "sha256": "11e96ba1dd7a510d83405776cd90f08fc29c186aa9a42ffb4bcba3f520bc5abb",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Ягодицы",
+            "форма части тела",
+            "посадка одежды",
+            "ягодицы",
+            "H-образный контур ягодиц",
+            "H-Bum"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HSdImK_WoAIlODw__04_TRAPEZE_BUM",
+          "name_ru": "Трапециевидный контур ягодиц",
+          "label": "Trapeze Bum",
+          "variant_id": "TRAPEZE_BUM",
+          "single_path": "singles/01_body-shape/glutes/SODA_HSdImK_WoAIlODw__04_TRAPEZE_BUM.png",
+          "sha256": "178e700c623bf41b05e85e91258c0750305461515cec56340deae4b93a981583",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Ягодицы",
+            "форма части тела",
+            "посадка одежды",
+            "ягодицы",
+            "Трапециевидный контур ягодиц",
+            "Trapeze Bum"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HSdImK_WoAIlODw__05_HEART_BUM",
+          "name_ru": "Контур ягодиц в форме сердца",
+          "label": "Heart Bum",
+          "variant_id": "HEART_BUM",
+          "single_path": "singles/01_body-shape/glutes/SODA_HSdImK_WoAIlODw__05_HEART_BUM.png",
+          "sha256": "9fd090fd5d0b8738d3a3892f31a9d4a4b939a3eeef5ea3a4128c98deb3370d87",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Ягодицы",
+            "форма части тела",
+            "посадка одежды",
+            "ягодицы",
+            "Контур ягодиц в форме сердца",
+            "Heart Bum"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HV7IUuGWYAA66oe__01_SMALL",
+          "name_ru": "Малый объём",
+          "label": "Small",
+          "variant_id": "SMALL",
+          "single_path": "singles/01_body-shape/glutes/SODA_HV7IUuGWYAA66oe__01_SMALL.png",
+          "sha256": "77f6f3241ee90da899857aaadc52d5ebbe3126a05a407a67f6d8aba98ad9cb23",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Ягодицы",
+            "форма части тела",
+            "ягодицы",
+            "Малый объём",
+            "Small"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HV7IUuGWYAA66oe__02_MEDIUM",
+          "name_ru": "Средний объём",
+          "label": "Medium",
+          "variant_id": "MEDIUM",
+          "single_path": "singles/01_body-shape/glutes/SODA_HV7IUuGWYAA66oe__02_MEDIUM.png",
+          "sha256": "5d5effaa99e6ca7aff86cfab9e706da25636531032eb01fbedd78fbdb1f16577",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Ягодицы",
+            "форма части тела",
+            "ягодицы",
+            "Средний объём",
+            "Medium"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HV7IUuGWYAA66oe__03_LARGE",
+          "name_ru": "Большой объём",
+          "label": "Large",
+          "variant_id": "LARGE",
+          "single_path": "singles/01_body-shape/glutes/SODA_HV7IUuGWYAA66oe__03_LARGE.png",
+          "sha256": "a555cd001e52ad678c39f183cba02d66f15c1408518150f287c768693b9a0f21",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Ягодицы",
+            "форма части тела",
+            "ягодицы",
+            "Большой объём",
+            "Large"
+          ]
+        },
+        {
+          "cell": 9,
+          "id": "SODA_HV7IUuGWYAA66oe__04_EXTRA_LARGE",
+          "name_ru": "Очень большой объём",
+          "label": "Extra Large",
+          "variant_id": "EXTRA_LARGE",
+          "single_path": "singles/01_body-shape/glutes/SODA_HV7IUuGWYAA66oe__04_EXTRA_LARGE.png",
+          "sha256": "cf264bbd0ba0c401bfe03519e19a7d812d1b90a089a8ecd784760501e37dfe88",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Ягодицы",
+            "форма части тела",
+            "ягодицы",
+            "Очень большой объём",
+            "Extra Large"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "hands",
+      "topic_ru": "Кисти",
+      "priority": 1,
+      "subject_label": "NEUTRAL",
+      "page": 1,
+      "path": "collages/hands__NEUTRAL__p01.jpg",
+      "sha256": "9365fe224bc997a55a3686683f8216b4141ba1f7238670b37a071d01cd2c0e7f",
+      "width": 1600,
+      "height": 1560,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HR4mAd5W0AQfyAK__01_HAND_01",
+          "name_ru": "Кулак, вид сверху",
+          "label": "Кулак, вид сверху",
+          "variant_id": "HAND_01",
+          "single_path": "singles/01_body-shape/hands/SODA_HR4mAd5W0AQfyAK__01_HAND_01.png",
+          "sha256": "3a3f8dfb4dc2d8a7b37ed37a465d9625721ae55fd201515657cd81e447c929f4",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Кисти",
+            "кисти",
+            "пальцы",
+            "Кулак, вид сверху"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HR4mAd5W0AQfyAK__02_HAND_02",
+          "name_ru": "Расслабленная кисть, пальцы вниз",
+          "label": "Расслабленная кисть, пальцы вниз",
+          "variant_id": "HAND_02",
+          "single_path": "singles/01_body-shape/hands/SODA_HR4mAd5W0AQfyAK__02_HAND_02.png",
+          "sha256": "ca37e617d7729a7e0320f31a66278ac2decd76fdc19dccd9f49822c44757f3e4",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Кисти",
+            "кисти",
+            "пальцы",
+            "Расслабленная кисть, пальцы вниз"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HR4mAd5W0AQfyAK__03_HAND_03",
+          "name_ru": "Сжатый кулак сбоку",
+          "label": "Сжатый кулак сбоку",
+          "variant_id": "HAND_03",
+          "single_path": "singles/01_body-shape/hands/SODA_HR4mAd5W0AQfyAK__03_HAND_03.png",
+          "sha256": "52fba25d2e2f108efd9b91ce49b658ecaf47d822d35432812e4c55d584697bcf",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Кисти",
+            "кисти",
+            "пальцы",
+            "Сжатый кулак сбоку"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HR4mAd5W0AQfyAK__04_HAND_04",
+          "name_ru": "Большой палец вверх",
+          "label": "Большой палец вверх",
+          "variant_id": "HAND_04",
+          "single_path": "singles/01_body-shape/hands/SODA_HR4mAd5W0AQfyAK__04_HAND_04.png",
+          "sha256": "932dc94e2097b8063742320c19c94263037a1c98916ca5df7215667e118c8e13",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Кисти",
+            "кисти",
+            "пальцы",
+            "Большой палец вверх"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HR4mAd5W0AQfyAK__05_HAND_05",
+          "name_ru": "Кисть с опущенными пальцами",
+          "label": "Кисть с опущенными пальцами",
+          "variant_id": "HAND_05",
+          "single_path": "singles/01_body-shape/hands/SODA_HR4mAd5W0AQfyAK__05_HAND_05.png",
+          "sha256": "236d4278986eb88538c6c05c3173b20ddd7e3309511cc6acf664afae86f01329",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Кисти",
+            "кисти",
+            "пальцы",
+            "Кисть с опущенными пальцами"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HR4mAd5W0AQfyAK__06_HAND_06",
+          "name_ru": "Раскрытая кисть сбоку",
+          "label": "Раскрытая кисть сбоку",
+          "variant_id": "HAND_06",
+          "single_path": "singles/01_body-shape/hands/SODA_HR4mAd5W0AQfyAK__06_HAND_06.png",
+          "sha256": "aafdebe365140cdcedb163db85f79006a3671bea3e1edc3fc936a1b8be046dfa",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Кисти",
+            "кисти",
+            "пальцы",
+            "Раскрытая кисть сбоку"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HR4mAd5W0AQfyAK__07_HAND_07",
+          "name_ru": "Указательный палец вниз",
+          "label": "Указательный палец вниз",
+          "variant_id": "HAND_07",
+          "single_path": "singles/01_body-shape/hands/SODA_HR4mAd5W0AQfyAK__07_HAND_07.png",
+          "sha256": "80aed46323f093b963e4406137ca374aaba393951a9a2d798b4e6fde44a7ce13",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Кисти",
+            "кисти",
+            "пальцы",
+            "Указательный палец вниз"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HR4mAd5W0AQfyAK__08_HAND_08",
+          "name_ru": "Раскрытая кисть, вид с тыла",
+          "label": "Раскрытая кисть, вид с тыла",
+          "variant_id": "HAND_08",
+          "single_path": "singles/01_body-shape/hands/SODA_HR4mAd5W0AQfyAK__08_HAND_08.png",
+          "sha256": "0a113dab45ac36bfaaf6166019ccf8dd896705420036d34b305ff9da8f01620a",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Кисти",
+            "кисти",
+            "пальцы",
+            "Раскрытая кисть, вид с тыла"
+          ]
+        },
+        {
+          "cell": 9,
+          "id": "SODA_HR4mAd5W0AQfyAK__09_HAND_09",
+          "name_ru": "Кисть в ракурсном сокращении",
+          "label": "Кисть в ракурсном сокращении",
+          "variant_id": "HAND_09",
+          "single_path": "singles/01_body-shape/hands/SODA_HR4mAd5W0AQfyAK__09_HAND_09.png",
+          "sha256": "97377af9a7d21dcf5891a931d34f1d8786f26ff22be7167f7b41b33959e3ce3f",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Кисти",
+            "кисти",
+            "пальцы",
+            "Кисть в ракурсном сокращении"
+          ]
+        },
+        {
+          "cell": 10,
+          "id": "SODA_HR4mAd5W0AQfyAK__10_HAND_10",
+          "name_ru": "Две сцепленные кисти",
+          "label": "Две сцепленные кисти",
+          "variant_id": "HAND_10",
+          "single_path": "singles/01_body-shape/hands/SODA_HR4mAd5W0AQfyAK__10_HAND_10.png",
+          "sha256": "5893bb2c95a1f43ab6b8ce55ed24fb7936b072fb7996613a1f831714b1312b35",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Кисти",
+            "кисти",
+            "пальцы",
+            "Две сцепленные кисти"
+          ]
+        },
+        {
+          "cell": 11,
+          "id": "SODA_HR4mAd5W0AQfyAK__11_HAND_11",
+          "name_ru": "Кисти: контакт и захват",
+          "label": "Кисти: контакт и захват",
+          "variant_id": "HAND_11",
+          "single_path": "singles/01_body-shape/hands/SODA_HR4mAd5W0AQfyAK__11_HAND_11.png",
+          "sha256": "1cd5beb8dcf79b9b0efbf906810f3d7dc82b8ff89698e5a78ec882ccdc8bc6ad",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Кисти",
+            "кисти",
+            "пальцы",
+            "Кисти: контакт и захват"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "hips",
+      "topic_ru": "Бёдра",
+      "priority": 1,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/hips__FEMALE__p01.jpg",
+      "sha256": "29eb1e176c175ea416280cbd5b462ef1656b497dba314f7a182853eee7f736ac",
+      "width": 1600,
+      "height": 1090,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HTY-RreW0AE5mtx__01_SLENDER",
+          "name_ru": "Худощавое телосложение",
+          "label": "Slender",
+          "variant_id": "SLENDER",
+          "single_path": "singles/01_body-shape/hips/SODA_HTY-RreW0AE5mtx__01_SLENDER.png",
+          "sha256": "aaeac8a855d9448de445cf43db7a58d424e1cecc519c8f2b6954a2d30dbbce53",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бёдра",
+            "форма части тела",
+            "таз",
+            "бёдра",
+            "Худощавое телосложение",
+            "Slender"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HTY-RreW0AE5mtx__02_PEAR",
+          "name_ru": "Грушевидная форма",
+          "label": "Pear",
+          "variant_id": "PEAR",
+          "single_path": "singles/01_body-shape/hips/SODA_HTY-RreW0AE5mtx__02_PEAR.png",
+          "sha256": "26c11fc7a78f61050ba626cc0d66a533babfb981fd86fe9c4775120b6e65427f",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бёдра",
+            "форма части тела",
+            "таз",
+            "бёдра",
+            "Грушевидная форма",
+            "Pear"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HTY-RreW0AE5mtx__03_ATHLETIC",
+          "name_ru": "Атлетичное телосложение",
+          "label": "Athletic",
+          "variant_id": "ATHLETIC",
+          "single_path": "singles/01_body-shape/hips/SODA_HTY-RreW0AE5mtx__03_ATHLETIC.png",
+          "sha256": "813ac09dc2602e5e20c9bb781c32b1d8c01e6ed95be389850f21dee352008aff",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бёдра",
+            "форма части тела",
+            "таз",
+            "бёдра",
+            "Атлетичное телосложение",
+            "Athletic"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HTY-RreW0AE5mtx__04_CHUBBY",
+          "name_ru": "Пухлое телосложение",
+          "label": "Chubby",
+          "variant_id": "CHUBBY",
+          "single_path": "singles/01_body-shape/hips/SODA_HTY-RreW0AE5mtx__04_CHUBBY.png",
+          "sha256": "9a611678378a18cf78fb8069bb9ae835cfd2b5b2d868b2e4773bafec5b5b27da",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бёдра",
+            "форма части тела",
+            "таз",
+            "бёдра",
+            "Пухлое телосложение",
+            "Chubby"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HTY-RreW0AE5mtx__05_HOURGLASS",
+          "name_ru": "Фигура типа «песочные часы»",
+          "label": "Hourglass",
+          "variant_id": "HOURGLASS",
+          "single_path": "singles/01_body-shape/hips/SODA_HTY-RreW0AE5mtx__05_HOURGLASS.png",
+          "sha256": "d00cb56ad5f6eac1d7690bebc1183a30e64387752e633268e355af2b672ff935",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бёдра",
+            "форма части тела",
+            "таз",
+            "бёдра",
+            "Фигура типа «песочные часы»",
+            "Hourglass"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "lower-body",
+      "topic_ru": "Нижняя часть тела",
+      "priority": 1,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/lower-body__FEMALE__p01.jpg",
+      "sha256": "a046789dc448d2a8e4cbd3f8385623ff43cef35ca3ecb89129a89c2b13643661",
+      "width": 1600,
+      "height": 1090,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HWuXCLeXAAA2gCe__01_PEAR",
+          "name_ru": "Грушевидная форма",
+          "label": "Pear",
+          "variant_id": "PEAR",
+          "single_path": "singles/01_body-shape/lower-body/SODA_HWuXCLeXAAA2gCe__01_PEAR.png",
+          "sha256": "7f55f73084a59472ecc1fff6783f88c0ddc06d56fbfd848740d7ba47c5a77d60",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Нижняя часть тела",
+            "форма части тела",
+            "нижняя часть тела",
+            "ягодицы",
+            "бёдра",
+            "Грушевидная форма",
+            "Pear"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HWuXCLeXAAA2gCe__02_ATHLETIC",
+          "name_ru": "Атлетичное телосложение",
+          "label": "Athletic",
+          "variant_id": "ATHLETIC",
+          "single_path": "singles/01_body-shape/lower-body/SODA_HWuXCLeXAAA2gCe__02_ATHLETIC.png",
+          "sha256": "d03a44eb40660df4084e74351cbc46862fc3f18b1acb8f6a292c30102ec8ae81",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Нижняя часть тела",
+            "форма части тела",
+            "нижняя часть тела",
+            "ягодицы",
+            "бёдра",
+            "Атлетичное телосложение",
+            "Athletic"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HWuXCLeXAAA2gCe__03_SLIM",
+          "name_ru": "Стройное телосложение",
+          "label": "Slim",
+          "variant_id": "SLIM",
+          "single_path": "singles/01_body-shape/lower-body/SODA_HWuXCLeXAAA2gCe__03_SLIM.png",
+          "sha256": "2a1383166748297b22c81b6460dd24a56b78aa15e93347bdf8a9911d424c49c1",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Нижняя часть тела",
+            "форма части тела",
+            "нижняя часть тела",
+            "ягодицы",
+            "бёдра",
+            "Стройное телосложение",
+            "Slim"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HWuXCLeXAAA2gCe__04_FULL",
+          "name_ru": "Полное телосложение",
+          "label": "Full",
+          "variant_id": "FULL",
+          "single_path": "singles/01_body-shape/lower-body/SODA_HWuXCLeXAAA2gCe__04_FULL.png",
+          "sha256": "c24502bb62bf01a20d4f79f5c9b0913f63b7c0f6547277952c08a22c0a7d3ef5",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Нижняя часть тела",
+            "форма части тела",
+            "нижняя часть тела",
+            "ягодицы",
+            "бёдра",
+            "Полное телосложение",
+            "Full"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HWuXCLeXAAA2gCe__05_HIP_DIPS",
+          "name_ru": "Впадины у тазобедренных суставов",
+          "label": "Hip Dips",
+          "variant_id": "HIP_DIPS",
+          "single_path": "singles/01_body-shape/lower-body/SODA_HWuXCLeXAAA2gCe__05_HIP_DIPS.png",
+          "sha256": "b582cf7558707e474a40a8f8af9aa5d99f9294d6b3cba541032e1918d1e547dd",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Нижняя часть тела",
+            "форма части тела",
+            "нижняя часть тела",
+            "ягодицы",
+            "бёдра",
+            "Впадины у тазобедренных суставов",
+            "Hip Dips"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HWuXCLeXAAA2gCe__06_HOURGLASS",
+          "name_ru": "Фигура типа «песочные часы»",
+          "label": "Hourglass",
+          "variant_id": "HOURGLASS",
+          "single_path": "singles/01_body-shape/lower-body/SODA_HWuXCLeXAAA2gCe__06_HOURGLASS.png",
+          "sha256": "648a94cb11b9c763bb3400d723740a0885fa0e9c7308b20e811f2fa6f28ab355",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Нижняя часть тела",
+            "форма части тела",
+            "нижняя часть тела",
+            "ягодицы",
+            "бёдра",
+            "Фигура типа «песочные часы»",
+            "Hourglass"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "mouth",
+      "topic_ru": "Губы и рот",
+      "priority": 1,
+      "subject_label": "NEUTRAL",
+      "page": 1,
+      "path": "collages/mouth__NEUTRAL__p01.jpg",
+      "sha256": "8da6cbfb33ca3a0bd880ffc38728c05e68639e026ccee0c06273819bee5e9358",
+      "width": 1600,
+      "height": 1650,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HRPRvj2WIAI6H_-__01_MOUTH_01",
+          "name_ru": "Рот 01",
+          "label": "Mouth 01",
+          "variant_id": "MOUTH_01",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__01_MOUTH_01.png",
+          "sha256": "67aad4d7a19b03ba4774d8a8a57bc74d84baec3c9bf94c5ccc8ad188365d0f24",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 01",
+            "Mouth 01"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HRPRvj2WIAI6H_-__02_MOUTH_02",
+          "name_ru": "Рот 02",
+          "label": "Mouth 02",
+          "variant_id": "MOUTH_02",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__02_MOUTH_02.png",
+          "sha256": "5d54bdfdef04923adc80652cd2daa74c7b126f828c290022054ce0f9d8a0d95a",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 02",
+            "Mouth 02"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HRPRvj2WIAI6H_-__03_MOUTH_03",
+          "name_ru": "Рот 03",
+          "label": "Mouth 03",
+          "variant_id": "MOUTH_03",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__03_MOUTH_03.png",
+          "sha256": "342ea4d184b7a3dc2ecfac341d9876d122d1d2e3ff947dd8a1ce190355a384c3",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 03",
+            "Mouth 03"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HRPRvj2WIAI6H_-__04_MOUTH_04",
+          "name_ru": "Рот 04",
+          "label": "Mouth 04",
+          "variant_id": "MOUTH_04",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__04_MOUTH_04.png",
+          "sha256": "8d827eda128b4b10e3daa0e2c8813892fc2bafa0ebeef85bd97231b9bdf4cc29",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 04",
+            "Mouth 04"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HRPRvj2WIAI6H_-__05_MOUTH_05",
+          "name_ru": "Рот 05",
+          "label": "Mouth 05",
+          "variant_id": "MOUTH_05",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__05_MOUTH_05.png",
+          "sha256": "05c1647753f9d291f8787878186c45de0ee994b6c996ae6be6785a1b57176f70",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 05",
+            "Mouth 05"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HRPRvj2WIAI6H_-__06_MOUTH_06",
+          "name_ru": "Рот 06",
+          "label": "Mouth 06",
+          "variant_id": "MOUTH_06",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__06_MOUTH_06.png",
+          "sha256": "733565d1dfffbd39d83460db28edc522c1d648931732bff718fc3dd103bb6d3d",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 06",
+            "Mouth 06"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HRPRvj2WIAI6H_-__07_MOUTH_07",
+          "name_ru": "Рот 07",
+          "label": "Mouth 07",
+          "variant_id": "MOUTH_07",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__07_MOUTH_07.png",
+          "sha256": "9922e49aabecea359b8ceafb44860d4abb2ed8fffb1b731ff640e66e9e5eaf80",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 07",
+            "Mouth 07"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HRPRvj2WIAI6H_-__08_MOUTH_08",
+          "name_ru": "Рот 08",
+          "label": "Mouth 08",
+          "variant_id": "MOUTH_08",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__08_MOUTH_08.png",
+          "sha256": "a2f78c50cb3ccc689645d63f4f4c88700a04af5187ddd88e604db2d30bdb6a5a",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 08",
+            "Mouth 08"
+          ]
+        },
+        {
+          "cell": 9,
+          "id": "SODA_HRPRvj2WIAI6H_-__09_MOUTH_09",
+          "name_ru": "Рот 09",
+          "label": "Mouth 09",
+          "variant_id": "MOUTH_09",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__09_MOUTH_09.png",
+          "sha256": "eaa9157e22402ef07e598a0bd20efd594788703e5fb7a70b817156f83e40b8fc",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 09",
+            "Mouth 09"
+          ]
+        },
+        {
+          "cell": 10,
+          "id": "SODA_HRPRvj2WIAI6H_-__10_MOUTH_10",
+          "name_ru": "Рот 10",
+          "label": "Mouth 10",
+          "variant_id": "MOUTH_10",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__10_MOUTH_10.png",
+          "sha256": "df14bedacb54aa4bfdd6833c8a422fa1179fc53a7c288eee00908aab32434a05",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 10",
+            "Mouth 10"
+          ]
+        },
+        {
+          "cell": 11,
+          "id": "SODA_HRPRvj2WIAI6H_-__11_MOUTH_11",
+          "name_ru": "Рот 11",
+          "label": "Mouth 11",
+          "variant_id": "MOUTH_11",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__11_MOUTH_11.png",
+          "sha256": "5928a145d6ef8ebe4f0fd8ccef7bdfb7424cd054bf4488a2e3778f5563c56729",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 11",
+            "Mouth 11"
+          ]
+        },
+        {
+          "cell": 12,
+          "id": "SODA_HRPRvj2WIAI6H_-__12_MOUTH_12",
+          "name_ru": "Рот 12",
+          "label": "Mouth 12",
+          "variant_id": "MOUTH_12",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__12_MOUTH_12.png",
+          "sha256": "962b090f7ac8d20a6e1e166c56838f49d003ae3c53b0e88715fd361a996edaf3",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 12",
+            "Mouth 12"
+          ]
+        },
+        {
+          "cell": 13,
+          "id": "SODA_HRPRvj2WIAI6H_-__13_MOUTH_13",
+          "name_ru": "Рот 13",
+          "label": "Mouth 13",
+          "variant_id": "MOUTH_13",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__13_MOUTH_13.png",
+          "sha256": "3f7575ef50f84fe991954ae27a3636b7d414c6ac7e225ac4808387a41521958e",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 13",
+            "Mouth 13"
+          ]
+        },
+        {
+          "cell": 14,
+          "id": "SODA_HRPRvj2WIAI6H_-__14_MOUTH_14",
+          "name_ru": "Рот 14",
+          "label": "Mouth 14",
+          "variant_id": "MOUTH_14",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__14_MOUTH_14.png",
+          "sha256": "deba60d5736bfa3020b53c52acc882eabdfb097f783d1340633e865c60195971",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 14",
+            "Mouth 14"
+          ]
+        },
+        {
+          "cell": 15,
+          "id": "SODA_HRPRvj2WIAI6H_-__15_MOUTH_15",
+          "name_ru": "Рот 15",
+          "label": "Mouth 15",
+          "variant_id": "MOUTH_15",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__15_MOUTH_15.png",
+          "sha256": "3188abcab948b7ea44c231bef5d8b2902152f1f6fbd99f6c2de1ffb3bc6f5483",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 15",
+            "Mouth 15"
+          ]
+        },
+        {
+          "cell": 16,
+          "id": "SODA_HRPRvj2WIAI6H_-__16_MOUTH_16",
+          "name_ru": "Рот 16",
+          "label": "Mouth 16",
+          "variant_id": "MOUTH_16",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__16_MOUTH_16.png",
+          "sha256": "58261a9c76a74d717c3e76488303dea667517f62fd5ff0a7c54dda6bf70f4195",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 16",
+            "Mouth 16"
+          ]
+        },
+        {
+          "cell": 17,
+          "id": "SODA_HRPRvj2WIAI6H_-__17_MOUTH_17",
+          "name_ru": "Рот 17",
+          "label": "Mouth 17",
+          "variant_id": "MOUTH_17",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__17_MOUTH_17.png",
+          "sha256": "523a08c0ce24d03c9717b2ccaed34d89bbd65775e09bf492d69eabeae7195541",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 17",
+            "Mouth 17"
+          ]
+        },
+        {
+          "cell": 18,
+          "id": "SODA_HRPRvj2WIAI6H_-__18_MOUTH_18",
+          "name_ru": "Рот 18",
+          "label": "Mouth 18",
+          "variant_id": "MOUTH_18",
+          "single_path": "singles/01_body-shape/mouth/SODA_HRPRvj2WIAI6H_-__18_MOUTH_18.png",
+          "sha256": "79e5a02d40515190aa1672d6c3f7f6941f58c0834cb8d09a3546b380c3bd72d6",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Губы и рот",
+            "форма части тела",
+            "форма рта/лица",
+            "анатомическая форма",
+            "рот",
+            "губы",
+            "Рот 18",
+            "Mouth 18"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "torso",
+      "topic_ru": "Торс",
+      "priority": 1,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/torso__FEMALE__p01.jpg",
+      "sha256": "063982379344a1603dcaf715b294818b306669bded071e6b9cf64848fc5aff2c",
+      "width": 1600,
+      "height": 1090,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HWss9-yWIAALWyJ__01_PETITE",
+          "name_ru": "Миниатюрное телосложение",
+          "label": "Petite",
+          "variant_id": "PETITE",
+          "single_path": "singles/01_body-shape/torso/SODA_HWss9-yWIAALWyJ__01_PETITE.png",
+          "sha256": "359d0ea7514fd7fa7151d75e7dde44318655d9ed21b154b9d6ef44a120f39307",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Торс",
+            "телосложение",
+            "форма части тела",
+            "торс",
+            "Миниатюрное телосложение",
+            "Petite"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HWss9-yWIAALWyJ__02_HOURGLASS",
+          "name_ru": "Фигура типа «песочные часы»",
+          "label": "Hourglass",
+          "variant_id": "HOURGLASS",
+          "single_path": "singles/01_body-shape/torso/SODA_HWss9-yWIAALWyJ__02_HOURGLASS.png",
+          "sha256": "350848c284c36bb7711980330bfa27c85517ca71160e1d1d81830062fde8c8f7",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Торс",
+            "телосложение",
+            "форма части тела",
+            "торс",
+            "Фигура типа «песочные часы»",
+            "Hourglass"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HWss9-yWIAALWyJ__03_ATHLETIC",
+          "name_ru": "Атлетичное телосложение",
+          "label": "Athletic",
+          "variant_id": "ATHLETIC",
+          "single_path": "singles/01_body-shape/torso/SODA_HWss9-yWIAALWyJ__03_ATHLETIC.png",
+          "sha256": "a35cec0b0d9a20a0ddb05de8059d378d1640a0219314354755ed666d9a108444",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Торс",
+            "телосложение",
+            "форма части тела",
+            "торс",
+            "Атлетичное телосложение",
+            "Athletic"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HWss9-yWIAALWyJ__04_CHUBBY",
+          "name_ru": "Пухлое телосложение",
+          "label": "Chubby",
+          "variant_id": "CHUBBY",
+          "single_path": "singles/01_body-shape/torso/SODA_HWss9-yWIAALWyJ__04_CHUBBY.png",
+          "sha256": "8773390e41bfcdaf6d0ed3e8509d484711239990e08d362eff605b44c1b7edaf",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Торс",
+            "телосложение",
+            "форма части тела",
+            "торс",
+            "Пухлое телосложение",
+            "Chubby"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HWss9-yWIAALWyJ__05_SLIM",
+          "name_ru": "Стройное телосложение",
+          "label": "Slim",
+          "variant_id": "SLIM",
+          "single_path": "singles/01_body-shape/torso/SODA_HWss9-yWIAALWyJ__05_SLIM.png",
+          "sha256": "7782fefcae95d2427444213b968a48cff65de4ec861b0edcc6233186481496da",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Торс",
+            "телосложение",
+            "форма части тела",
+            "торс",
+            "Стройное телосложение",
+            "Slim"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HWss9-yWIAALWyJ__06_FULL",
+          "name_ru": "Полное телосложение",
+          "label": "Full",
+          "variant_id": "FULL",
+          "single_path": "singles/01_body-shape/torso/SODA_HWss9-yWIAALWyJ__06_FULL.png",
+          "sha256": "6c23178c155787e080ec461b923713a28da529676137987c2f34974dba520a9a",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Торс",
+            "телосложение",
+            "форма части тела",
+            "торс",
+            "Полное телосложение",
+            "Full"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "torso",
+      "topic_ru": "Торс",
+      "priority": 1,
+      "subject_label": "MALE",
+      "page": 1,
+      "path": "collages/torso__MALE__p01.jpg",
+      "sha256": "57286c528d95c525efda2f6023b6d87857dc3574d5898d2003b91e39945a4020",
+      "width": 1600,
+      "height": 1560,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HTWL-olWoAAHCA9__01_STOCKY",
+          "name_ru": "Коренастое телосложение",
+          "label": "Stocky",
+          "variant_id": "STOCKY",
+          "single_path": "singles/01_body-shape/torso/SODA_HTWL-olWoAAHCA9__01_STOCKY.png",
+          "sha256": "5997d5e2d4d8db79d2852345e33dd7baccb4e422c4982fc26630f676ba829d06",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Торс",
+            "телосложение",
+            "форма части тела",
+            "торс",
+            "Коренастое телосложение",
+            "Stocky"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HTWL-olWoAAHCA9__02_SLENDER",
+          "name_ru": "Худощавое телосложение",
+          "label": "Slender",
+          "variant_id": "SLENDER",
+          "single_path": "singles/01_body-shape/torso/SODA_HTWL-olWoAAHCA9__02_SLENDER.png",
+          "sha256": "99c9d3af53c8f5990408e030a445ffca61e7c68217a7d44ce71934644fdcb17c",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Торс",
+            "телосложение",
+            "форма части тела",
+            "торс",
+            "Худощавое телосложение",
+            "Slender"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HTWL-olWoAAHCA9__03_FULL_BUILD",
+          "name_ru": "Полное телосложение",
+          "label": "Full Build",
+          "variant_id": "FULL_BUILD",
+          "single_path": "singles/01_body-shape/torso/SODA_HTWL-olWoAAHCA9__03_FULL_BUILD.png",
+          "sha256": "03bcc8bea478b845264c0c96624118aa4468e2638a80e7bff3d957b5a257051d",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Торс",
+            "телосложение",
+            "форма части тела",
+            "торс",
+            "Полное телосложение",
+            "Full Build"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HTWL-olWoAAHCA9__04_ATHLETIC",
+          "name_ru": "Атлетичное телосложение",
+          "label": "Athletic",
+          "variant_id": "ATHLETIC",
+          "single_path": "singles/01_body-shape/torso/SODA_HTWL-olWoAAHCA9__04_ATHLETIC.png",
+          "sha256": "e8fd79b00816c5182a2ad08c537cce586b37ff10049d81ae7a70484f0fec737c",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Торс",
+            "телосложение",
+            "форма части тела",
+            "торс",
+            "Атлетичное телосложение",
+            "Athletic"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HTWL-olWoAAHCA9__05_MUSCULAR",
+          "name_ru": "Мускулистое телосложение",
+          "label": "Muscular",
+          "variant_id": "MUSCULAR",
+          "single_path": "singles/01_body-shape/torso/SODA_HTWL-olWoAAHCA9__05_MUSCULAR.png",
+          "sha256": "b282b8aec423d4556c809adb4fe98d2a19f702211885feda6f1b2437bfd929df",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Торс",
+            "телосложение",
+            "форма части тела",
+            "торс",
+            "Мускулистое телосложение",
+            "Muscular"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HTWL-olWoAAHCA9__06_SOFT_BUILD",
+          "name_ru": "Мягкое телосложение",
+          "label": "Soft Build",
+          "variant_id": "SOFT_BUILD",
+          "single_path": "singles/01_body-shape/torso/SODA_HTWL-olWoAAHCA9__06_SOFT_BUILD.png",
+          "sha256": "f0ac75c7e0321b78db9419226955abfbb38cdfbcd537251f147f04f3b0f224c3",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Торс",
+            "телосложение",
+            "форма части тела",
+            "торс",
+            "Мягкое телосложение",
+            "Soft Build"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HTWL-olWoAAHCA9__07_BROAD_MUSCULAR",
+          "name_ru": "Широкое и мускулистое телосложение",
+          "label": "Broad & Muscular",
+          "variant_id": "BROAD_MUSCULAR",
+          "single_path": "singles/01_body-shape/torso/SODA_HTWL-olWoAAHCA9__07_BROAD_MUSCULAR.png",
+          "sha256": "844a50cd7d7d2eca3f027bf7b94d167f78ff0f4c867ba6cfebd0f9a1ceb91230",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Торс",
+            "телосложение",
+            "форма части тела",
+            "торс",
+            "Широкое и мускулистое телосложение",
+            "Broad & Muscular"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HTWL-olWoAAHCA9__08_LEAN_DEFINED",
+          "name_ru": "Подтянутое рельефное телосложение",
+          "label": "Lean & Defined",
+          "variant_id": "LEAN_DEFINED",
+          "single_path": "singles/01_body-shape/torso/SODA_HTWL-olWoAAHCA9__08_LEAN_DEFINED.png",
+          "sha256": "27dd9e3401f04a3a6f9e402d0a42ad0c27672836b9458e917724a66bf0638b63",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Торс",
+            "телосложение",
+            "форма части тела",
+            "торс",
+            "Подтянутое рельефное телосложение",
+            "Lean & Defined"
+          ]
+        },
+        {
+          "cell": 9,
+          "id": "SODA_HQij288WgAAPQG9__01_LEAN",
+          "name_ru": "Подтянутое телосложение",
+          "label": "Lean",
+          "variant_id": "LEAN",
+          "single_path": "singles/01_body-shape/torso/SODA_HQij288WgAAPQG9__01_LEAN.png",
+          "sha256": "aa63a6cfa203fd4cc95ca157dc63a6d5b11734bd4334f364503391a9d3a9fafc",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Торс",
+            "телосложение",
+            "форма части тела",
+            "торс",
+            "Подтянутое телосложение",
+            "Lean"
+          ]
+        },
+        {
+          "cell": 10,
+          "id": "SODA_HQij288WgAAPQG9__02_FULL",
+          "name_ru": "Полное телосложение",
+          "label": "Full",
+          "variant_id": "FULL",
+          "single_path": "singles/01_body-shape/torso/SODA_HQij288WgAAPQG9__02_FULL.png",
+          "sha256": "2ba6c601767593f7146b6e56caea25283a27a7e516fd4579f28856589fe58fc0",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Торс",
+            "телосложение",
+            "форма части тела",
+            "торс",
+            "Полное телосложение",
+            "Full"
+          ]
+        },
+        {
+          "cell": 11,
+          "id": "SODA_HQij288WgAAPQG9__03_MUSCULAR",
+          "name_ru": "Мускулистое телосложение",
+          "label": "Muscular",
+          "variant_id": "MUSCULAR",
+          "single_path": "singles/01_body-shape/torso/SODA_HQij288WgAAPQG9__03_MUSCULAR.png",
+          "sha256": "d6d5db836f279a9e88bf989b9611d817823db72acb2a7ea0b43524801f5d9a59",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Торс",
+            "телосложение",
+            "форма части тела",
+            "торс",
+            "Мускулистое телосложение",
+            "Muscular"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "activewear",
+      "topic_ru": "Спортивная одежда",
+      "priority": 2,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/activewear__FEMALE__p01.jpg",
+      "sha256": "cfd6892d2107fedc92f727785db8e4e54cee853bc6bd7e5e14b0109a528fc24c",
+      "width": 1600,
+      "height": 1090,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HWAOcSlXcAA01L3__01_TANK_BIKER_SHORTS",
+          "name_ru": "Майка и велошорты",
+          "label": "Tank + Biker Shorts",
+          "variant_id": "TANK_BIKER_SHORTS",
+          "single_path": "singles/02_clothing-fit/activewear/SODA_HWAOcSlXcAA01L3__01_TANK_BIKER_SHORTS.png",
+          "sha256": "e19426d58e99f0df58714214168841c60d40d392cd9346189b01f0a051a65919",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Спортивная одежда",
+            "посадка одежды",
+            "одежда",
+            "поза",
+            "спортивная одежда",
+            "Майка и велошорты",
+            "Tank + Biker Shorts"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HWAOcSlXcAA01L3__02_LONG_SLEEVE_FLARED_LEGGINGS",
+          "name_ru": "Лонгслив и расклешённые легинсы",
+          "label": "Long Sleeve + Flared Leggings",
+          "variant_id": "LONG_SLEEVE_FLARED_LEGGINGS",
+          "single_path": "singles/02_clothing-fit/activewear/SODA_HWAOcSlXcAA01L3__02_LONG_SLEEVE_FLARED_LEGGINGS.png",
+          "sha256": "a3ccbd1033a2b58891d987ed054e5fcd288978eb36bd1aa928e1378476898d0b",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Спортивная одежда",
+            "посадка одежды",
+            "одежда",
+            "поза",
+            "спортивная одежда",
+            "Лонгслив и расклешённые легинсы",
+            "Long Sleeve + Flared Leggings"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HWAOcSlXcAA01L3__03_ATHLETIC_ROMPER",
+          "name_ru": "Спортивный ромпер",
+          "label": "Athletic Romper",
+          "variant_id": "ATHLETIC_ROMPER",
+          "single_path": "singles/02_clothing-fit/activewear/SODA_HWAOcSlXcAA01L3__03_ATHLETIC_ROMPER.png",
+          "sha256": "f7b435daf6639c8e8931d82e39045a333e36aa40488d73d66b62f7e8a042f633",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Спортивная одежда",
+            "посадка одежды",
+            "одежда",
+            "поза",
+            "спортивная одежда",
+            "Спортивный ромпер",
+            "Athletic Romper"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HWAOcSlXcAA01L3__04_SWEATSHIRT_SKIRT",
+          "name_ru": "Свитшот и юбка",
+          "label": "Sweatshirt + Skirt",
+          "variant_id": "SWEATSHIRT_SKIRT",
+          "single_path": "singles/02_clothing-fit/activewear/SODA_HWAOcSlXcAA01L3__04_SWEATSHIRT_SKIRT.png",
+          "sha256": "7c4dda6ae684e5076633d630f763073e3296f51db38273e7c8b8284416ec21d3",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Спортивная одежда",
+            "посадка одежды",
+            "одежда",
+            "поза",
+            "спортивная одежда",
+            "Свитшот и юбка",
+            "Sweatshirt + Skirt"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HWAOcSlXcAA01L3__05_LONGLINE_TOP_CAPRIS",
+          "name_ru": "Удлинённый топ и капри",
+          "label": "Longline Top + Capris",
+          "variant_id": "LONGLINE_TOP_CAPRIS",
+          "single_path": "singles/02_clothing-fit/activewear/SODA_HWAOcSlXcAA01L3__05_LONGLINE_TOP_CAPRIS.png",
+          "sha256": "3e3d3b67016ceccee32761bbcbbe5bb6d2aa8dab60d400e5b2fd28f49d2354f7",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Спортивная одежда",
+            "посадка одежды",
+            "одежда",
+            "поза",
+            "спортивная одежда",
+            "Удлинённый топ и капри",
+            "Longline Top + Capris"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HWAOcSlXcAA01L3__06_TRACK_JACKET_PANTS",
+          "name_ru": "Спортивная куртка и брюки",
+          "label": "Track Jacket + Pants",
+          "variant_id": "TRACK_JACKET_PANTS",
+          "single_path": "singles/02_clothing-fit/activewear/SODA_HWAOcSlXcAA01L3__06_TRACK_JACKET_PANTS.png",
+          "sha256": "944db15f2b17230c0350219c69c37eb93900d31a62f64f4770d7de3c197ea4b6",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Спортивная одежда",
+            "посадка одежды",
+            "одежда",
+            "поза",
+            "спортивная одежда",
+            "Спортивная куртка и брюки",
+            "Track Jacket + Pants"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "bodysuits",
+      "topic_ru": "Боди и бельё",
+      "priority": 2,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/bodysuits__FEMALE__p01.jpg",
+      "sha256": "1d1cd5c97d1aec25c4966d628da4ae5ff9d3d66a67c67797ec3204aaafce751b",
+      "width": 1600,
+      "height": 1560,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HW7c0kxXsAAh1hJ__01_SWEETHEART_BODYSUIT",
+          "name_ru": "Боди с вырезом-сердечком",
+          "label": "Sweetheart Bodysuit",
+          "variant_id": "SWEETHEART_BODYSUIT",
+          "single_path": "singles/02_clothing-fit/bodysuits/SODA_HW7c0kxXsAAh1hJ__01_SWEETHEART_BODYSUIT.png",
+          "sha256": "bcfa2ee0c869cff2b6995fd876db6e0b2b1d9bf32390f4318b3d4ad784031403",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Боди и бельё",
+            "посадка одежды",
+            "одежда",
+            "боди",
+            "бельё",
+            "Боди с вырезом-сердечком",
+            "Sweetheart Bodysuit"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HW7c0kxXsAAh1hJ__02_RIBBON_HALTER",
+          "name_ru": "Халтер с лентой",
+          "label": "Ribbon Halter",
+          "variant_id": "RIBBON_HALTER",
+          "single_path": "singles/02_clothing-fit/bodysuits/SODA_HW7c0kxXsAAh1hJ__02_RIBBON_HALTER.png",
+          "sha256": "c6215000dfdd29be611c88f9d8eadb1e16c4ab09f035311a6c5a9ea0d6ba09b8",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Боди и бельё",
+            "посадка одежды",
+            "одежда",
+            "боди",
+            "бельё",
+            "Халтер с лентой",
+            "Ribbon Halter"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HW7c0kxXsAAh1hJ__03_ASYMMETRIC_WRAP",
+          "name_ru": "Асимметричный запах",
+          "label": "Asymmetric Wrap",
+          "variant_id": "ASYMMETRIC_WRAP",
+          "single_path": "singles/02_clothing-fit/bodysuits/SODA_HW7c0kxXsAAh1hJ__03_ASYMMETRIC_WRAP.png",
+          "sha256": "7d930c562f4c1c20ffd95903aebd47fd8d3bca5750903d6abf3e7c2ef3fd4cfe",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Боди и бельё",
+            "посадка одежды",
+            "одежда",
+            "боди",
+            "бельё",
+            "Асимметричный запах",
+            "Asymmetric Wrap"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HW7c0kxXsAAh1hJ__04_LACE_UP_CORSET",
+          "name_ru": "Корсет со шнуровкой",
+          "label": "Lace-up Corset",
+          "variant_id": "LACE_UP_CORSET",
+          "single_path": "singles/02_clothing-fit/bodysuits/SODA_HW7c0kxXsAAh1hJ__04_LACE_UP_CORSET.png",
+          "sha256": "2fe8fef4936709e9efb164aad963385d7ee660c8394172e09ec780607a6a60ff",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Боди и бельё",
+            "посадка одежды",
+            "одежда",
+            "боди",
+            "бельё",
+            "Корсет со шнуровкой",
+            "Lace-up Corset"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HW7c0kxXsAAh1hJ__05_MESH_SHOULDER",
+          "name_ru": "Сетчатая деталь на плече",
+          "label": "Mesh Shoulder",
+          "variant_id": "MESH_SHOULDER",
+          "single_path": "singles/02_clothing-fit/bodysuits/SODA_HW7c0kxXsAAh1hJ__05_MESH_SHOULDER.png",
+          "sha256": "f57a175cba7b195b4efa53eb26c6baba15364a605a0e1246799c57adf9e9a7d9",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Боди и бельё",
+            "посадка одежды",
+            "одежда",
+            "боди",
+            "бельё",
+            "Сетчатая деталь на плече",
+            "Mesh Shoulder"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HW7c0kxXsAAh1hJ__06_SQUARE_NECK_BODYSUIT",
+          "name_ru": "Боди с квадратным вырезом",
+          "label": "Square-neck Bodysuit",
+          "variant_id": "SQUARE_NECK_BODYSUIT",
+          "single_path": "singles/02_clothing-fit/bodysuits/SODA_HW7c0kxXsAAh1hJ__06_SQUARE_NECK_BODYSUIT.png",
+          "sha256": "1b507cb10014e6e7a46327ff3e717b1f38a309ecb044614c1a5eb5f6a128dc91",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Боди и бельё",
+            "посадка одежды",
+            "одежда",
+            "боди",
+            "бельё",
+            "Боди с квадратным вырезом",
+            "Square-neck Bodysuit"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HW7c0kxXsAAh1hJ__07_CROSS_WAIST_SET",
+          "name_ru": "Комплект с перекрёстом на талии",
+          "label": "Cross-waist Set",
+          "variant_id": "CROSS_WAIST_SET",
+          "single_path": "singles/02_clothing-fit/bodysuits/SODA_HW7c0kxXsAAh1hJ__07_CROSS_WAIST_SET.png",
+          "sha256": "d566c6be447116ca50146505a455b986d3f139fec5742e2407802edc5ac751cb",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Боди и бельё",
+            "посадка одежды",
+            "одежда",
+            "боди",
+            "бельё",
+            "Комплект с перекрёстом на талии",
+            "Cross-waist Set"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HW7c0kxXsAAh1hJ__08_KEYHOLE_HALTER",
+          "name_ru": "Халтер с вырезом-каплей",
+          "label": "Keyhole Halter",
+          "variant_id": "KEYHOLE_HALTER",
+          "single_path": "singles/02_clothing-fit/bodysuits/SODA_HW7c0kxXsAAh1hJ__08_KEYHOLE_HALTER.png",
+          "sha256": "40dd06a6c3de1377a28bcba000428f2e4b538c4857334b697eb9c7f4772359cd",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Боди и бельё",
+            "посадка одежды",
+            "одежда",
+            "боди",
+            "бельё",
+            "Халтер с вырезом-каплей",
+            "Keyhole Halter"
+          ]
+        },
+        {
+          "cell": 9,
+          "id": "SODA_HW7c0kxXsAAh1hJ__09_PUFF_SLEEVE_TOP",
+          "name_ru": "Топ с рукавами-фонариками",
+          "label": "Puff-sleeve Top",
+          "variant_id": "PUFF_SLEEVE_TOP",
+          "single_path": "singles/02_clothing-fit/bodysuits/SODA_HW7c0kxXsAAh1hJ__09_PUFF_SLEEVE_TOP.png",
+          "sha256": "7d4c426f0d18de742a04f38df3b741f14e8d95af64bf068c14cb7dfb902e4fbd",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Боди и бельё",
+            "посадка одежды",
+            "одежда",
+            "боди",
+            "бельё",
+            "Топ с рукавами-фонариками",
+            "Puff-sleeve Top"
+          ]
+        },
+        {
+          "cell": 10,
+          "id": "SODA_HW7c0kxXsAAh1hJ__10_DEEP_V_BODYSUIT",
+          "name_ru": "Боди с глубоким V-образным вырезом",
+          "label": "Deep V Bodysuit",
+          "variant_id": "DEEP_V_BODYSUIT",
+          "single_path": "singles/02_clothing-fit/bodysuits/SODA_HW7c0kxXsAAh1hJ__10_DEEP_V_BODYSUIT.png",
+          "sha256": "9d5ea4a4b621a104a7982a3e83f71947a64e018d4e5b3fa97b2850f86a89a407",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Боди и бельё",
+            "посадка одежды",
+            "одежда",
+            "боди",
+            "бельё",
+            "Боди с глубоким V-образным вырезом",
+            "Deep V Bodysuit"
+          ]
+        },
+        {
+          "cell": 11,
+          "id": "SODA_HW7c0kxXsAAh1hJ__11_SPORTY_ZIP",
+          "name_ru": "Спортивный вариант на молнии",
+          "label": "Sporty Zip",
+          "variant_id": "SPORTY_ZIP",
+          "single_path": "singles/02_clothing-fit/bodysuits/SODA_HW7c0kxXsAAh1hJ__11_SPORTY_ZIP.png",
+          "sha256": "7f1564a45461abd5b8fb514bc7a5d5efa92005b0a90249f22f92f7c8414f76fd",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Боди и бельё",
+            "посадка одежды",
+            "одежда",
+            "боди",
+            "бельё",
+            "Спортивный вариант на молнии",
+            "Sporty Zip"
+          ]
+        },
+        {
+          "cell": 12,
+          "id": "SODA_HW7c0kxXsAAh1hJ__12_LACE_TRIM_SET",
+          "name_ru": "Комплект с кружевной отделкой",
+          "label": "Lace-trim Set",
+          "variant_id": "LACE_TRIM_SET",
+          "single_path": "singles/02_clothing-fit/bodysuits/SODA_HW7c0kxXsAAh1hJ__12_LACE_TRIM_SET.png",
+          "sha256": "5944f9777b42a415acba4c39c893a6337e29cd08c3aeaa9625da59966595fb40",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Боди и бельё",
+            "посадка одежды",
+            "одежда",
+            "боди",
+            "бельё",
+            "Комплект с кружевной отделкой",
+            "Lace-trim Set"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "shorts",
+      "topic_ru": "Шорты",
+      "priority": 2,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/shorts__FEMALE__p01.jpg",
+      "sha256": "91b3a14bb511d256b22aefdf056bc473049b9e1ebb7295056ddec95ee5da8a67",
+      "width": 1600,
+      "height": 1560,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HT5RgavWQAAswEQ__01_SPORTY",
+          "name_ru": "Спортивный вариант",
+          "label": "Sporty",
+          "variant_id": "SPORTY",
+          "single_path": "singles/02_clothing-fit/shorts/SODA_HT5RgavWQAAswEQ__01_SPORTY.png",
+          "sha256": "515ce8368139a0148714b778042a200128be2d1a2bdd140804d4f972fbeef482",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Шорты",
+            "посадка одежды",
+            "одежда",
+            "короткие шорты",
+            "Спортивный вариант",
+            "Sporty"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HT5RgavWQAAswEQ__02_PAPERBAG",
+          "name_ru": "Пояс paperbag",
+          "label": "Paperbag",
+          "variant_id": "PAPERBAG",
+          "single_path": "singles/02_clothing-fit/shorts/SODA_HT5RgavWQAAswEQ__02_PAPERBAG.png",
+          "sha256": "d0860070e7d57cc9e3b16cf66b3e8409b6bb025eb7c02c134db9b0eee3a2e541",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Шорты",
+            "посадка одежды",
+            "одежда",
+            "короткие шорты",
+            "Пояс paperbag",
+            "Paperbag"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HT5RgavWQAAswEQ__03_LEATHER",
+          "name_ru": "Кожа",
+          "label": "Leather",
+          "variant_id": "LEATHER",
+          "single_path": "singles/02_clothing-fit/shorts/SODA_HT5RgavWQAAswEQ__03_LEATHER.png",
+          "sha256": "ebf938c6081b5a7368a9bd3c15bb0e800fd9570f7879e24f5d1f09679681f63f",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Шорты",
+            "посадка одежды",
+            "одежда",
+            "короткие шорты",
+            "Кожа",
+            "Leather"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HT5RgavWQAAswEQ__04_PLAID",
+          "name_ru": "Клетчатый рисунок",
+          "label": "Plaid",
+          "variant_id": "PLAID",
+          "single_path": "singles/02_clothing-fit/shorts/SODA_HT5RgavWQAAswEQ__04_PLAID.png",
+          "sha256": "23111b38f07b24e039ddc7f7a9d6750d5d865e1fd2ffed5e8ce33eb96870759e",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Шорты",
+            "посадка одежды",
+            "одежда",
+            "короткие шорты",
+            "Клетчатый рисунок",
+            "Plaid"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HT5RgavWQAAswEQ__05_DENIM",
+          "name_ru": "Деним",
+          "label": "Denim",
+          "variant_id": "DENIM",
+          "single_path": "singles/02_clothing-fit/shorts/SODA_HT5RgavWQAAswEQ__05_DENIM.png",
+          "sha256": "7e24e4fbedcd51cdd61bf157987890f163498bcfa4c88c891663ef77cb8e0635",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Шорты",
+            "посадка одежды",
+            "одежда",
+            "короткие шорты",
+            "Деним",
+            "Denim"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HT5RgavWQAAswEQ__06_COTTON",
+          "name_ru": "Хлопок",
+          "label": "Cotton",
+          "variant_id": "COTTON",
+          "single_path": "singles/02_clothing-fit/shorts/SODA_HT5RgavWQAAswEQ__06_COTTON.png",
+          "sha256": "614235f60696132af7c6fd94d979265d03ce61a48f5f8896ec08aed969961817",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Шорты",
+            "посадка одежды",
+            "одежда",
+            "короткие шорты",
+            "Хлопок",
+            "Cotton"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HT5RgavWQAAswEQ__07_HIGH_WAIST",
+          "name_ru": "Высокая талия",
+          "label": "High-Waist",
+          "variant_id": "HIGH_WAIST",
+          "single_path": "singles/02_clothing-fit/shorts/SODA_HT5RgavWQAAswEQ__07_HIGH_WAIST.png",
+          "sha256": "f5d92fa9a307f79f746c98364996b7ffd544535c41a8c8646fe65ae4f4a10cc5",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Шорты",
+            "посадка одежды",
+            "одежда",
+            "короткие шорты",
+            "Высокая талия",
+            "High-Waist"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HT5RgavWQAAswEQ__08_RIPPED",
+          "name_ru": "С прорехами",
+          "label": "Ripped",
+          "variant_id": "RIPPED",
+          "single_path": "singles/02_clothing-fit/shorts/SODA_HT5RgavWQAAswEQ__08_RIPPED.png",
+          "sha256": "545a62faf946975bb4ac329016793292af774fefa555314c554d6fbcb434cbd5",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Шорты",
+            "посадка одежды",
+            "одежда",
+            "короткие шорты",
+            "С прорехами",
+            "Ripped"
+          ]
+        },
+        {
+          "cell": 9,
+          "id": "SODA_HT5RgavWQAAswEQ__09_COLORED",
+          "name_ru": "Цветной",
+          "label": "Colored",
+          "variant_id": "COLORED",
+          "single_path": "singles/02_clothing-fit/shorts/SODA_HT5RgavWQAAswEQ__09_COLORED.png",
+          "sha256": "623e468ae436c5ab8a93fe617565d3905fa1528df3ea5dce60fd6a2a10a75147",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Шорты",
+            "посадка одежды",
+            "одежда",
+            "короткие шорты",
+            "Цветной",
+            "Colored"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "skirts",
+      "topic_ru": "Юбки",
+      "priority": 2,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/skirts__FEMALE__p01.jpg",
+      "sha256": "b89b5a77a2b442e82aae38ee62a5a3bfe609487abe51ba7a1e384e577e99b70f",
+      "width": 1600,
+      "height": 1560,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HTwGU_iXAAAxsff__01_FRONT_NEUTRAL",
+          "name_ru": "Нейтральная поза спереди",
+          "label": "Front Neutral",
+          "variant_id": "FRONT_NEUTRAL",
+          "single_path": "singles/02_clothing-fit/skirts/SODA_HTwGU_iXAAAxsff__01_FRONT_NEUTRAL.png",
+          "sha256": "dfa599aecd04603d78d4448483898bab18f9b02925d11f7cddfb9677cbd9215c",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Юбки",
+            "посадка одежды",
+            "одежда",
+            "плиссированная юбка",
+            "Нейтральная поза спереди",
+            "Front Neutral"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HTwGU_iXAAAxsff__02_REAR_NEUTRAL",
+          "name_ru": "Нейтральная поза сзади",
+          "label": "Rear Neutral",
+          "variant_id": "REAR_NEUTRAL",
+          "single_path": "singles/02_clothing-fit/skirts/SODA_HTwGU_iXAAAxsff__02_REAR_NEUTRAL.png",
+          "sha256": "6db355498a404de80b1064a3ff39ef78881e84a79052a96bc27e0b9b4eba1dcf",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Юбки",
+            "посадка одежды",
+            "одежда",
+            "плиссированная юбка",
+            "Нейтральная поза сзади",
+            "Rear Neutral"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HTwGU_iXAAAxsff__03_HIP_SHIFT",
+          "name_ru": "Перенос веса на бедро",
+          "label": "Hip Shift",
+          "variant_id": "HIP_SHIFT",
+          "single_path": "singles/02_clothing-fit/skirts/SODA_HTwGU_iXAAAxsff__03_HIP_SHIFT.png",
+          "sha256": "754d1a6e8fd5198e6635e5ea42506b8b673dcbae1b7503a55332d46f74cda128",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Юбки",
+            "посадка одежды",
+            "одежда",
+            "плиссированная юбка",
+            "Перенос веса на бедро",
+            "Hip Shift"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HTwGU_iXAAAxsff__04_WALKING",
+          "name_ru": "Шаг при ходьбе",
+          "label": "Walking",
+          "variant_id": "WALKING",
+          "single_path": "singles/02_clothing-fit/skirts/SODA_HTwGU_iXAAAxsff__04_WALKING.png",
+          "sha256": "6adfc2d8ebe20089d2511ce43dd545db4e92d4854b606559c57b8230eb22fcaa",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Юбки",
+            "посадка одежды",
+            "одежда",
+            "плиссированная юбка",
+            "Шаг при ходьбе",
+            "Walking"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HTwGU_iXAAAxsff__05_SIDE_TWIST",
+          "name_ru": "Поворот корпуса вбок",
+          "label": "Side Twist",
+          "variant_id": "SIDE_TWIST",
+          "single_path": "singles/02_clothing-fit/skirts/SODA_HTwGU_iXAAAxsff__05_SIDE_TWIST.png",
+          "sha256": "b73efacf7b6a257808a743bb8e2f87429a66773af7b4839173a391ff4d5d1ee9",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Юбки",
+            "посадка одежды",
+            "одежда",
+            "плиссированная юбка",
+            "Поворот корпуса вбок",
+            "Side Twist"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HTwGU_iXAAAxsff__06_STEP_UP",
+          "name_ru": "Шаг вверх",
+          "label": "Step Up",
+          "variant_id": "STEP_UP",
+          "single_path": "singles/02_clothing-fit/skirts/SODA_HTwGU_iXAAAxsff__06_STEP_UP.png",
+          "sha256": "75d64f046b966a9df760524dba47baefc0872c43ac0bb2f0ebb053deab45b82f",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Юбки",
+            "посадка одежды",
+            "одежда",
+            "плиссированная юбка",
+            "Шаг вверх",
+            "Step Up"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HTwGU_iXAAAxsff__07_SIDE_SIT",
+          "name_ru": "Сидение боком",
+          "label": "Side Sit",
+          "variant_id": "SIDE_SIT",
+          "single_path": "singles/02_clothing-fit/skirts/SODA_HTwGU_iXAAAxsff__07_SIDE_SIT.png",
+          "sha256": "5f7e161e5d36def1f1ada5892201d6145c7fa326e1db2fe2efe27e77862a1ec5",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Юбки",
+            "посадка одежды",
+            "одежда",
+            "плиссированная юбка",
+            "Сидение боком",
+            "Side Sit"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HTwGU_iXAAAxsff__08_KNEELING",
+          "name_ru": "Положение на коленях",
+          "label": "Kneeling",
+          "variant_id": "KNEELING",
+          "single_path": "singles/02_clothing-fit/skirts/SODA_HTwGU_iXAAAxsff__08_KNEELING.png",
+          "sha256": "6d93f69a775190f758c1842a244ed4da826f9b82a534dadb40adeec4ff8c1e70",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Юбки",
+            "посадка одежды",
+            "одежда",
+            "плиссированная юбка",
+            "Положение на коленях",
+            "Kneeling"
+          ]
+        },
+        {
+          "cell": 9,
+          "id": "SODA_HTwGU_iXAAAxsff__09_ONE_KNEE_UP",
+          "name_ru": "Одно колено поднято",
+          "label": "One Knee Up",
+          "variant_id": "ONE_KNEE_UP",
+          "single_path": "singles/02_clothing-fit/skirts/SODA_HTwGU_iXAAAxsff__09_ONE_KNEE_UP.png",
+          "sha256": "45b059ac5dbc95069e2199ba65009dae10bfcc997cb38a2a7beb891a453327c8",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Юбки",
+            "посадка одежды",
+            "одежда",
+            "плиссированная юбка",
+            "Одно колено поднято",
+            "One Knee Up"
+          ]
+        },
+        {
+          "cell": 10,
+          "id": "SODA_HTwGU_iXAAAxsff__10_CROSS_LEGGED",
+          "name_ru": "Скрещённые ноги",
+          "label": "Cross-Legged",
+          "variant_id": "CROSS_LEGGED",
+          "single_path": "singles/02_clothing-fit/skirts/SODA_HTwGU_iXAAAxsff__10_CROSS_LEGGED.png",
+          "sha256": "3ccfcd1b6b2820f586d45bd86da32c7c68d1bec230e57f5e3aa116c858f4312e",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Юбки",
+            "посадка одежды",
+            "одежда",
+            "плиссированная юбка",
+            "Скрещённые ноги",
+            "Cross-Legged"
+          ]
+        },
+        {
+          "cell": 11,
+          "id": "SODA_HTwGU_iXAAAxsff__11_LOW_CROUCH",
+          "name_ru": "Низкий присед",
+          "label": "Low Crouch",
+          "variant_id": "LOW_CROUCH",
+          "single_path": "singles/02_clothing-fit/skirts/SODA_HTwGU_iXAAAxsff__11_LOW_CROUCH.png",
+          "sha256": "a8d3d7945c27ab09dd3070c36d4fe60fa1f8b84c796a55d9ecb9c8e81f949872",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Юбки",
+            "посадка одежды",
+            "одежда",
+            "плиссированная юбка",
+            "Низкий присед",
+            "Low Crouch"
+          ]
+        },
+        {
+          "cell": 12,
+          "id": "SODA_HTwGU_iXAAAxsff__12_SPIN",
+          "name_ru": "Вращение",
+          "label": "Spin",
+          "variant_id": "SPIN",
+          "single_path": "singles/02_clothing-fit/skirts/SODA_HTwGU_iXAAAxsff__12_SPIN.png",
+          "sha256": "429d1ee45ac1fd8503570ac3c3ddbec153748195d0a886cd99bc21dd916a1c2c",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Юбки",
+            "посадка одежды",
+            "одежда",
+            "плиссированная юбка",
+            "Вращение",
+            "Spin"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "sleeves",
+      "topic_ru": "Рукава",
+      "priority": 2,
+      "subject_label": "NEUTRAL",
+      "page": 1,
+      "path": "collages/sleeves__NEUTRAL__p01.jpg",
+      "sha256": "f90171934ffdafbb7356c1213c2a07d69ab43bd824826613e0cb3121ccb42592",
+      "width": 1600,
+      "height": 1090,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HSHAPBDbsAA97OP__01_THICK",
+          "name_ru": "Толстый",
+          "label": "Thick",
+          "variant_id": "THICK",
+          "single_path": "singles/02_clothing-fit/sleeves/SODA_HSHAPBDbsAA97OP__01_THICK.png",
+          "sha256": "5c1ce43f620b4ac62ed824cfb674f014af5548b79f30abdeca86737f3d5005a1",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Рукава",
+            "посадка одежды",
+            "одежда",
+            "рукав",
+            "согнутая рука",
+            "Толстый",
+            "Thick"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HSHAPBDbsAA97OP__02_THIN",
+          "name_ru": "Тонкий",
+          "label": "Thin",
+          "variant_id": "THIN",
+          "single_path": "singles/02_clothing-fit/sleeves/SODA_HSHAPBDbsAA97OP__02_THIN.png",
+          "sha256": "277e325a74c07eb061fc3c606c35a17d8f60dd322a3fcd742c86c855613ec0cb",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Рукава",
+            "посадка одежды",
+            "одежда",
+            "рукав",
+            "согнутая рука",
+            "Тонкий",
+            "Thin"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HSHAPBDbsAA97OP__03_SMOOTH",
+          "name_ru": "Гладкий",
+          "label": "Smooth",
+          "variant_id": "SMOOTH",
+          "single_path": "singles/02_clothing-fit/sleeves/SODA_HSHAPBDbsAA97OP__03_SMOOTH.png",
+          "sha256": "0bf67845ba64329db687e88a6a131c468dc327a81949361c214bebcc1a3801ac",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Рукава",
+            "посадка одежды",
+            "одежда",
+            "рукав",
+            "согнутая рука",
+            "Гладкий",
+            "Smooth"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HSHAPBDbsAA97OP__04_SOFT",
+          "name_ru": "Мягкая форма",
+          "label": "Soft",
+          "variant_id": "SOFT",
+          "single_path": "singles/02_clothing-fit/sleeves/SODA_HSHAPBDbsAA97OP__04_SOFT.png",
+          "sha256": "f8102c7ed237b4d2be9a3c04a08af0ddcdca7c4190f5c7b7c1ec020dd40517dc",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Рукава",
+            "посадка одежды",
+            "одежда",
+            "рукав",
+            "согнутая рука",
+            "Мягкая форма",
+            "Soft"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HSHAPBDbsAA97OP__05_STIFF",
+          "name_ru": "Жёсткий",
+          "label": "Stiff",
+          "variant_id": "STIFF",
+          "single_path": "singles/02_clothing-fit/sleeves/SODA_HSHAPBDbsAA97OP__05_STIFF.png",
+          "sha256": "24f47ad224991c82ff46267cc904af6da14aa0223b9dd4425d993c7582ceb065",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Рукава",
+            "посадка одежды",
+            "одежда",
+            "рукав",
+            "согнутая рука",
+            "Жёсткий",
+            "Stiff"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HSHAPBDbsAA97OP__06_STRETCHY",
+          "name_ru": "Эластичный",
+          "label": "Stretchy",
+          "variant_id": "STRETCHY",
+          "single_path": "singles/02_clothing-fit/sleeves/SODA_HSHAPBDbsAA97OP__06_STRETCHY.png",
+          "sha256": "22d77314a0fb8b7ff5c882c61a958cc65c190922700deba56b44048052c8a9d9",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Рукава",
+            "посадка одежды",
+            "одежда",
+            "рукав",
+            "согнутая рука",
+            "Эластичный",
+            "Stretchy"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "swimwear",
+      "topic_ru": "Верх купальника",
+      "priority": 2,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/swimwear__FEMALE__p01.jpg",
+      "sha256": "b896b982472a370eef86412cf5f54de50ec43676566faaee2958c2d6ab4744bf",
+      "width": 1600,
+      "height": 1090,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HVHkWMpWQAAG5ww__01_TRIANGLE",
+          "name_ru": "Треугольный верх купальника",
+          "label": "Triangle",
+          "variant_id": "TRIANGLE",
+          "single_path": "singles/02_clothing-fit/swimwear/SODA_HVHkWMpWQAAG5ww__01_TRIANGLE.png",
+          "sha256": "10b0668f3d35cccd7646cb49adaac0b17e366887ab9da7d170e3ac5af79f3e76",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Верх купальника",
+            "посадка одежды",
+            "одежда",
+            "верх купальника",
+            "Треугольный верх купальника",
+            "Triangle"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HVHkWMpWQAAG5ww__02_HALTER",
+          "name_ru": "Халтер с бретелью вокруг шеи",
+          "label": "Halter",
+          "variant_id": "HALTER",
+          "single_path": "singles/02_clothing-fit/swimwear/SODA_HVHkWMpWQAAG5ww__02_HALTER.png",
+          "sha256": "9d80d11b46d71b53f20278fde740efdf91543f4d0a3bef96b5011966ffa59a2a",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Верх купальника",
+            "посадка одежды",
+            "одежда",
+            "верх купальника",
+            "Халтер с бретелью вокруг шеи",
+            "Halter"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HVHkWMpWQAAG5ww__03_UNDERWIRE",
+          "name_ru": "Верх на косточках",
+          "label": "Underwire",
+          "variant_id": "UNDERWIRE",
+          "single_path": "singles/02_clothing-fit/swimwear/SODA_HVHkWMpWQAAG5ww__03_UNDERWIRE.png",
+          "sha256": "c0c37c72f69fb4a68a52d28c5421c1367b98b069b1e8e2e126c73ebb594e148c",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Верх купальника",
+            "посадка одежды",
+            "одежда",
+            "верх купальника",
+            "Верх на косточках",
+            "Underwire"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HVHkWMpWQAAG5ww__04_BANDEAU",
+          "name_ru": "Верх-бандо",
+          "label": "Bandeau",
+          "variant_id": "BANDEAU",
+          "single_path": "singles/02_clothing-fit/swimwear/SODA_HVHkWMpWQAAG5ww__04_BANDEAU.png",
+          "sha256": "ca6129a04f63c413efbb15b8b6bd6b65803b01c14023278532ace7ed1303b9ff",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Верх купальника",
+            "посадка одежды",
+            "одежда",
+            "верх купальника",
+            "Верх-бандо",
+            "Bandeau"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HVHkWMpWQAAG5ww__05_PLUNGE",
+          "name_ru": "Глубокий вырез",
+          "label": "Plunge",
+          "variant_id": "PLUNGE",
+          "single_path": "singles/02_clothing-fit/swimwear/SODA_HVHkWMpWQAAG5ww__05_PLUNGE.png",
+          "sha256": "1ed00fc29365b15e3530e1edb488c8ca2240164321eb8ad19dae892d5cba8b62",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Верх купальника",
+            "посадка одежды",
+            "одежда",
+            "верх купальника",
+            "Глубокий вырез",
+            "Plunge"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HVHkWMpWQAAG5ww__06_PUSH_UP",
+          "name_ru": "Пуш-ап",
+          "label": "Push-up",
+          "variant_id": "PUSH_UP",
+          "single_path": "singles/02_clothing-fit/swimwear/SODA_HVHkWMpWQAAG5ww__06_PUSH_UP.png",
+          "sha256": "528c6b50b6716b33faf448eb96f7418f367f7200fcfd98c416009b0cf4e08b71",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Верх купальника",
+            "посадка одежды",
+            "одежда",
+            "верх купальника",
+            "Пуш-ап",
+            "Push-up"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HVHkWMpWQAAG5ww__07_SPORTY",
+          "name_ru": "Спортивный вариант",
+          "label": "Sporty",
+          "variant_id": "SPORTY",
+          "single_path": "singles/02_clothing-fit/swimwear/SODA_HVHkWMpWQAAG5ww__07_SPORTY.png",
+          "sha256": "fa73036da1fa19f455c244001f441a89cc2e5613520218150ff5f382be0677f5",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Верх купальника",
+            "посадка одежды",
+            "одежда",
+            "верх купальника",
+            "Спортивный вариант",
+            "Sporty"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HVHkWMpWQAAG5ww__08_MICRO_TINY",
+          "name_ru": "Микро / очень маленький",
+          "label": "Micro / Tiny",
+          "variant_id": "MICRO_TINY",
+          "single_path": "singles/02_clothing-fit/swimwear/SODA_HVHkWMpWQAAG5ww__08_MICRO_TINY.png",
+          "sha256": "114a47ebf1937603beb2286d81e85b77d60f4d56a50dd25d17a38ca324b3caa6",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Верх купальника",
+            "посадка одежды",
+            "одежда",
+            "верх купальника",
+            "Микро / очень маленький",
+            "Micro / Tiny"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "tops",
+      "topic_ru": "Топы",
+      "priority": 2,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/tops__FEMALE__p01.jpg",
+      "sha256": "a2721e98d0dbe81802a25c474433e1952a4ba47b1f3895b691e6eb75dfcaa277",
+      "width": 1600,
+      "height": 1560,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HUEb_TFXEAE1Uvy__01_SQUARE_NECK_CROP",
+          "name_ru": "Укороченный топ с квадратным вырезом",
+          "label": "Square Neck Crop",
+          "variant_id": "SQUARE_NECK_CROP",
+          "single_path": "singles/02_clothing-fit/tops/SODA_HUEb_TFXEAE1Uvy__01_SQUARE_NECK_CROP.png",
+          "sha256": "df64e05d647180d677456147b810127a287f0a4b202035d7c7d1adb3f4768202",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Топы",
+            "посадка одежды",
+            "одежда",
+            "топы",
+            "Укороченный топ с квадратным вырезом",
+            "Square Neck Crop"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HUEb_TFXEAE1Uvy__02_COWL_NECK_CAMI",
+          "name_ru": "Топ-камисоль с воротом-хомутом",
+          "label": "Cowl Neck Cami",
+          "variant_id": "COWL_NECK_CAMI",
+          "single_path": "singles/02_clothing-fit/tops/SODA_HUEb_TFXEAE1Uvy__02_COWL_NECK_CAMI.png",
+          "sha256": "ee7675fd066817fd27a9bc44fb974f38355fa7eea16e6b513e680b87ede5289f",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Топы",
+            "посадка одежды",
+            "одежда",
+            "топы",
+            "Топ-камисоль с воротом-хомутом",
+            "Cowl Neck Cami"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HUEb_TFXEAE1Uvy__03_PEASANT_CROP",
+          "name_ru": "Укороченный топ в крестьянском стиле",
+          "label": "Peasant Crop",
+          "variant_id": "PEASANT_CROP",
+          "single_path": "singles/02_clothing-fit/tops/SODA_HUEb_TFXEAE1Uvy__03_PEASANT_CROP.png",
+          "sha256": "743a32e583db880c877f551657c8595c0c7013bcd3e91099481e8e9082afb74b",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Топы",
+            "посадка одежды",
+            "одежда",
+            "топы",
+            "Укороченный топ в крестьянском стиле",
+            "Peasant Crop"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HUEb_TFXEAE1Uvy__04_DENIM_CORSET",
+          "name_ru": "Джинсовый корсет",
+          "label": "Denim Corset",
+          "variant_id": "DENIM_CORSET",
+          "single_path": "singles/02_clothing-fit/tops/SODA_HUEb_TFXEAE1Uvy__04_DENIM_CORSET.png",
+          "sha256": "5e18f00193971dd6117ed243b93b421fe4e96ed57052cab9f798fe2db05f06c9",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Топы",
+            "посадка одежды",
+            "одежда",
+            "топы",
+            "Джинсовый корсет",
+            "Denim Corset"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HUEb_TFXEAE1Uvy__05_WRAP_TOP",
+          "name_ru": "Топ с запахом",
+          "label": "Wrap Top",
+          "variant_id": "WRAP_TOP",
+          "single_path": "singles/02_clothing-fit/tops/SODA_HUEb_TFXEAE1Uvy__05_WRAP_TOP.png",
+          "sha256": "6a2bf33551e7605cb56cf3dea7f397886fca7b82d8686b0a05b57a608b47fd70",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Топы",
+            "посадка одежды",
+            "одежда",
+            "топы",
+            "Топ с запахом",
+            "Wrap Top"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HUEb_TFXEAE1Uvy__06_PUFF_SLEEVE_CROP",
+          "name_ru": "Укороченный топ с рукавами-фонариками",
+          "label": "Puff Sleeve Crop",
+          "variant_id": "PUFF_SLEEVE_CROP",
+          "single_path": "singles/02_clothing-fit/tops/SODA_HUEb_TFXEAE1Uvy__06_PUFF_SLEEVE_CROP.png",
+          "sha256": "a9cdc6d43f6340321f454fd52b957bd953b6e5a47ab01f895dd1f086fdf164ef",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Топы",
+            "посадка одежды",
+            "одежда",
+            "топы",
+            "Укороченный топ с рукавами-фонариками",
+            "Puff Sleeve Crop"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HUEb_TFXEAE1Uvy__07_HALTER_VEST",
+          "name_ru": "Жилет-халтер",
+          "label": "Halter Vest",
+          "variant_id": "HALTER_VEST",
+          "single_path": "singles/02_clothing-fit/tops/SODA_HUEb_TFXEAE1Uvy__07_HALTER_VEST.png",
+          "sha256": "eb704a11755a401d00a240816966bbec0e322d3b3dd2d0b64de66e758563bdcc",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Топы",
+            "посадка одежды",
+            "одежда",
+            "топы",
+            "Жилет-халтер",
+            "Halter Vest"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HUEb_TFXEAE1Uvy__08_LACE_TRIM_CAMI",
+          "name_ru": "Топ-камисоль с кружевной отделкой",
+          "label": "Lace Trim Cami",
+          "variant_id": "LACE_TRIM_CAMI",
+          "single_path": "singles/02_clothing-fit/tops/SODA_HUEb_TFXEAE1Uvy__08_LACE_TRIM_CAMI.png",
+          "sha256": "e327612ae6145d880ef51bb006ce5a1f25a75e5754744db0f67508ca8f9fa710",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Топы",
+            "посадка одежды",
+            "одежда",
+            "топы",
+            "Топ-камисоль с кружевной отделкой",
+            "Lace Trim Cami"
+          ]
+        },
+        {
+          "cell": 9,
+          "id": "SODA_HUEb_TFXEAE1Uvy__09_OFF_SHOULDER",
+          "name_ru": "Открытые плечи",
+          "label": "Off Shoulder",
+          "variant_id": "OFF_SHOULDER",
+          "single_path": "singles/02_clothing-fit/tops/SODA_HUEb_TFXEAE1Uvy__09_OFF_SHOULDER.png",
+          "sha256": "bf2b05b68b37a4d213ccaada523a2d17a78445f32dd279f0f042f8a17914f4c7",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Топы",
+            "посадка одежды",
+            "одежда",
+            "топы",
+            "Открытые плечи",
+            "Off Shoulder"
+          ]
+        },
+        {
+          "cell": 10,
+          "id": "SODA_HUEb_TFXEAE1Uvy__10_BUSTIER_TOP",
+          "name_ru": "Топ-бюстье",
+          "label": "Bustier Top",
+          "variant_id": "BUSTIER_TOP",
+          "single_path": "singles/02_clothing-fit/tops/SODA_HUEb_TFXEAE1Uvy__10_BUSTIER_TOP.png",
+          "sha256": "0b25be12042a9329f7490ae8f61b5bc88f10db3e00dfd6d49fe35e17518c2f55",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Топы",
+            "посадка одежды",
+            "одежда",
+            "топы",
+            "Топ-бюстье",
+            "Bustier Top"
+          ]
+        },
+        {
+          "cell": 11,
+          "id": "SODA_HUEb_TFXEAE1Uvy__11_TIE_FRONT_TOP",
+          "name_ru": "Топ с завязками спереди",
+          "label": "Tie Front Top",
+          "variant_id": "TIE_FRONT_TOP",
+          "single_path": "singles/02_clothing-fit/tops/SODA_HUEb_TFXEAE1Uvy__11_TIE_FRONT_TOP.png",
+          "sha256": "3988246d5417084c6cacad985dd6484dd16ef098359dafed65d3a24c80297cf3",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Топы",
+            "посадка одежды",
+            "одежда",
+            "топы",
+            "Топ с завязками спереди",
+            "Tie Front Top"
+          ]
+        },
+        {
+          "cell": 12,
+          "id": "SODA_HUEb_TFXEAE1Uvy__12_TWIST_BANDEAU",
+          "name_ru": "Перекрученный верх-бандо",
+          "label": "Twist Bandeau",
+          "variant_id": "TWIST_BANDEAU",
+          "single_path": "singles/02_clothing-fit/tops/SODA_HUEb_TFXEAE1Uvy__12_TWIST_BANDEAU.png",
+          "sha256": "1d8b0b534f0e435c2a2a3522289241dc8e3778793aa650b6e2b5e311b8cfbde7",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Топы",
+            "посадка одежды",
+            "одежда",
+            "топы",
+            "Перекрученный верх-бандо",
+            "Twist Bandeau"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "underwear-back",
+      "topic_ru": "Бельё со спины",
+      "priority": 2,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/underwear-back__FEMALE__p01.jpg",
+      "sha256": "451d4cb38da1f9cc439a5a83a4cd642952593ea10e13f27fe596d761646543ac",
+      "width": 1600,
+      "height": 1090,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HUUXQLWXkAAwtWx__01_SILK",
+          "name_ru": "Шёлк",
+          "label": "Silk",
+          "variant_id": "SILK",
+          "single_path": "singles/02_clothing-fit/underwear-back/SODA_HUUXQLWXkAAwtWx__01_SILK.png",
+          "sha256": "cdfc03a66e3697ebee647d6d4b48811055f31ae3fd793100aaa9eb941ee68491",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бельё со спины",
+            "посадка одежды",
+            "одежда",
+            "бельё",
+            "вид со спины",
+            "Шёлк",
+            "Silk"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HUUXQLWXkAAwtWx__02_COTTON",
+          "name_ru": "Хлопок",
+          "label": "Cotton",
+          "variant_id": "COTTON",
+          "single_path": "singles/02_clothing-fit/underwear-back/SODA_HUUXQLWXkAAwtWx__02_COTTON.png",
+          "sha256": "3c42039cafb398be8f3a53008bd922ce8dded3bbe541f62bc8ec65b4d5761be5",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бельё со спины",
+            "посадка одежды",
+            "одежда",
+            "бельё",
+            "вид со спины",
+            "Хлопок",
+            "Cotton"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HUUXQLWXkAAwtWx__03_SPANDEX",
+          "name_ru": "Спандекс",
+          "label": "Spandex",
+          "variant_id": "SPANDEX",
+          "single_path": "singles/02_clothing-fit/underwear-back/SODA_HUUXQLWXkAAwtWx__03_SPANDEX.png",
+          "sha256": "9b97996c90ec47ecc89fd4784b01e81c9c7c439966e01f1085a08c3c43cb13e8",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бельё со спины",
+            "посадка одежды",
+            "одежда",
+            "бельё",
+            "вид со спины",
+            "Спандекс",
+            "Spandex"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HUUXQLWXkAAwtWx__04_BAMBOO",
+          "name_ru": "Бамбук",
+          "label": "Bamboo",
+          "variant_id": "BAMBOO",
+          "single_path": "singles/02_clothing-fit/underwear-back/SODA_HUUXQLWXkAAwtWx__04_BAMBOO.png",
+          "sha256": "94d602a25d2f08e5397a898fae619f6a494b3ef88ada5e9d236ecbfde661763a",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бельё со спины",
+            "посадка одежды",
+            "одежда",
+            "бельё",
+            "вид со спины",
+            "Бамбук",
+            "Bamboo"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HUUXQLWXkAAwtWx__05_MICROFIBER",
+          "name_ru": "Микрофибра",
+          "label": "Microfiber",
+          "variant_id": "MICROFIBER",
+          "single_path": "singles/02_clothing-fit/underwear-back/SODA_HUUXQLWXkAAwtWx__05_MICROFIBER.png",
+          "sha256": "6d3661ceed761b71e4a55deca35245d73694bf476c37233628529bac819859e9",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бельё со спины",
+            "посадка одежды",
+            "одежда",
+            "бельё",
+            "вид со спины",
+            "Микрофибра",
+            "Microfiber"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HUUXQLWXkAAwtWx__06_VISCOSE",
+          "name_ru": "Вискоза",
+          "label": "Viscose",
+          "variant_id": "VISCOSE",
+          "single_path": "singles/02_clothing-fit/underwear-back/SODA_HUUXQLWXkAAwtWx__06_VISCOSE.png",
+          "sha256": "19a2cdb7474efa4d26e00229d9ef02b25d7fdfcff7b69c13986bb5f8a1a33147",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бельё со спины",
+            "посадка одежды",
+            "одежда",
+            "бельё",
+            "вид со спины",
+            "Вискоза",
+            "Viscose"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HUUXQLWXkAAwtWx__07_POLYAMIDE",
+          "name_ru": "Полиамид",
+          "label": "Polyamide",
+          "variant_id": "POLYAMIDE",
+          "single_path": "singles/02_clothing-fit/underwear-back/SODA_HUUXQLWXkAAwtWx__07_POLYAMIDE.png",
+          "sha256": "64cdb04a5f789a7898097411ef9993fe93157f1eaff1177b9210339275981fd8",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бельё со спины",
+            "посадка одежды",
+            "одежда",
+            "бельё",
+            "вид со спины",
+            "Полиамид",
+            "Polyamide"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HUUXQLWXkAAwtWx__08_POLYESTER",
+          "name_ru": "Полиэстер",
+          "label": "Polyester",
+          "variant_id": "POLYESTER",
+          "single_path": "singles/02_clothing-fit/underwear-back/SODA_HUUXQLWXkAAwtWx__08_POLYESTER.png",
+          "sha256": "44589a880ea48901c744db40be765efe98f293ba70ae8b37ed1685c67a587ffe",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бельё со спины",
+            "посадка одежды",
+            "одежда",
+            "бельё",
+            "вид со спины",
+            "Полиэстер",
+            "Polyester"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "underwear-front",
+      "topic_ru": "Бельё спереди",
+      "priority": 2,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/underwear-front__FEMALE__p01.jpg",
+      "sha256": "b09d4649dd7c8d928595a671c5397aef6bd3a781e14aa2ba101b2f86008bfec6",
+      "width": 1600,
+      "height": 1090,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HT1aRcGWYAE_Q5-__01_SILK",
+          "name_ru": "Шёлк",
+          "label": "Silk",
+          "variant_id": "SILK",
+          "single_path": "singles/02_clothing-fit/underwear-front/SODA_HT1aRcGWYAE_Q5-__01_SILK.png",
+          "sha256": "459e636e3d73e420ef96ba919914d08f70eb69ff7315234e29c8f551a574cc01",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бельё спереди",
+            "посадка одежды",
+            "одежда",
+            "бельё",
+            "вид спереди",
+            "Шёлк",
+            "Silk"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HT1aRcGWYAE_Q5-__02_COTTON",
+          "name_ru": "Хлопок",
+          "label": "Cotton",
+          "variant_id": "COTTON",
+          "single_path": "singles/02_clothing-fit/underwear-front/SODA_HT1aRcGWYAE_Q5-__02_COTTON.png",
+          "sha256": "57082b6bdb114befad39c9b87abe63c8d1bc8bb9527347aafb3148dc7ec44527",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бельё спереди",
+            "посадка одежды",
+            "одежда",
+            "бельё",
+            "вид спереди",
+            "Хлопок",
+            "Cotton"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HT1aRcGWYAE_Q5-__03_SPANDEX",
+          "name_ru": "Спандекс",
+          "label": "Spandex",
+          "variant_id": "SPANDEX",
+          "single_path": "singles/02_clothing-fit/underwear-front/SODA_HT1aRcGWYAE_Q5-__03_SPANDEX.png",
+          "sha256": "584c30b6ef3f6cbf4a03416d581e04879d33371caa91499ee31977b83875221c",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бельё спереди",
+            "посадка одежды",
+            "одежда",
+            "бельё",
+            "вид спереди",
+            "Спандекс",
+            "Spandex"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HT1aRcGWYAE_Q5-__04_BAMBOO",
+          "name_ru": "Бамбук",
+          "label": "Bamboo",
+          "variant_id": "BAMBOO",
+          "single_path": "singles/02_clothing-fit/underwear-front/SODA_HT1aRcGWYAE_Q5-__04_BAMBOO.png",
+          "sha256": "415aedcfbe0e768ad34c08c65222d64c2ad07e17d91c719602aec2500620fd8b",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бельё спереди",
+            "посадка одежды",
+            "одежда",
+            "бельё",
+            "вид спереди",
+            "Бамбук",
+            "Bamboo"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HT1aRcGWYAE_Q5-__05_MICROFIBER",
+          "name_ru": "Микрофибра",
+          "label": "Microfiber",
+          "variant_id": "MICROFIBER",
+          "single_path": "singles/02_clothing-fit/underwear-front/SODA_HT1aRcGWYAE_Q5-__05_MICROFIBER.png",
+          "sha256": "de174d9580a8876197e90799687a9272ff8c4f84a5daad32d6076e541b2b4331",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бельё спереди",
+            "посадка одежды",
+            "одежда",
+            "бельё",
+            "вид спереди",
+            "Микрофибра",
+            "Microfiber"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HT1aRcGWYAE_Q5-__06_VISCOSE",
+          "name_ru": "Вискоза",
+          "label": "Viscose",
+          "variant_id": "VISCOSE",
+          "single_path": "singles/02_clothing-fit/underwear-front/SODA_HT1aRcGWYAE_Q5-__06_VISCOSE.png",
+          "sha256": "f65d13be45b89cc0e9aaae77aaa2898eeb577dca931fec8adad78a643df6f9c6",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бельё спереди",
+            "посадка одежды",
+            "одежда",
+            "бельё",
+            "вид спереди",
+            "Вискоза",
+            "Viscose"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HT1aRcGWYAE_Q5-__07_POLYAMIDE",
+          "name_ru": "Полиамид",
+          "label": "Polyamide",
+          "variant_id": "POLYAMIDE",
+          "single_path": "singles/02_clothing-fit/underwear-front/SODA_HT1aRcGWYAE_Q5-__07_POLYAMIDE.png",
+          "sha256": "6406ba89b45b6955de05348e2c8929a6bf8d6dba1940a70ff9aff6e28fca2468",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бельё спереди",
+            "посадка одежды",
+            "одежда",
+            "бельё",
+            "вид спереди",
+            "Полиамид",
+            "Polyamide"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HT1aRcGWYAE_Q5-__08_POLYESTER",
+          "name_ru": "Полиэстер",
+          "label": "Polyester",
+          "variant_id": "POLYESTER",
+          "single_path": "singles/02_clothing-fit/underwear-front/SODA_HT1aRcGWYAE_Q5-__08_POLYESTER.png",
+          "sha256": "a7a5048d973e2a413126b705a88a4cff246db8d646a96f57c9ec792a0e1d9f2c",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Бельё спереди",
+            "посадка одежды",
+            "одежда",
+            "бельё",
+            "вид спереди",
+            "Полиэстер",
+            "Polyester"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "back-view",
+      "topic_ru": "Со спины",
+      "priority": 3,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/back-view__FEMALE__p01.jpg",
+      "sha256": "f3ae21175e59e4c893f0da3430a27c6e270e53399e598968eaa6606686308492",
+      "width": 400,
+      "height": 620,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HQXj6KeXwAAfhpy__01_WHOLE_FIGURE",
+          "name_ru": "Фигура целиком",
+          "label": "Whole figure",
+          "variant_id": "WHOLE_FIGURE",
+          "single_path": "singles/03_pose/back-view/SODA_HQXj6KeXwAAfhpy__01_WHOLE_FIGURE.png",
+          "sha256": "45a016cb55125b835366375ed88be7d04e6cb8981945fd46bde74690065069b1",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Со спины",
+            "поза",
+            "форма части тела",
+            "фигура целиком",
+            "Фигура целиком",
+            "Whole figure"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "dramatic",
+      "topic_ru": "Драматические позы",
+      "priority": 3,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/dramatic__FEMALE__p01.jpg",
+      "sha256": "32abc76382d94e4941ceaa5882345cdc9558068fc41260a1d58fb8059ed3faad",
+      "width": 1600,
+      "height": 1560,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HTOlxkoWwAAMk59__01_MASTERMIND",
+          "name_ru": "Стратег",
+          "label": "Mastermind",
+          "variant_id": "MASTERMIND",
+          "single_path": "singles/03_pose/dramatic/SODA_HTOlxkoWwAAMk59__01_MASTERMIND.png",
+          "sha256": "585892b1eef68ef3bc160e9208527ce6b7cdeeef36c1606ba3de0a2e2a309b9d",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Драматические позы",
+            "поза",
+            "драматические позы",
+            "Стратег",
+            "Mastermind"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HTOlxkoWwAAMk59__02_SINISTER_LAUGH",
+          "name_ru": "Зловещий смех",
+          "label": "Sinister Laugh",
+          "variant_id": "SINISTER_LAUGH",
+          "single_path": "singles/03_pose/dramatic/SODA_HTOlxkoWwAAMk59__02_SINISTER_LAUGH.png",
+          "sha256": "34aeb98b44db767df3d6b93d4f2ab57c83fe93e5984bf7ebd7a3eea95583f8ab",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Драматические позы",
+            "поза",
+            "драматические позы",
+            "Зловещий смех",
+            "Sinister Laugh"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HTOlxkoWwAAMk59__03_COMMAND",
+          "name_ru": "Командный жест",
+          "label": "Command",
+          "variant_id": "COMMAND",
+          "single_path": "singles/03_pose/dramatic/SODA_HTOlxkoWwAAMk59__03_COMMAND.png",
+          "sha256": "bdab3bde110969ea98040721c57c9b78d6d0c54c4a4b271eaa9f6cec17be4f92",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Драматические позы",
+            "поза",
+            "драматические позы",
+            "Командный жест",
+            "Command"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HTOlxkoWwAAMk59__04_POWER_STANCE",
+          "name_ru": "Силовая стойка",
+          "label": "Power Stance",
+          "variant_id": "POWER_STANCE",
+          "single_path": "singles/03_pose/dramatic/SODA_HTOlxkoWwAAMk59__04_POWER_STANCE.png",
+          "sha256": "73298da29c16ea8900adc6ba83d0d725cae402732fc54626162f9bb360862ade",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Драматические позы",
+            "поза",
+            "драматические позы",
+            "Силовая стойка",
+            "Power Stance"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HTOlxkoWwAAMk59__05_SCHEMING_LEAN",
+          "name_ru": "Наклон с хитрым жестом",
+          "label": "Scheming Lean",
+          "variant_id": "SCHEMING_LEAN",
+          "single_path": "singles/03_pose/dramatic/SODA_HTOlxkoWwAAMk59__05_SCHEMING_LEAN.png",
+          "sha256": "e434f2cd40a055b0d88b6117f309cbca9eccdd3797080212ace977755f03642c",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Драматические позы",
+            "поза",
+            "драматические позы",
+            "Наклон с хитрым жестом",
+            "Scheming Lean"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HTOlxkoWwAAMk59__06_THREATENING_POINT",
+          "name_ru": "Угрожающий жест пальцем",
+          "label": "Threatening Point",
+          "variant_id": "THREATENING_POINT",
+          "single_path": "singles/03_pose/dramatic/SODA_HTOlxkoWwAAMk59__06_THREATENING_POINT.png",
+          "sha256": "c65e1ea69b6f1c766c486967e477d076f40facc8b14a5a0aed165f514cc4e2a7",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Драматические позы",
+            "поза",
+            "драматические позы",
+            "Угрожающий жест пальцем",
+            "Threatening Point"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HTOlxkoWwAAMk59__07_SHADOW_CROUCH",
+          "name_ru": "Низкий присед",
+          "label": "Shadow Crouch",
+          "variant_id": "SHADOW_CROUCH",
+          "single_path": "singles/03_pose/dramatic/SODA_HTOlxkoWwAAMk59__07_SHADOW_CROUCH.png",
+          "sha256": "9f966eb4e1997abe1ae1082e8b5dd090e06bdd19aaf8ed2663562191c3179c42",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Драматические позы",
+            "поза",
+            "драматические позы",
+            "Низкий присед",
+            "Shadow Crouch"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HTOlxkoWwAAMk59__08_COLD_APPLAUSE",
+          "name_ru": "Холодные аплодисменты",
+          "label": "Cold Applause",
+          "variant_id": "COLD_APPLAUSE",
+          "single_path": "singles/03_pose/dramatic/SODA_HTOlxkoWwAAMk59__08_COLD_APPLAUSE.png",
+          "sha256": "cb4aae06b94dedf5f464a355435c61478512b06f4fb50057a6eacdf71c858885",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Драматические позы",
+            "поза",
+            "драматические позы",
+            "Холодные аплодисменты",
+            "Cold Applause"
+          ]
+        },
+        {
+          "cell": 9,
+          "id": "SODA_HTOlxkoWwAAMk59__09_VICTORY_CLAIM",
+          "name_ru": "Заявление о победе",
+          "label": "Victory Claim",
+          "variant_id": "VICTORY_CLAIM",
+          "single_path": "singles/03_pose/dramatic/SODA_HTOlxkoWwAAMk59__09_VICTORY_CLAIM.png",
+          "sha256": "8612a129105f9022791eff82425d302847f2e0e98ee2c7fd78f00800a9d9936c",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Драматические позы",
+            "поза",
+            "драматические позы",
+            "Заявление о победе",
+            "Victory Claim"
+          ]
+        },
+        {
+          "cell": 10,
+          "id": "SODA_HTOlxkoWwAAMk59__10_BACK_TURN",
+          "name_ru": "Поворот спиной",
+          "label": "Back Turn",
+          "variant_id": "BACK_TURN",
+          "single_path": "singles/03_pose/dramatic/SODA_HTOlxkoWwAAMk59__10_BACK_TURN.png",
+          "sha256": "4fae3bd34ba3a75fd3f88a5a271ba61b808374aef72641db0b274f7fee6056c7",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Драматические позы",
+            "поза",
+            "драматические позы",
+            "Поворот спиной",
+            "Back Turn"
+          ]
+        },
+        {
+          "cell": 11,
+          "id": "SODA_HTOlxkoWwAAMk59__11_MOCKING_BOW",
+          "name_ru": "Насмешливый поклон",
+          "label": "Mocking Bow",
+          "variant_id": "MOCKING_BOW",
+          "single_path": "singles/03_pose/dramatic/SODA_HTOlxkoWwAAMk59__11_MOCKING_BOW.png",
+          "sha256": "0ee0d3be541cc7c75bc0760e81c260fbb8b02c4bd35236348915fe7b8e62d199",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Драматические позы",
+            "поза",
+            "драматические позы",
+            "Насмешливый поклон",
+            "Mocking Bow"
+          ]
+        },
+        {
+          "cell": 12,
+          "id": "SODA_HTOlxkoWwAAMk59__12_FINAL_SCHEME",
+          "name_ru": "Финальный замысел",
+          "label": "Final Scheme",
+          "variant_id": "FINAL_SCHEME",
+          "single_path": "singles/03_pose/dramatic/SODA_HTOlxkoWwAAMk59__12_FINAL_SCHEME.png",
+          "sha256": "0bc0064c59dc5348159d5470208a7d0bae8cbabbb8c6502c6109457013b02a68",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Драматические позы",
+            "поза",
+            "драматические позы",
+            "Финальный замысел",
+            "Final Scheme"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "heroic",
+      "topic_ru": "Героические позы",
+      "priority": 3,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/heroic__FEMALE__p01.jpg",
+      "sha256": "1a099a51168322c8e78a9ebb83efc57ff425f81e9c4b0c6a56dd12bbdd2628ee",
+      "width": 1600,
+      "height": 1560,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HTTmt_9WYAAZUTv__01_HERO_LANDING",
+          "name_ru": "Героическое приземление",
+          "label": "Hero Landing",
+          "variant_id": "HERO_LANDING",
+          "single_path": "singles/03_pose/heroic/SODA_HTTmt_9WYAAZUTv__01_HERO_LANDING.png",
+          "sha256": "4f28b77c71f038c127508b6b10e830276e4617f7d91ced7d520919c9a802945e",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Героические позы",
+            "поза",
+            "героические позы",
+            "Героическое приземление",
+            "Hero Landing"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HTTmt_9WYAAZUTv__02_KAMEHAMEHA",
+          "name_ru": "Камехамеха",
+          "label": "Kamehameha",
+          "variant_id": "KAMEHAMEHA",
+          "single_path": "singles/03_pose/heroic/SODA_HTTmt_9WYAAZUTv__02_KAMEHAMEHA.png",
+          "sha256": "290403b7a7a8f76a76c6fd4444c3b010f1a953c4df17cc4a2037d7b289b65c24",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Героические позы",
+            "поза",
+            "героические позы",
+            "Камехамеха",
+            "Kamehameha"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HTTmt_9WYAAZUTv__03_SHIELD_GUARD",
+          "name_ru": "Защита щитом",
+          "label": "Shield Guard",
+          "variant_id": "SHIELD_GUARD",
+          "single_path": "singles/03_pose/heroic/SODA_HTTmt_9WYAAZUTv__03_SHIELD_GUARD.png",
+          "sha256": "8caa4828393d886f957151278bbde57a39149432184fa691960493de12bfe7a1",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Героические позы",
+            "поза",
+            "героические позы",
+            "Защита щитом",
+            "Shield Guard"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HTTmt_9WYAAZUTv__04_SUPER_FLIGHT",
+          "name_ru": "Сверхполёт",
+          "label": "Super Flight",
+          "variant_id": "SUPER_FLIGHT",
+          "single_path": "singles/03_pose/heroic/SODA_HTTmt_9WYAAZUTv__04_SUPER_FLIGHT.png",
+          "sha256": "cee26118c4abb037ed8e8e794106bc2fb399f6908be07a996b7d64727e1fb2a7",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Героические позы",
+            "поза",
+            "героические позы",
+            "Сверхполёт",
+            "Super Flight"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HTTmt_9WYAAZUTv__05_READY_STANCE",
+          "name_ru": "Стойка готовности",
+          "label": "Ready Stance",
+          "variant_id": "READY_STANCE",
+          "single_path": "singles/03_pose/heroic/SODA_HTTmt_9WYAAZUTv__05_READY_STANCE.png",
+          "sha256": "0c59db4d45dea942659a5422440cd9bcbc47fa2f8f8d9201c0c2c0481facc2db",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Героические позы",
+            "поза",
+            "героические позы",
+            "Стойка готовности",
+            "Ready Stance"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HTTmt_9WYAAZUTv__06_WEB_CROUCH",
+          "name_ru": "Присед «паутина»",
+          "label": "Web Crouch",
+          "variant_id": "WEB_CROUCH",
+          "single_path": "singles/03_pose/heroic/SODA_HTTmt_9WYAAZUTv__06_WEB_CROUCH.png",
+          "sha256": "639d2bbc375609c2963cda7dc635d1d2cc4528527835a062e73fab56a5ff2d5f",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Героические позы",
+            "поза",
+            "героические позы",
+            "Присед «паутина»",
+            "Web Crouch"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HTTmt_9WYAAZUTv__07_UPPERCUT",
+          "name_ru": "Апперкот",
+          "label": "Uppercut",
+          "variant_id": "UPPERCUT",
+          "single_path": "singles/03_pose/heroic/SODA_HTTmt_9WYAAZUTv__07_UPPERCUT.png",
+          "sha256": "31dc58810e8c6b7594326a8d5f5d14d153e9ace706a777bc4774a57419197281",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Героические позы",
+            "поза",
+            "героические позы",
+            "Апперкот",
+            "Uppercut"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HTTmt_9WYAAZUTv__08_RESCUE_REACH",
+          "name_ru": "Спасательный жест с вытянутой рукой",
+          "label": "Rescue Reach",
+          "variant_id": "RESCUE_REACH",
+          "single_path": "singles/03_pose/heroic/SODA_HTTmt_9WYAAZUTv__08_RESCUE_REACH.png",
+          "sha256": "11b915962acf2a43d1156ccd6f9a0412a03bc736eda7e7a7a021f383435d222d",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Героические позы",
+            "поза",
+            "героические позы",
+            "Спасательный жест с вытянутой рукой",
+            "Rescue Reach"
+          ]
+        },
+        {
+          "cell": 9,
+          "id": "SODA_HTTmt_9WYAAZUTv__09_POWER_UP",
+          "name_ru": "Набор силы",
+          "label": "Power Up",
+          "variant_id": "POWER_UP",
+          "single_path": "singles/03_pose/heroic/SODA_HTTmt_9WYAAZUTv__09_POWER_UP.png",
+          "sha256": "927de6e412cb39c06b73b681447cc383fe494be55a2f3bbde07927823dab64b9",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Героические позы",
+            "поза",
+            "героические позы",
+            "Набор силы",
+            "Power Up"
+          ]
+        },
+        {
+          "cell": 10,
+          "id": "SODA_HTTmt_9WYAAZUTv__10_VICTORY_FIST",
+          "name_ru": "Кулак победы",
+          "label": "Victory Fist",
+          "variant_id": "VICTORY_FIST",
+          "single_path": "singles/03_pose/heroic/SODA_HTTmt_9WYAAZUTv__10_VICTORY_FIST.png",
+          "sha256": "242bbc32b31701cd6bddde401b2d3811f1b68e2f2ff349fbfc56ff1d34eae710",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Героические позы",
+            "поза",
+            "героические позы",
+            "Кулак победы",
+            "Victory Fist"
+          ]
+        },
+        {
+          "cell": 11,
+          "id": "SODA_HTTmt_9WYAAZUTv__11_AIR_KICK",
+          "name_ru": "Удар ногой в воздухе",
+          "label": "Air Kick",
+          "variant_id": "AIR_KICK",
+          "single_path": "singles/03_pose/heroic/SODA_HTTmt_9WYAAZUTv__11_AIR_KICK.png",
+          "sha256": "ec3280e2e45dc076026e5d95298981e824f65aaba6be2fe0ba1e55829e56a3ee",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Героические позы",
+            "поза",
+            "героические позы",
+            "Удар ногой в воздухе",
+            "Air Kick"
+          ]
+        },
+        {
+          "cell": 12,
+          "id": "SODA_HTTmt_9WYAAZUTv__12_HERO_TURN",
+          "name_ru": "Героический разворот",
+          "label": "Hero Turn",
+          "variant_id": "HERO_TURN",
+          "single_path": "singles/03_pose/heroic/SODA_HTTmt_9WYAAZUTv__12_HERO_TURN.png",
+          "sha256": "dd6949b2cdb5428b47e37f70195dcadc2e7f16e7988cee9c14629c8e02154c43",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Героические позы",
+            "поза",
+            "героические позы",
+            "Героический разворот",
+            "Hero Turn"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "heroic",
+      "topic_ru": "Героические позы",
+      "priority": 3,
+      "subject_label": "MALE",
+      "page": 1,
+      "path": "collages/heroic__MALE__p01.jpg",
+      "sha256": "02b698b8ebb215b74b7fdeef6721a81ceda7abc31272df9f57356efc35e02eb6",
+      "width": 1600,
+      "height": 1560,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HStlgx2WoAAz1X___01_HOVER",
+          "name_ru": "Парение",
+          "label": "Hover",
+          "variant_id": "HOVER",
+          "single_path": "singles/03_pose/heroic/SODA_HStlgx2WoAAz1X___01_HOVER.png",
+          "sha256": "4185d33788ed14f9536183ae46dccb8bb888423201fc2965bd20dd0c9e5adb31",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Героические позы",
+            "поза",
+            "мужские позы",
+            "Парение",
+            "Hover"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HStlgx2WoAAz1X___02_LANDING",
+          "name_ru": "Приземление",
+          "label": "Landing",
+          "variant_id": "LANDING",
+          "single_path": "singles/03_pose/heroic/SODA_HStlgx2WoAAz1X___02_LANDING.png",
+          "sha256": "8f6803563055316ea9fc20ad5d3f95bb1bd1bc4173bb32a1e373537b5f3524d9",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Героические позы",
+            "поза",
+            "мужские позы",
+            "Приземление",
+            "Landing"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HStlgx2WoAAz1X___03_UPWARD_FLIGHT",
+          "name_ru": "Полёт вверх",
+          "label": "Upward Flight",
+          "variant_id": "UPWARD_FLIGHT",
+          "single_path": "singles/03_pose/heroic/SODA_HStlgx2WoAAz1X___03_UPWARD_FLIGHT.png",
+          "sha256": "e45cae7e57ebf74860798f77ab2c5d518e1e63ac1c8d539f72541ca64008ce3f",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Героические позы",
+            "поза",
+            "мужские позы",
+            "Полёт вверх",
+            "Upward Flight"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HStlgx2WoAAz1X___04_LEAP",
+          "name_ru": "Прыжок",
+          "label": "Leap",
+          "variant_id": "LEAP",
+          "single_path": "singles/03_pose/heroic/SODA_HStlgx2WoAAz1X___04_LEAP.png",
+          "sha256": "0be3e95f932131d8530591897abf67bd920ee8cf951e675aa3998d304a415c5e",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Героические позы",
+            "поза",
+            "мужские позы",
+            "Прыжок",
+            "Leap"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HStlgx2WoAAz1X___05_REAR_STAND",
+          "name_ru": "Стойка спиной",
+          "label": "Rear Stand",
+          "variant_id": "REAR_STAND",
+          "single_path": "singles/03_pose/heroic/SODA_HStlgx2WoAAz1X___05_REAR_STAND.png",
+          "sha256": "ccb466db99294995f9d6cfcbc3bc5099a1999c3a7b667dfd019988997c3646bc",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Героические позы",
+            "поза",
+            "мужские позы",
+            "Стойка спиной",
+            "Rear Stand"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HStlgx2WoAAz1X___06_ARMS_CROSSED",
+          "name_ru": "Скрещённые руки",
+          "label": "Arms Crossed",
+          "variant_id": "ARMS_CROSSED",
+          "single_path": "singles/03_pose/heroic/SODA_HStlgx2WoAAz1X___06_ARMS_CROSSED.png",
+          "sha256": "1adcef0a3b27eb57b227775f856a0c29f0b312a6880663a8375f0632905469b9",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Героические позы",
+            "поза",
+            "мужские позы",
+            "Скрещённые руки",
+            "Arms Crossed"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HStlgx2WoAAz1X___07_DIAGONAL_FLIGHT",
+          "name_ru": "Диагональный полёт",
+          "label": "Diagonal Flight",
+          "variant_id": "DIAGONAL_FLIGHT",
+          "single_path": "singles/03_pose/heroic/SODA_HStlgx2WoAAz1X___07_DIAGONAL_FLIGHT.png",
+          "sha256": "36f3b96a67fcaf5a265ee3a317a625b784362a4836286a1acd44939c4c5575bd",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Героические позы",
+            "поза",
+            "мужские позы",
+            "Диагональный полёт",
+            "Diagonal Flight"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HStlgx2WoAAz1X___08_FORWARD_STANCE",
+          "name_ru": "Стойка лицом вперёд",
+          "label": "Forward Stance",
+          "variant_id": "FORWARD_STANCE",
+          "single_path": "singles/03_pose/heroic/SODA_HStlgx2WoAAz1X___08_FORWARD_STANCE.png",
+          "sha256": "2ce95a64280010826549572f982512341bf5685380a508af1ff0a4af1aee28c3",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Героические позы",
+            "поза",
+            "мужские позы",
+            "Стойка лицом вперёд",
+            "Forward Stance"
+          ]
+        },
+        {
+          "cell": 9,
+          "id": "SODA_HStlgx2WoAAz1X___09_FORWARD_DIVE",
+          "name_ru": "Нырок вперёд",
+          "label": "Forward Dive",
+          "variant_id": "FORWARD_DIVE",
+          "single_path": "singles/03_pose/heroic/SODA_HStlgx2WoAAz1X___09_FORWARD_DIVE.png",
+          "sha256": "99ec346302f8847a0485ac23409f7b866e23273a5f74404dc676e3061c357b94",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "Героические позы",
+            "поза",
+            "мужские позы",
+            "Нырок вперёд",
+            "Forward Dive"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "kneeling-reclining",
+      "topic_ru": "Колени и полулёжа",
+      "priority": 3,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/kneeling-reclining__FEMALE__p01.jpg",
+      "sha256": "9516285c6a69d592b29d04caa2140c65539df7a1661eddad84b5fc2a2a64b596",
+      "width": 1600,
+      "height": 620,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HS1Lx_nWYAAvR8s__01_SOFT_KNEEL",
+          "name_ru": "Мягкое положение на коленях",
+          "label": "Soft Kneel",
+          "variant_id": "SOFT_KNEEL",
+          "single_path": "singles/03_pose/kneeling-reclining/SODA_HS1Lx_nWYAAvR8s__01_SOFT_KNEEL.png",
+          "sha256": "675de7d859505e249217c8de02770f80c94af743b2b326b944fb13293b5bcc9b",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Колени и полулёжа",
+            "поза",
+            "Мягкое положение на коленях",
+            "Soft Kneel"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HS1Lx_nWYAAvR8s__02_FLOOR_STRETCH",
+          "name_ru": "Растяжка на полу",
+          "label": "Floor Stretch",
+          "variant_id": "FLOOR_STRETCH",
+          "single_path": "singles/03_pose/kneeling-reclining/SODA_HS1Lx_nWYAAvR8s__02_FLOOR_STRETCH.png",
+          "sha256": "28e68c3aae02c6bc43894ba93edc97d67aa282d06f6daf4e0fcd385dc4c1c548",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Колени и полулёжа",
+            "поза",
+            "Растяжка на полу",
+            "Floor Stretch"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HS1Lx_nWYAAvR8s__03_BACK_GLANCE",
+          "name_ru": "Взгляд назад через плечо",
+          "label": "Back Glance",
+          "variant_id": "BACK_GLANCE",
+          "single_path": "singles/03_pose/kneeling-reclining/SODA_HS1Lx_nWYAAvR8s__03_BACK_GLANCE.png",
+          "sha256": "f6d865f5ed83c845460bf3728e578d922bd4dced93700c7462935926f9eaf418",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Колени и полулёжа",
+            "поза",
+            "Взгляд назад через плечо",
+            "Back Glance"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HS1Lx_nWYAAvR8s__04_RECLINED_TURN",
+          "name_ru": "Разворот полулёжа",
+          "label": "Reclined Turn",
+          "variant_id": "RECLINED_TURN",
+          "single_path": "singles/03_pose/kneeling-reclining/SODA_HS1Lx_nWYAAvR8s__04_RECLINED_TURN.png",
+          "sha256": "dddf70c2baa841ac4afe54bb051a17a02111992e0ea8a0e8e4a3a512a00c6810",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Колени и полулёжа",
+            "поза",
+            "Разворот полулёжа",
+            "Reclined Turn"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "perspective",
+      "topic_ru": "Перспективное сокращение",
+      "priority": 3,
+      "subject_label": "NEUTRAL",
+      "page": 1,
+      "path": "collages/perspective__NEUTRAL__p01.jpg",
+      "sha256": "40290bd1049861eb2ea715ae2a677111e699f9d46c044956dd0caf104d37683e",
+      "width": 400,
+      "height": 620,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HRaFAxoawAAIMMT__01_WHOLE_FIGURE",
+          "name_ru": "Фигура целиком",
+          "label": "Whole figure",
+          "variant_id": "WHOLE_FIGURE",
+          "single_path": "singles/03_pose/perspective/SODA_HRaFAxoawAAIMMT__01_WHOLE_FIGURE.png",
+          "sha256": "50719a85ff0ecb6c2998be499e67d108ed71a9e05a00768ae5d199e138c2062a",
+          "subject_label": "NEUTRAL",
+          "tags_ru": [
+            "Нейтральный — пол не задан",
+            "Перспективное сокращение",
+            "поза",
+            "Фигура целиком",
+            "Whole figure"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "seated-standing",
+      "topic_ru": "Сидение и стойки",
+      "priority": 3,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/seated-standing__FEMALE__p01.jpg",
+      "sha256": "2c357c1a15e7b3041b05b9e37051ec4743d1b45a8c5fc373a2b589754a5673e7",
+      "width": 1600,
+      "height": 1090,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HSx49nLXUAA-zFL__01_FRONT_KNEEL",
+          "name_ru": "Поза на коленях лицом вперёд",
+          "label": "Front Kneel",
+          "variant_id": "FRONT_KNEEL",
+          "single_path": "singles/03_pose/seated-standing/SODA_HSx49nLXUAA-zFL__01_FRONT_KNEEL.png",
+          "sha256": "e7ca6995ca5e51f158b932b26b54bef99f45990ad3130fd46039b4e011fda48e",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Сидение и стойки",
+            "поза",
+            "Поза на коленях лицом вперёд",
+            "Front Kneel"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HSx49nLXUAA-zFL__02_OVER_THE_SHOULDER",
+          "name_ru": "Разворот через плечо",
+          "label": "Over the Shoulder",
+          "variant_id": "OVER_THE_SHOULDER",
+          "single_path": "singles/03_pose/seated-standing/SODA_HSx49nLXUAA-zFL__02_OVER_THE_SHOULDER.png",
+          "sha256": "347f60d35480c765627c33288ea6cd744a6c126a446398efc10334d0d6410050",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Сидение и стойки",
+            "поза",
+            "Разворот через плечо",
+            "Over the Shoulder"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HSx49nLXUAA-zFL__03_SIDE_SIT",
+          "name_ru": "Сидение боком",
+          "label": "Side Sit",
+          "variant_id": "SIDE_SIT",
+          "single_path": "singles/03_pose/seated-standing/SODA_HSx49nLXUAA-zFL__03_SIDE_SIT.png",
+          "sha256": "ee1b100b353112ac5a2ee528d310955ad99c16f926a30bad872bd650e43155e7",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Сидение и стойки",
+            "поза",
+            "Сидение боком",
+            "Side Sit"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HSx49nLXUAA-zFL__04_COY_LEAN",
+          "name_ru": "Застенчивый наклон",
+          "label": "Coy Lean",
+          "variant_id": "COY_LEAN",
+          "single_path": "singles/03_pose/seated-standing/SODA_HSx49nLXUAA-zFL__04_COY_LEAN.png",
+          "sha256": "2ae5c04dd191cfe391e787188d7c483f3a48ece151707660b7381d2e0eb03d10",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Сидение и стойки",
+            "поза",
+            "Застенчивый наклон",
+            "Coy Lean"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HS2RQ-KWkAAUFcS__01_SEATED_TURN",
+          "name_ru": "Поворот сидя",
+          "label": "Seated Turn",
+          "variant_id": "SEATED_TURN",
+          "single_path": "singles/03_pose/seated-standing/SODA_HS2RQ-KWkAAUFcS__01_SEATED_TURN.png",
+          "sha256": "c45dedcf4bae942df80f95bb66b6b3d55913dcad352fa1cb2011bb5f22485a9f",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Сидение и стойки",
+            "поза",
+            "Поворот сидя",
+            "Seated Turn"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HS2RQ-KWkAAUFcS__02_HIP_SHIFT",
+          "name_ru": "Перенос веса на бедро",
+          "label": "Hip Shift",
+          "variant_id": "HIP_SHIFT",
+          "single_path": "singles/03_pose/seated-standing/SODA_HS2RQ-KWkAAUFcS__02_HIP_SHIFT.png",
+          "sha256": "377ff7ca81f31db3fff72d34f7ac16b8a01476bdf23878d0ea1659545b1de73a",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Сидение и стойки",
+            "поза",
+            "Перенос веса на бедро",
+            "Hip Shift"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HS2RQ-KWkAAUFcS__03_SUPPORTED_SIT",
+          "name_ru": "Сидение с опорой",
+          "label": "Supported Sit",
+          "variant_id": "SUPPORTED_SIT",
+          "single_path": "singles/03_pose/seated-standing/SODA_HS2RQ-KWkAAUFcS__03_SUPPORTED_SIT.png",
+          "sha256": "aa00ec65a0b892e375291b2440dedcaf34c9265199332cf0217feb9530ca5d43",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Сидение и стойки",
+            "поза",
+            "Сидение с опорой",
+            "Supported Sit"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HS2RQ-KWkAAUFcS__04_STANDING_TWIST",
+          "name_ru": "Скручивание стоя",
+          "label": "Standing Twist",
+          "variant_id": "STANDING_TWIST",
+          "single_path": "singles/03_pose/seated-standing/SODA_HS2RQ-KWkAAUFcS__04_STANDING_TWIST.png",
+          "sha256": "9d70dac9fd1548c720cd589d15f19e8c8af8c3bf4c79284bfb028b696a5435cc",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Сидение и стойки",
+            "поза",
+            "Скручивание стоя",
+            "Standing Twist"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "sitting-stretching",
+      "topic_ru": "Сидение и растяжка",
+      "priority": 3,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/sitting-stretching__FEMALE__p01.jpg",
+      "sha256": "a7f20a3c0f953192d880efbb7c371f4fe0c7727c0ec2995e730adc59b89ad7e6",
+      "width": 1600,
+      "height": 1090,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HUg7sveWcAEYWQj__01_BALANCED_SQUAT",
+          "name_ru": "Присед с равновесной опорой",
+          "label": "Balanced Squat",
+          "variant_id": "BALANCED_SQUAT",
+          "single_path": "singles/03_pose/sitting-stretching/SODA_HUg7sveWcAEYWQj__01_BALANCED_SQUAT.png",
+          "sha256": "ee3f818e8614cd6ad7262c30a536aab0de8092c70f74cf6b40bcf9b1eb507f2a",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Сидение и растяжка",
+            "поза",
+            "Присед с равновесной опорой",
+            "Balanced Squat"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HUg7sveWcAEYWQj__02_RAISED_KNEE_SIT",
+          "name_ru": "Сидение с поднятым коленом",
+          "label": "Raised Knee Sit",
+          "variant_id": "RAISED_KNEE_SIT",
+          "single_path": "singles/03_pose/sitting-stretching/SODA_HUg7sveWcAEYWQj__02_RAISED_KNEE_SIT.png",
+          "sha256": "f6bf21bfcd83b0f38280cb2a1e2a1170a3557a5e92d7bee591e1465b1dc1bce5",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Сидение и растяжка",
+            "поза",
+            "Сидение с поднятым коленом",
+            "Raised Knee Sit"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HUg7sveWcAEYWQj__03_PRONE_REST",
+          "name_ru": "Положение лёжа на животе",
+          "label": "Prone Rest",
+          "variant_id": "PRONE_REST",
+          "single_path": "singles/03_pose/sitting-stretching/SODA_HUg7sveWcAEYWQj__03_PRONE_REST.png",
+          "sha256": "48fb882fc17d096b34553176c10020fca850ce35aac5d76222e1c4d9b4d29adb",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Сидение и растяжка",
+            "поза",
+            "Положение лёжа на животе",
+            "Prone Rest"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HUg7sveWcAEYWQj__04_FORWARD_LEAN",
+          "name_ru": "Наклон вперёд",
+          "label": "Forward Lean",
+          "variant_id": "FORWARD_LEAN",
+          "single_path": "singles/03_pose/sitting-stretching/SODA_HUg7sveWcAEYWQj__04_FORWARD_LEAN.png",
+          "sha256": "5134d30a7294d46ee7f516ec846337c4af1a5775cd56f0102a89df367babceb9",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Сидение и растяжка",
+            "поза",
+            "Наклон вперёд",
+            "Forward Lean"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HUg7sveWcAEYWQj__05_OVERHEAD_CURVE",
+          "name_ru": "Изгиб с поднятыми руками",
+          "label": "Overhead Curve",
+          "variant_id": "OVERHEAD_CURVE",
+          "single_path": "singles/03_pose/sitting-stretching/SODA_HUg7sveWcAEYWQj__05_OVERHEAD_CURVE.png",
+          "sha256": "f03b3846daf3eadf017ce4cecdd2f2b10cc28fa32156aec4c356b27886e9a049",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Сидение и растяжка",
+            "поза",
+            "Изгиб с поднятыми руками",
+            "Overhead Curve"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HUg7sveWcAEYWQj__06_SIDE_KNEEL",
+          "name_ru": "Положение на колене боком",
+          "label": "Side Kneel",
+          "variant_id": "SIDE_KNEEL",
+          "single_path": "singles/03_pose/sitting-stretching/SODA_HUg7sveWcAEYWQj__06_SIDE_KNEEL.png",
+          "sha256": "a756b601619f7ee785041d207f77442c63d2bf874213aec7e1640511e18d657f",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Сидение и растяжка",
+            "поза",
+            "Положение на колене боком",
+            "Side Kneel"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "standing",
+      "topic_ru": "Стоя",
+      "priority": 3,
+      "subject_label": "FEMALE",
+      "page": 1,
+      "path": "collages/standing__FEMALE__p01.jpg",
+      "sha256": "1516bf74861dd948dad2e8c389cb15817c283edad891dfc61b5a034dc68a9b3c",
+      "width": 1600,
+      "height": 1560,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HStGNRuWMAAbQIR__01_HIP_SHIFT",
+          "name_ru": "Перенос веса на бедро",
+          "label": "Hip Shift",
+          "variant_id": "HIP_SHIFT",
+          "single_path": "singles/03_pose/standing/SODA_HStGNRuWMAAbQIR__01_HIP_SHIFT.png",
+          "sha256": "d30cd1ddb6dba28ba29d645ff07938f659b548a96075c25d321e2d75aa0159a3",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Стоя",
+            "поза",
+            "поза стоя",
+            "Перенос веса на бедро",
+            "Hip Shift"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HStGNRuWMAAbQIR__02_OVERHEAD_STRETCH",
+          "name_ru": "Потягивание с руками вверх",
+          "label": "Overhead Stretch",
+          "variant_id": "OVERHEAD_STRETCH",
+          "single_path": "singles/03_pose/standing/SODA_HStGNRuWMAAbQIR__02_OVERHEAD_STRETCH.png",
+          "sha256": "05c9226551b0140a58202182f06f7ffa4f02d0a3312f845798b17f2d94c26853",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Стоя",
+            "поза",
+            "поза стоя",
+            "Потягивание с руками вверх",
+            "Overhead Stretch"
+          ]
+        },
+        {
+          "cell": 3,
+          "id": "SODA_HStGNRuWMAAbQIR__03_STEP_FORWARD",
+          "name_ru": "Шаг вперёд",
+          "label": "Step Forward",
+          "variant_id": "STEP_FORWARD",
+          "single_path": "singles/03_pose/standing/SODA_HStGNRuWMAAbQIR__03_STEP_FORWARD.png",
+          "sha256": "7b9bbe2fd9df6b37113e40b97eb6bc7de8d5a94f2148338796deda1509d84080",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Стоя",
+            "поза",
+            "поза стоя",
+            "Шаг вперёд",
+            "Step Forward"
+          ]
+        },
+        {
+          "cell": 4,
+          "id": "SODA_HStGNRuWMAAbQIR__04_HANDS_BEHIND",
+          "name_ru": "Руки за спиной",
+          "label": "Hands Behind",
+          "variant_id": "HANDS_BEHIND",
+          "single_path": "singles/03_pose/standing/SODA_HStGNRuWMAAbQIR__04_HANDS_BEHIND.png",
+          "sha256": "e3d58f02aa12e27a00efa12c0b78c09f04446cd99a3c516dd631c0ea8cd422e0",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Стоя",
+            "поза",
+            "поза стоя",
+            "Руки за спиной",
+            "Hands Behind"
+          ]
+        },
+        {
+          "cell": 5,
+          "id": "SODA_HStGNRuWMAAbQIR__05_SIDE_LEAN",
+          "name_ru": "Наклон вбок",
+          "label": "Side Lean",
+          "variant_id": "SIDE_LEAN",
+          "single_path": "singles/03_pose/standing/SODA_HStGNRuWMAAbQIR__05_SIDE_LEAN.png",
+          "sha256": "30f9f137c98f53e73ab1d511539adcb33c7ed9b258126307f6b40fae70615683",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Стоя",
+            "поза",
+            "поза стоя",
+            "Наклон вбок",
+            "Side Lean"
+          ]
+        },
+        {
+          "cell": 6,
+          "id": "SODA_HStGNRuWMAAbQIR__06_OVER_THE_SHOULDER",
+          "name_ru": "Разворот через плечо",
+          "label": "Over the Shoulder",
+          "variant_id": "OVER_THE_SHOULDER",
+          "single_path": "singles/03_pose/standing/SODA_HStGNRuWMAAbQIR__06_OVER_THE_SHOULDER.png",
+          "sha256": "d88acdad089f5a285680a4a8a8bcf9351f134d4a1eced8f7c3e79cc1f868472a",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Стоя",
+            "поза",
+            "поза стоя",
+            "Разворот через плечо",
+            "Over the Shoulder"
+          ]
+        },
+        {
+          "cell": 7,
+          "id": "SODA_HSnlz3aWQAArOHH__01_CROSSOVER",
+          "name_ru": "Перекрёстная постановка ног",
+          "label": "Crossover",
+          "variant_id": "CROSSOVER",
+          "single_path": "singles/03_pose/standing/SODA_HSnlz3aWQAArOHH__01_CROSSOVER.png",
+          "sha256": "9bf204d83223cadff9eded4b863dc147b386e19d1d44fd3732ea53ffe301c96d",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Стоя",
+            "поза",
+            "поза стоя",
+            "Перекрёстная постановка ног",
+            "Crossover"
+          ]
+        },
+        {
+          "cell": 8,
+          "id": "SODA_HSnlz3aWQAArOHH__02_BENT_LEG",
+          "name_ru": "Согнутая нога",
+          "label": "Bent Leg",
+          "variant_id": "BENT_LEG",
+          "single_path": "singles/03_pose/standing/SODA_HSnlz3aWQAArOHH__02_BENT_LEG.png",
+          "sha256": "b01fadefa261b25d484a04b319b3ab97cfbb27a8f1815e43297935c2888fd11a",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Стоя",
+            "поза",
+            "поза стоя",
+            "Согнутая нога",
+            "Bent Leg"
+          ]
+        },
+        {
+          "cell": 9,
+          "id": "SODA_HSnlz3aWQAArOHH__03_CASUAL_FLAMINGO",
+          "name_ru": "Непринуждённая стойка с согнутой ногой",
+          "label": "Casual Flamingo",
+          "variant_id": "CASUAL_FLAMINGO",
+          "single_path": "singles/03_pose/standing/SODA_HSnlz3aWQAArOHH__03_CASUAL_FLAMINGO.png",
+          "sha256": "3f90ce636feb165802fb6638f026b1e4dba2397721a99248ae2c6c789e06ec91",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Стоя",
+            "поза",
+            "поза стоя",
+            "Непринуждённая стойка с согнутой ногой",
+            "Casual Flamingo"
+          ]
+        },
+        {
+          "cell": 10,
+          "id": "SODA_HSnlz3aWQAArOHH__04_BLOCKED",
+          "name_ru": "Поза «блок»",
+          "label": "Blocked",
+          "variant_id": "BLOCKED",
+          "single_path": "singles/03_pose/standing/SODA_HSnlz3aWQAArOHH__04_BLOCKED.png",
+          "sha256": "ab7e2ccf017512e0e785761277c13cc16a57122f73731429c7b826df09ff9733",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Стоя",
+            "поза",
+            "поза стоя",
+            "Поза «блок»",
+            "Blocked"
+          ]
+        },
+        {
+          "cell": 11,
+          "id": "SODA_HSnlz3aWQAArOHH__05_CASUAL",
+          "name_ru": "Непринуждённая стойка",
+          "label": "Casual",
+          "variant_id": "CASUAL",
+          "single_path": "singles/03_pose/standing/SODA_HSnlz3aWQAArOHH__05_CASUAL.png",
+          "sha256": "3abb5fb2e514ca3132a78065db29ffe00e8230cac016d6babaf2e719840ee3c9",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Стоя",
+            "поза",
+            "поза стоя",
+            "Непринуждённая стойка",
+            "Casual"
+          ]
+        },
+        {
+          "cell": 12,
+          "id": "SODA_HSnlz3aWQAArOHH__06_CASUAL_LEG",
+          "name_ru": "Непринуждённая постановка ноги",
+          "label": "Casual Leg",
+          "variant_id": "CASUAL_LEG",
+          "single_path": "singles/03_pose/standing/SODA_HSnlz3aWQAArOHH__06_CASUAL_LEG.png",
+          "sha256": "973116241ae357ef4b1d6d4abfeca56315181baee0667f186db7f050948e582e",
+          "subject_label": "FEMALE",
+          "tags_ru": [
+            "Женский",
+            "Стоя",
+            "поза",
+            "поза стоя",
+            "Непринуждённая постановка ноги",
+            "Casual Leg"
+          ]
+        }
+      ]
+    },
+    {
+      "topic": "weapon",
+      "topic_ru": "С предметом в руках",
+      "priority": 3,
+      "subject_label": "MALE",
+      "page": 1,
+      "path": "collages/weapon__MALE__p01.jpg",
+      "sha256": "30a0482fbe6cfc69450cb9423b955e889cdb81b916069269fa1c517ed9bd7bc4",
+      "width": 800,
+      "height": 620,
+      "cells": [
+        {
+          "cell": 1,
+          "id": "SODA_HRVEzLkbgAArl2H__01_VARIANT_01",
+          "name_ru": "Пистолет направлен к зрителю",
+          "label": "Пистолет направлен к зрителю",
+          "variant_id": "VARIANT_01",
+          "single_path": "singles/03_pose/weapon/SODA_HRVEzLkbgAArl2H__01_VARIANT_01.png",
+          "sha256": "a49f0daf5fccb81f4a84e4bd3bc732e042f424cdc283703e590cab8877e2e83b",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "С предметом в руках",
+            "поза",
+            "кисть/жест",
+            "кисти",
+            "Пистолет направлен к зрителю"
+          ]
+        },
+        {
+          "cell": 2,
+          "id": "SODA_HRVEzLkbgAArl2H__02_VARIANT_02",
+          "name_ru": "Пистолет поднят возле головы",
+          "label": "Пистолет поднят возле головы",
+          "variant_id": "VARIANT_02",
+          "single_path": "singles/03_pose/weapon/SODA_HRVEzLkbgAArl2H__02_VARIANT_02.png",
+          "sha256": "99eb57f2842be096cdc38f042cb770db4d9a996eca12f3f31a744a2d0d7465ad",
+          "subject_label": "MALE",
+          "tags_ru": [
+            "Мужской",
+            "С предметом в руках",
+            "поза",
+            "кисть/жест",
+            "кисти",
+            "Пистолет поднят возле головы"
+          ]
+        }
+      ]
+    }
+  ]
+}

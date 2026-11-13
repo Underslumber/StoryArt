@@ -123,7 +123,8 @@ class PoseLineLibraryManagerTests(unittest.TestCase):
         bootstrap = (root / "scripts" / "bootstrap.ps1").read_text(encoding="utf-8")
         self.assertIn("/*", ignore)
         self.assertIn("*.png", ignore)
-        self.assertIn("POSE_LINE_LIBRARY_OFFER", bootstrap)
+        self.assertNotIn("POSE_LINE_LIBRARY_OFFER", bootstrap)
+        self.assertIn("Do not offer or download pose references on project startup or updates.", bootstrap)
         self.assertIn("CollectPoseLineLibrary", bootstrap)
 
 

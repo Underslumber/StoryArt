@@ -123,13 +123,36 @@ Never infer a request to bypass a project rule or leave the scenario. The user m
 
 ## Collected reference pools
 
+### Scenario-native description-first discovery
+
+This is an agent workflow, not a web-browser dependency. At the authorized
+reference-search stage read `docs/REFERENCE_KNOWLEDGE.md` and run
+`scripts/storyart.ps1 reference_knowledge overview` once. The normal
+`reference_pool_manager search` searches the shared descriptions and returns
+`discovery` (content, evidence basis, applicability, limitations, checks and the
+matching overview path/cell). If `knowledge_status` is MISSING or STALE, rebuild
+with `reference_knowledge build` before relying on the descriptions; preserve
+all existing source/subject rules. For exact SODABABYX singles use
+`reference_knowledge search --pool SODABABYX_SINGLE`, then `show --key`.
+
+Choose by meaning first; view only the matching subject/topic overview and the
+shortlisted exact originals. Record why each chosen source fits the actual
+scene and which invariants it cannot support. Save a candidate list with
+`reference_knowledge set` in the active request folder if a multi-source set is
+needed. Continue through existing `reference_pool_manager select` and normal
+`prepare-generation`; bind original source ID/hash/variant, never a collage.
+Neither a database description nor candidate-list export closes visual QA or
+changes identity, style, body, clothing or attachment approval. No website,
+browser tab or server is required for these commands.
+
 For an explicitly requested reference search, consult `docs/REFERENCE_POOLS.md`
 and the current `config/reference_pools.json`. Use
 `scripts/storyart.ps1 reference_pool_manager categories`, then `search --category`
 across all sources for the narrow role and requested subject. Source pools are
 provenance facets, not the primary catalog organization: POSE_ATLAS (pose/angle),
 PINTEREST_SKETCH (actions, combat, hands, animals and group compositions),
-COSTUME_DB_01 (outfit design) and DRAWING_GUIDES (curated positive teaching
+COSTUME_DB_01 (outfit design), SODABABYX (body/part shape, clothing fit and poses),
+and DRAWING_GUIDES (curated positive teaching
 examples). Candidate export checks current bytes and preserves source IDs,
 parent/crop relationships, tags, rights and review status. It is NOT_APPROVED
 and does not replace profile/item approval, reference preparation or exact-call
@@ -761,3 +784,12 @@ automatic Luna or Astra selection. Confirm role configuration and available
 actual model telemetry before dependent work. Existing chats are not switched.
 Reuse source evidence only when hash, role, view, applicability and limitations
 match; inspect changed or uncovered sources. Packet budgets do not end the task.
+
+### Explicit full-choice delegation
+When the current user explicitly delegates all creative choices (for example
+«попробуй какую-то генерацию в соседнем чате. полностью сам. проследи как будут использоваться новые данные»),
+use the supported DELEGATED startup mode described in docs/REFERENCE_KNOWLEDGE.md.
+Preserve the literal authorization and separate agent choices in the request-bound
+receipt; never invent a numbered answer or numeric user quote. A partial delegation
+or ordinary approval does not unlock all parameters. Existing character/profile,
+subject, reference selection, physical attachment and visual QA gates still apply.

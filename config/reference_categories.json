@@ -9,6 +9,8 @@
     "ACCESSORIES": {"label_ru": "Аксессуары"},
     "FABRIC_FIT": {"label_ru": "Ткань и посадка"},
     "ANATOMY": {"label_ru": "Анатомия"},
+    "BODY_SHAPE": {"label_ru": "Формы тела"},
+    "BODY_PART_SHAPE": {"label_ru": "Формы частей тела"},
     "FACE_EXPRESSION": {"label_ru": "Лицо и выражение"},
     "HAIR": {"label_ru": "Волосы"},
     "LIGHT_COLOR": {"label_ru": "Свет и цвет"},

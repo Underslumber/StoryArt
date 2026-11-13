@@ -1,2 +1,4 @@
 # Shipped Oracle patches are integrity-pinned by exact bytes; never convert line endings.
 runtime/chatgpt-web-image/oracle-patches/** -text
+# Reviewed reference manifests and images are bound to exact byte hashes.
+SODABABYX_SOURCE_COLLECTION/** -text

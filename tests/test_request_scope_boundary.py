@@ -204,3 +204,35 @@ def test_structured_request_wrapper_rejects_foreign_request_before_read(tmp_path
     assert reads == []
     error_output = capsys.readouterr().err
     assert "FOREIGN_REQUEST" in error_output or "UNBOUND_LEGACY_REQUEST" in error_output
+
+
+def test_preparation_relocation_preserves_scope_and_rolls_back(tmp_path, monkeypatch):
+    import json
+    workspace, _, source, plan, state_path = _request_fixture(tmp_path, monkeypatch)
+    plan.unlink()
+    guard._bind_guard_to_current_chat(state_path, "IMAGE_GENERATION")
+    state = {"schema_version": guard.SCHEMA_VERSION, "owner_chat_id": "test-thread-boundary",
+             "request_id": "REQ-SYNTHETIC", "task_kind": "IMAGE_GENERATION", "status": "ACTIVE",
+             "attempts": [], "events": []}
+    guard.atomic_write_json(state_path, state)
+    target = workspace / "Other_GENERATIONS/00_PENDING/REQ-SYNTHETIC"
+    original = guard.atomic_write_json
+    def fail_chat(path, value):
+        if path == guard._chat_binding_path("test-thread-boundary"):
+            raise OSError("simulated registry write failure")
+        return original(path, value)
+    monkeypatch.setattr(guard, "atomic_write_json", fail_chat)
+    with pytest.raises(OSError): guard.relocate_preparation(state_path, target, workspace)
+    assert source.exists() and not target.exists()
+    assert guard.load_guard(state_path) == state
+    monkeypatch.setattr(guard, "atomic_write_json", original)
+    guard.relocate_preparation(state_path, target, workspace)
+    moved = guard.load_guard(target / state_path.name)
+    assert moved["request_id"] == state["request_id"] and moved["events"][-1]["event"] == "PREPARATION_RELOCATED"
+    assert not source.exists()
+    with pytest.raises(guard.GuardError): guard.assert_active_request_path(state_path)
+    moved["attempts"] = [{"status": "ACTIVE"}]
+    guard.atomic_write_json(target / state_path.name, moved)
+    with pytest.raises(guard.GuardError): guard.relocate_preparation(target / state_path.name, source, workspace)
+    monkeypatch.setenv("CODEX_THREAD_ID", "other-chat")
+    with pytest.raises(guard.GuardError): guard.relocate_preparation(target / state_path.name, source, workspace)

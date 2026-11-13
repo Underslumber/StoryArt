@@ -34,6 +34,8 @@ REPLACEMENT_AUTHORIZATION_QUESTION = REPLACEMENT_AUTHORIZATION_QUESTION.encode("
 REPLACEMENT_AUTHORIZATION_ANSWER = REPLACEMENT_AUTHORIZATION_ANSWER.encode("ascii").decode("unicode_escape")
 REPLACEMENT_AUTHORIZATION_SOURCE = "Direct user structured reply in current chat"
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff"}
+USER_STYLE_TASK_KIND = "IMAGE_GENERATION_USER_STYLE"
+SINGLE_OUTPUT_KINDS = {"IMAGE_GENERATION_NATIVE_DEFAULT", USER_STYLE_TASK_KIND}
 # Adult physique stages default to one plain two-piece swimsuit; other cuts need the user's direct instruction.
 DEFAULT_SWIMWEAR_RUNG = "TWO_PIECE"
 SWIMWEAR_OVERRIDE_RUNGS = ("BIKINI", "EXTREME_MICRO", "SPORT_TOP", "ONE_PIECE", "CUSTOM")
@@ -289,6 +291,80 @@ def _authorize_guard_path(path: Path) -> str | None:
 def assert_active_request_path(path: str | Path) -> None:
     """Reject foreign or unbound image request paths before their JSON is opened."""
     _authorize_guard_path(Path(path))
+
+
+def relocate_preparation(path: Path, destination: Path, workspace: Path | None = None) -> dict:
+    """Move this chat's unexecuted request and its bindings, with rollback."""
+    root = (workspace or Path(__file__).resolve().parent.parent).resolve()
+    path = path.resolve()
+    source = path.parent
+    target = destination.resolve()
+    thread = os.environ.get("CODEX_THREAD_ID", "").strip()
+    if not thread:
+        raise GuardError("Relocation requires the owning chat.")
+    state = load_guard(path)  # Authorize before inspecting any request data.
+    chat_path = _chat_binding_path(thread)
+    chat = _read_binding(chat_path)
+    try:
+        source.relative_to(root)
+        rel = target.relative_to(root)
+    except ValueError as exc:
+        raise GuardError("Relocation must stay inside this workspace.") from exc
+    if (path.name != "EXECUTION_GUARD.json" or state.get("owner_chat_id") != thread
+            or not chat or chat.get("active_folder") != str(source)
+            or state.get("task_kind") != "IMAGE_GENERATION"
+            or state.get("attempts") or state.get("execution_started_at") or state.get("available_results")
+            or state.get("status") in {"COMPLETE", "CANCELLED"}
+            or (source / "REFERENCE_PLAN.json").exists() or (source / "EXECUTION_CALL.json").exists()):
+        raise GuardError("Only the current unexecuted image preparation without a plan/call may relocate.")
+    if (len(rel.parts) != 3 or not rel.parts[0].endswith("_GENERATIONS")
+            or rel.parts[1] != "00_PENDING" or rel.parts[2] != state.get("request_id")
+            or target == source or target.exists()):
+        raise GuardError("Destination must be a new canonical style request folder with the same request id.")
+    old_binding = _folder_binding_path(source)
+    new_binding = _folder_binding_path(target)
+    if new_binding.exists():
+        raise GuardError("Destination already has a binding; never adopt or overwrite it.")
+    focus = _focus_binding_path(thread)
+    tracked = [chat_path, old_binding, new_binding, focus]
+    before = {p: p.read_bytes() if p.exists() else None for p in tracked}
+    original_guard = path.read_bytes()
+    lock = _chat_request_root() / "relocate.lock"
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        lock_fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError as exc:
+        raise GuardError("Another relocation is pending; do not overlap operations.") from exc
+    os.close(lock_fd)
+    moved = False
+    try:
+        # Detect another owner/state change since preflight rather than overwrite it.
+        if path.read_bytes() != original_guard or any((p.read_bytes() if p.exists() else None) != b for p, b in before.items()):
+            raise GuardError("Request bindings changed during relocation preparation.")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        source.rename(target)
+        moved = True
+        new_path = target / path.name
+        state.setdefault("events", []).append({"at": iso_time(utc_now()), "event": "PREPARATION_RELOCATED",
+                                               "from": str(source), "to": str(target)})
+        atomic_write_json(new_path, state)
+        atomic_write_json(new_binding, {"thread_id": thread, "active_folder": str(target), "task_kind": state["task_kind"]})
+        atomic_write_json(chat_path, {**chat, "active_folder": str(target)})
+        _write_execution_focus(thread, new_path, state["task_kind"])
+        old_binding.unlink()
+    except Exception:
+        if moved:
+            target.rename(source)
+            path.write_bytes(original_guard)
+            for binding, content in before.items():
+                if content is None:
+                    binding.unlink(missing_ok=True)
+                else:
+                    binding.write_bytes(content)
+        raise
+    finally:
+        lock.unlink(missing_ok=True)
+    return state
 
 
 def load_guard(path: Path) -> dict[str, object]:
@@ -606,7 +682,79 @@ def is_physique_stage(stage: str | None) -> bool:
 
 
 def is_project_image_generation(state: dict[str, object]) -> bool:
-    return state.get("task_kind") in {"IMAGE_GENERATION", "IMAGE_GENERATION_NATIVE_DEFAULT"}
+    return state.get("task_kind") in {"IMAGE_GENERATION", *SINGLE_OUTPUT_KINDS}
+
+
+def validate_user_style_call(execution_call, request_id, reference_plan, locked_character=""):
+    if not reference_plan:
+        raise GuardError("User STYLE continuation requires its prepared reference plan.")
+    try:
+        if __package__:
+            from .user_style_reference import validate_call
+        else:
+            from user_style_reference import validate_call
+        return validate_call(execution_call, request_id, reference_plan, locked_character)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise GuardError(f"Invalid user STYLE continuation: {error}") from error
+
+
+def validate_user_style_transition(state: dict, selection: dict, user_quote: str) -> None:
+    if (state.get("task_kind") not in SINGLE_OUTPUT_KINDS
+            or state.get("status") != "ACTIVE" or state.get("active_attempt")
+            or any(row.get("status") == "UNKNOWN" for row in state.get("attempts", []))):
+        raise GuardError("User STYLE preparation requires an active corrected single-output request with no outstanding attempt.")
+    correction = next((row for row in reversed(state.get("events", []))
+                       if row.get("event") == "USER_CORRECTION"), {})
+    explicit_choice = (bool(user_quote) and correction.get("invariant_change_evidence") == user_quote
+                       and bool(correction.get("invariant_changes", {}).get("style"))
+                       and bool(correction.get("invariant_changes", {}).get("references")))
+    authorization = state.get("user_style_authorization", {})
+    retained_choice = (state.get("task_kind") == USER_STYLE_TASK_KIND
+                       and authorization.get("style_quote") == user_quote
+                       and authorization.get("sources") == selection.get("sources")
+                       and authorization.get("target_subject_label") == selection.get("target_subject_label")
+                       and authorization.get("style_invariants") == {
+                           key: state.get("locked_invariants", {}).get(key) for key in ("style", "references")})
+    if not (explicit_choice or retained_choice):
+        raise GuardError("User STYLE preparation needs an explicit source choice or its unchanged prior authorization.")
+
+
+def select_user_style_route(path: Path, execution_call: dict, reference_plan: Path, user_quote: str) -> dict:
+    """Opt-in correction transition/repreparation; retain folder, revision and attempts."""
+    assert_active_request_path(path)
+    state = load_guard(path)
+    if reference_plan.resolve().parent != path.resolve().parent:
+        raise GuardError("User STYLE plan must remain in the original active request folder.")
+    binding = validate_user_style_call(execution_call, str(state.get("request_id", "")), reference_plan,
+                                      str(state.get("locked_invariants", {}).get("character", "")))
+    plan = json.loads(reference_plan.read_text(encoding="utf-8"))
+    validate_user_style_transition(state, plan, user_quote)
+    if (plan.get("chat_id") != state.get("owner_chat_id") or plan.get("user_quote") != user_quote
+            or plan.get("task_revision") != state.get("task_revision")
+            or execution_call["user_selections"]["style"]["user_quote"] != user_quote):
+        raise GuardError("User STYLE transition provenance belongs to another chat or correction.")
+    previous_kind = state["task_kind"]
+    state["task_kind"] = USER_STYLE_TASK_KIND
+    state["user_style_authorization"] = {"reference_plan": str(reference_plan.resolve()),
+        "binding": binding, "task_revision": state.get("task_revision"), "style_quote": user_quote,
+        "sources": plan["sources"], "target_subject_label": plan["target_subject_label"],
+        "style_invariants": {key: state.get("locked_invariants", {}).get(key) for key in ("style", "references")}}
+    state.pop("ready_binding", None)
+    state["phase"] = "CORRECTION"
+    state["next_required_action"] = "NEXT_SAFE_EXECUTION_OR_COMPLETE"
+    if isinstance(state.get("recovery"), dict):
+        state["last_recovery"] = {**state.pop("recovery"), "resolved_at": iso_time(utc_now()),
+                                  "evidence": [str(reference_plan.resolve())]}
+    append_event(state, "USER_STYLE_ROUTE_SELECTED", "Explicit source-style correction prepared without inferred numeric fidelity.",
+                 utc_now(), from_task_kind=previous_kind, to_task_kind=USER_STYLE_TASK_KIND,
+                 user_quote=user_quote, reference_binding=binding)
+    atomic_write_json(path, state)
+    if state.get("owner_chat_id"):
+        folder_binding = _read_binding(_guard_binding_path(path))
+        if folder_binding and folder_binding.get("thread_id") == state["owner_chat_id"]:
+            atomic_write_json(_guard_binding_path(path), {**folder_binding, "task_kind": USER_STYLE_TASK_KIND})
+        _write_execution_focus(str(state["owner_chat_id"]), path, USER_STYLE_TASK_KIND)
+    return state
 
 
 def validate_user_generation_selections(execution_call: dict[str, object], *, no_references: bool) -> dict[str, str]:
@@ -810,10 +958,10 @@ def validate_image_execution_scope(
     extra_generation_evidence: str,
 ) -> None:
     task_kind = state.get("task_kind")
-    if task_kind not in {"IMAGE_GENERATION", "IMAGE_GENERATION_NATIVE_DEFAULT"}:
+    if task_kind not in {"IMAGE_GENERATION", *SINGLE_OUTPUT_KINDS}:
         return
     contract = str(output_contract or "").upper()
-    if task_kind == "IMAGE_GENERATION_NATIVE_DEFAULT" and contract != "REQUESTED_DELIVERABLE":
+    if task_kind in SINGLE_OUTPUT_KINDS and contract != "REQUESTED_DELIVERABLE":
         raise GuardError("IMAGE_GENERATION_NATIVE_DEFAULT requires --output-contract REQUESTED_DELIVERABLE.")
     if contract not in {"REQUESTED_DELIVERABLE", "USER_REQUESTED_EXTRA"}:
         raise GuardError(
@@ -2810,7 +2958,7 @@ def execution_focus_binding(thread_id: str) -> dict[str, object] | None:
     if value is None:
         return None
     if value.get("thread_id") != thread_id or value.get("task_kind") not in {
-        "GENERAL", "IMAGE_GENERATION", "IMAGE_GENERATION_NATIVE_DEFAULT", "IMAGE_EDIT"
+        "GENERAL", "IMAGE_GENERATION", "IMAGE_GENERATION_NATIVE_DEFAULT", USER_STYLE_TASK_KIND, "IMAGE_EDIT"
     }:
         raise GuardError("Execution focus binding is invalid.")
     guard_path = Path(str(value.get("guard_path", ""))).resolve()
@@ -3074,6 +3222,19 @@ def checkpoint(
                 execution_call, str(state.get("request_id", "")), reference_plan,
                 str(state.get("locked_invariants", {}).get("character", "")),
             )
+        elif state.get("task_kind") == USER_STYLE_TASK_KIND:
+            if not reference_plan or Path(reference_plan).resolve().parent != Path(path).resolve().parent:
+                raise GuardError("User STYLE plan must remain in the guard-scoped request folder.")
+            binding = validate_user_style_call(
+                execution_call, str(state.get("request_id", "")), reference_plan,
+                str(state.get("locked_invariants", {}).get("character", "")),
+            )
+            authorization = state.get("user_style_authorization", {})
+            if (authorization.get("reference_plan") != str(Path(reference_plan).resolve())
+                    or authorization.get("binding") != binding
+                    or authorization.get("task_revision") != state.get("task_revision")):
+                raise GuardError("User STYLE call is not the exact current-correction authorized preparation.")
+            state["ready_binding"] = binding
         state["status"] = "READY"
         state["phase"] = "READY_FOR_EXECUTION"
         state["next_required_action"] = "CALL_VALIDATION_OR_EXECUTION_OR_BLOCKER"
@@ -3218,7 +3379,7 @@ def checkpoint(
         )
         if is_project_image_generation(state):
             bound_stage = str((state.get("ready_binding") or {}).get("stage", "")).strip()
-            if state.get("task_kind") == "IMAGE_GENERATION_NATIVE_DEFAULT":
+            if state.get("task_kind") in SINGLE_OUTPUT_KINDS:
                 bound_stage = bound_stage or "SINGLE_PASS"
             elif not bound_stage:
                 raise GuardError("EXECUTION_STARTED requires a validated ready stage binding.")
@@ -3246,6 +3407,13 @@ def checkpoint(
             )
             if binding != state.get("ready_binding"):
                 raise GuardError("Execution call differs from the prompt contract bound at readiness.")
+        elif state.get("task_kind") == USER_STYLE_TASK_KIND:
+            binding = validate_user_style_call(
+                execution_call, str(state.get("request_id", "")), reference_plan,
+                str(state.get("locked_invariants", {}).get("character", "")),
+            )
+            if binding != state.get("ready_binding"):
+                raise GuardError("User STYLE call, sources or plan changed after readiness.")
         if is_project_image_generation(state):
             attempt_stage = str((state.get("ready_binding") or {}).get("stage") or "SINGLE_PASS")
         new_attempt_id = str(attempt_id or uuid.uuid4())
@@ -3296,14 +3464,20 @@ def checkpoint(
                 "reference_plan_snapshot_sha256": file_sha256(plan_snapshot_path),
                 "execution_call": execution_call,
             }
-        elif state.get("task_kind") == "IMAGE_GENERATION_NATIVE_DEFAULT":
+        elif state.get("task_kind") in SINGLE_OUTPUT_KINDS:
             call_json = json.dumps(execution_call, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
             execution_snapshot_fields = {
-                "request_purpose": "NATIVE_DEFAULT",
+                "request_purpose": "USER_ATTACHED_STYLE" if state.get("task_kind") == USER_STYLE_TASK_KIND else "NATIVE_DEFAULT",
                 "execution_stage": attempt_stage or "SINGLE_PASS",
                 "execution_call": execution_call,
                 "execution_call_sha256": hashlib.sha256(call_json.encode("utf-8")).hexdigest(),
             }
+            if state.get("task_kind") == USER_STYLE_TASK_KIND:
+                source_plan = Path(reference_plan).resolve()
+                snapshot_path = Path(path).resolve().parent / f"EXECUTED_USER_STYLE_PLAN_{new_attempt_id}.json"
+                atomic_write_json(snapshot_path, json.loads(source_plan.read_text(encoding="utf-8")))
+                execution_snapshot_fields.update(reference_plan_snapshot_path=str(snapshot_path),
+                                                 reference_plan_snapshot_sha256=file_sha256(snapshot_path))
         asserted_invariants = execution_start_assertions(state, invariant_assertions)
         active_swimwear_attempt = validate_swimwear_execution_start(
             state,
@@ -3360,7 +3534,7 @@ def checkpoint(
         if is_project_image_generation(state):
             if not evidence_paths:
                 raise GuardError("Image generation requires a real output path as visible-result evidence.")
-            if state.get("task_kind") == "IMAGE_GENERATION_NATIVE_DEFAULT" and len(evidence_paths) != 1:
+            if state.get("task_kind") in SINGLE_OUTPUT_KINDS and len(evidence_paths) != 1:
                 raise GuardError("IMAGE_GENERATION_NATIVE_DEFAULT requires exactly one output image.")
             for item in evidence_paths:
                 file = Path(item)
@@ -3568,7 +3742,7 @@ def checkpoint(
                 not Path(item).is_file() or Path(item).suffix.lower() not in IMAGE_EXTENSIONS for item in resolved_paths
             ):
                 raise GuardError("AVAILABLE reconciliation requires existing image output evidence.")
-            if state.get("task_kind") == "IMAGE_GENERATION_NATIVE_DEFAULT" and len(resolved_paths) != 1:
+            if state.get("task_kind") in SINGLE_OUTPUT_KINDS and len(resolved_paths) != 1:
                 raise GuardError("IMAGE_GENERATION_NATIVE_DEFAULT requires exactly one reconciled output image.")
         else:
             resolved_paths = []
@@ -4207,6 +4381,9 @@ def make_parser() -> argparse.ArgumentParser:
 
     status = subparsers.add_parser("status", help="Show the current guard state and enforce elapsed-time limits.")
     status.add_argument("--state", required=True)
+    relocate = subparsers.add_parser("relocate-preparation", help="Move only this chat's unexecuted, unplanned image request to its canonical style folder.")
+    relocate.add_argument("--state", required=True)
+    relocate.add_argument("--destination", required=True)
     return parser
 
 
@@ -4235,6 +4412,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 max_preflight_actions=args.max_preflight_actions,
                 max_execution_minutes=args.max_execution_minutes,
             )
+        elif args.command == "relocate-preparation":
+            state = relocate_preparation(Path(args.state), Path(args.destination))
         elif args.command == "checkpoint":
             assert_active_request_path(Path(args.state))
             execution_call = None

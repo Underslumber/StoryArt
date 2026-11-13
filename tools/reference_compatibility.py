@@ -19,7 +19,7 @@ SOFT_ROLES = {
     "POSE", "POSE_SOFT", "AUX_POSE", "STYLE", "STYLE_SOFT", "BACKGROUND", "BACKGROUND_STYLE",
     "CAMERA", "CAMERA_ONLY", "AUX_CAMERA", "CLOTHES", "CLOTHING_BEHAVIOR",
     "AUX_CLOTHING_BEHAVIOR", "OBJECT_INTERACTION", "AUX_OBJECT_INTERACTION", "AUX_CONTACT_POINTS",
-    "LIGHTING", "COMPOSITION", "ITEM_SCALE_FIT",
+    "LIGHTING", "COMPOSITION", "ITEM_SCALE_FIT", "AUX_BODY_SHAPE",
 }
 ANATOMY_VALUES = {"MALE_ANATOMY", "FEMALE_ANATOMY", "ANDROGYNOUS_ANATOMY"}
 POSE_ROLES = {"POSE", "POSE_SOFT", "AUX_POSE", "ART_POSE_SOFT", "POSE_STUDY", "STAGING_ONLY"}
@@ -68,6 +68,16 @@ def strict_subject_decision(target: dict[str, Any], reference: dict[str, Any], *
         return "REVIEW_REQUIRED", "File-backed subject classification requires a reviewed source hash."
     if bound_hash != UNKNOWN and bound_hash.lower() != _clean(reference.get("sha256")).lower():
         return "REVIEW_REQUIRED", "Reviewed subject label is not bound to current source bytes."
+    if _clean(reference.get("subject_label")).upper() == "NEUTRAL":
+        if (not pose and role == "AUX_MOUTH_EXPRESSION"
+                and reference.get("subject_usage_scope") == "MOUTH_EXPRESSION_ONLY"
+                and reference.get("subject_label_status") == "CONFIRMED"
+                and bound_hash != UNKNOWN
+                and _clean(reference.get("subject_label_evidence")) != UNKNOWN
+                and target_label in {"MALE_ANATOMY", "FEMALE_ANATOMY"}
+                and _clean(target.get("anatomy_evidence_source")) != UNKNOWN):
+            return "ALLOWED", "Reviewed neutral isolated mouth transfers expression only; preserve target sex, identity and style."
+        return "BLOCKED", "NEUTRAL is allowed only as a reviewed isolated mouth expression, never pose, identity, body or style."
     source_label = explicit_subject_label(reference)
     if source_label == "NO_SUBJECT" and role in NO_SUBJECT_ROLES:
         return "ALLOWED", "Reviewed source explicitly contains no subject."

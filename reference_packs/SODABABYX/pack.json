@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "pool": "SODABABYX",
+  "title": "SODABABYX: 45 originals, 273 singles, 36 discovery collages",
+  "target_root": "SODABABYX_SOURCE_COLLECTION",
+  "source": {
+    "name": "SODABABYX body shape, clothing fit and pose references",
+    "author": "@sodababyx",
+    "homepage": "https://x.com/sodababyx",
+    "terms_summary": "Bundled in this repository at the explicit request of the collection owner. Original author attribution and per-file post/media URLs are retained. Collection acceptance is not generation or style approval; no additional licence is asserted.",
+    "redistribution": "not_established"
+  },
+  "metadata": []
+}

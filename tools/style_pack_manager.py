@@ -39,7 +39,7 @@ try:
         explicit_custom_profile, menu_selection_fields, parse_startup_option_descriptions,
         preset_profile_from_description, startup_clarification_requirements,
         validate_menu_choice_quote, validate_menu_user_selections,
-        validate_startup_profile_evidence,
+        validate_startup_profile_evidence, delegated_startup,
     )
 except ModuleNotFoundError:  # Direct execution as python tools\\style_pack_manager.py
     from style_pack_startup import (
@@ -47,7 +47,7 @@ except ModuleNotFoundError:  # Direct execution as python tools\\style_pack_mana
         explicit_custom_profile, menu_selection_fields, parse_startup_option_descriptions,
         preset_profile_from_description, startup_clarification_requirements,
         validate_menu_choice_quote, validate_menu_user_selections,
-        validate_startup_profile_evidence,
+        validate_startup_profile_evidence, delegated_startup,
     )
 
 try:
@@ -1552,7 +1552,7 @@ def compatibility_target(
             raise StylePackError("A supplied profile requires --style-name so its approved registry record can be verified.")
         profile_identity = _approved_profile_identity(paths, Path(profile_value))
 
-    target_name = str(getattr(args, "target_name", "") or getattr(args, "character_name", "") or (profile_identity or {}).get("character_name", "") or target_id.removeprefix("CHAR_").replace("_", " ")).strip()
+    target_name = str(getattr(args, "target_name", "") or getattr(args, "character_name", "") or (profile_identity or {}).get("character_name", "") or (target_id.removeprefix("CHAR_").replace("_", " ") if target_id not in {"NONE", "NEW"} else "")).strip()
     prompt_anatomy, prompt_evidence = prompt_target_anatomy(str(getattr(args, "target_prompt", "") or getattr(args, "prompt_text", "")), target_name)
     profile_anatomy = (profile_identity or {}).get("target_anatomy", "UNKNOWN")
     if profile_anatomy != "UNKNOWN" and prompt_anatomy != "UNKNOWN" and profile_anatomy != prompt_anatomy:
@@ -1598,7 +1598,7 @@ def enforce_reference_compatibility(
         "anatomy_compatibility": reference.get("anatomy_compatibility", "UNKNOWN"),
         "anatomy_evidence_source": reference.get("anatomy_evidence_source", "UNKNOWN"),
     }
-    for key in ("subject_label", "subject_label_evidence", "subject_label_status", "subject_label_sha256", "sha256", "visual_qa_status", "physiology_group", "source_subject", "subject_anatomy_compatibility", "subject_anatomy_evidence_source", "framing", "coverage", "source_coverage", "shot_type", "face_reference_purpose", "face_reference_purpose_scope"):
+    for key in ("subject_label", "subject_label_evidence", "subject_label_status", "subject_label_sha256", "subject_usage_scope", "sha256", "visual_qa_status", "physiology_group", "source_subject", "subject_anatomy_compatibility", "subject_anatomy_evidence_source", "framing", "coverage", "source_coverage", "shot_type", "face_reference_purpose", "face_reference_purpose_scope"):
         if key in reference:
             metadata[key] = reference[key]
     result = validate_reference_compatibility(target, metadata, roles)
@@ -1752,6 +1752,8 @@ RISK_LABEL_RE = re.compile(r"^D(?:[1-9]|10)$", re.IGNORECASE)
 
 def parse_startup_interaction(args: argparse.Namespace) -> dict[str, object]:
     selection_mode = args.startup_selection_mode.upper()
+    if selection_mode == "DELEGATED":
+        return delegated_startup(args)
     if selection_mode == "DIRECT_CONFIRMATION":
         missing = startup_clarification_requirements(args)
         if missing:
@@ -2474,6 +2476,20 @@ def validate_resolved_slot_compatibility(
                 enforce_reference_compatibility(stage_target, metadata, roles)
                 return
         raise StylePackError("Attached reference has no planned source metadata record.")
+    if record.get("pool") == "SODABABYX":
+        try:
+            from tools.shape_fit_reference_pool import PLAN_ROLES, ShapeFitError, revalidate_plan_reference
+        except ModuleNotFoundError:
+            from shape_fit_reference_pool import PLAN_ROLES, ShapeFitError, revalidate_plan_reference
+        prefix = str(record["ref_id"]).upper() + ":"
+        source_roles = [role.removeprefix(prefix) for role in roles]
+        source_roles = [PLAN_ROLES.get(role, role) for role in source_roles]
+        try:
+            revalidate_plan_reference(paths.workspace, record, target, source_roles)
+        except ShapeFitError as error:
+            raise StylePackError(str(error)) from error
+        enforce_reference_compatibility(target, record, source_roles)
+        return
     planned_roles = {
         str(role).upper()
         for reference in planned_compatibility
@@ -2706,6 +2722,18 @@ def validate_reference_policy_slots(paths: StylePaths, plan: dict[str, object], 
     def is_approved_project_reference(slot: dict[str, object]) -> bool:
         if is_user_attachment(slot):
             return False
+        # An explicitly selected, accepted collection single is project source
+        # data. It is neither an imported user attachment nor BODY_REFERENCE_LIBRARY.
+        singles = [record for record in plan.get("auxiliary_body_references", [])
+                   if record.get("pool") == "SODABABYX" and record.get("singles_manifest_sha256")
+                   and Path(str(record.get("path", ""))).resolve() == Path(str(slot.get("path", ""))).resolve()
+                   and record.get("sha256") == slot.get("sha256")]
+        if len(singles) == 1:
+            try:
+                validate_resolved_slot_compatibility(paths, plan, slot, Path(str(slot["path"])).resolve())
+                return True
+            except (StylePackError, OSError, ValueError):
+                return False
         try:
             record = validate_plan_reference(paths, str(slot["path"]), "SCENE")
             status = str(record.get("status", ""))
@@ -3263,9 +3291,11 @@ def parse_selected_source_reviews(
         path = Path(str(record["path"])).resolve()
         auxiliary_review_roles = {
             "AUX_BODY_BUILD": ("BODY",),
+            "AUX_BODY_SHAPE": ("BODY",),
             "AUX_POSE": ("POSE",),
             "AUX_CAMERA": ("COMPOSITION",),
             "AUX_CLOTHING_BEHAVIOR": ("CLOTHES",),
+            "AUX_MOUTH_EXPRESSION": ("FACE",),
             "AUX_OBJECT_INTERACTION": ("BODY", "COMPOSITION"),
         }
         for role in record["active_roles"]:
@@ -3303,7 +3333,7 @@ def parse_selected_source_reviews(
             raise StylePackError(f"Selected-source review outcome is {outcome}; only PASS can prepare generation.")
         if role not in REVIEW_CATEGORIES:
             raise StylePackError(f"Unknown reviewed source role {role}; choose from {', '.join(REVIEW_CATEGORIES)}.")
-        if not re.fullmatch(r"[A-Z][A-Z0-9_]*(?::[A-Z][A-Z0-9_]*)?", slot_role):
+        if not re.fullmatch(r"(?:[A-Z][A-Z0-9_]*|SODA_[A-Z0-9_-]+)(?::[A-Z][A-Z0-9_]*)?", slot_role):
             raise StylePackError(f"Invalid physical slot role {slot_role!r}; use the exact active role from the attachment plan.")
         path = Path(str(declaration["path"]).strip()).expanduser().resolve()
         key = (role, slot_role, str(path).casefold())
@@ -4867,6 +4897,17 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         args.allow_body_identity_change,
         target_identity,
     )
+    if getattr(args, "shape_fit_reference", []):
+        if getattr(args, "prompt_only_physique", False):
+            raise StylePackError("--prompt-only-physique forbids shape/fit image references.")
+        try:
+            from tools.shape_fit_reference_pool import ShapeFitError, plan_references
+        except ModuleNotFoundError:
+            from shape_fit_reference_pool import ShapeFitError, plan_references
+        try:
+            auxiliary_body_references.extend(plan_references(args.workspace, args.shape_fit_reference, target_identity))
+        except ShapeFitError as error:
+            raise StylePackError(str(error)) from error
 
     resolved_user_selections = startup_interaction.get("resolved_user_selections", {})
     selected_style_choice = str(resolved_user_selections.get("style", "")).upper()
@@ -5221,9 +5262,10 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         "style_fidelity_confirmation": {
             "user_selected_percentage": args.fidelity,
             "resolution_source": startup_interaction["parameter_source"],
+            "selected_by": "AGENT" if startup_interaction.get("selected") == "AGENT_DELEGATED" else "USER",
             "user_choice_quote": startup_interaction["user_choice_quote"],
             "custom_parameters_user_quote": startup_interaction["custom_parameters_user_quote"],
-            "resolved_after_menu_choice": startup_interaction.get("selection_state") != "DIRECT_PARAMETERS_CONFIRMED",
+            "resolved_after_menu_choice": startup_interaction.get("selection_state") not in {"DIRECT_PARAMETERS_CONFIRMED", "AGENT_DELEGATED"},
         },
         "startup_parameter_selection": {
             **startup_interaction,
@@ -5463,12 +5505,13 @@ def validate_reference_plan_for_recording(
         raise StylePackError("Reference plan fidelity does not match the resolved startup parameters.")
     if schema_version >= 5:
         startup = plan.get("startup_parameter_selection")
-        valid_startup_selections = {*STARTUP_CHOICES, "DIRECT_CONFIRMED"}
+        valid_startup_selections = {*STARTUP_CHOICES, "DIRECT_CONFIRMED", "AGENT_DELEGATED"}
         if not isinstance(startup, dict) or startup.get("selected") not in valid_startup_selections:
             raise StylePackError("Reference plan has no valid directly confirmed or optional-menu startup parameters.")
         if startup.get("selection_state") in {"NEW_SELECTION", "USER_CONFIRMED_FROM_TEXT_MENU", "USER_CONFIRMED_AFTER_NATIVE_UNAVAILABLE", "DIRECT_PARAMETERS_CONFIRMED", "REUSED_WITH_USER_RESELECTION"} and not str(startup.get("user_choice_quote", "")).strip():
             raise StylePackError("Reference plan has no recorded user startup choice or confirmation.")
         valid_states = {
+            "AGENT_DELEGATED",
             "NEW_SELECTION", "USER_CONFIRMED_FROM_TEXT_MENU", "DIRECT_PARAMETERS_CONFIRMED",
             "REUSED_IN_SAME_CHAT", "REUSED_WITH_USER_RESELECTION",
         }
@@ -5483,6 +5526,14 @@ def validate_reference_plan_for_recording(
             origin_state = str(startup.get("selection_origin_state", startup.get("selection_state", "")))
             if origin_state in {"DIRECT_PARAMETERS_CONFIRMED", "REUSED_WITH_USER_RESELECTION"} and not re.search(rf"(?<!\d){fidelity}\s*%?(?!\d)", str(provenance["quote"])):
                 raise StylePackError("Direct confirmation provenance does not support the prepared fidelity.")
+        if startup.get("selected") == "AGENT_DELEGATED":
+            validate_startup_profile_evidence(startup, fidelity)
+            receipt = startup["delegation"]
+            choices = receipt["agent_choices"]
+            expected_style = "GENERATOR_DEFAULT" if plan.get("style_name") == "GENERATOR_DEFAULT" else "PROJECT_STYLE:" + str(plan.get("style_name"))
+            if (receipt["request_id"] != plan.get("request_id") or choices["style"] != expected_style
+                    or choices["character"] != plan.get("character_id")):
+                raise StylePackError("Delegated receipt differs from the prepared request/style/character.")
         resolved_profile = startup.get("resolved_parameters")
         if schema_version >= 6:
             validate_startup_profile_evidence(startup, fidelity)
@@ -5499,7 +5550,10 @@ def validate_reference_plan_for_recording(
         options = startup.get("options")
         if startup.get("menu_contract") == "THREE_AI_PRESETS_PLUS_CUSTOM" and (
             not isinstance(options, list) or [item.get("id") for item in options] != [*STARTUP_CHOICES]
-        ):
+        ) and not (schema_version >= 6 and startup.get("selection_state") == "REUSED_IN_SAME_CHAT"):
+            # Schema-6 reuse was checked above by the shared evidence validator,
+            # including its literal full-profile reply recovery. Keep the full
+            # menu requirement for new selections and older unvalidated plans.
             raise StylePackError("Reference plan does not contain the required three AI presets plus CUSTOM.")
         risk = plan.get("risk_assessment")
         if not isinstance(risk, dict) or not RISK_LABEL_RE.fullmatch(str(risk.get("generation_risk", ""))):
@@ -8614,7 +8668,7 @@ def build_parser() -> argparse.ArgumentParser:
     prepare_parser.add_argument("--user-reference-evidence-json", default="", help="User attachment provenance list bound to exact source bytes and current chat; supports user-selected SUBJECT slots.")
     prepare_parser.add_argument(
         "--startup-selection-mode",
-        choices=("DIRECT_CONFIRMATION", "NEW", "REUSE", "USER_CONFIRMATION"),
+        choices=("DIRECT_CONFIRMATION", "DELEGATED", "NEW", "REUSE", "USER_CONFIRMATION"),
         default="NEW",
         help="Record a newly shown startup profile menu; explicitly set --startup-menu-surface to the control actually presented. Use USER_CONFIRMATION with TEXT_NUMBERED_MENU only for a visible text fallback. DIRECT_CONFIRMATION requires fully confirmed current-chat parameters.",
     )
@@ -8645,6 +8699,7 @@ def build_parser() -> argparse.ArgumentParser:
         default="",
         help="Exact user answer selecting one startup-menu item; it need not contain numeric values.",
     )
+    prepare_parser.add_argument("--delegated-selection-json", default="", help="Exact full-delegation quote and separately recorded agent choices, bound to this request/chat.")
     prepare_parser.add_argument("--reuse-chat-id", default="", help="Current chat identifier to verify same-chat reuse.")
     prepare_parser.add_argument("--reuse-message-id", default="", help="Original confirmed message identifier to verify reuse.")
     prepare_parser.add_argument("--confirmed-chat-id", default="", help="Current chat identifier supporting a direct profile or menu selection.")
@@ -8811,6 +8866,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="AUTO uses one pass when possible; any SCENE that overflows attachments requires an explicitly requested MULTI_STAGE workflow with user authorization.",
     )
     prepare_parser.add_argument("--style-reference", action="append", default=[], help="Local overall rendering reference; repeat if needed.")
+    prepare_parser.add_argument("--shape-fit-reference", action="append", default=[], help="Explicit SODABABYX ID=ROLE=VARIANT choice; requires ordinary per-call source review and never supplies style or identity.")
     prepare_parser.add_argument(
         "--construction-guide-authorization", default="",
         help="Narrow author authorization file for one hash-bound NO_SUBJECT SIDE dimension guide on NEW CHARACTER_BASE only.",

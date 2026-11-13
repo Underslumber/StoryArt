@@ -41,7 +41,7 @@ CANONICAL_ROLES = {
 }
 BR_ROLE_SUFFIXES = {
     "AUX_BODY_BUILD", "AUX_POSE", "AUX_CAMERA", "AUX_CLOTHING_BEHAVIOR", "AUX_OBJECT_INTERACTION",
-    "AUX_CONTACT_POINTS", "STAGING_ONLY", "BODY_BUILD_TARGET", "CLOTHING_BEHAVIOR", "OBJECT_INTERACTION",
+    "AUX_CONTACT_POINTS", "AUX_BODY_SHAPE", "AUX_MOUTH_EXPRESSION", "STAGING_ONLY", "BODY_BUILD_TARGET", "CLOTHING_BEHAVIOR", "OBJECT_INTERACTION",
     "CAMERA_ONLY",
 }
 
@@ -75,7 +75,7 @@ def _reference_bindings(references: list[dict[str, object]]) -> list[dict[str, o
         if not roles or any(
             role in {"UNKNOWN", "UNSPECIFIED", "NONE"}
             or (role not in CANONICAL_ROLES and not re.fullmatch(
-                r"BR_\d+:(?:" + "|".join(sorted(BR_ROLE_SUFFIXES)) + r")", role
+                r"(?:BR_\d+|SODA_[A-Z0-9_-]+):(?:" + "|".join(sorted(BR_ROLE_SUFFIXES)) + r")", role
             ))
             for role in roles
         ):

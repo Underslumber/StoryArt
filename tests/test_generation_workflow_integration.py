@@ -1030,7 +1030,16 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--startup-selection-mode", startup_mode, "--aux-body-decision", body_decision,
             "--confirmed-chat-id", "integration-chat", "--confirmed-message-id", "integration-message",
         ]
-        if startup_mode == "DIRECT_CONFIRMATION":
+        if startup_mode == "DELEGATED":
+            receipt = self.workspace / (request_id + "-delegation.json")
+            receipt.write_text(json.dumps({"request_id": request_id, "current_chat_id": "integration-chat",
+                "message_id": "integration-message", "user_quote": "Выбери всё самостоятельно.",
+                "agent_reason": "Select compatible scene sources", "agent_choices": {
+                    "style": "PROJECT_STYLE:" + self.style_name, "character": character_id,
+                    "fidelity": fidelity, "aux_body_decision": body_decision,
+                    "reference_policy": "PROJECT_STYLE_ONLY"}}, ensure_ascii=False), encoding="utf-8")
+            args.extend(("--delegated-selection-json", receipt))
+        elif startup_mode == "DIRECT_CONFIRMATION":
             args.extend(("--confirmed-parameters-user-quote", startup_quote or f"Keep the confirmed {fidelity}% fidelity and decline BODY_REFERENCE_LIBRARY."))
         elif startup_mode in {"USER_CONFIRMATION", "NEW"}:
             args.extend(("--startup-menu-surface", menu_surface, "--startup-choice", startup_choice, "--startup-choice-user-quote", startup_choice_quote))
@@ -1110,6 +1119,15 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         risk = json.loads(Path(call["risk_assessment"]["path"]).read_text(encoding="utf-8"))
         self.assertEqual(risk["original_prompt"]["text"], call["prompt"]["text"])
         self._start_call(guard, plan_path, call)  # Actual independent guard exact-call validation, no provider.
+
+    def test_delegated_profile_reaches_validated_exact_call(self):
+        request_id = "delegated-exact"
+        guard, plan_path = self._prepare_scene(request_id, startup_mode="DELEGATED")
+        call = self._resolve_and_prepare_call(request_id, guard, plan_path, "A polished brass compass on a wooden desk.")
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        self.assertEqual("AGENT", plan["style_fidelity_confirmation"]["selected_by"])
+        self.assertEqual("AGENT_DELEGATED", plan["startup_parameter_selection"]["selected"])
+        self._start_call(guard, plan_path, call)
 
     def test_prepare_generation_requires_exact_selected_source_review(self):
         matrix_pool = self.style_pack / "01_WORK" / "STYLE_CROPS"

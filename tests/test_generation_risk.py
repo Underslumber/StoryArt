@@ -132,6 +132,40 @@ class StartupMenuTests(unittest.TestCase):
         values["startup_option"] = [value + f"; style=PROJECT_STYLE:{values['style_name']}; reference_policy=USER_ATTACHED_REFERENCES; character={values.get('character_id', 'NONE')}" if "; style=" not in value else value for value in values["startup_option"]]
         return Namespace(**values)
 
+    def test_delegated_startup_roundtrip_and_tampering(self):
+        import copy
+        receipt = {"request_id": "trial", "current_chat_id": "chat-1", "message_id": "msg-1",
+                   "user_quote": "попробуй какую-то генерацию. полностью сам.", "agent_reason": "Compatible approved sources",
+                   "agent_choices": {"style": "PROJECT_STYLE:SAMPLE", "character": "CHAR_001", "fidelity": 90,
+                                     "aux_body_decision": "DECLINED", "reference_policy": "APPROVED_PLUS_USER_REFERENCES"}}
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "delegation.json"
+            path.write_text(json.dumps(receipt, ensure_ascii=False), encoding="utf-8")
+            args = self.make_args(startup_selection_mode="DELEGATED", delegated_selection_json=str(path),
+                                  request_id="trial", character_id="CHAR_001", aux_body_decision="DECLINED")
+            startup = manager.parse_startup_interaction(args)
+            self.assertEqual("AGENT_CHOICE_UNDER_USER_DELEGATION", startup["parameter_source"])
+            self.assertEqual((90, "DECLINED"), manager.validate_startup_profile_evidence(startup, 90))
+            selections = {k: {"choice": v, "user_quote": receipt["user_quote"]}
+                          for k, v in startup["resolved_user_selections"].items()}
+            manager.validate_menu_user_selections(startup, selections)
+            for field, value in (("style", "PROJECT_STYLE:OTHER"), ("character", "CHAR_002")):
+                wrong = copy.deepcopy(selections); wrong[field]["choice"] = value
+                with self.assertRaises(manager.StylePackError): manager.validate_menu_user_selections(startup, wrong)
+            for field, value in (("fidelity", 70), ("aux_body_decision", "SELECTED")):
+                wrong = copy.deepcopy(startup); wrong["resolved_parameters"][field] = value
+                with self.assertRaises(manager.StylePackError): manager.validate_startup_profile_evidence(wrong)
+            args.request_id = "other"
+            with self.assertRaises(manager.StylePackError): manager.parse_startup_interaction(args)
+            args.request_id = "trial"
+            args.confirmed_chat_id = "other"
+            with self.assertRaises(manager.StylePackError): manager.parse_startup_interaction(args)
+            args.confirmed_chat_id = "chat-1"
+            for quote in ("да", "выбери позу", "не делай полностью сам", "полностью сам кроме стиля", "Выбери позу полностью сам.", "Выбери позу. Полностью сам."):
+                bad = copy.deepcopy(receipt); bad["user_quote"] = quote
+                path.write_text(json.dumps(bad, ensure_ascii=False), encoding="utf-8")
+                with self.assertRaises(manager.StylePackError): manager.parse_startup_interaction(args)
+
     def test_option_one_records_its_confirmed_profile(self):
         result = manager.parse_startup_interaction(self.make_args(
             startup_selection_mode="USER_CONFIRMATION",
@@ -566,6 +600,32 @@ class StartupMenuTests(unittest.TestCase):
             custom_parameters_user_quote="Use 70% fidelity and decline BODY_REFERENCE_LIBRARY.",
         ))
         self.assertEqual(manager.validate_startup_profile_evidence(saved), (70, "DECLINED"))
+
+    def test_reused_selected_option_needs_literal_complete_profile_and_matching_bindings(self):
+        quote = "90% стиля SAMPLE + использовать BODY_REFERENCE_LIBRARY"
+        saved = manager.parse_startup_interaction(self.make_args(
+            startup_choice_user_quote=quote,
+            startup_option=[
+                "OPTION_1=" + quote,
+                "OPTION_2=90% стиля SAMPLE, без BODY_REFERENCE_LIBRARY",
+                "OPTION_3=70% стиля SAMPLE, без BODY_REFERENCE_LIBRARY",
+            ],
+        ))
+        saved["selection_state"] = "REUSED_IN_SAME_CHAT"
+        saved["options"] = saved["options"][:1]
+        self.assertEqual(manager.validate_startup_profile_evidence(saved), (90, "SELECTED"))
+        for field, value in (
+            ("selection_state", "NEW_SELECTION"),
+            ("user_choice_quote", "1"),
+            ("resolved_user_selections", {"style": "PROJECT_STYLE:OTHER"}),
+            ("resolved_parameters", {"fidelity": 70, "aux_body_decision": "SELECTED"}),
+            ("body_library_provenance", {**saved["body_library_provenance"], "chat_id": "other-chat"}),
+        ):
+            with self.subTest(field=field):
+                changed = json.loads(json.dumps(saved))
+                changed[field] = value
+                with self.assertRaises(manager.StylePackError):
+                    manager.validate_startup_profile_evidence(changed)
 
     def test_custom_accepts_natural_complete_quote_but_rejects_incomplete_or_mismatched(self):
         natural = "Use 70% fidelity and decline BODY_REFERENCE_LIBRARY."

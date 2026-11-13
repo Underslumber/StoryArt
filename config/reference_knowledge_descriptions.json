@@ -1,0 +1,2552 @@
+{
+  "records": [
+    {
+      "cell": 1,
+      "key": "PINTEREST_SKETCH:1046735138386619000_ink_01",
+      "sha256": "044f7099aba339e4c334db2341e097f7bac2c18385abc37e5c4f464576f51c56",
+      "description": "Устойчивая фронтальная стойка: ноги широко, одна рука опущена с длинной рукоятью молота; боёк у земли сбоку.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_01.jpg",
+        "sheet_sha256": "8c2ff3fcb2d2227b655980dfb5627d805d63bdc35bb1d13a8cbf53718fc2bec9",
+        "cell": 1,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 2,
+      "key": "PINTEREST_SKETCH:1046735138386619000_ink_02",
+      "sha256": "672482b1ab3eaf0d2ac9ee4bbaf8e6f0802860c65a97c4f5b3c12bf16a6e9645",
+      "description": "Шаг вперёд с наклоном корпуса: обе руки держат рукоять тяжёлого молота по диагонали перед тазом.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_01.jpg",
+        "sheet_sha256": "8c2ff3fcb2d2227b655980dfb5627d805d63bdc35bb1d13a8cbf53718fc2bec9",
+        "cell": 2,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 3,
+      "key": "PINTEREST_SKETCH:1046735138386619000_ink_03",
+      "sha256": "b875e7a1541632de34c504f4a26b15766d0d8aebfc696e750f07db293f79fe41",
+      "description": "Шагающая фигура анфас поднимает молот одной рукой высоко над головой; свободная рука опущена.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_01.jpg",
+        "sheet_sha256": "8c2ff3fcb2d2227b655980dfb5627d805d63bdc35bb1d13a8cbf53718fc2bec9",
+        "cell": 3,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 4,
+      "key": "PINTEREST_SKETCH:1046735138386619000_ink_04",
+      "sha256": "a98df688906a0bafa24ce19bbf0303288cd4906a0ef590edc3c665e51e2cec96",
+      "description": "Широкая стойка спереди, молот горизонтально лежит на плече; один локоть согнут, другая рука опущена.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_01.jpg",
+        "sheet_sha256": "8c2ff3fcb2d2227b655980dfb5627d805d63bdc35bb1d13a8cbf53718fc2bec9",
+        "cell": 4,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 5,
+      "key": "PINTEREST_SKETCH:1046735138386619000_ink_05",
+      "sha256": "b13c103b97c4422f126e65742028e40722fc3d6cb9c0a1f863d6b83195604d4a",
+      "description": "Стойка со спины, ноги широко; молот поперёк плеч, одна кисть держит конец рукояти.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_01.jpg",
+        "sheet_sha256": "8c2ff3fcb2d2227b655980dfb5627d805d63bdc35bb1d13a8cbf53718fc2bec9",
+        "cell": 5,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 6,
+      "key": "PINTEREST_SKETCH:988258711975150484",
+      "sha256": "97641d8c1cbdf7a4408f599d4bab187b51d050528274785794e41291044903b6",
+      "description": "Низкая боевая стойка с сильным наклоном вперёд; молот удерживается двумя руками по диагонали, ноги согнуты и разнесены.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_01.jpg",
+        "sheet_sha256": "8c2ff3fcb2d2227b655980dfb5627d805d63bdc35bb1d13a8cbf53718fc2bec9",
+        "cell": 6,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 7,
+      "key": "PINTEREST_SKETCH:342695852890649813",
+      "sha256": "16ae5718178965a860295e0f346cb23fe5fd47040d9943078e63d10f02026ead",
+      "description": "Рывок или прыжок вперёд с длинным древковым оружием позади плеч; корпус наклонён, одна нога направлена вперёд, плащ развивается.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_01.jpg",
+        "sheet_sha256": "8c2ff3fcb2d2227b655980dfb5627d805d63bdc35bb1d13a8cbf53718fc2bec9",
+        "cell": 7,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 8,
+      "key": "PINTEREST_SKETCH:1134344224949951279",
+      "sha256": "79ef73378d75eb397e0b35f5b6b1caea79a1b30250c59a645c9bcbf0dbbe1d87",
+      "description": "Профильная динамическая схема: одна нога опорная, другая поднята вперёд, руки вытянуты; верх корпуса пересечён графическим эффектом, не подходит как полная анатомическая опора.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_01.jpg",
+        "sheet_sha256": "8c2ff3fcb2d2227b655980dfb5627d805d63bdc35bb1d13a8cbf53718fc2bec9",
+        "cell": 8,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 9,
+      "key": "PINTEREST_SKETCH:603130575145815310",
+      "sha256": "d4eda827434abcbb82a6930a7e2e643a651080d15945435c4db3245be0c49ddb",
+      "description": "Крылатая фигура на одном колене: одна кисть опирается о землю, другая держит длинное оружие вертикально; крылья раскрыты вверх.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_01.jpg",
+        "sheet_sha256": "8c2ff3fcb2d2227b655980dfb5627d805d63bdc35bb1d13a8cbf53718fc2bec9",
+        "cell": 9,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 10,
+      "key": "PINTEREST_SKETCH:1108941108267739304",
+      "sha256": "14217bead04599fe894ec4352d8836fa5640a306a0d19e53dbe8b34e310c1272",
+      "description": "Фигура внутри вихря, одна рука поднята и вынесена в сторону, другая опущена; нижняя часть тела закрыта эффектом.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_01.jpg",
+        "sheet_sha256": "8c2ff3fcb2d2227b655980dfb5627d805d63bdc35bb1d13a8cbf53718fc2bec9",
+        "cell": 10,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 11,
+      "key": "PINTEREST_SKETCH:630926229020055630",
+      "sha256": "49c2682eca5c407ec7e5fa867a99a42ac0a9d57c4b6671073e40d5882f886b2d",
+      "description": "Присед на коленях с поднятыми разведёнными руками под большим круговым эффектом; корпус наклонён вперёд, пальцы раскрыты.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_01.jpg",
+        "sheet_sha256": "8c2ff3fcb2d2227b655980dfb5627d805d63bdc35bb1d13a8cbf53718fc2bec9",
+        "cell": 11,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 12,
+      "key": "PINTEREST_SKETCH:672443788157863330",
+      "sha256": "1b8e70bb0642f37e9c17afa0eea16c5e359fc289a3c841e7e9c510467567fe95",
+      "description": "Перспективный ракурс: вытянутая к зрителю рука держит крупный пистолет; корпус отклонён, одна нога согнута и поднята.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_01.jpg",
+        "sheet_sha256": "8c2ff3fcb2d2227b655980dfb5627d805d63bdc35bb1d13a8cbf53718fc2bec9",
+        "cell": 12,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 1,
+      "key": "PINTEREST_SKETCH:572520171400027973",
+      "sha256": "e3571b791bc595e28cdbd732476d1e04ecab859978c59c46b8ea14073f564928",
+      "description": "Фрагмент торса спереди: одна кисть протянута к камере пальцами вперёд, другая раскрыта ладонью вверх внизу; кисти увеличены перспективой.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_02.jpg",
+        "sheet_sha256": "c4b4a3542ec0267ff93b675c0eef6b6b8bb811f94581b9f568a59ad3f2488264",
+        "cell": 1,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 2,
+      "key": "PINTEREST_SKETCH:1121044532264195496",
+      "sha256": "ad27bfb9f9aa5c04059c8c00c8b49c75673477542906bbbdea5f1eea323d9b68",
+      "description": "Шаг и боковой наклон корпуса: одна рука высоко отведена по диагонали, другая направлена вниз; длинные полы одежды подчёркивают движение.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_02.jpg",
+        "sheet_sha256": "c4b4a3542ec0267ff93b675c0eef6b6b8bb811f94581b9f568a59ad3f2488264",
+        "cell": 2,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 3,
+      "key": "PINTEREST_SKETCH:1108941108267739321",
+      "sha256": "cd9caf3fb08b2fba9e92ceb3bf2e3cd6f9108e6fcb87bbacd585824ee0321347",
+      "description": "Низкий выпад с ударом или касанием земли одной рукой; другая рука согнута и поднята, вокруг крупные камни и трещины.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_02.jpg",
+        "sheet_sha256": "c4b4a3542ec0267ff93b675c0eef6b6b8bb811f94581b9f568a59ad3f2488264",
+        "cell": 3,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 4,
+      "key": "PINTEREST_SKETCH:651755377330206583",
+      "sha256": "adde0beafd909560e983a4db231d38b20c81413371925b537e6e7690470d2f3d",
+      "description": "Прыжок вниз с большим мечом, направленным остриём в землю; колени согнуты, корпус подан вперёд, волосы подняты движением.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_02.jpg",
+        "sheet_sha256": "c4b4a3542ec0267ff93b675c0eef6b6b8bb811f94581b9f568a59ad3f2488264",
+        "cell": 4,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 5,
+      "key": "PINTEREST_SKETCH:876583514994171762",
+      "sha256": "00ea143e9452cfc154c33505eeed4756511364f972f61bc763e1cd889b19c31b",
+      "description": "Многофигурный лист: крылатый персонаж сверху и несколько перекрывающихся боевых фигур снизу. Подходит для поиска композиции, не один изолированный силуэт.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_02.jpg",
+        "sheet_sha256": "c4b4a3542ec0267ff93b675c0eef6b6b8bb811f94581b9f568a59ad3f2488264",
+        "cell": 5,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 6,
+      "key": "PINTEREST_SKETCH:1000362135988987657",
+      "sha256": "ef7dfc2d488535254efb9c8651b28cfe867b9edb6d1dc906adb0eb6664b9e605",
+      "description": "Лист с двумя сценами: крупная крылатая фигура с оружием сверху и небольшой широкий выпад с копьём снизу. Перед использованием нужно выбрать нужную фигуру.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_02.jpg",
+        "sheet_sha256": "c4b4a3542ec0267ff93b675c0eef6b6b8bb811f94581b9f568a59ad3f2488264",
+        "cell": 6,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 7,
+      "key": "PINTEREST_SKETCH:1124985181965596309",
+      "sha256": "6dc1f4c653411d44101bbd72ec488b41e59450b244c407f38f0fcfad3b4de705",
+      "description": "Фронтальная стоящая фигура с картами в руках и дугой парящих карт вокруг плеч; ноги близко, длинная одежда частично закрывает тело.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_02.jpg",
+        "sheet_sha256": "c4b4a3542ec0267ff93b675c0eef6b6b8bb811f94581b9f568a59ad3f2488264",
+        "cell": 7,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 8,
+      "key": "PINTEREST_SKETCH:528610075034443913",
+      "sha256": "84ca3fd46c9e0f8f6499b2e4e6ecc7b140f8f3228666c396500ee9473b201a2a",
+      "description": "Парящая крылатая фигура: корпус отклонён назад, одна нога согнута, вторая вытянута, руки раскрыты по бокам.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_02.jpg",
+        "sheet_sha256": "c4b4a3542ec0267ff93b675c0eef6b6b8bb811f94581b9f568a59ad3f2488264",
+        "cell": 8,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 9,
+      "key": "PINTEREST_SKETCH:1082904672937752887",
+      "sha256": "8fdb591bb50cc2c98e15db7ea2bf67030196a0716a9e09c132d7712c71e5a625",
+      "description": "Композиция масштаба: огромный торс с двумя протянутыми кистями и маленькая стоящая фигура между ними. Не одиночная поза одного тела.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_02.jpg",
+        "sheet_sha256": "c4b4a3542ec0267ff93b675c0eef6b6b8bb811f94581b9f568a59ad3f2488264",
+        "cell": 9,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 10,
+      "key": "PINTEREST_SKETCH:648940627597986969",
+      "sha256": "e5043f8534ed47073672fa9801449a8cabfcbfb2091db19612e6c433f460dc34",
+      "description": "Замах косой за плечами: руки подняты и согнуты около головы, корпус развёрнут, древко идёт по диагонали; нижние ноги обрезаны.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_02.jpg",
+        "sheet_sha256": "c4b4a3542ec0267ff93b675c0eef6b6b8bb811f94581b9f568a59ad3f2488264",
+        "cell": 10,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 11,
+      "key": "PINTEREST_SKETCH:828310556510975247",
+      "sha256": "3f4b04ff834ed4957ceed8d425b7633f69f8a8793993ee2f2e31190bd5a46c68",
+      "description": "Динамический наклон с двумя клинками и круговыми следами ударов; обе руки разведены, тело сокращено перспективой.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_02.jpg",
+        "sheet_sha256": "c4b4a3542ec0267ff93b675c0eef6b6b8bb811f94581b9f568a59ad3f2488264",
+        "cell": 11,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 12,
+      "key": "PINTEREST_SKETCH:1098878377846110029",
+      "sha256": "a0824f25785317ff6a64eeeac24b9dfe1c56c5ed9a8545822631139353d2af7b",
+      "description": "Спокойная стойка в три четверти с мечом в опущенной руке; второй локоть согнут у талии, стопы разнесены.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_02.jpg",
+        "sheet_sha256": "c4b4a3542ec0267ff93b675c0eef6b6b8bb811f94581b9f568a59ad3f2488264",
+        "cell": 12,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 1,
+      "key": "PINTEREST_SKETCH:923871311074286719",
+      "sha256": "ec96436f711d39a7e0e03a793b785c500514b20839e790e187ff9a7b81a96958",
+      "description": "Рука с мечом вытянута к зрителю: клинок резко укрупнён перспективой; корпус отклонён, одна нога согнута.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_03.jpg",
+        "sheet_sha256": "2473dd5ea430438b00d13bd866b90092359d18514cb822bdc82dea89be0aaaa9",
+        "cell": 1,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 2,
+      "key": "PINTEREST_SKETCH:1119355682409661000",
+      "sha256": "803437f4d803299a5498795cd9a9ba4b2a70af9830f2b0d85d823c7556114300",
+      "description": "Расслабленная посадка в кресле с подлокотниками: ноги вытянуты к камере и перекрещены, голова опирается на руку; сильная нижняя перспектива.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_03.jpg",
+        "sheet_sha256": "2473dd5ea430438b00d13bd866b90092359d18514cb822bdc82dea89be0aaaa9",
+        "cell": 2,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 3,
+      "key": "PINTEREST_SKETCH:722687071501004508",
+      "sha256": "2a7229b4d1e85fa5c8f0c739c2bd060e63232d27b5433236507ce16a97dd5334",
+      "description": "Низкая посадка на одно колено с двумя мечами в опущенных разведённых руках. На заднем плане отдельная фигура со спины; не чисто одиночный источник.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_03.jpg",
+        "sheet_sha256": "2473dd5ea430438b00d13bd866b90092359d18514cb822bdc82dea89be0aaaa9",
+        "cell": 3,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 4,
+      "key": "PINTEREST_SKETCH:895371969701861316",
+      "sha256": "13215d6982784b90768e83af3e176ec022ece051a0a72e8a88bf89cf1eedd780",
+      "description": "Фрагмент торса с руками вокруг подвешенной шахматной фигуры: верхняя кисть направлена к камере, нижняя раскрыта ладонью вверх.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_03.jpg",
+        "sheet_sha256": "2473dd5ea430438b00d13bd866b90092359d18514cb822bdc82dea89be0aaaa9",
+        "cell": 4,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 5,
+      "key": "PINTEREST_SKETCH:1108026314606685981",
+      "sha256": "2320c397da5ef21054567330db103f8e8de6b08e2b1832c798244b9078b5f5ae",
+      "description": "Две перекрывающиеся фигуры в прыжке: одна с длинным оружием, другая перевёрнута и изогнута над ней. Требуется разбор отдельного силуэта.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_03.jpg",
+        "sheet_sha256": "2473dd5ea430438b00d13bd866b90092359d18514cb822bdc82dea89be0aaaa9",
+        "cell": 5,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 6,
+      "key": "PINTEREST_SKETCH:1050042469354144269",
+      "sha256": "34163a0b82cd83cacf1e7dff9f040f4ee5ede966ea270ebb8761641048f72c11",
+      "description": "Маленькая летящая фигура над облаками и несколько больших магических колец. Полезнее для масштаба и композиции; анатомические детали слишком мелкие.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_03.jpg",
+        "sheet_sha256": "2473dd5ea430438b00d13bd866b90092359d18514cb822bdc82dea89be0aaaa9",
+        "cell": 6,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 7,
+      "key": "PINTEREST_SKETCH:672232681912334923",
+      "sha256": "5444effafba05c7f9fade90b5cf5a02d1b59f5c8a9b471e32b7aefab7bb23dae",
+      "description": "Прыжок с двумя кинжалами: одна рука у груди, другая широко отведена назад; одна нога поджата, вторая вытянута по диагонали.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_03.jpg",
+        "sheet_sha256": "2473dd5ea430438b00d13bd866b90092359d18514cb822bdc82dea89be0aaaa9",
+        "cell": 7,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 8,
+      "key": "PINTEREST_SKETCH:1136807130975926879",
+      "sha256": "246b42bf83b0f0ee76c2c89e69cb70332261b0ea6eebf5f134ade269b4fb9b7e",
+      "description": "Высокий спиральный вихрь над маленькой фигурой у земли. Тело почти не читается; источник эффектов и масштаба, а не точной позы.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_03.jpg",
+        "sheet_sha256": "2473dd5ea430438b00d13bd866b90092359d18514cb822bdc82dea89be0aaaa9",
+        "cell": 8,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 9,
+      "key": "PINTEREST_SKETCH:1124000019575492733",
+      "sha256": "d2a881daa746e603b320cb7455daf7fe16562c841eed5a9e9134d0e7e0bda9da",
+      "description": "Крупный фрагмент головы, плеча и согнутой руки с кулаком возле лица; наклон головы, нижняя часть тела отсутствует.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_03.jpg",
+        "sheet_sha256": "2473dd5ea430438b00d13bd866b90092359d18514cb822bdc82dea89be0aaaa9",
+        "cell": 9,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 10,
+      "key": "PINTEREST_SKETCH:1106126358514330003",
+      "sha256": "a4ee69f4ac3f573e1b87c41f1206c07e376ffbc58585df5114894d9d7379dc3b",
+      "description": "Фронтальная стойка мускулистой фигуры в полный рост: руки свободно вниз, ноги немного разнесены. Сильно подчёркнутые мышцы не являются целевым телосложением персонажа.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_03.jpg",
+        "sheet_sha256": "2473dd5ea430438b00d13bd866b90092359d18514cb822bdc82dea89be0aaaa9",
+        "cell": 10,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 11,
+      "key": "PINTEREST_SKETCH:1129981362782389225",
+      "sha256": "ac971e5c38f1545c3932133d622de326046a06e1c1442fc727decacb01c5b608",
+      "description": "Поза с косой: одна нога опорная, другая поджата; корпус наклонён, одна рука у головы, другая держит древко позади таза.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_03.jpg",
+        "sheet_sha256": "2473dd5ea430438b00d13bd866b90092359d18514cb822bdc82dea89be0aaaa9",
+        "cell": 11,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 12,
+      "key": "PINTEREST_SKETCH:691161874105949612",
+      "sha256": "0734dae44e4a4242b088610f159f6ef3f8962f54eddfdbeaa8703871890fb8b3",
+      "description": "Верхняя половина фигуры с длинным оружием по диагонали перед лицом; поднятая кисть и сокращение руки подчёркивают ракурс, ноги не показаны.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_03.jpg",
+        "sheet_sha256": "2473dd5ea430438b00d13bd866b90092359d18514cb822bdc82dea89be0aaaa9",
+        "cell": 12,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 1,
+      "key": "PINTEREST_SKETCH:748793875587378261",
+      "sha256": "d06c7333cfdf69443898eefb8aeea4fb9a2a953bead30868327593423f857b08",
+      "description": "Сидя в кресле, нога на ногу: голова опирается на одну кисть, другая рука раскрыта ладонью вверх; расслабленный наклон корпуса.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_04.jpg",
+        "sheet_sha256": "6ff4f237f37a88eb5713bff879684e05aa6ab0619ca208a8915fe11c93eca6a2",
+        "cell": 1,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 2,
+      "key": "PINTEREST_SKETCH:905293962617029622",
+      "sha256": "99582c703c7a7560be1218e20521819124b002d999b28a652295516a3269b9b1",
+      "description": "Нижний ракурс двух фигур: ближняя сидит на возвышении, опирая предплечье о поднятое колено; дальняя стоит. Сильное увеличение обуви в перспективе.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_04.jpg",
+        "sheet_sha256": "6ff4f237f37a88eb5713bff879684e05aa6ab0619ca208a8915fe11c93eca6a2",
+        "cell": 2,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 3,
+      "key": "PINTEREST_SKETCH:1059964462317560041",
+      "sha256": "aee97f10c1b170c0e871fbe6f8bed8b4cec7847c8678494c68300a861ac8be83",
+      "description": "Парящая фигура с разведёнными руками и раскрытыми кистями; корпус отклонён, ноги близко и слегка согнуты.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_04.jpg",
+        "sheet_sha256": "6ff4f237f37a88eb5713bff879684e05aa6ab0619ca208a8915fe11c93eca6a2",
+        "cell": 3,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 4,
+      "key": "PINTEREST_SKETCH:920001030150887889",
+      "sha256": "4e04b4d297f246d32a3a36d88b7e68bb76c6b2b5cc2ff0b6f7aa732f7c7bf460",
+      "description": "Широкий выпад с двуручным ударом молотом в землю; корпус скручен вниз, руки удерживают длинное древко, вокруг дуги эффекта.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_04.jpg",
+        "sheet_sha256": "6ff4f237f37a88eb5713bff879684e05aa6ab0619ca208a8915fe11c93eca6a2",
+        "cell": 4,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 5,
+      "key": "PINTEREST_SKETCH:1069393874013873562",
+      "sha256": "8e2204d7bdf1c360be685af5137f49184b8d8160bd66a0b765cac8d81f5b049f",
+      "description": "Широкая боевая стойка с длинной косой по диагонали: одна рука над плечом, другая вытянута вперёд; колени согнуты.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_04.jpg",
+        "sheet_sha256": "6ff4f237f37a88eb5713bff879684e05aa6ab0619ca208a8915fe11c93eca6a2",
+        "cell": 5,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 6,
+      "key": "PINTEREST_SKETCH:1142929211706486530",
+      "sha256": "e68b0f3e9ea8f6c20e38d495db478c724d4088c4357fe893579d013be2639b32",
+      "description": "Баланс с косой на одной вытянутой ноге, вторая поджата; корпус наклонён к поднятой руке, древко проходит за тазом.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_04.jpg",
+        "sheet_sha256": "6ff4f237f37a88eb5713bff879684e05aa6ab0619ca208a8915fe11c93eca6a2",
+        "cell": 6,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 7,
+      "key": "PINTEREST_SKETCH:1111052170569882271",
+      "sha256": "6d2fbdd392da1d46fa0e5d632d6c1fc6ed3f6cb990c81879052bd144a1c8e74f",
+      "description": "Опора на носок одной ноги с косой: вторая нога согнута, голова склонена к поднятому предплечью, вторая рука держит оружие за спиной.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_04.jpg",
+        "sheet_sha256": "6ff4f237f37a88eb5713bff879684e05aa6ab0619ca208a8915fe11c93eca6a2",
+        "cell": 7,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 8,
+      "key": "PINTEREST_SKETCH:901705156648006683",
+      "sha256": "4406f83f2bdf0c448f3de15bb91ab84c5edee60c8770920fa4adf36ee7ee72ee",
+      "description": "Низкий коленный выпад в профиль: корпус подан вперёд, рука с мечом отведена далеко назад, другая кисть около переднего колена.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_04.jpg",
+        "sheet_sha256": "6ff4f237f37a88eb5713bff879684e05aa6ab0619ca208a8915fe11c93eca6a2",
+        "cell": 8,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 9,
+      "key": "PINTEREST_SKETCH:1118370519981535454",
+      "sha256": "082690133534b250c67d91e6e662bd2425d671c28812c745c07d2ea40dca6583",
+      "description": "Очень низкий широкий выпад: одна нога вытянута в сторону, другая согнута; руки с клинками разведены позади плеч.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_04.jpg",
+        "sheet_sha256": "6ff4f237f37a88eb5713bff879684e05aa6ab0619ca208a8915fe11c93eca6a2",
+        "cell": 9,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 10,
+      "key": "PINTEREST_SKETCH:981503312518527970",
+      "sha256": "da274232422654657e9c84375c33b4e68d387ee82bc37352caca9ee196cb41ee",
+      "description": "Фигура в воздухе с мечом над головой в двух руках; корпус отклонён назад, колени согнуты, след движения идёт дугой.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_04.jpg",
+        "sheet_sha256": "6ff4f237f37a88eb5713bff879684e05aa6ab0619ca208a8915fe11c93eca6a2",
+        "cell": 10,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 11,
+      "key": "PINTEREST_SKETCH:978970037767012361",
+      "sha256": "7aa2d138658d66792ec220a8e27a390bdbb8ee6abb3c19ee70edbc6399f0343d",
+      "description": "Низкий выпрыгивающий выпад: меч поднят двумя руками возле головы, одна нога далеко в сторону, другая поджата под тело.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_04.jpg",
+        "sheet_sha256": "6ff4f237f37a88eb5713bff879684e05aa6ab0619ca208a8915fe11c93eca6a2",
+        "cell": 11,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 12,
+      "key": "PINTEREST_SKETCH:1121466744728088421",
+      "sha256": "a1f872106f4813adc7817003aa8bd597051fb2672ba2c37af256d39e110e1fb9",
+      "description": "Резко сокращённая к камере рука с кинжалом: кулак занимает передний план, вторая кисть у груди; нижняя часть фигуры обрезана.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_04.jpg",
+        "sheet_sha256": "6ff4f237f37a88eb5713bff879684e05aa6ab0619ca208a8915fe11c93eca6a2",
+        "cell": 12,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 1,
+      "key": "PINTEREST_SKETCH:319333429850751437",
+      "sha256": "f4e33a8c38d2f6c9f5d9b54a45ac3d308785dd7b55d260e0b35ce3187fc83491",
+      "description": "Фигура со спины направляет вытянутую руку вверх по диагонали через цепочку магических колец; нижнее тело перекрыто чёрным эффектом.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_05.jpg",
+        "sheet_sha256": "f24d028edf4d4733c124e217aabd6ad42e27cde3611aa43ce352e2c726619f1e",
+        "cell": 1,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 2,
+      "key": "PINTEREST_SKETCH:1118511257474548108",
+      "sha256": "8ce9fbc4385923dc28b572766806d1001a8503dfd6c7be2473c01a7fb626e26b",
+      "description": "Шагающая фигура спереди с опущенным длинным мечом в одной руке; ноги близко и перекрываются, другая кисть свободна.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_05.jpg",
+        "sheet_sha256": "f24d028edf4d4733c124e217aabd6ad42e27cde3611aa43ce352e2c726619f1e",
+        "cell": 2,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 3,
+      "key": "PINTEREST_SKETCH:606719381075073087",
+      "sha256": "56be2a1ea7f7ddb64107daee434f9e3fdb6485f22631b6303635c1366c220e25",
+      "description": "Крупный верхний ракурс снизу на торс и раскрытую к камере ладонь; голова повёрнута в сторону, пальцы сильно увеличены перспективой.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_05.jpg",
+        "sheet_sha256": "f24d028edf4d4733c124e217aabd6ad42e27cde3611aa43ce352e2c726619f1e",
+        "cell": 3,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 4,
+      "key": "PINTEREST_SKETCH:1013943303610051008",
+      "sha256": "2b741991fb5fb2e1868a82505bfefeb2b0f0ee6a1604bdae86cc1a3bee49db85",
+      "description": "Широкая стойка бронированной фигуры с мечом над плечом в двух руках; обозначена дуга замаха.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_05.jpg",
+        "sheet_sha256": "f24d028edf4d4733c124e217aabd6ad42e27cde3611aa43ce352e2c726619f1e",
+        "cell": 4,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 5,
+      "key": "PINTEREST_SKETCH:996421486312000855",
+      "sha256": "4ad96ba8a56e75a5e2b974ea1f7bc58c5b0f8d2d201d8df9ecb6b4849da19a3f",
+      "description": "Сильный наклон в низком выпаде: одна ладонь опирается о землю, другая рука с мечом высоко отведена назад.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_05.jpg",
+        "sheet_sha256": "f24d028edf4d4733c124e217aabd6ad42e27cde3611aa43ce352e2c726619f1e",
+        "cell": 5,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 6,
+      "key": "PINTEREST_SKETCH:1051098000548360355",
+      "sha256": "5ad013ac3c7e7165f2e1e54de31d6bb3f2cc6a0bece067996b126fb9a901f16b",
+      "description": "Рука с пистолетом направлена прямо к камере; корпус отклонён, одна нога поджата. Оружие крупнее тела из-за сокращения.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_05.jpg",
+        "sheet_sha256": "f24d028edf4d4733c124e217aabd6ad42e27cde3611aa43ce352e2c726619f1e",
+        "cell": 6,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 7,
+      "key": "PINTEREST_SKETCH:1092122978541322126",
+      "sha256": "1c0f6e15b0b03f81c556dcf2732cb270d6785a0592ed2630926eeeb4ffaffd60",
+      "description": "Спокойная фронтальная стойка: одна ладонь поднята с огненным эффектом, другая рука держит длинное древко вертикально сбоку.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_05.jpg",
+        "sheet_sha256": "f24d028edf4d4733c124e217aabd6ad42e27cde3611aa43ce352e2c726619f1e",
+        "cell": 7,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 8,
+      "key": "PINTEREST_SKETCH:645281452839342096",
+      "sha256": "ade84304c5f95a39dfa44f18379cb937699366f31ea2669dffae10987f152637",
+      "description": "Боковой выпад с длинным древковым оружием: переднее колено согнуто, задняя нога вытянута, корпус развёрнут, руки пересекают грудь.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_05.jpg",
+        "sheet_sha256": "f24d028edf4d4733c124e217aabd6ad42e27cde3611aa43ce352e2c726619f1e",
+        "cell": 8,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 9,
+      "key": "PINTEREST_SKETCH:426364289745099322_ink_01",
+      "sha256": "accd54e42ab6d6c938b6921d45a0153dcd2ddfa25d2b8db6b492f6008d1f6646",
+      "description": "Широкий присед спереди с двумя топорами в разведённых руках; локти согнуты, корпус подан вперёд.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_05.jpg",
+        "sheet_sha256": "f24d028edf4d4733c124e217aabd6ad42e27cde3611aa43ce352e2c726619f1e",
+        "cell": 9,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 10,
+      "key": "PINTEREST_SKETCH:426364289745099322_ink_05",
+      "sha256": "96a4f9415a637ec82cb8bc0a9b43981d44ddfece28b15d6d88d6096b81084c0f",
+      "description": "Бег к камере с мечом по диагонали перед тазом; корпус наклонён, свободный локоть отведён назад, одна нога поднята.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_05.jpg",
+        "sheet_sha256": "f24d028edf4d4733c124e217aabd6ad42e27cde3611aa43ce352e2c726619f1e",
+        "cell": 10,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 11,
+      "key": "PINTEREST_SKETCH:426364289745099322_ink_07",
+      "sha256": "ac7b9fe74e0c7faf3f74b312360c905a8af138b5f8b200ffb11bf4592b910ea9",
+      "description": "Прыжок или бег в три четверти с молотом в отведённой назад руке; другая кисть перед корпусом, колени поджаты.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_05.jpg",
+        "sheet_sha256": "f24d028edf4d4733c124e217aabd6ad42e27cde3611aa43ce352e2c726619f1e",
+        "cell": 11,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 12,
+      "key": "PINTEREST_SKETCH:426364289745099322_ink_08",
+      "sha256": "ef7de0945535131989a99186be3cdf75430b3a5b80f2d6a3da85768e3cbe3b8f",
+      "description": "Бег фронтально с молотом над одним плечом; свободная рука отведена в сторону, одна нога вытянута вперёд, другая согнута.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_05.jpg",
+        "sheet_sha256": "f24d028edf4d4733c124e217aabd6ad42e27cde3611aa43ce352e2c726619f1e",
+        "cell": 12,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 1,
+      "key": "PINTEREST_SKETCH:426364289745099322_ink_09",
+      "sha256": "cc3df437afd304c88b8fb57ed79d5c1d9722e481fc895ea601b35fde47c6e198",
+      "description": "Широкий низкий выпад с двумя короткими палками: руки разведены у талии, одна нога согнута, другая вытянута в сторону.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_06.jpg",
+        "sheet_sha256": "3d07c3a66d6d5656a6b191f2fee10f0104a41facdfab65673458763b4a86bc62",
+        "cell": 1,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 2,
+      "key": "PINTEREST_SKETCH:426364289745099322_ink_10",
+      "sha256": "86e084f9c87bcb944c6efa20dc44bf4fd897a4108b6b92970b7f45fd04c64b94",
+      "description": "Стойка в три четверти с мечом в двух опущенных руках перед тазом; переднее колено согнуто, задняя нога отставлена.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_06.jpg",
+        "sheet_sha256": "3d07c3a66d6d5656a6b191f2fee10f0104a41facdfab65673458763b4a86bc62",
+        "cell": 2,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 3,
+      "key": "PINTEREST_SKETCH:426364289745099322_ink_13",
+      "sha256": "45bcc93f45b220aaab9ac8682289355b6b48d7801ab7cb8009147b82386e6b26",
+      "description": "Перевёрнутая акробатическая поза с опорой на одну кисть; ноги подняты над корпусом, в свободной руке небольшой пистолет.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_06.jpg",
+        "sheet_sha256": "3d07c3a66d6d5656a6b191f2fee10f0104a41facdfab65673458763b4a86bc62",
+        "cell": 3,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 4,
+      "key": "PINTEREST_SKETCH:426364289745099322_ink_14",
+      "sha256": "fc8c279aabccd55d8cf744dd13c4d9ceaac45dd5924ccd4fae68c782494bde3a",
+      "description": "Глубокий присед с молотом на длинной рукояти по диагонали перед телом; обе кисти держат древко на разных уровнях.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_06.jpg",
+        "sheet_sha256": "3d07c3a66d6d5656a6b191f2fee10f0104a41facdfab65673458763b4a86bc62",
+        "cell": 4,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 5,
+      "key": "PINTEREST_SKETCH:426364289745099322_ink_16",
+      "sha256": "fde06518a2953f589cb750d545251c1db3c5c0b11d91d026812c1e01833bfc4e",
+      "description": "Прыжок с длинным древковым оружием поперёк таза: обе ноги сильно поджаты, корпус развёрнут, руки разнесены по древку.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_06.jpg",
+        "sheet_sha256": "3d07c3a66d6d5656a6b191f2fee10f0104a41facdfab65673458763b4a86bc62",
+        "cell": 5,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 6,
+      "key": "PINTEREST_SKETCH:426364289745099322_ink_18",
+      "sha256": "7a978d0f237c89410afc90b5223726deb23dd2840f732dd2bb6e261c9a8fc664",
+      "description": "Стоящая фигура с двумя клинками: одна рука вытянута горизонтально в сторону, другая опущена; ноги умеренно разнесены.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_06.jpg",
+        "sheet_sha256": "3d07c3a66d6d5656a6b191f2fee10f0104a41facdfab65673458763b4a86bc62",
+        "cell": 6,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 7,
+      "key": "PINTEREST_SKETCH:1068830924075248608",
+      "sha256": "982571a932222208503352fd10c8ffc94777bce40a1f60db6201dd5aad7ef399",
+      "description": "Фрагмент фигуры с пистолетом у виска и мечом перед тазом; руки и клинок перекрываются, нижние ноги обрезаны.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_06.jpg",
+        "sheet_sha256": "3d07c3a66d6d5656a6b191f2fee10f0104a41facdfab65673458763b4a86bc62",
+        "cell": 7,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 8,
+      "key": "PINTEREST_SKETCH:1094374778261693312",
+      "sha256": "b51f5f3b4cc7930de98f84c3483446643b3b0e0eb5dde7d66b2296a18ee43e2f",
+      "description": "Широкий выпад в профиль: меч занесён одной рукой за голову, свободная рука вытянута вперёд раскрытой кистью.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_06.jpg",
+        "sheet_sha256": "3d07c3a66d6d5656a6b191f2fee10f0104a41facdfab65673458763b4a86bc62",
+        "cell": 8,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 9,
+      "key": "PINTEREST_SKETCH:889320257675090324",
+      "sha256": "d75d953587604a917d870aea3b51f8585e04d937adad5b422a3824ecb2f3bb2f",
+      "description": "Разворот корпуса в широком выпаде с длинным оружием за спиной; голова через плечо, руки согнуты, часть силуэта закрыта эффектом.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_06.jpg",
+        "sheet_sha256": "3d07c3a66d6d5656a6b191f2fee10f0104a41facdfab65673458763b4a86bc62",
+        "cell": 9,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 10,
+      "key": "PINTEREST_SKETCH:588423507561955797",
+      "sha256": "9e8fb994cabcefd2c2ee3a6a2a330e64f6e70ef846b3ad5f95460b4134ba9c07",
+      "description": "Низкий широкий выпад с одним клинком в отведённой назад руке; свободная рука раскрыта в сторону, одно колено почти у земли.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_06.jpg",
+        "sheet_sha256": "3d07c3a66d6d5656a6b191f2fee10f0104a41facdfab65673458763b4a86bc62",
+        "cell": 10,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 11,
+      "key": "PINTEREST_SKETCH:833517843581457475",
+      "sha256": "4f9206b206fc5bbf1f6cc48dc6ffe9c02fde17e25378fcf7727e45821428ab0d",
+      "description": "Фигура в капюшоне в глубоком приседе с опорой на раскрытую кисть; большой меч поднят другой рукой над плечом.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_06.jpg",
+        "sheet_sha256": "3d07c3a66d6d5656a6b191f2fee10f0104a41facdfab65673458763b4a86bc62",
+        "cell": 11,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 12,
+      "key": "PINTEREST_SKETCH:905505068846144034",
+      "sha256": "be7ef375414b1d6ed761a8817e84f4dc4e9177e32da10fd20ef83526ba37bef3",
+      "description": "Стоящая фигура с мечом над головой в одной руке; вторая держит ножны или второй клинок у пояса, таз смещён в сторону.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_06.jpg",
+        "sheet_sha256": "3d07c3a66d6d5656a6b191f2fee10f0104a41facdfab65673458763b4a86bc62",
+        "cell": 12,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 1,
+      "key": "PINTEREST_SKETCH:704039354279163398",
+      "sha256": "fdf4d8b571fb09e802255e5678c428d9eade9935bc3d4f74a82ec637384fc210",
+      "description": "Фронтальная стойка с одной раскрытой ладонью у плеча и длинным древком в другой опущенной руке; ноги близко, таз смещён.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_07.jpg",
+        "sheet_sha256": "76f2991dbb53b85fdebb675aa0117752ea142dcff647ca73a8d7d1bd9fdc1569",
+        "cell": 1,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 2,
+      "key": "PINTEREST_SKETCH:1048846200717820970",
+      "sha256": "31ffb64d46d0bdcc04e680f76dcb2f252b4b99f893c51111c1640cba1aba5e54",
+      "description": "Низкий широкий выпад с двумя мечами в разведённых руках; поверх фигуры нанесена конструктивная схема плеч, таза и суставов.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_07.jpg",
+        "sheet_sha256": "76f2991dbb53b85fdebb675aa0117752ea142dcff647ca73a8d7d1bd9fdc1569",
+        "cell": 2,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 3,
+      "key": "PINTEREST_SKETCH:1143351424173401483",
+      "sha256": "0ed8b7bc66b9270f9736f9eb2a32a059f8420283040dc9bdbdf21d4acd10e77c",
+      "description": "Маленькая фигура в низком выпаде с мечом далеко за плечом и свободной рукой в сторону; значительная часть листа пустая.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_07.jpg",
+        "sheet_sha256": "76f2991dbb53b85fdebb675aa0117752ea142dcff647ca73a8d7d1bd9fdc1569",
+        "cell": 3,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 4,
+      "key": "PINTEREST_SKETCH:691302611577762477",
+      "sha256": "8b330cc5f9a654b5cf08125ead25fda72b912f8bd332c269fb3848aebdc2b31a",
+      "description": "Глубокий присед с опорой на одну кисть перед телом; голова опущена, свободная рука согнута, ноги широко расставлены.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_07.jpg",
+        "sheet_sha256": "76f2991dbb53b85fdebb675aa0117752ea142dcff647ca73a8d7d1bd9fdc1569",
+        "cell": 4,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 5,
+      "key": "PINTEREST_SKETCH:920634348812084255",
+      "sha256": "3396fb3619ee42008772d91046cbe784f5532ff3c84732a5d4c507714af3f900",
+      "description": "Резко вытянутая к камере раскрытая кисть с разведёнными пальцами; корпус и голова повернуты в сторону, нижние ноги не показаны.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_07.jpg",
+        "sheet_sha256": "76f2991dbb53b85fdebb675aa0117752ea142dcff647ca73a8d7d1bd9fdc1569",
+        "cell": 5,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 6,
+      "key": "PINTEREST_SKETCH:965811082602243681",
+      "sha256": "24f43c367669992319d2b09b345d818f8cbe77b015785d7eb92c9fb771352978",
+      "description": "Широкая стойка с косой в двух руках перед телом: одна кисть выше плеча, другая у таза, древко наклонено по диагонали.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_07.jpg",
+        "sheet_sha256": "76f2991dbb53b85fdebb675aa0117752ea142dcff647ca73a8d7d1bd9fdc1569",
+        "cell": 6,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 7,
+      "key": "PINTEREST_SKETCH:520447300693234187",
+      "sha256": "8f0514706ec56bd5650f55a06cb33eb959a539462ff67f257026c0c79af97b60",
+      "description": "Портретный фрагмент бойца с клинком поперёк груди и раскрытой ближней ладонью; показаны лицо, плечи и кисти, не полная поза.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_07.jpg",
+        "sheet_sha256": "76f2991dbb53b85fdebb675aa0117752ea142dcff647ca73a8d7d1bd9fdc1569",
+        "cell": 7,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 8,
+      "key": "PINTEREST_SKETCH:1118511257474548133",
+      "sha256": "47773bab8e89aa1c0b0d110f33ed05bbeafcb6a4635b5ad63a9f714dfdd6eb35",
+      "description": "Узкая скрещённая стойка с мечом около головы и открытой ладонью возле гарды; корпус развёрнут в три четверти.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_07.jpg",
+        "sheet_sha256": "76f2991dbb53b85fdebb675aa0117752ea142dcff647ca73a8d7d1bd9fdc1569",
+        "cell": 8,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 9,
+      "key": "PINTEREST_SKETCH:379146862403252463",
+      "sha256": "8645f301b84a3ff17c49095a079678aa7da9e9c08bc1cd25292c9a82e84da2aa",
+      "description": "Шаг вперёд с вытянутой в сторону рукой и изогнутым клинком; другая кисть у груди, задняя нога поднята.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_07.jpg",
+        "sheet_sha256": "76f2991dbb53b85fdebb675aa0117752ea142dcff647ca73a8d7d1bd9fdc1569",
+        "cell": 9,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 10,
+      "key": "PINTEREST_SKETCH:716987203201762177",
+      "sha256": "2444376eed59cab15367c84033dd087a3f6496943bfd6396f9101750892a581b",
+      "description": "Фрагмент торса и бёдер с двуручным хватом меча перед тазом; голова наклонена, клинок уходит по диагонали за край.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_07.jpg",
+        "sheet_sha256": "76f2991dbb53b85fdebb675aa0117752ea142dcff647ca73a8d7d1bd9fdc1569",
+        "cell": 10,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 11,
+      "key": "PINTEREST_SKETCH:774759942180734779_body_01",
+      "sha256": "8fb1f716f712f48adc516123e7055fa6823449eae4c154a493321cd36d5f0621",
+      "description": "Учебная высокая стойка меча: обе руки над головой, клинок поперёк, корпус в три четверти со спины, ноги разнесены; рядом поясняющая надпись.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_07.jpg",
+        "sheet_sha256": "76f2991dbb53b85fdebb675aa0117752ea142dcff647ca73a8d7d1bd9fdc1569",
+        "cell": 11,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 12,
+      "key": "PINTEREST_SKETCH:774759942180734779_body_03",
+      "sha256": "11fae2d0a3ab176a4cd3f373815b7bd6302ac5132e1c61f05f102191f84654fc",
+      "description": "Учебная фронтальная боевая стойка: меч над головой в двух руках, локти разведены, колени согнуты, стопы широко.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_07.jpg",
+        "sheet_sha256": "76f2991dbb53b85fdebb675aa0117752ea142dcff647ca73a8d7d1bd9fdc1569",
+        "cell": 12,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 1,
+      "key": "PINTEREST_SKETCH:774759942180734779_body_04",
+      "sha256": "ced22e6486b28fa5cf62acd83db1a96a534a10b5a701ce5c2039266629622ae5",
+      "description": "Учебная стойка с мечом на уровне плеча в двух руках; корпус развёрнут, переднее колено согнуто, задняя пятка поднята.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_08.jpg",
+        "sheet_sha256": "1ee8c6f16139ca497a9de7904fe7fce7030d27aa567b0a0eb0e45959aa4a5600",
+        "cell": 1,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 2,
+      "key": "PINTEREST_SKETCH:774759942180734779_body_06",
+      "sha256": "e720bd5021f586980a49dd0d616e8ae290b13bc54a59830f02b22eb70d46eed3",
+      "description": "Учебная короткая стойка: меч удерживается двумя руками низко перед тазом, остриё направлено вперёд; корпус почти фронтально.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_08.jpg",
+        "sheet_sha256": "1ee8c6f16139ca497a9de7904fe7fce7030d27aa567b0a0eb0e45959aa4a5600",
+        "cell": 2,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 3,
+      "key": "PINTEREST_SKETCH:774759942180734779_body_07",
+      "sha256": "bfd6eac7e193998f9421539915fffa0874efa802bc539fb46c26ef231deaed3b",
+      "description": "Учебная защитная стойка в профиль: обе руки с мечом вытянуты вперёд, передняя нога согнута, задняя вытянута.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_08.jpg",
+        "sheet_sha256": "1ee8c6f16139ca497a9de7904fe7fce7030d27aa567b0a0eb0e45959aa4a5600",
+        "cell": 3,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 4,
+      "key": "PINTEREST_SKETCH:774759942180734779_body_08",
+      "sha256": "d223f70f2502619ec65412ecc9583ff050dad1cdfd4d31b08f3a6286c2a39fd1",
+      "description": "Учебная стойка с мечом поперёк груди на согнутых руках; голова в профиль, ноги широко, переднее колено согнуто.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_08.jpg",
+        "sheet_sha256": "1ee8c6f16139ca497a9de7904fe7fce7030d27aa567b0a0eb0e45959aa4a5600",
+        "cell": 4,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 5,
+      "key": "PINTEREST_SKETCH:774759942180734779_body_09",
+      "sha256": "b686d08cd6f89a36c6100343c346366ef53da33796104669fc35efb5fdd6dfec",
+      "description": "Учебная открытая стойка: меч в двух руках опущен по диагонали перед телом, корпус прямой, ноги широко.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_08.jpg",
+        "sheet_sha256": "1ee8c6f16139ca497a9de7904fe7fce7030d27aa567b0a0eb0e45959aa4a5600",
+        "cell": 5,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 6,
+      "key": "PINTEREST_SKETCH:774759942180734779_body_10",
+      "sha256": "119795cb6434dbb16f726380b63ad2a374eae2d1b7a36420497bd93ea11d763c",
+      "description": "Учебная фронтальная стойка с низким двуручным хватом меча; клинок уходит вниз в сторону, голова повёрнута.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_08.jpg",
+        "sheet_sha256": "1ee8c6f16139ca497a9de7904fe7fce7030d27aa567b0a0eb0e45959aa4a5600",
+        "cell": 6,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 7,
+      "key": "PINTEREST_SKETCH:642959284285945905",
+      "sha256": "bf5561fef859065b5f39a7db8f79fbd1a43a8a4e337d3a807d8fbabe023fce6d",
+      "description": "Широкий низкий выпад тёмного персонажа с клинком и развевающимся плащом; силуэт контрастный, часть суставов скрыта одеждой.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_08.jpg",
+        "sheet_sha256": "1ee8c6f16139ca497a9de7904fe7fce7030d27aa567b0a0eb0e45959aa4a5600",
+        "cell": 7,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 8,
+      "key": "PINTEREST_SKETCH:1121466744728088240",
+      "sha256": "908055f09f1f5d6a1f6bf43f8cacaa678cc0431c6b525303af79b3f9275b07a4",
+      "description": "Прыжок с двумя кинжалами в ракурсе сверху: одна рука перед грудью, другая отведена назад, одно колено поджато, другая нога вытянута.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_08.jpg",
+        "sheet_sha256": "1ee8c6f16139ca497a9de7904fe7fce7030d27aa567b0a0eb0e45959aa4a5600",
+        "cell": 8,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 9,
+      "key": "PINTEREST_SKETCH:361273201343061990",
+      "sha256": "c1183d0af069013f29cdd594b8984430c64b3b0e008095cc564036ba6fd36e31",
+      "description": "Конструктивный разбор бойца с двумя клинками в широкой стойке: стрелки показывают вращение корпуса, плеч и таза; есть вспомогательные схемы ног.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_08.jpg",
+        "sheet_sha256": "1ee8c6f16139ca497a9de7904fe7fce7030d27aa567b0a0eb0e45959aa4a5600",
+        "cell": 9,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 10,
+      "key": "PINTEREST_SKETCH:969751732265705454",
+      "sha256": "e4746e744d5559b4c07f056c7404b5bfecf614fc8305e49a0a42dfa2e29ba20c",
+      "description": "Изогнутая фигура в воздухе с косой над головой в двух руках; колени согнуты, тело образует дугу, длинное древко пересекает верх кадра.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_08.jpg",
+        "sheet_sha256": "1ee8c6f16139ca497a9de7904fe7fce7030d27aa567b0a0eb0e45959aa4a5600",
+        "cell": 10,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 11,
+      "key": "PINTEREST_SKETCH:529384131225259500",
+      "sha256": "3f316bc7dd0a9c1e73a21fe590c7304a02e8579efc50686c16e64908263f8a2a",
+      "description": "Глубокий симметричный присед на носках: голова опущена, руки с двумя мечами разведены в стороны и подняты.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_08.jpg",
+        "sheet_sha256": "1ee8c6f16139ca497a9de7904fe7fce7030d27aa567b0a0eb0e45959aa4a5600",
+        "cell": 11,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 12,
+      "key": "PINTEREST_SKETCH:794392821822715315",
+      "sha256": "f890d19ff804f8d3b696cee4bb1b6549cc65e786a0c2508e5a4145aec4599572",
+      "description": "Широкая стойка в три четверти с двумя мечами: один клинок отведён назад, другой проходит перед тазом; корпус наклонён и скручен.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_08.jpg",
+        "sheet_sha256": "1ee8c6f16139ca497a9de7904fe7fce7030d27aa567b0a0eb0e45959aa4a5600",
+        "cell": 12,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 1,
+      "key": "PINTEREST_SKETCH:897553400758059827",
+      "sha256": "2291c28e78bed651bbe04f61b41b164d8a6f026e2dc61b2b979d1b8e60d17523",
+      "description": "Очень широкая стойка с поднятыми руками и горизонтальным магическим эффектом над плечами; фигура мелкая и стилизованная, суставы читаются ограниченно.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_09.jpg",
+        "sheet_sha256": "ef4582379fb4d0f989cca101c3d4532f4c2221c9dea355a5ed0aec70cf496c60",
+        "cell": 1,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 2,
+      "key": "PINTEREST_SKETCH:848717492319555667",
+      "sha256": "aa21b001bd71dbd2634d1bc66dfc4e1dbe546803b30390c5f4df18cf6bdfad90",
+      "description": "Низкий выпад в ракурсе сверху: одна рука с мечом отведена за голову, другая кисть протянута вперёд; ноги частично обрезаны.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_09.jpg",
+        "sheet_sha256": "ef4582379fb4d0f989cca101c3d4532f4c2221c9dea355a5ed0aec70cf496c60",
+        "cell": 2,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 3,
+      "key": "PINTEREST_SKETCH:1101200546415385245",
+      "sha256": "fb0b5d2c71455c0818d6e8deb8441012bfcab96728ecada7d13fc0233d613071",
+      "description": "Присед с сильным наклоном корпуса и одной кистью у земли; вторая рука раскрыта над коленом, ближняя нога увеличена перспективой.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_09.jpg",
+        "sheet_sha256": "ef4582379fb4d0f989cca101c3d4532f4c2221c9dea355a5ed0aec70cf496c60",
+        "cell": 3,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 4,
+      "key": "PINTEREST_SKETCH:786933734885756403",
+      "sha256": "b3153417655f9837fc06cc02fbf9c1d991d22cfc9590d0f529f899e936a507f1",
+      "description": "Широкая стойка с двумя длинными палками или клинками поперёк груди; руки перекрещены перед лицом, голова опущена.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_09.jpg",
+        "sheet_sha256": "ef4582379fb4d0f989cca101c3d4532f4c2221c9dea355a5ed0aec70cf496c60",
+        "cell": 4,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 5,
+      "key": "PINTEREST_SKETCH:696298792427020977",
+      "sha256": "472f2f71c2eacb7d1a1d1ed67779c6559034ec1547686bf10327c42540a563ec",
+      "description": "Балансирующая поза с косой: одна нога вытянута вниз, другая поджата, корпус склонён к руке у головы; древко за тазом.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_09.jpg",
+        "sheet_sha256": "ef4582379fb4d0f989cca101c3d4532f4c2221c9dea355a5ed0aec70cf496c60",
+        "cell": 5,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 6,
+      "key": "PINTEREST_SKETCH:490470215683243510",
+      "sha256": "ef911ea408b415432632117208905b3a85963e980302f1f77ce2006e3653d0d3",
+      "description": "Широкий боевой выпад внутри огненной спирали: одна рука высоко отведена назад, другая перед корпусом; часть тела перекрыта эффектом.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_09.jpg",
+        "sheet_sha256": "ef4582379fb4d0f989cca101c3d4532f4c2221c9dea355a5ed0aec70cf496c60",
+        "cell": 6,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 7,
+      "key": "PINTEREST_SKETCH:864057878560644055",
+      "sha256": "f7e3ba53037047e26dcdf026fe3122b8961c23133e716fdc23b6b63e4ebce577",
+      "description": "Замах мечом в воздухе или на одной ноге: обе кисти над плечом, корпус отклонён назад, одна нога поджата, другая вытянута.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_09.jpg",
+        "sheet_sha256": "ef4582379fb4d0f989cca101c3d4532f4c2221c9dea355a5ed0aec70cf496c60",
+        "cell": 7,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 8,
+      "key": "PINTEREST_SKETCH:1140536674396121703",
+      "sha256": "2d25947718933621aba4e1bd8a4eb8b45600c35dd2e5be2c34715f3be9432f43",
+      "description": "Спокойная стойка в полный рост, клинок горизонтально за плечами в поднятой кисти; свободная рука опущена, одежда показывает складки у колен.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_09.jpg",
+        "sheet_sha256": "ef4582379fb4d0f989cca101c3d4532f4c2221c9dea355a5ed0aec70cf496c60",
+        "cell": 8,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 9,
+      "key": "PINTEREST_SKETCH:1096908053016718048",
+      "sha256": "1ecab5ed062079854c329ec1288f378ae490b6eb6140679963daddb07a3fd5ec",
+      "description": "Фрагмент торса в наклоне: голова опущена, одна рука согнута в сторону, другая уходит вниз за край; кисти и ноги не раскрыты полностью.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_09.jpg",
+        "sheet_sha256": "ef4582379fb4d0f989cca101c3d4532f4c2221c9dea355a5ed0aec70cf496c60",
+        "cell": 9,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 10,
+      "key": "PINTEREST_SKETCH:697354323551035972",
+      "sha256": "136867440dd5109b1e1718fee59a5ee7333be332854acbcd26441fab3a9b982e",
+      "description": "Широкая фронтальная стойка с двуручным хватом очень большого меча перед тазом; клинок выходит вверх за край изображения.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_09.jpg",
+        "sheet_sha256": "ef4582379fb4d0f989cca101c3d4532f4c2221c9dea355a5ed0aec70cf496c60",
+        "cell": 10,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 11,
+      "key": "PINTEREST_SKETCH:631770653967398994",
+      "sha256": "eaa56218aacdfd046859726a09bebd7b2b8fb03954370b7e91f5469f51becc0b",
+      "description": "Низкая стойка с длинным древком перед телом: руки перекрещены у груди, колени согнуты, голова наклонена к поднятому предплечью.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_09.jpg",
+        "sheet_sha256": "ef4582379fb4d0f989cca101c3d4532f4c2221c9dea355a5ed0aec70cf496c60",
+        "cell": 11,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 12,
+      "key": "PINTEREST_SKETCH:602708362672898177",
+      "sha256": "11e85fadcced62fdfaef6fb7803b8b66d9d44eabd7094a76f1093934a0fb99b9",
+      "description": "Фронтальная фигура с огненным эффектом над поднятой ладонью и длинным посохом в другой руке; ноги близко, корпус почти прямой.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_09.jpg",
+        "sheet_sha256": "ef4582379fb4d0f989cca101c3d4532f4c2221c9dea355a5ed0aec70cf496c60",
+        "cell": 12,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 1,
+      "key": "PINTEREST_SKETCH:631770653967399001",
+      "sha256": "aae52e01132370eb0d3dff9abf90783cc3fc99d39916d822538c3d24b1dc89e8",
+      "description": "Коленный выпад с длинным посохом по диагонали перед телом: верхняя рука вытянута вверх, нижняя возле таза, голова опущена.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_10.jpg",
+        "sheet_sha256": "67a37f00c2f509db28e579d93f573804ffcac769ee460185a0ebb2373ee2c138",
+        "cell": 1,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 2,
+      "key": "PINTEREST_SKETCH:980658887592063555",
+      "sha256": "0819692664c9d006fb9437e4bc3d901895772705acb4869df9997e811bf73679",
+      "description": "Бег или прыжок с пистолетом, направленным к зрителю; рука и оружие укрупнены, одно колено поднято, другая нога вытянута вниз.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_10.jpg",
+        "sheet_sha256": "67a37f00c2f509db28e579d93f573804ffcac769ee460185a0ebb2373ee2c138",
+        "cell": 2,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 3,
+      "key": "PINTEREST_SKETCH:680817668699058213",
+      "sha256": "96f3f1f870cc6c10f3739c62d438411369d0e33b43bc7d21c6a91ffc50db9352",
+      "description": "Стойка в три четверти на перспективной плоскости: колени согнуты, один кулак впереди, меч в другой руке отведён сбоку.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_10.jpg",
+        "sheet_sha256": "67a37f00c2f509db28e579d93f573804ffcac769ee460185a0ebb2373ee2c138",
+        "cell": 3,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 4,
+      "key": "PINTEREST_SKETCH:766526799125366660",
+      "sha256": "e4eda1c2401ec9609da708ac7afd74d3e60a6922ec48f4b30170083545fc298e",
+      "description": "Крупный фрагмент лица и двух кистей: одна рука подпирает голову, другая протянута к зрителю с согнутыми пальцами; сильное сокращение.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_10.jpg",
+        "sheet_sha256": "67a37f00c2f509db28e579d93f573804ffcac769ee460185a0ebb2373ee2c138",
+        "cell": 4,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 5,
+      "key": "PINTEREST_SKETCH:1089237859958699673",
+      "sha256": "73ec1393177a4312245e7a99886ce1d8331ebe20e133ac5051acadb8c3a6707c",
+      "description": "Фронтальный торс с двумя кистями одна над другой: верхняя направлена пальцами вниз, нижняя раскрыта ладонью вверх; ноги отсутствуют.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_10.jpg",
+        "sheet_sha256": "67a37f00c2f509db28e579d93f573804ffcac769ee460185a0ebb2373ee2c138",
+        "cell": 5,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 6,
+      "key": "PINTEREST_SKETCH:698832067225596046",
+      "sha256": "ad205f63e25b26ad07f1faa54ee5ee32795ca348140b35a7810f8c0f5ba6e92a",
+      "description": "Композиция большого торса с двумя протянутыми кистями и маленькой согнутой фигурой между ними. Разные масштабы, не поза одного тела.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_10.jpg",
+        "sheet_sha256": "67a37f00c2f509db28e579d93f573804ffcac769ee460185a0ebb2373ee2c138",
+        "cell": 6,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 7,
+      "key": "PINTEREST_SKETCH:703406035597807803",
+      "sha256": "e7c0b9135c0b7ed01a36c5cc4f75ddcc90f743e6e3834200fb6745f6c00463c8",
+      "description": "Крупная раскрытая кисть с согнутыми пальцами направлена к камере; корпус в три четверти, голова повернута в сторону, нижнее тело обрезано.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_10.jpg",
+        "sheet_sha256": "67a37f00c2f509db28e579d93f573804ffcac769ee460185a0ebb2373ee2c138",
+        "cell": 7,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 8,
+      "key": "PINTEREST_SKETCH:60165345010519350",
+      "sha256": "5331794a027679716a42c40081f4f9900054585f0fe60c479c6331c64bf71e3c",
+      "description": "Верхний ракурс летящей вперёд фигуры: одна открытая ладонь приближена к камере, другой кулак отведён за плечо; нижняя часть отсутствует.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_10.jpg",
+        "sheet_sha256": "67a37f00c2f509db28e579d93f573804ffcac769ee460185a0ebb2373ee2c138",
+        "cell": 8,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 9,
+      "key": "PINTEREST_SKETCH:1128644356649818270",
+      "sha256": "d1a5856891c76950320e6343fef638416792e40fb01f74284122a72b221554b1",
+      "description": "Сильный ракурс сверху на фигуру с опущенной головой и руками; одно колено поднято, тело заметно сокращено перспективой.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_10.jpg",
+        "sheet_sha256": "67a37f00c2f509db28e579d93f573804ffcac769ee460185a0ebb2373ee2c138",
+        "cell": 9,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 10,
+      "key": "PINTEREST_SKETCH:949696640190870947",
+      "sha256": "fa67ee183e44f9f57a0d745f368eed49073e39ddc37be4232f6f39766795933b",
+      "description": "Ракурс сверху на вытянувшуюся фигуру: одна рука тянется вверх в сторону, другая вниз к камере; торс скручен.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_10.jpg",
+        "sheet_sha256": "67a37f00c2f509db28e579d93f573804ffcac769ee460185a0ebb2373ee2c138",
+        "cell": 10,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 11,
+      "key": "PINTEREST_SKETCH:616782111506023543",
+      "sha256": "f373599636fc3b710f84d5bb3218c95429738eba642b655c020776a5a85cf3ce",
+      "description": "Взгляд сверху на стоящую фигуру, кулаки на бёдрах или у пояса; голова наклонена, ноги сходятся в перспективе.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_10.jpg",
+        "sheet_sha256": "67a37f00c2f509db28e579d93f573804ffcac769ee460185a0ebb2373ee2c138",
+        "cell": 11,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 12,
+      "key": "PINTEREST_SKETCH:600597300349537544",
+      "sha256": "37c1c20e5235f1000689a1afcf4895c7aeb1cc031b49db750a7c82691734cc74",
+      "description": "Две взаимодействующие фигуры: стоящая ставит одну ногу на спину лежащей лицом вниз. Есть перспективная сетка; не одиночная поза.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_10.jpg",
+        "sheet_sha256": "67a37f00c2f509db28e579d93f573804ffcac769ee460185a0ebb2373ee2c138",
+        "cell": 12,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 1,
+      "key": "PINTEREST_SKETCH:943011609493549591",
+      "sha256": "3ef360aede4c0325048feb943dbcf0a3950f26ba29e0451abd2571df3b3dceb8",
+      "description": "Ракурс сверху на фигуру с большой раскрытой ладонью, протянутой к камере; другая рука вниз, рядом маленькая схема. Сильное перспективное сокращение.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_11.jpg",
+        "sheet_sha256": "daff581877b7c05e21c5ca02495a397d850cb4b7ea0e9ca65562a1e36e494c52",
+        "cell": 1,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 2,
+      "key": "PINTEREST_SKETCH:993114155334272094",
+      "sha256": "dd4483eeccdc1f8ddb2a4d38c1e83a0b6ff0bcfab3c47ee5c430a561c0689bf4",
+      "description": "Групповая композиция снизу: ближняя фигура сидит с широко разнесёнными коленями, позади стоят две фигуры; есть перспективная сетка.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_11.jpg",
+        "sheet_sha256": "daff581877b7c05e21c5ca02495a397d850cb4b7ea0e9ca65562a1e36e494c52",
+        "cell": 2,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 3,
+      "key": "PINTEREST_SKETCH:703124560612335715",
+      "sha256": "ec26308d9599085932016158f339fc29af5303e10e7d4000f65ded7a03d7a984",
+      "description": "Фигура летит или бежит к камере с крупным кулаком на переднем плане; другое плечо отведено, ноги резко сокращены.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_11.jpg",
+        "sheet_sha256": "daff581877b7c05e21c5ca02495a397d850cb4b7ea0e9ca65562a1e36e494c52",
+        "cell": 3,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 4,
+      "key": "PINTEREST_SKETCH:970173944746797745",
+      "sha256": "bf45dce954a9e5cab3736f2f821462d32ece4ec4633b754e0b91e878dca6c6aa",
+      "description": "Верхний ракурс на стоящего человека с руками за головой; локти подняты, грудь развёрнута, нижние ноги частично обрезаны.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_11.jpg",
+        "sheet_sha256": "daff581877b7c05e21c5ca02495a397d850cb4b7ea0e9ca65562a1e36e494c52",
+        "cell": 4,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 5,
+      "key": "PINTEREST_SKETCH:492370171769698141",
+      "sha256": "3404a0dabd2e57bf4c752c3450dc7d3f26472413ba2c230e02c6e3c13c3286c3",
+      "description": "Спокойная стойка в полный рост, вид снизу: руки свободно опущены, ноги разнесены, голова слегка повёрнута; перспективная сетка.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_11.jpg",
+        "sheet_sha256": "daff581877b7c05e21c5ca02495a397d850cb4b7ea0e9ca65562a1e36e494c52",
+        "cell": 5,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 6,
+      "key": "PINTEREST_SKETCH:988258711983143368",
+      "sha256": "6d16df0b09a22434b84f0300786e4c15dfc91daa0dcde4d121fa4fb0fc39e9b2",
+      "description": "Многофигурная таблица стоек, бега, ударов и замахов. Это обзор множества вариантов, а не один готовый референс позы.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_11.jpg",
+        "sheet_sha256": "daff581877b7c05e21c5ca02495a397d850cb4b7ea0e9ca65562a1e36e494c52",
+        "cell": 6,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 7,
+      "key": "PINTEREST_SKETCH:834573374672905802",
+      "sha256": "006136b79c428afaebbc69250badfa846de56d5d61bc31b6f1a8ae3a3dd4db41",
+      "description": "Резкий взгляд сверху на бегущую фигуру: одно колено поднято к груди, обе руки согнуты, голова наклонена.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_11.jpg",
+        "sheet_sha256": "daff581877b7c05e21c5ca02495a397d850cb4b7ea0e9ca65562a1e36e494c52",
+        "cell": 7,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 8,
+      "key": "PINTEREST_SKETCH:1092052609673737720",
+      "sha256": "3f28d6be51dadc552d757b25f1cb6107e57036a9db7f37ffa5bdcbfb54036f11",
+      "description": "Две большие раскрытые кисти тянутся вверх к камере; фигура целиком уходит вниз в сильной перспективе, голова между руками.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_11.jpg",
+        "sheet_sha256": "daff581877b7c05e21c5ca02495a397d850cb4b7ea0e9ca65562a1e36e494c52",
+        "cell": 8,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 9,
+      "key": "PINTEREST_SKETCH:502292164672161618",
+      "sha256": "06a698a5e1f62944403b2fbdb5fd78f6308bd6d116cb7c514eeaa47690d34285",
+      "description": "Очень низкий выпад с опорой на кулак: одно колено у земли, другая нога вытянута; длинное оружие или прямая линия проходит за плечами.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_11.jpg",
+        "sheet_sha256": "daff581877b7c05e21c5ca02495a397d850cb4b7ea0e9ca65562a1e36e494c52",
+        "cell": 9,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 10,
+      "key": "PINTEREST_SKETCH:906701337491955766",
+      "sha256": "7e3240ecd2227db25b6b49320515d8b987859750d0a610ae122cbd5661e40a77",
+      "description": "Фигура в прыжке с пальцем вытянутой руки, направленным вверх к камере; колени согнуты и разведены, другая кисть опущена.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_11.jpg",
+        "sheet_sha256": "daff581877b7c05e21c5ca02495a397d850cb4b7ea0e9ca65562a1e36e494c52",
+        "cell": 10,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 11,
+      "key": "PINTEREST_SKETCH:1147714286308980029",
+      "sha256": "9a031449d74d57277341f1d93b0710d82107be2bea7efd9c8dff58b02c0bcab7",
+      "description": "Шагающая фигура со спины с большим масштабом ближней ноги; вдали отдельная фронтальная фигура с разведёнными руками. Сцена на перспективной сетке.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_11.jpg",
+        "sheet_sha256": "daff581877b7c05e21c5ca02495a397d850cb4b7ea0e9ca65562a1e36e494c52",
+        "cell": 11,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 12,
+      "key": "PINTEREST_SKETCH:881157483346836328",
+      "sha256": "2c25e2627966578e7b0faff584c70b465353cb97f5cfcd82ac8f9264a99fb600",
+      "description": "Летящая вперёд фигура в ракурсе сверху: ближняя рука раскрыта пальцами вперёд, дальняя отведена назад, колени поджаты.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_11.jpg",
+        "sheet_sha256": "daff581877b7c05e21c5ca02495a397d850cb4b7ea0e9ca65562a1e36e494c52",
+        "cell": 12,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 1,
+      "key": "PINTEREST_SKETCH:1118511257474567479",
+      "sha256": "178122353c19b8a5e364c510b190e03e5b3e7cd4ef1d7f5505c9cf1d54c02c69",
+      "description": "Сильная перспектива вытянутой к камере ноги и раскрытой кисти; корпус отклонён, вторая нога согнута. Полезно для сокращения и диагонального действия.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_12.jpg",
+        "sheet_sha256": "c21fb605f841d966be6ca18fae235c1ab87ae0b1d2981980421f6157b79e4c21",
+        "cell": 1,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 2,
+      "key": "PINTEREST_SKETCH:1088745278698788012",
+      "sha256": "3d1279897711298d41d603c7f012aead445aef53618c5925ef7000fffb7640a5",
+      "description": "Экстремальный ракурс на раскрытую ладонь перед камерой; фигура отклонена назад, одна рука у головы, ноги широко. Вспомогательные дуги перспективы.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_12.jpg",
+        "sheet_sha256": "c21fb605f841d966be6ca18fae235c1ab87ae0b1d2981980421f6157b79e4c21",
+        "cell": 2,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 3,
+      "key": "PINTEREST_SKETCH:703124560612469005",
+      "sha256": "d93e68b997d5f1f0288c13dba0aafca93255e1f8b345ba05b79f39a8fb8c6bd6",
+      "description": "Глубокий присед с опорой на ладонь между широко расставленными ногами; голова опущена, свободная рука согнута над коленом.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_12.jpg",
+        "sheet_sha256": "c21fb605f841d966be6ca18fae235c1ab87ae0b1d2981980421f6157b79e4c21",
+        "cell": 3,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 4,
+      "key": "PINTEREST_SKETCH:436356651427329457",
+      "sha256": "f37aba8384bcb01afbf27683898554d019d301e3f073114d45bfd792361fe65f",
+      "description": "Три версии летящей к камере фигуры с вытянутым кулаком: две простые схемы сверху и детализированная снизу. Это набор вариантов, не одна поза.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_12.jpg",
+        "sheet_sha256": "c21fb605f841d966be6ca18fae235c1ab87ae0b1d2981980421f6157b79e4c21",
+        "cell": 4,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 5,
+      "key": "PINTEREST_SKETCH:644014815500381273",
+      "sha256": "ea4eedd2b70929ea24dd76133f36fa5413c08e5b392373b19d952a1e872901f0",
+      "description": "Крупный ракурс сверху на голову, плечи и торс; руки опущены, одна кисть сжата; нижнее тело обрезано.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_12.jpg",
+        "sheet_sha256": "c21fb605f841d966be6ca18fae235c1ab87ae0b1d2981980421f6157b79e4c21",
+        "cell": 5,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 6,
+      "key": "PINTEREST_SKETCH:402227810485606529",
+      "sha256": "4742853834a96a3fea350a1f819625074a6f232a5f8f4acd70a4ec43edbcc5b2",
+      "description": "Композиция двух бойцов: ближняя фигура поднимает кулак к лицу и отводит другую руку, дальняя стоит в защите. Масштабное сокращение переднего тела.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_12.jpg",
+        "sheet_sha256": "c21fb605f841d966be6ca18fae235c1ab87ae0b1d2981980421f6157b79e4c21",
+        "cell": 6,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 7,
+      "key": "PINTEREST_SKETCH:1094374778261693304",
+      "sha256": "b061b333e8c55cc79224cebeaf46652fd971f4212a6b2a65043eacdcd47b8d93",
+      "description": "Фронтальная низкая стойка без оружия: ноги широко и согнуты, руки опущены по бокам с раскрытыми пальцами, корпус подан вперёд.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_12.jpg",
+        "sheet_sha256": "c21fb605f841d966be6ca18fae235c1ab87ae0b1d2981980421f6157b79e4c21",
+        "cell": 7,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 8,
+      "key": "PINTEREST_SKETCH:1023583821574862617",
+      "sha256": "58d59d3c4b81b74ed9e1dde29c8c22d74e2f225fa64739ef629837e4ab1b1cd1",
+      "description": "Торс в ракурсе сверху с одной рукой, протянутой к зрителю ладонью вверх; другая рука опущена, голова наклонена.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_12.jpg",
+        "sheet_sha256": "c21fb605f841d966be6ca18fae235c1ab87ae0b1d2981980421f6157b79e4c21",
+        "cell": 8,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 9,
+      "key": "PINTEREST_SKETCH:1130051731533643294",
+      "sha256": "42fa9855e14ab088dbad51b35dbe11874721b235715751d1fa209327a1944572",
+      "description": "Большой многофигурный лист полётов и перспективных ударов: центральная фигура со скрещёнными руками, вокруг разные ракурсы рук и тел.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_12.jpg",
+        "sheet_sha256": "c21fb605f841d966be6ca18fae235c1ab87ae0b1d2981980421f6157b79e4c21",
+        "cell": 9,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 10,
+      "key": "PINTEREST_SKETCH:723109283973579386",
+      "sha256": "6e98e7c55550dce21d9963d55dd616c02345c3b57ac54476fd2699348cb443ae",
+      "description": "Учебный лист с несколькими динамическими позами: прыжки, приседы, развороты и опора на ладонь; варианты требуют отдельного выбора.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_12.jpg",
+        "sheet_sha256": "c21fb605f841d966be6ca18fae235c1ab87ae0b1d2981980421f6157b79e4c21",
+        "cell": 10,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 11,
+      "key": "PINTEREST_SKETCH:1114007657856896240",
+      "sha256": "88cd90e2f5f5ede83060f0bff3ede13fd15c5e3342063f3d713c8d1e5b4163e0",
+      "description": "Нижний ракурс сидящей фигуры с широко разнесёнными коленями: одна подошва направлена к камере, другая нога опущена; туловище отклонено.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_12.jpg",
+        "sheet_sha256": "c21fb605f841d966be6ca18fae235c1ab87ae0b1d2981980421f6157b79e4c21",
+        "cell": 11,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 12,
+      "key": "PINTEREST_SKETCH:1023302346607531682",
+      "sha256": "5a016a790dc584cf7a83b1160010c6d38f1fda7aacaa26b1f93bbea67917e441",
+      "description": "Фрагмент торса с обеими раскрытыми ладонями, вытянутыми к зрителю; пальцы доминируют на переднем плане, ноги не показаны.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_12.jpg",
+        "sheet_sha256": "c21fb605f841d966be6ca18fae235c1ab87ae0b1d2981980421f6157b79e4c21",
+        "cell": 12,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 1,
+      "key": "PINTEREST_SKETCH:1129066569097790744",
+      "sha256": "2da54998015873065979ce0a340bdf46301f8250c0604cf4f4e7394be3d1be78",
+      "description": "Фронтальный фрагмент в капюшоне с двумя раскрытыми ладонями перед лицом; пальцы разведены, нижняя часть тела не показана.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_13.jpg",
+        "sheet_sha256": "6662cffeec8fe02255225e35e384885485b9dfa6b5075efd31caa7311d4a1515",
+        "cell": 1,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 2,
+      "key": "PINTEREST_SKETCH:701646816921606440",
+      "sha256": "30170cccd89b644d290f5bf010947833270e4e968eba0c5b6c7e76bd5102e59a",
+      "description": "Три стоящие фигуры в ракурсах сверху: со скрещёнными руками, с опущенным кулаком и с руками у пояса. Не один вариант позы.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_13.jpg",
+        "sheet_sha256": "6662cffeec8fe02255225e35e384885485b9dfa6b5075efd31caa7311d4a1515",
+        "cell": 2,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 3,
+      "key": "PINTEREST_SKETCH:719309371741914822",
+      "sha256": "3a483995740929c575946c520ad6f2feeffe9e3c868fd4bc7ccef9bf090da2a3",
+      "description": "Шагающая к камере фигура с двумя раскрытыми ладонями перед тазом; голова опущена, ноги перекрываются в перспективе.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_13.jpg",
+        "sheet_sha256": "6662cffeec8fe02255225e35e384885485b9dfa6b5075efd31caa7311d4a1515",
+        "cell": 3,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 4,
+      "key": "PINTEREST_SKETCH:1116822407626630552",
+      "sha256": "4ab9ea5085f93b101fccf5438adf949cc43c1a181ae6cddffe68c99228fb2b8e",
+      "description": "Высокий ракурс стоящей фигуры с опущенными кулаками; плечи крупные, ноги сокращены, голова наклонена.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_13.jpg",
+        "sheet_sha256": "6662cffeec8fe02255225e35e384885485b9dfa6b5075efd31caa7311d4a1515",
+        "cell": 4,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 5,
+      "key": "PINTEREST_SKETCH:919578817685414038",
+      "sha256": "466ca76a141b48a14d062953aac6ccaec4626461018b88adf7ddd707852ada31",
+      "description": "Полет или прыжок с кулаком, поднятым прямо к камере; тело вытянуто вниз, другая рука прижата сбоку, одна нога согнута.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_13.jpg",
+        "sheet_sha256": "6662cffeec8fe02255225e35e384885485b9dfa6b5075efd31caa7311d4a1515",
+        "cell": 5,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 6,
+      "key": "PINTEREST_SKETCH:693272936412507176",
+      "sha256": "1de83d54aece77c1accb0b7ba257d94aa775ddd7699dbc44c9bac270f5ccf793",
+      "description": "Обзорный лист из нескольких динамических фигур: ближняя стоит над камерой с крупной подошвой, вокруг бег, прыжки и наклоны.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_13.jpg",
+        "sheet_sha256": "6662cffeec8fe02255225e35e384885485b9dfa6b5075efd31caa7311d4a1515",
+        "cell": 6,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 7,
+      "key": "PINTEREST_SKETCH:991847517924094079",
+      "sha256": "110a5a696ba6c4d27e63e62de85371b419acdb787baa5816c0d7fbdf53f2aabf",
+      "description": "Бегущий силуэт сверху: одна нога вытянута вперёд, другая согнута назад, руки разведены для равновесия, голова наклонена.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_13.jpg",
+        "sheet_sha256": "6662cffeec8fe02255225e35e384885485b9dfa6b5075efd31caa7311d4a1515",
+        "cell": 7,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 8,
+      "key": "PINTEREST_SKETCH:776308054562855424",
+      "sha256": "147d3970a07f11d7257efbdff3d436b988f5abad4e26d58a002c39a63f2ac391",
+      "description": "Парящая или прыгающая фигура рядом с вертикальной плоскостью: одно колено высоко поднято, другая нога вытянута, руки согнуты.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_13.jpg",
+        "sheet_sha256": "6662cffeec8fe02255225e35e384885485b9dfa6b5075efd31caa7311d4a1515",
+        "cell": 8,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 9,
+      "key": "PINTEREST_SKETCH:663084745181294313",
+      "sha256": "a91aa3a9fd5990808713b935e8406a6560c9163a09005916da030b0a9ef81634",
+      "description": "Глубокий присед анфас с крупными стопами на переднем плане; одна ладонь поднята, другая вытянута перед коленями; конструктивная схема.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_13.jpg",
+        "sheet_sha256": "6662cffeec8fe02255225e35e384885485b9dfa6b5075efd31caa7311d4a1515",
+        "cell": 9,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 10,
+      "key": "PINTEREST_SKETCH:349873464808752875",
+      "sha256": "2d71c5122c7f33dab9bb7267dbe9e8ea82697688f44f54acba5f8c1ae9606c24",
+      "description": "Сильный верхний ракурс бегущей фигуры: плечи и голова впереди, руки отведены назад, одно колено крупно на переднем плане.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_13.jpg",
+        "sheet_sha256": "6662cffeec8fe02255225e35e384885485b9dfa6b5075efd31caa7311d4a1515",
+        "cell": 10,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 11,
+      "key": "PINTEREST_SKETCH:716635359464614212",
+      "sha256": "08c698c3ee764c8fba5c8b4e9d68c4b504362eca4e7fdfc4839b608b2e6969b1",
+      "description": "Широкий низкий выпад с руками перед грудью, образующими округлую защиту; колени согнуты, корпус развёрнут.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_13.jpg",
+        "sheet_sha256": "6662cffeec8fe02255225e35e384885485b9dfa6b5075efd31caa7311d4a1515",
+        "cell": 11,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 12,
+      "key": "PINTEREST_SKETCH:1011621135050265857",
+      "sha256": "301d86a049bf8ebff62ff896e9a8ae6613a79bac578a583b55c76a920a774274",
+      "description": "Очень широкий боковой выпад: передняя нога вытянута, задняя согнута, корпус низко, обе руки раскрыты и отведены.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_13.jpg",
+        "sheet_sha256": "6662cffeec8fe02255225e35e384885485b9dfa6b5075efd31caa7311d4a1515",
+        "cell": 12,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 1,
+      "key": "PINTEREST_SKETCH:782852347724247326",
+      "sha256": "b6bdc5356fa4d01df38ff434f2b7df27988be23b0080ec59191f5d1e7a4a6027",
+      "description": "Компактный глубокий присед в ракурсе сверху: колени разведены, стопы рядом, руки отведены назад, голова опущена.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_14.jpg",
+        "sheet_sha256": "119c23e6138429f38bb30ffcc51d613d7bbf2f427c207ff45cf518cf6f041769",
+        "cell": 1,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 2,
+      "key": "PINTEREST_SKETCH:490822059382907965",
+      "sha256": "2d949f7f2b7313d7fdac31aff6b657de8d06d061bd81f238f6a7c627f1e918d5",
+      "description": "Композиция трёх летящих или падающих фигур на перспективной сетке; центральная полусидит в воздухе, другие развёрнуты и перевёрнуты.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_14.jpg",
+        "sheet_sha256": "119c23e6138429f38bb30ffcc51d613d7bbf2f427c207ff45cf518cf6f041769",
+        "cell": 2,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 3,
+      "key": "PINTEREST_SKETCH:1035898351804472422",
+      "sha256": "5f06e8e8b2912a99696ced03f32f5bc4aff3d78224b9ed97d2447a0a8e34e3dd",
+      "description": "Верхний ракурс фигуры с рукой, протянутой вперёд раскрытой кистью; другая рука отведена в сторону, корпус повёрнут, ноги близко.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_14.jpg",
+        "sheet_sha256": "119c23e6138429f38bb30ffcc51d613d7bbf2f427c207ff45cf518cf6f041769",
+        "cell": 3,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 4,
+      "key": "PINTEREST_SKETCH:1101974602573932993",
+      "sha256": "d3f95f0c8183e9f9995273652eeef1f9d236cebcf51da47e62b6d258c473f3fc",
+      "description": "Низкий боковой выпад с одной ладонью у земли; другая рука раскрыта, одна нога вытянута, голова опущена; стрелка показывает движение.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_14.jpg",
+        "sheet_sha256": "119c23e6138429f38bb30ffcc51d613d7bbf2f427c207ff45cf518cf6f041769",
+        "cell": 4,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 5,
+      "key": "PINTEREST_SKETCH:887138826622718723",
+      "sha256": "50bd88ac1eb47715d8702a0913b0807a30c710d61f45417f3be21ff176cfee50",
+      "description": "Сильный ракурс сверху на изогнутый торс и большую открытую ладонь; одна нога согнута, часть конечностей обрезана.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_14.jpg",
+        "sheet_sha256": "119c23e6138429f38bb30ffcc51d613d7bbf2f427c207ff45cf518cf6f041769",
+        "cell": 5,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 6,
+      "key": "PINTEREST_SKETCH:953637289866773735",
+      "sha256": "87d11aa0b435ddbec3d41ce551b8ee8e83e8556a45fba6cbba24001331752871",
+      "description": "Крупный фрагмент бойца с кулаком, вытянутым к зрителю; корпус скручен, другая кисть раскрыта у талии, ноги обрезаны.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_14.jpg",
+        "sheet_sha256": "119c23e6138429f38bb30ffcc51d613d7bbf2f427c207ff45cf518cf6f041769",
+        "cell": 6,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 7,
+      "key": "PINTEREST_SKETCH:642185228158811368",
+      "sha256": "8728f37f86117e36209791fb01c93a0b138f611e52f6b007286d27d1c395cef8",
+      "description": "Шаг с открытой кистью, вытянутой к камере; корпус в три четверти, вторая рука у пояса. В углу отдельная маленькая иллюстрация того же жеста.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_14.jpg",
+        "sheet_sha256": "119c23e6138429f38bb30ffcc51d613d7bbf2f427c207ff45cf518cf6f041769",
+        "cell": 7,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 8,
+      "key": "PINTEREST_SKETCH:390616967665382653",
+      "sha256": "0de0f2cc6e645a80806a3dd10a23b574fc85972a03c589c6659451604c340e6e",
+      "description": "Сидя низко с опорой руками позади или по бокам: одна нога вытянута к зрителю, другая согнута, торс наклонён вперёд.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_14.jpg",
+        "sheet_sha256": "119c23e6138429f38bb30ffcc51d613d7bbf2f427c207ff45cf518cf6f041769",
+        "cell": 8,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 9,
+      "key": "PINTEREST_SKETCH:914864111827973348",
+      "sha256": "1e4fadb4813458a0bc23ce0a30ab1753e3c311a98c4839d02f4fa38020ee8a57",
+      "description": "Фронтальная посадка в кресле в сильном нижнем ракурсе: колени широко, руки на подлокотниках, одна стопа крупно перед камерой.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_14.jpg",
+        "sheet_sha256": "119c23e6138429f38bb30ffcc51d613d7bbf2f427c207ff45cf518cf6f041769",
+        "cell": 9,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 10,
+      "key": "PINTEREST_SKETCH:660340364115165133",
+      "sha256": "2d551eb50d8b133f5285037deea0c29d77b3cf99bda98405579d32b1847f80d1",
+      "description": "Баланс на одной ноге с высоко поднятым коленом; одна рука вытянута вперёд, другая согнута у груди. Брюки скрывают часть анатомии.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_14.jpg",
+        "sheet_sha256": "119c23e6138429f38bb30ffcc51d613d7bbf2f427c207ff45cf518cf6f041769",
+        "cell": 10,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 11,
+      "key": "PINTEREST_SKETCH:1005358316836949227",
+      "sha256": "ee531ec0c5ea8e13d1cecb1f4275d2a8533f25911e12b461e87b540e5db28f43",
+      "description": "Очень низкая стойка в профиль: одна нога вытянута в сторону, другая согнута, одна открытая ладонь впереди на уровне лица, другая ниже.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_14.jpg",
+        "sheet_sha256": "119c23e6138429f38bb30ffcc51d613d7bbf2f427c207ff45cf518cf6f041769",
+        "cell": 11,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 12,
+      "key": "PINTEREST_SKETCH:1053701644097818373",
+      "sha256": "7e59f5690e8b46be363c86d0358d02c00434d41ddf63594c5cd6225d575806e4",
+      "description": "Широкая боксёрская стойка: одна рука вытянута прямым ударом, другой кулак у подбородка, колени согнуты.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_14.jpg",
+        "sheet_sha256": "119c23e6138429f38bb30ffcc51d613d7bbf2f427c207ff45cf518cf6f041769",
+        "cell": 12,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 1,
+      "key": "PINTEREST_SKETCH:801218589960568476",
+      "sha256": "9114add01f3609723483b5d7533044d699692b0c7fe5758e461b1080dfa2440d",
+      "description": "Широкая полусогнутая стойка с коротким клинком в опущенной руке; другая ладонь вытянута перед грудью, корпус развёрнут.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/MALE_15.jpg",
+        "sheet_sha256": "74ea6cadde81c676f0598dee5f2f076a1716e3e348c19a8988ee0d541dce1955",
+        "cell": 1,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 1,
+      "key": "PINTEREST_SKETCH:1140044093201617168",
+      "sha256": "a935b91a92649ec70882345e1c8b6fd8cd952e81583cd10cc2c0ed0ff0801730",
+      "description": "Баланс с косой и магическим кругом: одна нога вытянута вниз, другая поджата; одна рука у головы, другая держит древко за тазом.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/FEMALE_01.jpg",
+        "sheet_sha256": "c25e8f6e8c4ffc66a205a83fd0c037152caa889aea31ba6c9377e5d857ce101e",
+        "cell": 1,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 2,
+      "key": "PINTEREST_SKETCH:590041988727036834",
+      "sha256": "6220e1890c3984f02dc76a646f89c55a76289e80367b9f3a528442fc59cb3783",
+      "description": "Вытянутая фронтальная фигура внутри большой водяной спирали; одна кисть у груди, другая опущена, ноги близко. Эффект занимает большую часть листа.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/FEMALE_01.jpg",
+        "sheet_sha256": "c25e8f6e8c4ffc66a205a83fd0c037152caa889aea31ba6c9377e5d857ce101e",
+        "cell": 2,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 3,
+      "key": "PINTEREST_SKETCH:746330969517446504_body_04",
+      "sha256": "946dc62acf6607863a92aa8b8b939cc5ee79320b8d0f06b173548704384fecb9",
+      "description": "Спокойная фронтальная стойка с длинным молотом вертикально сбоку: одна кисть держит рукоять у плеча, другая на бедре.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/FEMALE_01.jpg",
+        "sheet_sha256": "c25e8f6e8c4ffc66a205a83fd0c037152caa889aea31ba6c9377e5d857ce101e",
+        "cell": 3,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 4,
+      "key": "PINTEREST_SKETCH:746330969517446504_body_08",
+      "sha256": "25387bf4a46b11a0bcfcf0b5815e836bf9e545f0cbe8e31387ce007b34cc89cd",
+      "description": "Широкая стойка с горизонтальным махом молота в двух вытянутых руках; корпус скручен, древко и боёк вынесены далеко в сторону.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/FEMALE_01.jpg",
+        "sheet_sha256": "c25e8f6e8c4ffc66a205a83fd0c037152caa889aea31ba6c9377e5d857ce101e",
+        "cell": 4,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 5,
+      "key": "PINTEREST_SKETCH:595601119481922183",
+      "sha256": "3e8ee792acfef1dae463116ccfc7f338aca5b519b25ca1b15bf6a75100224b1e",
+      "description": "Верхний ракурс фигуры с руками, образующими округлый жест перед корпусом; голова повёрнута, за плечами плащ, нижние ноги обрезаны.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/FEMALE_01.jpg",
+        "sheet_sha256": "c25e8f6e8c4ffc66a205a83fd0c037152caa889aea31ba6c9377e5d857ce101e",
+        "cell": 5,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 6,
+      "key": "PINTEREST_SKETCH:763500943105973861",
+      "sha256": "a39bb49694cf6b8144b70c0d6aa408ae1f86a92bbaf7bfbff2f2460b26bd50e7",
+      "description": "Фрагмент фигуры с одной рукой, вытянутой к камере, и резко укрупнённым клинком; грудь развёрнута, ноги не показаны.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/FEMALE_01.jpg",
+        "sheet_sha256": "c25e8f6e8c4ffc66a205a83fd0c037152caa889aea31ba6c9377e5d857ce101e",
+        "cell": 6,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 7,
+      "key": "PINTEREST_SKETCH:641833384442853534",
+      "sha256": "1fac7485b1410ecf02c870f44164e8201322de4a132dd76aed729cf21e9db257",
+      "description": "Прыжок или баланс с поднятым коленом и мечом в вытянутой руке; корпус в три четверти, другая нога вытянута вниз, видны высокие каблуки.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/FEMALE_01.jpg",
+        "sheet_sha256": "c25e8f6e8c4ffc66a205a83fd0c037152caa889aea31ba6c9377e5d857ce101e",
+        "cell": 7,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 8,
+      "key": "PINTEREST_SKETCH:955959458387077396",
+      "sha256": "2fef4c4d7d81f3f6c9f97a4cd14a93569cb65568beac1b19ef5cbf194e4c3afc",
+      "description": "Фрагмент фигуры с одной поднятой рукой и другой у груди; между кистями диагональная композиция магических кругов. Нижнее тело закрыто одеждой и краем кадра.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/FEMALE_01.jpg",
+        "sheet_sha256": "c25e8f6e8c4ffc66a205a83fd0c037152caa889aea31ba6c9377e5d857ce101e",
+        "cell": 8,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 9,
+      "key": "PINTEREST_SKETCH:426364289745099322_ink_02",
+      "sha256": "09682ea4af6e48d8b4a37a7836005cd257e37844818fe555713af826a38ae3de",
+      "description": "Прыжок лучницы с натянутой тетивой: одна рука держит лук впереди, другая у лица, ноги согнуты и смещены назад.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/FEMALE_01.jpg",
+        "sheet_sha256": "c25e8f6e8c4ffc66a205a83fd0c037152caa889aea31ba6c9377e5d857ce101e",
+        "cell": 9,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 10,
+      "key": "PINTEREST_SKETCH:426364289745099322_ink_03",
+      "sha256": "9a336ed28bcbbf5d0e532931ff143ede486b4aedc79f75c1b37a3d7ac34fa8bd",
+      "description": "Бегущий замах длинным оружием за плечами: обе руки подняты к одному плечу, одна нога опорная, другая согнута назад.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/FEMALE_01.jpg",
+        "sheet_sha256": "c25e8f6e8c4ffc66a205a83fd0c037152caa889aea31ba6c9377e5d857ce101e",
+        "cell": 10,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 11,
+      "key": "PINTEREST_SKETCH:426364289745099322_ink_06",
+      "sha256": "927209a5f00fa094bf70e9c2af2637461f5f6c6fd7c7ed791e32abc4231bcd39",
+      "description": "Широкая стойка с пистолетом в двух вытянутых руках на уровне лица; передняя нога согнута, задняя вытянута.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/FEMALE_01.jpg",
+        "sheet_sha256": "c25e8f6e8c4ffc66a205a83fd0c037152caa889aea31ba6c9377e5d857ce101e",
+        "cell": 11,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 12,
+      "key": "PINTEREST_SKETCH:426364289745099322_ink_15",
+      "sha256": "aa568c95eee22bb5f35c6e75a127ebfec013858ee8b69be33dda0ccf6b6ee5cb",
+      "description": "Боевая стойка со спины в три четверти: меч поднят около плеча, обе руки согнуты, ноги широко разнесены.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/FEMALE_01.jpg",
+        "sheet_sha256": "c25e8f6e8c4ffc66a205a83fd0c037152caa889aea31ba6c9377e5d857ce101e",
+        "cell": 12,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    },
+    {
+      "cell": 1,
+      "key": "PINTEREST_SKETCH:426364289745099322_ink_19",
+      "sha256": "147bcd929684476e97f5cbc79fd5be0aabda636b930bb5264b76a55cbcd60159",
+      "description": "Длинный выпад с прямым двуручным ударом мечом: руки вытянуты горизонтально, переднее колено согнуто почти под прямым углом, задняя нога прямая.",
+      "evidence": {
+        "kind": "VISUAL_DISCOVERY_OVERVIEW",
+        "sheet": "work/reference-knowledge-20261113/description-review/FEMALE_02.jpg",
+        "sheet_sha256": "0c0a1f69e38c81c3c25eb9a8f13927b53bcadc32f1a65e1a7c9b3a886f9a0cc6",
+        "cell": 1,
+        "reviewed_on": "2026-11-13",
+        "scope": "Discovery description, not full-resolution anatomical or per-call approval"
+      }
+    }
+  ]
+}
