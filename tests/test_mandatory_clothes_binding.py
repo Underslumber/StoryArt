@@ -283,4 +283,3 @@ def test_completion_rejects_missing_reordered_duplicate_or_unrecorded_tail(ids):
     state = _base_state(ids)
     state["scope_changes"] = [{"added_required_stages": ["SINGLE_PASS"]}]
     assert "five-stage prefix" in guard.completion_block_reason(state)
-
