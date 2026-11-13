@@ -111,6 +111,21 @@ class UserStyleReferenceTests(unittest.TestCase):
             self.prepare()
         self.assertEqual(self.path.read_bytes(), before)
 
+    def test_attempt_id_cannot_write_snapshot_outside_request(self):
+        self.correct()
+        files = self.prepare()
+        call = self.load_call(files)
+        victim = self.root / "victim.json"
+        victim.write_bytes(b"unrelated-data")
+        guard.checkpoint(self.path, event="READY_FOR_EXECUTION", summary="Ready",
+                         execution_call=call, reference_plan=files["reference_plan"])
+        started = guard.checkpoint(self.path, event="EXECUTION_STARTED", summary="Requested sheet",
+            attempt_id="x/../../victim", execution_call=call, reference_plan=files["reference_plan"])
+        snapshot = Path(started["active_attempt"]["execution_snapshot"]["reference_plan_snapshot_path"])
+        self.assertEqual(self.folder.resolve(), snapshot.resolve().parent)
+        self.assertTrue(snapshot.is_file())
+        self.assertEqual(b"unrelated-data", victim.read_bytes())
+
     def test_next_body_correction_reprepares_same_sources_without_reasking_style(self):
         self.correct()
         files = self.prepare()

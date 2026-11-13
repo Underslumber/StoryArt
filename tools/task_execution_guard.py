@@ -3474,7 +3474,7 @@ def checkpoint(
             }
             if state.get("task_kind") == USER_STYLE_TASK_KIND:
                 source_plan = Path(reference_plan).resolve()
-                snapshot_path = Path(path).resolve().parent / f"EXECUTED_USER_STYLE_PLAN_{new_attempt_id}.json"
+                snapshot_path = Path(path).resolve().parent / f"EXECUTED_USER_STYLE_PLAN_{hashlib.sha256(new_attempt_id.encode('utf-8')).hexdigest()[:20]}.json"
                 atomic_write_json(snapshot_path, json.loads(source_plan.read_text(encoding="utf-8")))
                 execution_snapshot_fields.update(reference_plan_snapshot_path=str(snapshot_path),
                                                  reference_plan_snapshot_sha256=file_sha256(snapshot_path))
