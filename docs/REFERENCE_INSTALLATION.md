@@ -1,5 +1,19 @@
 # Референсы после установки и обновления StoryArt
 
+Основной каталог поз `WAVESPEED_POSES` поставляется прямо с проектом:
+491 поза, 2946 оригинальных WebP 900×1200, три ракурса и два представления.
+Обычный Git checkout содержит изображения и разметку в
+`WAVESPEED_POSES_SOURCE_COLLECTION`. При неполной локальной копии:
+
+```powershell
+.\scripts\storyart.ps1 reference_packs install WAVESPEED_POSES
+```
+
+Недостающие оригиналы загружаются напрямую с GitHub StoryArt, без обращения
+к сайту WaveSpeed, по каталогу SHA-256. Пользовательские изображения, остальные
+пулы и их правила не меняются. Установленный каталог не выдаёт неподтверждённым
+изображениям допуск к просмотру/генерации. См. [условия и проверки](../WAVESPEED_POSES_SOURCE_COLLECTION/README.md).
+
 SODABABYX поставляется прямо в Git: 45 оригинальных листов, 273 одиночных
 референса, 36 тематических коллажей, альбомы и манифесты с происхождением,
 метками пола и SHA-256. После `git pull` они уже находятся в
@@ -58,6 +72,7 @@ SODABABYX поставляется прямо в Git: 45 оригинальны�
 
 | Пул | Где получить | Условия полного восстановления |
 |---|---|---|
+| WAVESPEED_POSES | GitHub StoryArt, каталог `WAVESPEED_POSES_SOURCE_COLLECTION` | Все 2946 WebP поставляются с проектом; пол/анатомия проверяются отдельно |
 | SODABABYX | [@sodababyx](https://x.com/sodababyx); точные посты и media URL в `SODABABYX_SOURCE_COLLECTION/SOURCE_MANIFEST.json` | Все 354 изображения уже в Git; 45 originals + 273 singles + 36 коллажей |
 | POSE_ATLAS | [Закрытый атлас проекта в Gitea](https://gitea.xapct.ru/Hatzy/StoryArt-Pose-Atlas) | 1439 PNG, доступ учётной записи по SSH; ключи и токены не поставляются |
 | COSTUME_DB_01 | [ai-costume-gallery](https://ai-costume-gallery.pages.dev/) | 1407 прямых ссылок в каталоге |

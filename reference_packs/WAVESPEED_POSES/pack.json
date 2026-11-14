@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "pool": "WAVESPEED_POSES",
+  "title": "WaveSpeed — основной каталог поз: 491 поза / 2946 изображений",
+  "target_root": "WAVESPEED_POSES_SOURCE_COLLECTION",
+  "source": {
+    "name": "WaveSpeed AI Pose Gallery",
+    "author": "WaveSpeed AI",
+    "homepage": "https://wavespeed.ai/free-tools/ai-pose-gallery",
+    "terms_url": "https://wavespeed.ai/free-tools/ai-pose-gallery",
+    "terms_summary": "Publisher permits image downloads and personal/commercial reference use. Do not resell images on their own as a pose pack. Original author and terms retained; no unrestricted relicensing claimed.",
+    "redistribution": "USER_REQUESTED_FREE_PROJECT_DISTRIBUTION_NO_RESALE"
+  },
+  "metadata": ["POSES.json", "README.md", "TERMS.md", "SUBJECT_REVIEWS.json"],
+  "build": {
+    "glob": "images/*.webp",
+    "url_template": "https://raw.githubusercontent.com/Underslumber/StoryArt/main/WAVESPEED_POSES_SOURCE_COLLECTION/{path}"
+  }
+}

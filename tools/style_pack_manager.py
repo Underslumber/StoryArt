@@ -2481,6 +2481,19 @@ def validate_resolved_slot_compatibility(
                 enforce_reference_compatibility(stage_target, metadata, roles)
                 return
         raise StylePackError("Attached reference has no planned source metadata record.")
+    if record.get("pool") == "WAVESPEED_POSES":
+        try:
+            from tools.wavespeed_pose_pool import revalidate
+        except ModuleNotFoundError:
+            from wavespeed_pose_pool import revalidate
+        prefix = str(record["ref_id"]).upper() + ":"
+        source_roles = [role.removeprefix(prefix) for role in roles]
+        try:
+            revalidate(paths.workspace, record, target, source_roles)
+        except ValueError as error:
+            raise StylePackError(str(error)) from error
+        enforce_reference_compatibility(target, record, source_roles)
+        return
     if record.get("pool") == "SODABABYX":
         try:
             from tools.shape_fit_reference_pool import PLAN_ROLES, ShapeFitError, revalidate_plan_reference
@@ -4917,6 +4930,18 @@ def command_prepare_generation(args: argparse.Namespace) -> None:
         try:
             auxiliary_body_references.extend(plan_references(args.workspace, args.shape_fit_reference, target_identity))
         except ShapeFitError as error:
+            raise StylePackError(str(error)) from error
+
+    if getattr(args, "pose_pool_reference", []):
+        if getattr(args, "prompt_only_physique", False):
+            raise StylePackError("--prompt-only-physique forbids pose-pool image references.")
+        try:
+            from tools.wavespeed_pose_pool import plan_references as pose_pool_references
+        except ModuleNotFoundError:
+            from wavespeed_pose_pool import plan_references as pose_pool_references
+        try:
+            auxiliary_body_references.extend(pose_pool_references(args.workspace, args.pose_pool_reference, target_identity))
+        except ValueError as error:
             raise StylePackError(str(error)) from error
 
     resolved_user_selections = startup_interaction.get("resolved_user_selections", {})
@@ -8904,6 +8929,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     prepare_parser.add_argument("--style-reference", action="append", default=[], help="Local overall rendering reference; repeat if needed.")
     prepare_parser.add_argument("--shape-fit-reference", action="append", default=[], help="Explicit SODABABYX ID=ROLE=VARIANT choice; requires ordinary per-call source review and never supplies style or identity.")
+    prepare_parser.add_argument("--pose-pool-reference", action="append", default=[], help="Explicit WaveSpeed ID=AUX_POSE or ID=AUX_CAMERA; requires confirmed matching subject and hash-bound pose review.")
     prepare_parser.add_argument(
         "--construction-guide-authorization", default="",
         help="Narrow author authorization file for one hash-bound NO_SUBJECT SIDE dimension guide on NEW CHARACTER_BASE only.",

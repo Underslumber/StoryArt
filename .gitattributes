@@ -2,3 +2,5 @@
 runtime/chatgpt-web-image/oracle-patches/** -text
 # Reviewed reference manifests and images are bound to exact byte hashes.
 SODABABYX_SOURCE_COLLECTION/** -text
+WAVESPEED_POSES_SOURCE_COLLECTION/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+reference_packs/WAVESPEED_POSES/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

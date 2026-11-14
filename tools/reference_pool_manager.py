@@ -67,6 +67,9 @@ def categorize(pool, r):
  return list(dict.fromkeys(x for x in categories if x in c["categories"])) or ["OTHER"]
 def records(pool: str):
  c=cfg()[pool]; base=(ROOT/c["root"]).resolve(); kind=c["adapter"]
+ if kind=="wavespeed_pose":
+  from tools.wavespeed_pose_pool import records as pose_records
+  return pose_records(ROOT)
  if kind=="shape_fit":
   from tools.shape_fit_reference_pool import catalog_records
   base,out=catalog_records(ROOT,pool)
@@ -226,6 +229,11 @@ def build_index(output: Path):
  return {"path":str(output.resolve()),"records":len(data),"categories":len(definitions),"embedded_images":False}
 
 def select(pool,ident,role,subject="",variant=""):
+ if cfg()[pool].get("adapter")=="wavespeed_pose":
+  from tools.wavespeed_pose_pool import select as pose_select
+  if variant: raise PoolError("WaveSpeed variants are exact image IDs; --variant is not used")
+  try: return pose_select(ROOT,ident,role,subject)
+  except ValueError as e: raise PoolError(str(e)) from e
  if cfg()[pool].get("adapter")=="shape_fit":
   from tools.shape_fit_reference_pool import ShapeFitError, select_candidate
   try: return select_candidate(ROOT,pool,ident,role,subject,variant)

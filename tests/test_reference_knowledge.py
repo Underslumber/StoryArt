@@ -39,5 +39,20 @@ class ReferenceKnowledgeTests(unittest.TestCase):
         self.assertEqual(1,len(search(data,'кулак рука',subject='MALE')))
         self.assertEqual([],search(data,'кулак нога'))
 
+    def test_wavespeed_exposes_missing_anatomy_review_and_its_actual_evidence(self):
+        source=self.record()
+        source.update(title='Sitting on heels',tags=['Sitting on the floor'],angle='front')
+        source['raw']={'visual_qa_status':'NOT_CHECKED','anatomy_qa_status':'NOT_CHECKED'}
+        pending=normalize('WAVESPEED_POSES',Path('.'),source)
+        self.assertTrue(any('анатомии' in x for x in pending['missing_checks']))
+        self.assertNotIn('обувь',pending['aliases_ru'])
+        self.assertIn('не подтверждение',pending['description'])
+        source['raw'].update(visual_qa_status='PASS',anatomy_qa_status='PASS',
+                             visual_review_evidence='Connected body observed.',review_limitations='Far hand occluded.')
+        reviewed=normalize('WAVESPEED_POSES',Path('.'),source)
+        self.assertIn('Connected body observed.',reviewed['description'])
+        self.assertIn('Far hand occluded.',reviewed['limitations'])
+        self.assertFalse(any('анатомии' in x for x in reviewed['missing_checks']))
+
 
 if __name__=='__main__': unittest.main()

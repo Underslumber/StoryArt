@@ -17,6 +17,7 @@ from tools import reference_pool_manager as pools
 DEFAULT = ROOT / 'work/reference-knowledge-20261113'
 DESCRIPTIONS = ROOT / 'config/reference_knowledge_descriptions.json'
 POLICY = {
+ 'WAVESPEED_POSES': ('WaveSpeed — основной каталог поз', 'Поза, опоры и ракурс: 491 поза в 3D и контуре с трёх направлений', 'Не переносить личность, пол, телосложение, одежду или стиль. Метаданные издателя не доказывают анатомию и согласованность ракурсов; неподтверждённые субъекты закрыты для просмотра и вложения.'),
  'POSE_ATLAS': ('Позы в нескольких ракурсах', 'Положение тела, опоры и проекция камеры', 'Не переносить личность, телосложение, одежду или стиль; сравнивать ракурсы только одной группы.'),
  'PINTEREST_SKETCH': ('Эскизы поз, жестов и взаимодействий', 'Мягкая подсказка позы, жеста или композиции в пределах исходной роли', 'Не переносить личность, телосложение, стиль, одежду и конструкцию оружия. Фрагменты листа не являются ракурсами одного тела.'),
  'COSTUME_DB_01': ('Каталог одежды', 'Поиск силуэта, состава комплекта и деталей одежды', 'Ключевые слова источника не доказывают посадку, конструкцию или пол. Нужны визуальная классификация и штатный wardrobe/item процесс.'),
@@ -37,7 +38,12 @@ TERMS = {
  'TECHNIQUE:BLOCK':'блок', 'TECHNIQUE:GRAPPLE':'захват', 'TECHNIQUE:PUNCH':'удар рукой',
  'TECHNIQUE:KICK':'удар ногой', 'POSE:CROUCH':'присед', 'POSE:SITTING':'сидя', 'POSE:GUARD':'защитная стойка',
  'ARMS:OVERHEAD':'руки над головой', 'STANDING':'стоя', 'SITTING':'сидя', 'LYING':'лёжа',
- 'front':'спереди', 'back':'сзади', 'left':'слева', 'right':'справа', 'side':'сбоку',
+ 'front':'спереди', 'back':'сзади', 'left':'слева', 'right':'справа', 'side':'сбоку', 'three_quarter':'три четверти',
+ 'Standing':'стоя', 'Fashion':'мода одежда', 'Everyday':'бытовые повседневные', 'Couples':'парные пара',
+ 'Sitting on a chair':'сидя на стуле', 'Sitting on the floor':'сидя на полу',
+ 'Kneeling & squatting':'на коленях присед', 'Lying down':'лёжа', 'Upper body':'верх тела',
+ 'Two people':'два человека взаимодействие', 'Sports & action':'спорт действие',
+ 'Dance':'танец', 'Heroic & cinematic':'героические кинематографичные', 'Line art':'контур',
  'high':'сверху', 'low':'снизу', 'oblique':'косой ракурс три четверти',
  'SOLO_FULL_BODY':'одна фигура целиком', 'BODY_PART:HAND':'кисть', 'DETAIL:FIST':'кулак',
  'DETAIL:VIEWS':'разные ракурсы', 'LESSON:ANATOMY':'анатомия',
@@ -68,7 +74,7 @@ def input_paths():
  for c in pools.cfg().values():
   out.extend(ROOT/c[k] for k in ('manifest','candidate_manifest','source_manifest') if c.get(k))
   if c['adapter']=='pose_atlas': out.append(ROOT/c['root']/'POSE_GROUPS.json')
- out += [ROOT/'tools/reference_pool_manager.py',ROOT/'tools/pose_reference_manager.py',ROOT/'tools/shape_fit_reference_pool.py',ROOT/'tools/reference_knowledge_ui.html',ROOT/'OLDMANLUX_SOURCE_COLLECTION/POSITIVE_EXAMPLES.json',ROOT/'SODABABYX_SOURCE_COLLECTION/SINGLES_MANIFEST.json',ROOT/'SODABABYX_SOURCE_COLLECTION/collages/INDEX.json',DESCRIPTIONS]
+ out += [ROOT/'tools/wavespeed_pose_pool.py',ROOT/'tools/reference_pool_manager.py',ROOT/'tools/pose_reference_manager.py',ROOT/'tools/shape_fit_reference_pool.py',ROOT/'tools/reference_knowledge_ui.html',ROOT/'OLDMANLUX_SOURCE_COLLECTION/POSITIVE_EXAMPLES.json',ROOT/'SODABABYX_SOURCE_COLLECTION/SINGLES_MANIFEST.json',ROOT/'SODABABYX_SOURCE_COLLECTION/collages/INDEX.json',DESCRIPTIONS]
  out += [pools.safe(ROOT,r['evidence']['sheet']) for r in pools.read_json(DESCRIPTIONS)['records']]
  return list(dict.fromkeys(out))
 
@@ -82,17 +88,25 @@ def normalize(pool,base,r):
  category_names=[pools.category_cfg()['categories'].get(c,{}).get('label_ru',c) for c in categories]
  title=r.get('title') or r['id']; angle=r.get('angle','')
  translated=aliases(' '.join([title,angle]+tags))
+ if pool=='WAVESPEED_POSES':
+  # Pose wording such as "sitting on heels" describes support, not shoes.
+  translated=aliases(' '.join([angle]+tags))
+  translated += [ru for en,ru in (('sitting','сидя'),('standing','стоя'),('lying','лёжа')) if re.search(r'\b'+en+r'\b',title,re.I)]
  observation=raw.get('summary_ru') or raw.get('review',{}).get('observations') or ''
+ if pool=='WAVESPEED_POSES': observation=raw.get('visual_review_evidence','')
  basis='Существующее визуальное описание' if observation else 'Метаданные источника; новый визуальный осмотр не заявлен'
  if pool=='PINTEREST_SKETCH':
   title={'SINGLE_POSE':'Одиночная поза','GROUP_SCENE':'Групповая сцена','HAND_GESTURE':'Жест кисти'}.get(title,title)
  if pool=='COSTUME_DB_01': observation='Ключевые слова исходного каталога: '+title
  if not observation: observation='Тема: '+title+'. '+('Признаки: '+', '.join(dict.fromkeys(translated+tags))+'. ' if tags else '')
  description=observation
- if angle: description+=' Ракурс: '+TERMS.get(angle,angle)+'.'
+ if angle:
+  if pool=='WAVESPEED_POSES': description+=' Метка камеры издателя: '+angle+'; это не подтверждение анатомического направления груди/спины.'
+  else: description+=' Ракурс: '+TERMS.get(angle,angle)+'.'
  if pool=='POSE_ATLAS': description+=' Группа одной позы: '+r.get('group_id','')+'.'
  limitations=[POLICY[pool][2]]
  if raw.get('review',{}).get('limitations'): limitations.append(raw['review']['limitations'])
+ if pool=='WAVESPEED_POSES' and raw.get('review_limitations'): limitations.append(raw['review_limitations'])
  for field in ('forbidden_influence','forbidden_uses','allowed_uses','allowed_influence','curation_reason'):
   if raw.get(field): limitations.append(field+': '+strings(raw[field]))
  if prov.get('review_notes') and prov['review_notes'] not in ('PASS','UNKNOWN'): limitations.append(strings(prov['review_notes']))
@@ -101,6 +115,9 @@ def normalize(pool,base,r):
  if not confirmed: missing.append('Пол/субъект не подтверждён для открытия и вложения; только метаданные.')
  if not angle: missing.append('Ракурс отдельно не описан; проверить оригинал перед выбором.')
  if basis.startswith('Метаданные'): missing.append('Описание не заменяет визуальную проверку содержания.')
+ if pool=='WAVESPEED_POSES':
+  if raw.get('visual_qa_status')!='PASS': missing.append('Индивидуальная визуальная проверка оригинала: '+raw.get('visual_qa_status','NOT_CHECKED'))
+  if raw.get('anatomy_qa_status')!='PASS': missing.append('Проверка взаимосвязанной анатомии и опор: '+raw.get('anatomy_qa_status','NOT_CHECKED'))
  roles=raw.get('allowed_roles') or ([r['role']] if r.get('role') else pools.cfg()[pool]['roles'])
  rec={'key':key,'pool':pool,'id':r['id'],'title':title,'description':description,'description_basis':basis,
       'categories':categories,'category_names':category_names,'tags':tags,'aliases_ru':translated,
@@ -111,6 +128,7 @@ def normalize(pool,base,r):
       'generation_eligible':False,'status':'DISCOVERY_ONLY','preview_allowed':False,
       'post_url':prov.get('post_url') or prov.get('source_pin_url') or '',
       'verification':['Сопоставить с буквальным ТЗ: роль, пол, анатомия, видимые области и ракурс.','Проверить полный выбранный файл и текущий SHA256.','Записать что подходит, что не подходит и почему; при несовместимости выбрать другой ID.','Выполнить штатный select/prepare-generation и exact-call validation.']}
+ if pool=='WAVESPEED_POSES': rec['description_evidence']['fields'].append('raw.visual_review_evidence')
  if confirmed and r.get('relative_path'):
   p=pools.safe(base,r['relative_path'])
   if p.is_file() and pools.sha(p)==r.get('sha256'):
@@ -214,7 +232,7 @@ def build(out):
  summary=[]
  for pool,policy in POLICY.items():
   rows=[r for r in data if r['pool']==pool]
-  summary.append({'pool':pool,'name':policy[0],'use_for':policy[1],'limits':policy[2],'count':len(rows),'preview_count':sum(r['preview_allowed'] for r in rows),'metadata_only':sum(not r['preview_allowed'] for r in rows)})
+  summary.append({'pool':pool,'primary_pose_source':pool==pools.read_json(pools.REGISTRY).get('primary_pose_pool'),'name':policy[0],'use_for':policy[1],'limits':policy[2],'count':len(rows),'preview_count':sum(r['preview_allowed'] for r in rows),'metadata_only':sum(not r['preview_allowed'] for r in rows)})
  bundle={'schema_version':1,'status':'DISCOVERY_ONLY','built_at':datetime.now(timezone.utc).isoformat(),'inputs':before,'summary':summary,'records':data,'collages':pages}
  dump(out/'DATABASE.json',bundle)
  db=sqlite3.connect(out/'references.sqlite3')
