@@ -1603,6 +1603,8 @@ def enforce_reference_compatibility(
         "anatomy_compatibility": reference.get("anatomy_compatibility", "UNKNOWN"),
         "anatomy_evidence_source": reference.get("anatomy_evidence_source", "UNKNOWN"),
     }
+    if reference.get('pool')=='WAVESPEED_POSES':
+        metadata.update({key:reference[key] for key in ('pool','participants','participant_bindings') if key in reference})
     for key in ("subject_label", "subject_label_evidence", "subject_label_status", "subject_label_sha256", "subject_usage_scope", "sha256", "visual_qa_status", "physiology_group", "source_subject", "subject_anatomy_compatibility", "subject_anatomy_evidence_source", "framing", "coverage", "source_coverage", "shot_type", "face_reference_purpose", "face_reference_purpose_scope"):
         if key in reference:
             metadata[key] = reference[key]
@@ -7854,6 +7856,19 @@ def render_confirmed_prompt(plan: dict[str, object], prompt_text: str, *, slots:
         item_block = "\n".join(lines)
         if item_block not in rendered:
             rendered = rendered.rstrip() + "\n\n" + item_block
+    pose_lines=[]
+    for reference in plan.get('auxiliary_body_references',[]):
+        if reference.get('pool')!='WAVESPEED_POSES':
+            continue
+        for binding in reference.get('participant_bindings',[]):
+            source=next(p for p in reference['participants'] if p['participant_id']==binding['source_participant'])
+            pose_lines.append(f"{reference['ref_id']} participant {source['participant_id']} ({source['locator']}) -> scene {binding['scene_participant']} ({binding['target_subject']}); transfer pose/contact only, preserve that scene participant's identity, body and clothing.")
+        if reference.get('subject_label')=='NEUTRAL':
+            pose_lines.append(f"{reference['ref_id']}: neutral pose/camera applies to the requested target sex; preserve target identity, anatomy, clothing and rendering style.")
+    if pose_lines:
+        pose_block='POSE_PARTICIPANT_BINDINGS:\n'+'\n'.join(pose_lines)
+        if pose_block not in rendered:
+            rendered=rendered.rstrip()+'\n\n'+pose_block
     return render_style_authority(plan, rendered, slots)
 
 

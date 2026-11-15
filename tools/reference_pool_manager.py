@@ -177,7 +177,8 @@ def search(pools,query="",tag="",subject="",limit=20,category=""):
    haystack=(r["id"]+" "+r["title"]+" "+" ".join(map(str,r.get("tags",[])))+" "+info.get("search_text","")).casefold()
    if q and not all(word in haystack for word in q.split()): continue
    if tag and tag.casefold() not in " ".join(map(str,r.get("tags",[])+r.get("groups",[]))).casefold(): continue
-   if subject and r["subject_label"]!=subject: continue
+   if subject and r["subject_label"]!=subject:
+    if pool!="WAVESPEED_POSES" or (r["subject_label"]!="NEUTRAL" and not any(p.get('subject_label') in {subject,'NEUTRAL'} for p in r.get('participants',[]))): continue
    item=public_record(pool,r)
    if info:
     item["discovery"]={k:info[k] for k in ("key","description","description_basis","use_for","limitations","missing_checks","verification")}
@@ -203,6 +204,7 @@ def category_summary(pools=None):
 
 def public_record(pool,r):
  unresolved=r.get("subject_label") not in ("MALE","FEMALE","NO_SUBJECT") or r.get("subject_label_status") not in ("CONFIRMED","NO_SUBJECT") or r.get("record_binding_status","CURRENT")!="CURRENT"
+ if pool=='WAVESPEED_POSES' and r.get('subject_label') in {'NEUTRAL','MIXED'} and r.get('subject_label_status')=='CONFIRMED': unresolved=False
  item={k:v for k,v in r.items() if k!="raw" and not (unresolved and k=="relative_path")}
  if unresolved:
   page_urls={"post_url","source_pin_url","source_post_url","media_source_post_url","media_context_post_url","discovered_via"}
@@ -228,11 +230,11 @@ def build_index(output: Path):
  output.parent.mkdir(parents=True,exist_ok=True); output.write_text(html_doc,encoding="utf-8")
  return {"path":str(output.resolve()),"records":len(data),"categories":len(definitions),"embedded_images":False}
 
-def select(pool,ident,role,subject="",variant=""):
+def select(pool,ident,role,subject="",variant="",participants=None):
  if cfg()[pool].get("adapter")=="wavespeed_pose":
   from tools.wavespeed_pose_pool import select as pose_select
   if variant: raise PoolError("WaveSpeed variants are exact image IDs; --variant is not used")
-  try: return pose_select(ROOT,ident,role,subject)
+  try: return pose_select(ROOT,ident,role,subject,participants)
   except ValueError as e: raise PoolError(str(e)) from e
  if cfg()[pool].get("adapter")=="shape_fit":
   from tools.shape_fit_reference_pool import ShapeFitError, select_candidate
@@ -306,6 +308,7 @@ def main():
  va=sp.add_parser("validate"); va.add_argument("--pool",choices=cfg().keys())
  ss=sp.add_parser("select"); ss.add_argument("--pool",required=True,choices=cfg().keys()); ss.add_argument("--id",required=True); ss.add_argument("--role",required=True); ss.add_argument("--subject",default=""); ss.add_argument("--variant",default=""); ss.add_argument("--output",type=Path,required=True)
  bi=sp.add_parser("build-index"); bi.add_argument("--output",type=Path,required=True)
+ ss.add_argument('--participants-json',type=Path,help='Explicit source_participant/scene_participant/target_subject mappings for a multi-person pose')
  a=ap.parse_args()
  try:
   if a.cmd=="list":
@@ -320,7 +323,8 @@ def main():
    print(json.dumps(out,ensure_ascii=False,indent=2)); return 1 if any(x["status"]!="VALID" for x in out) else 0
   elif a.cmd=="build-index": out=build_index(a.output)
   else:
-   out=select(a.pool,a.id,a.role,a.subject,a.variant); a.output.parent.mkdir(parents=True,exist_ok=True); a.output.write_text(json.dumps(out,ensure_ascii=False,indent=2),encoding="utf-8")
+   bindings=read_json(a.participants_json) if a.participants_json else None
+   out=select(a.pool,a.id,a.role,a.subject,a.variant,bindings); a.output.parent.mkdir(parents=True,exist_ok=True); a.output.write_text(json.dumps(out,ensure_ascii=False,indent=2),encoding="utf-8")
   print(json.dumps(out,ensure_ascii=False,indent=2)); return 0
  except Exception as e: print(json.dumps({"error":str(e)},ensure_ascii=False)); return 2
 if __name__=="__main__": sys.exit(main())

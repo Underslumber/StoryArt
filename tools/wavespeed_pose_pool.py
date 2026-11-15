@@ -37,11 +37,38 @@ def locations(workspace):
 
 
 def subject_confirmed(row):
-    return (row.get('subject_label') in {'MALE', 'FEMALE'}
+    label = row.get('subject_label')
+    return (label in {'MALE', 'FEMALE', 'NEUTRAL', 'MIXED'}
             and row.get('subject_label_status') == 'CONFIRMED'
             and row.get('subject_label_sha256') == row.get('sha256')
             and bool(row.get('subject_label_evidence'))
-            and bool(row.get('subject_review_id')))
+            and bool(row.get('subject_review_id'))
+            and (label != 'MIXED' or participants_confirmed(row)))
+
+
+def participants_confirmed(row):
+    people = row.get('participants', [])
+    return (len(people) >= 2 and len({p.get('participant_id') for p in people}) == len(people)
+            and all(p.get('participant_id') and p.get('subject_label') in {'MALE','FEMALE','NEUTRAL'}
+                    and p.get('locator') and p.get('evidence')
+                    and p.get('source_sha256') == row.get('sha256') for p in people))
+
+
+def validate_participant_bindings(row, bindings):
+    if not participants_confirmed(row):
+        raise ValueError('per-participant classification required')
+    people = {p['participant_id']:p for p in row['participants']}
+    if (not isinstance(bindings,list) or len(bindings)!=len(people)
+            or {b.get('source_participant') for b in bindings}!=set(people)
+            or len({b.get('scene_participant') for b in bindings})!=len(people)):
+        raise ValueError('explicit unique scene mapping required for every source participant')
+    for binding in bindings:
+        source = people[binding['source_participant']]['subject_label']
+        target = binding.get('target_subject')
+        if (not binding.get('scene_participant') or target not in {'MALE','FEMALE'}
+                or (source!='NEUTRAL' and source!=target)):
+            raise ValueError('participant target must match source sex or reviewed NEUTRAL')
+    return bindings
 
 
 def ready(row):
@@ -70,6 +97,7 @@ def records(workspace, include_excluded=False):
             'categories': ['POSE_ACTION'], 'category_basis': {'POSE_ACTION':['PUBLISHER_POSE_GALLERY']},
             'relative_path': row['relative_path'], 'sha256': row['sha256'],
             'subject_label': row.get('subject_label','UNKNOWN'),
+            'participants': row.get('participants', []),
             'subject_label_status': 'CONFIRMED' if confirmed else 'QUARANTINED',
             'record_binding_status': 'CURRENT',
             'role': '', 'review_state': row.get('visual_qa_status','NOT_CHECKED'),
@@ -81,7 +109,7 @@ def records(workspace, include_excluded=False):
     return root, result
 
 
-def select(workspace, ident, role, subject):
+def select(workspace, ident, role, subject='', participants=None):
     if role not in ROLES:
         raise ValueError('WaveSpeed permits only AUX_POSE or AUX_CAMERA; identity/body/style transfer forbidden')
     root, manifest = locations(workspace)
@@ -92,7 +120,11 @@ def select(workspace, ident, role, subject):
     row = found[0]
     if not subject_confirmed(row):
         raise ValueError('subject classification required; quarantined image path withheld')
-    if subject != row['subject_label']:
+    if row['subject_label']=='MIXED':
+        validate_participant_bindings(row,participants)
+    elif participants:
+        raise ValueError('participant mapping supplied for source without multiple participants')
+    elif subject not in {'MALE','FEMALE'} or row['subject_label'] not in {subject,'NEUTRAL'}:
         raise ValueError('target subject must exactly match confirmed source label')
     if (row.get('visual_qa_status') != 'PASS' or row.get('anatomy_qa_status') != 'PASS'
             or not row.get('visual_review_evidence') or not row.get('review_limitations')
@@ -109,6 +141,7 @@ def select(workspace, ident, role, subject):
     return {'schema_version':1, 'type':'CANDIDATE_SELECTION', 'pool':POOL,
             'candidate_id':ident, 'role':role, 'path':str(path), 'sha256':row['sha256'],
             'source_manifest_sha256':sha(manifest), 'subject_label':row['subject_label'],
+            'participants':row.get('participants',[]), 'participant_bindings':participants or [],
             'subject_label_evidence':row['subject_label_evidence'],
             'review':{'observations':row['visual_review_evidence'], 'limitations':row['review_limitations']},
             'generation_eligible':False, 'approval_status':'NOT_APPROVED',
@@ -124,19 +157,34 @@ def plan_references(workspace, values, target):
     subject = {'MALE_ANATOMY':'MALE','FEMALE_ANATOMY':'FEMALE'}.get(target.get('target_anatomy'),'')
     result = []
     for spec in values:
-        parts = spec.split('=')
+        selection, _, mapping = spec.partition('@')
+        parts = selection.split('=')
         if len(parts) != 2:
             raise ValueError('--pose-pool-reference requires ID=ROLE')
         ident, role = parts
-        choice = select(workspace, ident, role, subject)
+        bindings = []
+        if mapping:
+            for item in mapping.split(','):
+                fields = item.split(':')
+                if len(fields)!=3:
+                    raise ValueError('participant mapping requires A:SCENE_ID:MALE,B:SCENE_ID:FEMALE')
+                source,scene,label = fields
+                bindings.append({'source_participant':source,'scene_participant':scene,'target_subject':label})
+            current = target.get('character_id')
+            if current and current!='UNKNOWN':
+                own=[b for b in bindings if b['scene_participant']==current]
+                if len(own)!=1 or own[0]['target_subject']!=subject:
+                    raise ValueError('scene mapping must include current target character with its confirmed sex')
+        choice = select(workspace, ident, role, subject, bindings or None)
         if any(r['path'] == choice['path'] for r in result):
             raise ValueError('duplicate pose image in call')
         record = {'ref_id':ident,'pool':POOL,'mode':role,'selection_spec':spec,
                   'path':choice['path'],'sha256':choice['sha256'],
                   'source_manifest_sha256':choice['source_manifest_sha256'],
                   'active_roles':[role], 'source_character_id':'UNKNOWN',
-                  'subject_label':subject,'subject_label_status':'CONFIRMED',
+                  'subject_label':choice['subject_label'],'subject_label_status':'CONFIRMED',
                   'subject_label_sha256':choice['sha256'],
+                  'participants':choice['participants'],'participant_bindings':choice['participant_bindings'],
                   'subject_label_evidence':choice['subject_label_evidence'],
                   'style_influence':'FORBIDDEN','review':choice['review'],
                   'transfer_contract':LIMITS}
@@ -150,7 +198,8 @@ def plan_references(workspace, values, target):
 def revalidate(workspace, record, target, roles):
     fresh = plan_references(workspace,[record['selection_spec']],target)[0]
     for key in ('path','sha256','source_manifest_sha256','active_roles','subject_label',
-                'subject_label_sha256','subject_label_evidence','transfer_contract','review'):
+                'subject_label_sha256','subject_label_evidence','transfer_contract','review',
+                'participants','participant_bindings'):
         if record.get(key) != fresh.get(key):
             raise ValueError('stale WaveSpeed planned reference: '+key)
     if set(roles) != set(fresh['active_roles']):

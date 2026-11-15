@@ -69,6 +69,12 @@ def strict_subject_decision(target: dict[str, Any], reference: dict[str, Any], *
     if bound_hash != UNKNOWN and bound_hash.lower() != _clean(reference.get("sha256")).lower():
         return "REVIEW_REQUIRED", "Reviewed subject label is not bound to current source bytes."
     if _clean(reference.get("subject_label")).upper() == "NEUTRAL":
+        if ((pose or role in {'AUX_CAMERA','CAMERA','CAMERA_ONLY','ART_CAMERA_SOFT'})
+                and reference.get('subject_label_status')=='CONFIRMED'
+                and bound_hash != UNKNOWN and _clean(reference.get('subject_label_evidence'))!=UNKNOWN
+                and target_label in {'MALE_ANATOMY','FEMALE_ANATOMY'}
+                and _clean(target.get('anatomy_evidence_source'))!=UNKNOWN):
+            return 'ALLOWED', 'Reviewed neutral pose/camera applies to either sex; preserve target identity, anatomy and style.'
         if (not pose and role == "AUX_MOUTH_EXPRESSION"
                 and reference.get("subject_usage_scope") == "MOUTH_EXPRESSION_ONLY"
                 and reference.get("subject_label_status") == "CONFIRMED"
@@ -77,7 +83,23 @@ def strict_subject_decision(target: dict[str, Any], reference: dict[str, Any], *
                 and target_label in {"MALE_ANATOMY", "FEMALE_ANATOMY"}
                 and _clean(target.get("anatomy_evidence_source")) != UNKNOWN):
             return "ALLOWED", "Reviewed neutral isolated mouth transfers expression only; preserve target sex, identity and style."
-        return "BLOCKED", "NEUTRAL is allowed only as a reviewed isolated mouth expression, never pose, identity, body or style."
+        return "BLOCKED", "NEUTRAL requires a reviewed pose/camera or isolated mouth scope; identity, body and style transfer remain forbidden."
+    if (reference.get('pool')=='WAVESPEED_POSES' and reference.get('subject_label')=='MIXED'
+            and (pose or role=='AUX_CAMERA')):
+        if reference.get('subject_label_status')!='CONFIRMED' or _clean(reference.get('subject_label_evidence'))==UNKNOWN:
+            return 'REVIEW_REQUIRED','Multi-person source needs reviewed per-participant subject evidence.'
+        try:
+            from tools.wavespeed_pose_pool import validate_participant_bindings
+            validate_participant_bindings(reference,reference.get('participant_bindings'))
+        except ValueError as error:
+            return 'BLOCKED',str(error)
+        current=target.get('character_id')
+        if current and current!='UNKNOWN':
+            own=[b for b in reference['participant_bindings'] if b['scene_participant']==current]
+            expected={'MALE_ANATOMY':'MALE','FEMALE_ANATOMY':'FEMALE'}.get(target_label)
+            if len(own)!=1 or own[0]['target_subject']!=expected:
+                return 'BLOCKED','Multi-person mapping does not match the current target character.'
+        return 'ALLOWED','Every source participant maps to an explicit matching-sex scene participant; neutral applies to either sex.'
     source_label = explicit_subject_label(reference)
     if source_label == "NO_SUBJECT" and role in NO_SUBJECT_ROLES:
         return "ALLOWED", "Reviewed source explicitly contains no subject."

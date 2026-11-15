@@ -111,6 +111,7 @@ def normalize(pool,base,r):
   if raw.get(field): limitations.append(field+': '+strings(raw[field]))
  if prov.get('review_notes') and prov['review_notes'] not in ('PASS','UNKNOWN'): limitations.append(strings(prov['review_notes']))
  confirmed=r.get('subject_label') in ('MALE','FEMALE','NO_SUBJECT') and r.get('subject_label_status') in ('CONFIRMED','NO_SUBJECT') and r.get('record_binding_status','CURRENT')=='CURRENT'
+ if pool=='WAVESPEED_POSES' and r.get('subject_label') in {'NEUTRAL','MIXED'} and r.get('subject_label_status')=='CONFIRMED': confirmed=True
  missing=[]
  if not confirmed: missing.append('Пол/субъект не подтверждён для открытия и вложения; только метаданные.')
  if not angle: missing.append('Ракурс отдельно не описан; проверить оригинал перед выбором.')
@@ -129,6 +130,7 @@ def normalize(pool,base,r):
       'post_url':prov.get('post_url') or prov.get('source_pin_url') or '',
       'verification':['Сопоставить с буквальным ТЗ: роль, пол, анатомия, видимые области и ракурс.','Проверить полный выбранный файл и текущий SHA256.','Записать что подходит, что не подходит и почему; при несовместимости выбрать другой ID.','Выполнить штатный select/prepare-generation и exact-call validation.']}
  if pool=='WAVESPEED_POSES': rec['description_evidence']['fields'].append('raw.visual_review_evidence')
+ if pool=='WAVESPEED_POSES' and r.get('participants'): rec['participants']=r['participants']
  if confirmed and r.get('relative_path'):
   p=pools.safe(base,r['relative_path'])
   if p.is_file() and pools.sha(p)==r.get('sha256'):
@@ -254,7 +256,7 @@ def load(out):
 
 def search(data,query='',pool='',subject='',limit=12):
  terms=query.casefold().split()
- return [r for r in data['records'] if (not pool or r['pool']==pool) and (not subject or r['subject']==subject) and all(t in r['search_text'] for t in terms)][:limit]
+ return [r for r in data['records'] if (not pool or r['pool']==pool) and (not subject or r['subject']==subject or (r['pool']=='WAVESPEED_POSES' and (r['subject']=='NEUTRAL' or any(p.get('subject_label') in {subject,'NEUTRAL'} for p in r.get('participants',[]))))) and all(t in r['search_text'] for t in terms)][:limit]
 
 def candidate_set(data,keys,brief):
  by={r['key']:r for r in data['records']};chosen=[]

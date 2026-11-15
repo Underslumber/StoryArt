@@ -28,7 +28,7 @@ REVIEW_FIELDS = {'subject_label', 'subject_label_status', 'subject_label_sha256'
                 'subject_label_evidence', 'subject_review_id', 'reviewer', 'viewed',
                 'visual_qa_status', 'anatomy_qa_status', 'visual_review_evidence',
                 'visual_review_sha256', 'review_limitations', 'review_complete',
-                'curation_status', 'curation_reason'}
+                'curation_status', 'curation_reason', 'participants', 'author_review_requested'}
 
 
 def digest(path):
@@ -158,9 +158,14 @@ def apply_reviews(manifest, reviews, root, review_hash):
         if disposition is not None:
             if disposition not in {'READY','EXCLUDED'} or review.get('review_complete') is not True or not review.get('curation_reason'):
                 raise ValueError('Curation requires a completed review and an explicit READY/EXCLUDED reason')
-            if disposition == 'READY' and (label not in {'MALE','FEMALE'} or visual != 'PASS' or anatomy != 'PASS'):
+            from tools.wavespeed_pose_pool import participants_confirmed
+            if disposition == 'READY' and (label not in {'MALE','FEMALE','NEUTRAL','MIXED'}
+                    or visual != 'PASS' or anatomy != 'PASS'
+                    or (label=='MIXED' and not participants_confirmed({**row,**review}))):
                 raise ValueError('READY requires confirmed matching-sex subject and full pose QA PASS')
-        updates.append((row, {**{k:v for k,v in review.items() if k in REVIEW_FIELDS},'subject_label_status':'CONFIRMED' if label in {'MALE','FEMALE'} else 'QUARANTINED',
+        from tools.wavespeed_pose_pool import participants_confirmed
+        confirmed=label in {'MALE','FEMALE','NEUTRAL'} or (label=='MIXED' and participants_confirmed({**row,**review}))
+        updates.append((row, {**{k:v for k,v in review.items() if k in REVIEW_FIELDS},'subject_label_status':'CONFIRMED' if confirmed else 'QUARANTINED',
                               'subject_label_sha256':row['sha256'],'subject_review_id':review_hash+':'+ident,
                               'visual_qa_status':visual,'anatomy_qa_status':anatomy,
                               'visual_review_sha256':row['sha256']}))
@@ -194,8 +199,8 @@ def finalize_curation(manifest, root):
                 or not row.get('subject_review_id') or not row.get('visual_review_evidence')
                 or not row.get('review_limitations') or digest(root/row['relative_path']) != row['sha256']):
             raise ValueError('Unfinished or stale individual curation: '+row['id'])
-        if row['curation_status']=='READY' and (row['subject_label'] not in {'MALE','FEMALE'}
-                or row.get('subject_label_status')!='CONFIRMED' or not row.get('subject_label_evidence')
+        from tools.wavespeed_pose_pool import subject_confirmed
+        if row['curation_status']=='READY' and (not subject_confirmed(row)
                 or row['visual_qa_status']!='PASS' or row['anatomy_qa_status']!='PASS'):
             raise ValueError('Unsuitable source marked READY: '+row['id'])
     ready = [r for r in rows if r['curation_status']=='READY']

@@ -148,8 +148,14 @@ def test_excluded_pose_cannot_surface_or_select_even_with_old_pass(tmp_path):
             'subject_label_evidence':'neutral','reviewer':'test','viewed':'FULL_RESOLUTION',
             'visual_qa_status':'PASS','anatomy_qa_status':'PASS','visual_review_evidence':'body observed',
             'review_limitations':'schematic','review_complete':True,'curation_status':'READY','curation_reason':'test'}
-    with pytest.raises(ValueError,match='READY requires'):
-        apply_reviews(data,{'reviews':[review]},root,'hash')
+    apply_reviews(data,{'reviews':[review]},root,'hash')
+    manifest.write_text(json.dumps(data))
+    for label in ('MALE','FEMALE'):
+        assert pool.select(tmp_path,row['id'],'AUX_POSE',label)['subject_label']=='NEUTRAL'
+        target={'target_anatomy':label+'_ANATOMY','anatomy_evidence_source':'explicit target','character_id':'CHAR_TEST'}
+        planned=pool.plan_references(tmp_path,[row['id']+'=AUX_POSE'],target)[0]
+        assert planned['subject_label']=='NEUTRAL' and planned['compatibility']['compatible']
+        pool.revalidate(tmp_path,planned,target,['AUX_POSE'])
 
 
 def test_complete_curation_includes_exclusions_and_rejects_unreviewed_source(tmp_path,monkeypatch):
@@ -163,3 +169,48 @@ def test_complete_curation_includes_exclusions_and_rejects_unreviewed_source(tmp
     data['records'][-1]['review_complete']=False
     with pytest.raises(ValueError,match='Unfinished or stale'):
         finalize_curation(data,root)
+
+
+def test_multi_person_mapping_survives_plan_and_exact_call(tmp_path,monkeypatch):
+    from types import SimpleNamespace
+    from tools import style_pack_manager as manager
+    root,manifest,image,row,data=setup_pool(tmp_path)
+    confirm(root,manifest,row,data)
+    row['subject_label']='MIXED'
+    row['participants']=[{'participant_id':i,'subject_label':label,'locator':locator,
+                          'source_sha256':row['sha256'],'evidence':'Individually inspected participant'}
+                         for i,label,locator in [('A','FEMALE','left standing'),('B','NEUTRAL','right seated')]]
+    manifest.write_text(json.dumps(data))
+    with pytest.raises(ValueError,match='mapping'):
+        pool.select(tmp_path,row['id'],'AUX_POSE')
+    target={'target_anatomy':'FEMALE_ANATOMY','anatomy_evidence_source':'explicit target','character_id':'CHAR_TEST'}
+    spec=row['id']+'=AUX_POSE@A:CHAR_TEST:FEMALE,B:CHAR_OTHER:MALE'
+    record=pool.plan_references(tmp_path,[spec],target)[0]
+    assert record['compatibility']['compatible']
+    pool.revalidate(tmp_path,record,target,['AUX_POSE'])
+    paths=SimpleNamespace(workspace=tmp_path,pack=tmp_path/'STYLE_PROJECT_PACK',generations=tmp_path/'STYLE_GENERATIONS',slug='style')
+    plan={'target_identity_compatibility':{'target':target},'auxiliary_body_references':[record]}
+    manager.validate_resolved_slot_compatibility(paths,plan,{'active_roles':[row['id']+':AUX_POSE']},image.resolve())
+    monkeypatch.setattr(manager,'render_style_authority',lambda plan,prompt,slots:prompt)
+    prompt=manager.render_confirmed_prompt(plan,'Two characters interact')
+    assert 'left standing' in prompt and 'CHAR_OTHER (MALE)' in prompt
+    with pytest.raises(ValueError,match='current target'):
+        pool.plan_references(tmp_path,[spec.replace('A:CHAR_TEST:FEMALE','A:CHAR_TEST:MALE')],target)
+    row['participants'][1]['subject_label']='UNKNOWN'
+    manifest.write_text(json.dumps(data))
+    assert pool.records(tmp_path)[1]==[]
+    with pytest.raises(ValueError,match='classification required'):
+        pool.revalidate(tmp_path,record,target,['AUX_POSE'])
+
+
+def test_author_choices_preserve_anatomy_and_reject_stale_hash(tmp_path):
+    from tools.wavespeed_pose_review import initial,validate_answers
+    root,manifest,image,row,data=setup_pool(tmp_path)
+    row.update(anatomy_qa_status='FAIL',author_review_requested=True)
+    manifest.write_text(json.dumps(data))
+    state=initial(tmp_path)
+    answer={row['id']:{'sha256':row['sha256'],'choices':{'SUBJECT':'NEUTRAL'}}}
+    assert validate_answers(tmp_path,state,answer)==answer
+    image.write_bytes(b'changed source')
+    with pytest.raises(ValueError,match='bytes changed'):
+        validate_answers(tmp_path,state,answer)
