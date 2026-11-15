@@ -26,7 +26,7 @@ def pending(workspace):
             slots=[{'participant_id':p['participant_id'],'locator':p['locator']} for p in people if p['subject_label']=='UNKNOWN' or row.get('author_review_requested')]
         else:
             slots=[{'participant_id':'SUBJECT','locator':'Единственный участник'}] if row['subject_label']=='UNKNOWN' or row.get('author_review_requested') else []
-        if slots:result.append({'id':row['id'],'sha256':row['sha256'],'title':row['title'],'angle':row['angle'],
+        if slots:result.append({'id':row['id'],'group_id':row['group_id'],'sha256':row['sha256'],'title':row['title'],'angle':row['angle'],
                                 'representation':row['representation'],'slots':slots,'participants':people,
                                 'anatomy':row['anatomy_qa_status'],'relative_path':row['relative_path']})
     return result
@@ -97,6 +97,8 @@ def apply(workspace,state,allow_partial=False):
 
 def serve(workspace,state_path,port):
     state=read(state_path) if state_path.exists() else initial(workspace)
+    groups={r['id']:r['group_id'] for r in read(workspace/COLLECTION/'POSES.json')['records']}
+    for item in state['items']:item['group_id']=groups[item['id']]
     if not state_path.exists():save(state_path,state)
     token=secrets.token_urlsafe(24);lock=Lock()
     template=(workspace/'tools/wavespeed_pose_review.html').read_text('utf-8')
