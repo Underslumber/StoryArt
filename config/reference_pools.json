@@ -6,12 +6,17 @@
       "root": "WAVESPEED_POSES_SOURCE_COLLECTION",
       "manifest": "WAVESPEED_POSES_SOURCE_COLLECTION/POSES.json",
       "adapter": "wavespeed_pose",
-      "count": 2946,
-      "groups": 491,
-      "roles": ["AUX_POSE", "AUX_CAMERA"],
+      "count": 1458,
+      "groups": 382,
+      "roles": [
+        "AUX_POSE",
+        "AUX_CAMERA"
+      ],
       "display_name_ru": "WaveSpeed — основной каталог поз",
       "selection_policy": "EXPLICIT_REQUEST_ONLY",
-      "style_influence": "FORBIDDEN"
+      "style_influence": "FORBIDDEN",
+      "source_count": 2946,
+      "source_groups": 491
     },
     "POSE_ATLAS": {
       "root": "BODY_REFERENCE_LIBRARY/POSE_ATLAS",

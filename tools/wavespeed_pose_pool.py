@@ -44,11 +44,23 @@ def subject_confirmed(row):
             and bool(row.get('subject_review_id')))
 
 
-def records(workspace):
+def ready(row):
+    return (row.get('review_complete') is True and row.get('curation_status') == 'READY'
+            and bool(row.get('curation_reason'))
+            and subject_confirmed(row) and row.get('visual_qa_status') == 'PASS'
+            and row.get('anatomy_qa_status') == 'PASS'
+            and row.get('visual_review_sha256') == row.get('sha256')
+            and row.get('viewed') == 'FULL_RESOLUTION'
+            and bool(row.get('visual_review_evidence')) and bool(row.get('review_limitations')))
+
+
+def records(workspace, include_excluded=False):
     root, manifest = locations(workspace)
     data = json.loads(manifest.read_text('utf-8'))
     result = []
     for row in data['records']:
+        if not include_excluded and not ready(row):
+            continue
         confirmed = subject_confirmed(row)
         result.append({
             'id': row['id'], 'title': row['title'], 'group_id': row['group_id'],
@@ -86,6 +98,8 @@ def select(workspace, ident, role, subject):
             or not row.get('visual_review_evidence') or not row.get('review_limitations')
             or row.get('visual_review_sha256') != row['sha256']):
         raise ValueError('hash-bound visual and connected-body pose review required')
+    if not ready(row):
+        raise ValueError('pose excluded or completed library curation receipt missing')
     relative = Path(row['relative_path'].replace('\\','/'))
     if relative.is_absolute() or '..' in relative.parts:
         raise ValueError('unsafe pose image path')

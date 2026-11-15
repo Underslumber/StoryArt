@@ -27,7 +27,8 @@ ANGLES = {"Front": "front", "3/4": "three_quarter", "Side": "side"}
 REVIEW_FIELDS = {'subject_label', 'subject_label_status', 'subject_label_sha256',
                 'subject_label_evidence', 'subject_review_id', 'reviewer', 'viewed',
                 'visual_qa_status', 'anatomy_qa_status', 'visual_review_evidence',
-                'visual_review_sha256', 'review_limitations'}
+                'visual_review_sha256', 'review_limitations', 'review_complete',
+                'curation_status', 'curation_reason'}
 
 
 def digest(path):
@@ -153,6 +154,12 @@ def apply_reviews(manifest, reviews, root, review_hash):
         if 'PASS' in (visual,anatomy) and (review.get('viewed') != 'FULL_RESOLUTION'
                 or not review.get('visual_review_evidence') or not review.get('review_limitations')):
             raise ValueError('Visual/anatomy PASS requires full-resolution evidence and limitations')
+        disposition = review.get('curation_status')
+        if disposition is not None:
+            if disposition not in {'READY','EXCLUDED'} or review.get('review_complete') is not True or not review.get('curation_reason'):
+                raise ValueError('Curation requires a completed review and an explicit READY/EXCLUDED reason')
+            if disposition == 'READY' and (label not in {'MALE','FEMALE'} or visual != 'PASS' or anatomy != 'PASS'):
+                raise ValueError('READY requires confirmed matching-sex subject and full pose QA PASS')
         updates.append((row, {**{k:v for k,v in review.items() if k in REVIEW_FIELDS},'subject_label_status':'CONFIRMED' if label in {'MALE','FEMALE'} else 'QUARANTINED',
                               'subject_label_sha256':row['sha256'],'subject_review_id':review_hash+':'+ident,
                               'visual_qa_status':visual,'anatomy_qa_status':anatomy,
@@ -170,6 +177,36 @@ def preserve_reviews(rows, previous):
             row.update({k:old[k] for k in REVIEW_FIELDS if k in old})
 
 
+def finalize_curation(manifest, root):
+    """Completeness is about all original hashes, not only the ready subset."""
+    rows = manifest['records']
+    expected = {f'WS_{n:04d}_{style}_{angle}' for n in range(1,492)
+                for style in ('3d','line') for angle in ('front','side','three_quarter')}
+    if len(rows) != 2946 or {r['id'] for r in rows} != expected:
+        raise ValueError('Complete curation requires every one of the 2946 originals')
+    for row in rows:
+        if (row.get('review_complete') is not True or row.get('curation_status') not in {'READY','EXCLUDED'}
+                or not row.get('curation_reason') or row.get('viewed') != 'FULL_RESOLUTION'
+                or row.get('visual_qa_status') not in {'PASS','FAIL'}
+                or row.get('anatomy_qa_status') not in {'PASS','FAIL'}
+                or row.get('visual_review_sha256') != row.get('sha256')
+                or row.get('subject_label_sha256') != row.get('sha256')
+                or not row.get('subject_review_id') or not row.get('visual_review_evidence')
+                or not row.get('review_limitations') or digest(root/row['relative_path']) != row['sha256']):
+            raise ValueError('Unfinished or stale individual curation: '+row['id'])
+        if row['curation_status']=='READY' and (row['subject_label'] not in {'MALE','FEMALE'}
+                or row.get('subject_label_status')!='CONFIRMED' or not row.get('subject_label_evidence')
+                or row['visual_qa_status']!='PASS' or row['anatomy_qa_status']!='PASS'):
+            raise ValueError('Unsuitable source marked READY: '+row['id'])
+    ready = [r for r in rows if r['curation_status']=='READY']
+    if not ready: raise ValueError('No usable pose references in completed curation')
+    manifest['curation']={'status':'COMPLETE','reviewed_originals':len(rows),
+                          'ready':len(ready),'excluded':len(rows)-len(ready),
+                          'ready_groups':len({r['group_id'] for r in ready}),
+                          'scope':'Connected-body pose/support/camera; exact per-image observations and limitations apply.'}
+    return manifest['curation']
+
+
 def save_json(path, data):
     temporary = path.with_suffix('.json.tmp')
     temporary.write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding='utf-8')
@@ -181,6 +218,7 @@ def main():
     parser.add_argument("--catalogue", type=Path)
     parser.add_argument("--review-file", type=Path)
     parser.add_argument("--apply-reviews-only", action='store_true')
+    parser.add_argument("--require-complete-curation", action='store_true')
     parser.add_argument("--workspace", type=Path, default=ROOT)
     parser.add_argument("--workers", type=int, default=6)
     parser.add_argument("--timeout", type=float, default=15)
@@ -192,8 +230,10 @@ def main():
         path = root/'POSES.json'
         manifest = json.loads(path.read_text('utf-8'))
         count = apply_reviews(manifest,json.loads(args.review_file.read_text('utf-8-sig')),root,digest(args.review_file))
+        if args.require_complete_curation: finalize_curation(manifest,root)
         save_json(path,manifest)
         print(json.dumps({'reviewed':count})); return 0
+    if args.require_complete_curation: parser.error('--require-complete-curation requires --apply-reviews-only')
     if not args.catalogue: parser.error('--catalogue required for import')
     if args.review_file: parser.error('--review-file requires --apply-reviews-only')
     data = json.loads(args.catalogue.read_text(encoding="utf-8-sig"))

@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from tools import wavespeed_pose_pool as pool
-from tools.wavespeed_pose_library import apply_reviews, preserve_reviews, download_original
+from tools.wavespeed_pose_library import apply_reviews, preserve_reviews, download_original, finalize_curation
 
 
 def setup_pool(tmp_path):
@@ -31,6 +31,7 @@ def confirm(root,manifest,row,data):
               'subject_label_evidence':'Explicit bounded subject review','reviewer':'test-reviewer',
               'viewed':'FULL_RESOLUTION','visual_qa_status':'PASS','anatomy_qa_status':'PASS',
               'visual_review_evidence':'Connected body, supports and projection inspected',
+              'review_complete':True,'curation_status':'READY','curation_reason':'Reviewed matching subject and pose',
               'review_limitations':'Occluded hand requires scene-specific check'}
     apply_reviews(data,{'reviews':[review]},root,'review-hash')
     manifest.write_text(json.dumps(data))
@@ -39,7 +40,8 @@ def confirm(root,manifest,row,data):
 def test_quarantine_is_metadata_only_and_cannot_select(tmp_path):
     from tools.reference_pool_manager import public_record
     root,manifest,image,row,data=setup_pool(tmp_path)
-    record=pool.records(tmp_path)[1][0]
+    assert pool.records(tmp_path)[1]==[]
+    record=pool.records(tmp_path,include_excluded=True)[1][0]
     public=public_record(pool.POOL,record)
     assert 'relative_path' not in public
     assert 'source_url' not in public['provenance']
@@ -130,3 +132,34 @@ def test_range_download_reassembles_exact_bytes_and_rejects_changed_source(monke
     changed=True
     with pytest.raises(ValueError,match='ETag changed'):
         download_original('https://static.wavespeed.ai/example.webp')
+
+
+def test_excluded_pose_cannot_surface_or_select_even_with_old_pass(tmp_path):
+    root,manifest,image,row,data=setup_pool(tmp_path)
+    confirm(root,manifest,row,data)
+    assert len(pool.records(tmp_path)[1])==1
+    row['curation_status']='EXCLUDED'
+    row['curation_reason']='Visible missing hand'
+    manifest.write_text(json.dumps(data))
+    assert pool.records(tmp_path)[1]==[]
+    with pytest.raises(ValueError,match='excluded'):
+        pool.select(tmp_path,row['id'],'AUX_POSE','FEMALE')
+    review={'id':row['id'],'sha256':row['sha256'],'subject_label':'NEUTRAL',
+            'subject_label_evidence':'neutral','reviewer':'test','viewed':'FULL_RESOLUTION',
+            'visual_qa_status':'PASS','anatomy_qa_status':'PASS','visual_review_evidence':'body observed',
+            'review_limitations':'schematic','review_complete':True,'curation_status':'READY','curation_reason':'test'}
+    with pytest.raises(ValueError,match='READY requires'):
+        apply_reviews(data,{'reviews':[review]},root,'hash')
+
+
+def test_complete_curation_includes_exclusions_and_rejects_unreviewed_source(tmp_path,monkeypatch):
+    root,manifest,image,row,data=setup_pool(tmp_path)
+    confirm(root,manifest,row,data)
+    data['records']=[dict(row,id=f'WS_{n:04d}_{style}_{angle}',group_id=f'WS_{n:04d}')
+                     for n in range(1,492) for style in ('3d','line') for angle in ('front','side','three_quarter')]
+    data['records'][-1].update(curation_status='EXCLUDED',curation_reason='ambiguous subject',subject_label='UNKNOWN')
+    summary=finalize_curation(data,root)
+    assert summary['ready']==2945 and summary['excluded']==1
+    data['records'][-1]['review_complete']=False
+    with pytest.raises(ValueError,match='Unfinished or stale'):
+        finalize_curation(data,root)
