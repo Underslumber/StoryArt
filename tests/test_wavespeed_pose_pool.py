@@ -204,13 +204,16 @@ def test_multi_person_mapping_survives_plan_and_exact_call(tmp_path,monkeypatch)
 
 
 def test_author_choices_preserve_anatomy_and_reject_stale_hash(tmp_path):
-    from tools.wavespeed_pose_review import initial,validate_answers
+    from tools.wavespeed_pose_review import initial,validate_answers,pending
     root,manifest,image,row,data=setup_pool(tmp_path)
     row.update(anatomy_qa_status='FAIL',author_review_requested=True)
     manifest.write_text(json.dumps(data))
     state=initial(tmp_path)
     answer={row['id']:{'sha256':row['sha256'],'choices':{'SUBJECT':'NEUTRAL'}}}
     assert validate_answers(tmp_path,state,answer)==answer
+    row.update(author_review_completed=True,curation_status='EXCLUDED')
+    manifest.write_text(json.dumps(data))
+    assert pending(tmp_path)==[]  # Explicit author exclusions must not be asked again.
     image.write_bytes(b'changed source')
     with pytest.raises(ValueError,match='bytes changed'):
         validate_answers(tmp_path,state,answer)

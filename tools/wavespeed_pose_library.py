@@ -28,7 +28,8 @@ REVIEW_FIELDS = {'subject_label', 'subject_label_status', 'subject_label_sha256'
                 'subject_label_evidence', 'subject_review_id', 'reviewer', 'viewed',
                 'visual_qa_status', 'anatomy_qa_status', 'visual_review_evidence',
                 'visual_review_sha256', 'review_limitations', 'review_complete',
-                'curation_status', 'curation_reason', 'participants', 'author_review_requested'}
+                'curation_status', 'curation_reason', 'participants', 'author_review_requested',
+                'author_review_completed'}
 
 
 def digest(path):

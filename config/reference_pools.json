@@ -6,8 +6,8 @@
       "root": "WAVESPEED_POSES_SOURCE_COLLECTION",
       "manifest": "WAVESPEED_POSES_SOURCE_COLLECTION/POSES.json",
       "adapter": "wavespeed_pose",
-      "count": 2551,
-      "groups": 489,
+      "count": 2885,
+      "groups": 490,
       "roles": [
         "AUX_POSE",
         "AUX_CAMERA"

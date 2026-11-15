@@ -21,6 +21,8 @@ def pending(workspace):
     manifest=workspace/COLLECTION/'POSES.json'
     result=[]
     for row in read(manifest)['records']:
+        if row.get('author_review_completed'):
+            continue
         people=row.get('participants',[])
         if people:
             slots=[{'participant_id':p['participant_id'],'locator':p['locator']} for p in people if p['subject_label']=='UNKNOWN' or row.get('author_review_requested')]
@@ -83,7 +85,9 @@ def apply(workspace,state,allow_partial=False):
         row['curation_status']='READY' if not excluded and subject_confirmed(row) and row['anatomy_qa_status']=='PASS' and row['visual_qa_status']=='PASS' else 'EXCLUDED'
         row['curation_reason']='Author excluded source' if excluded else ('Author classification accepted; preserve recorded anatomy and support limits' if row['curation_status']=='READY' else 'Unresolved participant or existing anatomy failure remains')
         row['author_review_requested']=False
-        for key in ('subject_label','subject_label_evidence','participants','curation_status','curation_reason','author_review_requested'):
+        item=next(item for item in state['items'] if item['id']==row['id'])
+        row['author_review_completed']=all(slot['participant_id'] in answer['choices'] for slot in item['slots'])
+        for key in ('subject_label','subject_label_evidence','participants','curation_status','curation_reason','author_review_requested','author_review_completed'):
             if key in row:review[key]=row[key]
         review['reviewer']='Author explicit classification; original connected-anatomy QA preserved'
         updated+=1
