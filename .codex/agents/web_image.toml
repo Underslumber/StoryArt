@@ -1,6 +1,6 @@
 name = "web_image"
 description = "Execute a final approved StoryArt image specification through the project ChatGPT Web destination and download the original image."
-model = "gpt-6.1-sol"
+model = "gpt-6.2-sol"
 model_reasoning_effort = "low"
 
 developer_instructions = """

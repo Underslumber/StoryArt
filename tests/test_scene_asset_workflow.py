@@ -382,6 +382,23 @@ class SceneWorkflowTests(unittest.TestCase):
         with self.assertRaisesRegex(StylePackError, "cannot auto-expand into generated helper images"):
             build_generation_workflow(args, selected, [])
 
+    def test_scene_can_bind_two_garments_without_helper_images(self) -> None:
+        from tools.generation_call_contract import resolve_stage_slots
+
+        args = Namespace(reference_workflow="SINGLE_PASS", generation_purpose="SCENE",
+                         character_id="CHAR_003", attachment_limit=5)
+        selected = {name: reference(name) for name in ("style", "character_assembly", "subject")}
+        selected["clothes"] = [reference("navy"), reference("mint")]
+        workflow = build_generation_workflow(args, selected, [])
+        self.assertEqual(workflow["attachments_used"], 5)
+        self.assertEqual([s["path"] for s in workflow["slots"] if s["active_roles"] == ["CLOTHES"]], ["navy", "mint"])
+        plan = {"request_id": "joint-scene", "generation_workflow": workflow}
+        with TemporaryDirectory() as temporary:
+            self.assertEqual(resolve_stage_slots(plan, "SINGLE_PASS", {}, Path(temporary)), workflow["slots"])
+        selected["pose"] = reference("pose")
+        with self.assertRaisesRegex(StylePackError, "needs 6 physical attachments"):
+            build_generation_workflow(args, selected, [])
+
 
 class SceneQaTests(unittest.TestCase):
     def test_wallpaper_artifact_requires_scene_specific_qa(self) -> None:
@@ -506,12 +523,15 @@ class OptionalPoseCommandTests(unittest.TestCase):
             derived.write_bytes(b"synthetic stage metadata fixture")
             selections = {"reference_policy": {"choice": "APPROVED_CHARACTER_REFERENCES"}, "character": {"choice": "CHAR_001"}}
             source_slot = {"path": str(source), "sha256": manager.sha256(source), "active_roles": ["BODY"]}
+            classification = {"target": {"target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "approved profile"}}
+            plan = {"request_id": "request", "character_id": "CHAR_001", "target_identity_compatibility": classification}
+            parent_selections = {**selections, "style": {"choice": "TEST"}}
             snapshot = derived.parent / "snapshot.json"
-            snapshot.write_text(json.dumps({"request_id": "request", "target_identity_compatibility": {"target": {"target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "approved profile"}}, "execution_call": {"slots": [source_slot]}}), encoding="utf-8")
+            snapshot.write_text(json.dumps({**plan, "execution_call": {"slots": [source_slot], "user_selections": parent_selections}}), encoding="utf-8")
             output = {"path": str(derived), "sha256": manager.sha256(derived), "plan_snapshot": str(snapshot), "plan_snapshot_sha256": manager.sha256(snapshot)}
             slot = {"path": str(derived), "sha256": manager.sha256(derived), "active_roles": ["BODY"]}
             with patch.object(manager, "character_folder", return_value=identity), patch.object(manager, "validated_stage_outputs", return_value={"STAGE": output}):
-                manager.validate_reference_policy_slots(paths, {"request_id": "request", "target_identity_compatibility": {"target": {"target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "approved profile"}}}, {"slots": [slot]}, selections)
+                manager.validate_reference_policy_slots(paths, plan, {"slots": [slot]}, selections)
                 for bad_path in (Path(folder) / "user.bin", paths.workspace / manager.BODY_LIBRARY_NAME / "body.bin"):
                     bad = {"path": str(bad_path), "sha256": "unknown", "active_roles": ["BODY"]}
                     with self.subTest(path=bad_path), self.assertRaises(manager.StylePackError):
@@ -519,13 +539,14 @@ class OptionalPoseCommandTests(unittest.TestCase):
                 library_style = {"path": str(paths.workspace / manager.BODY_LIBRARY_NAME / "style.bin"), "sha256": "unknown", "active_roles": ["STYLE"]}
                 with self.assertRaises(manager.StylePackError):
                     manager.validate_reference_policy_slots(paths, {"request_id": "request", "target_identity_compatibility": {"target": {"target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "approved profile"}}}, {"slots": [source_slot, library_style]}, selections)
-                snapshot.write_text(json.dumps({"request_id": "request", "execution_call": {"slots": [source_slot, {"path": str(Path(folder) / "user.bin"), "sha256": "unknown", "active_roles": ["BODY"]}]}}), encoding="utf-8")
+                user_slot = {"path": str(Path(folder) / "user.bin"), "sha256": "unknown", "active_roles": ["BODY"]}
+                snapshot.write_text(json.dumps({**plan, "execution_call": {"slots": [source_slot, user_slot], "user_selections": parent_selections}}), encoding="utf-8")
                 output["plan_snapshot_sha256"] = manager.sha256(snapshot)
                 with self.assertRaises(manager.StylePackError):
-                    manager.validate_reference_policy_slots(paths, {"request_id": "request", "target_identity_compatibility": {"target": {"target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "approved profile"}}}, {"slots": [slot]}, selections)
+                    manager.validate_reference_policy_slots(paths, plan, {"slots": [slot]}, selections)
                 snapshot.write_text("tampered", encoding="utf-8")
                 with self.assertRaises(manager.StylePackError):
-                    manager.validate_reference_policy_slots(paths, {"request_id": "request", "target_identity_compatibility": {"target": {"target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "approved profile"}}}, {"slots": [slot]}, selections)
+                    manager.validate_reference_policy_slots(paths, plan, {"slots": [slot]}, selections)
 
     def test_body_library_selection_is_request_scoped_and_not_required_on_every_stage(self):
         from tools import style_pack_manager as manager
@@ -574,7 +595,9 @@ class OptionalPoseCommandTests(unittest.TestCase):
                 "target_identity_compatibility": {"target": {"target_anatomy": "MALE_ANATOMY", "anatomy_evidence_source": "approved profile"}},
                 "startup_parameter_selection": {"resolved_parameters": {"aux_body_decision": "SELECTED"}},
             }
-            snapshot.write_text(json.dumps({**plan, "execution_call": {"slots": [style_slot, library_slot]}}), encoding="utf-8")
+            snapshot.write_text(json.dumps({
+                **plan, "execution_call": {"slots": [style_slot, library_slot], "user_selections": selections},
+            }), encoding="utf-8")
             output = {
                 "path": str(derived), "sha256": manager.sha256(derived),
                 "plan_snapshot": str(snapshot), "plan_snapshot_sha256": manager.sha256(snapshot),
@@ -583,13 +606,15 @@ class OptionalPoseCommandTests(unittest.TestCase):
             with patch.object(manager, "validated_stage_outputs", return_value={"01_PHYSIQUE_FRONT": output}):
                 manager.validate_reference_policy_slots(paths, plan, {"slots": [derived_slot]}, selections)
                 selections["reference_policy"]["choice"] = "PROJECT_STYLE_ONLY"
-                snapshot.write_text(json.dumps({**plan, "execution_call": {"slots": [style_slot]}}), encoding="utf-8")
+                snapshot.write_text(json.dumps({
+                    **plan, "execution_call": {"slots": [style_slot], "user_selections": selections},
+                }), encoding="utf-8")
                 output["plan_snapshot_sha256"] = manager.sha256(snapshot)
                 manager.validate_reference_policy_slots(paths, plan, {"slots": [style_slot, derived_slot]}, selections)
                 selections["reference_policy"]["choice"] = "BODY_LIBRARY_ONLY"
                 snapshot.write_text(json.dumps({
-                    "request_id": "another-request", "execution_call": {"slots": [style_slot, library_slot]},
-                    "startup_parameter_selection": plan["startup_parameter_selection"],
+                    **plan, "request_id": "another-request",
+                    "execution_call": {"slots": [style_slot, library_slot], "user_selections": selections},
                 }), encoding="utf-8")
                 output["plan_snapshot_sha256"] = manager.sha256(snapshot)
                 with self.assertRaises(manager.StylePackError):

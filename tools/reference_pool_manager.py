@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Bounded discovery of local reference pools. Selections remain unapproved candidates."""
 from __future__ import annotations
-import argparse, csv, hashlib, json, sys
+import argparse, csv, hashlib, json, re, sys
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from tools.reference_query import BODY_FACINGS, normalize_query, rank_shortlist, resolve_body_facing
+
 if hasattr(sys.stdout, "reconfigure"): sys.stdout.reconfigure(encoding="utf-8")
 REGISTRY = ROOT / "config/reference_pools.json"
 CATEGORY_REGISTRY = ROOT / "config/reference_categories.json"
@@ -78,13 +80,16 @@ def records(pool: str):
    r["tags"]=list(dict.fromkeys(list(r.get("tags",[]))+[v.get("label","") for v in r.get("variants",[]) if v.get("label")]))
   return base,out
  if kind=="pose_atlas":
-  from tools.pose_reference_manager import localize_group, reference_context
+  from tools.pose_reference_manager import excluded_by_pose_review, localize_group, reference_context
   data=read_json(base/"POSE_GROUPS.json"); out=[]
   for g in map(localize_group,data["groups"]):
    for v in g["views"]:
     display=" · ".join(str(x) for x in (g.get("system"),g.get("pose_number"),g.get("pose_name_ru") or g.get("pose_name_ja")) if x)
     out.append({"id":v["source_id"],"title":g.get("pose_name_ru") or g.get("pose_name_ja",""),"group_display":display,"angle":v.get("angle",""),"tags":[g.get("category_ru",""),g.get("pose_family",""),g.get("group_size","")],"subject_label":v.get("subject_label","UNKNOWN"),"subject_label_status":v.get("subject_label_status","UNKNOWN"),"sha256":v.get("sha256",""),"relative_path":v.get("relative_path",v.get("reference_path","")),"group_id":g["group_id"],"source_id":v["source_id"],"role":"","review_state":v.get("visual_qa_status","NOT_CHECKED"),"provenance":{"source_id":v["source_id"],"group_id":g["group_id"],"review_notes":v.get("review_notes",""),"review_evidence":v.get("review_evidence","")}})
-  for r in out: r["categories"]=categorize(pool,r)
+  for r in out:
+   r["categories"]=categorize(pool,r)
+   if excluded_by_pose_review(r["provenance"]):
+    r["record_binding_status"]="POSE_REVIEW_EXCLUDED"
   return base,out
  if kind=="pinterest":
   p=read_json(ROOT/c["candidate_manifest"]); source_rows=read_json(ROOT/c["source_manifest"]).get("records",[]); source_by={x.get("id"):x for x in source_rows}; out=[]
@@ -157,8 +162,9 @@ def validate_pool(pool, deep=False, loaded=None):
    issues.extend("external_catalog:"+str(x) for x in validate_positive_library(base,build_catalog(base)))
   except Exception as e: issues.append("external_catalog_validation:"+str(e))
  return {"pool":pool,"status":"VALID" if not issues and len(rs)==c["count"] else "ISSUES","records":len(rs),"expected":c["count"],"issues":issues}
-def search(pools,query="",tag="",subject="",limit=20,category=""):
- result={}; q=query.casefold(); wanted=category.upper()
+def search(pools,query="",tag="",subject="",limit=20,category="",body_facing=""):
+ query,body_facing=resolve_body_facing(query,body_facing)
+ result={}; q=normalize_query(query); wanted=category.upper()
  knowledge={}; knowledge_status="MISSING"; knowledge_notice=""
  knowledge_root=ROOT/"work/reference-knowledge-20261113"
  if (knowledge_root/"DATABASE.json").is_file():
@@ -171,8 +177,10 @@ def search(pools,query="",tag="",subject="",limit=20,category=""):
  for pool in pools:
   _,rs=records(pool); hits=[]
   for r in rs:
+   if r.get("record_binding_status")=="POSE_REVIEW_EXCLUDED": continue
    info=knowledge.get(pool+":"+r["id"],{})
    if info.get("sha256")!=r.get("sha256"): info={}
+   if body_facing and info.get("body_facing")!=body_facing: continue
    if wanted and wanted not in r.get("categories",[]): continue
    haystack=(r["id"]+" "+r["title"]+" "+" ".join(map(str,r.get("tags",[])))+" "+info.get("search_text","")).casefold()
    if q and not all(word in haystack for word in q.split()): continue
@@ -182,13 +190,22 @@ def search(pools,query="",tag="",subject="",limit=20,category=""):
    item=public_record(pool,r)
    if info:
     item["discovery"]={k:info[k] for k in ("key","description","description_basis","use_for","limitations","missing_checks","verification")}
+    item["discovery"].update({k:info[k] for k in ("body_facing","body_facing_evidence","body_facing_review_view") if k in info})
     if ("relative_path" in item and info.get("preview_allowed") and
         info.get("subject")==r.get("subject_label") and info.get("overview")):
      item["discovery"]["overview"]={**info["overview"],"path":str(safe(knowledge_root,info["overview"]["path"]))}
+   item["_search_fields"]={"title":r.get("title",""),"tags":" ".join(map(str,r.get("tags",[]))),"id":r.get("id",""),"text":info.get("search_text","")}
+   item["_search_source"]=pool
+   item["_search_group"]=r.get("group_id") or r.get("parent_id") or re.sub(r'_(?:3d|line)_.*$','',r.get("id",""))
    hits.append(item)
   result[pool]=hits
- all_hits=[r for rows in result.values() for r in rows]
- return {"category":wanted or "ALL","total":len(all_hits),"by_source":{p:len(rows) for p,rows in result.items()},"records":all_hits[:limit],
+ total_hits=sum(map(len,result.values()))
+ all_hits=rank_shortlist([r for rows in result.values() for r in rows],query,
+     text=lambda r:" ".join(r.get("_search_fields",{}).values()),
+     source=lambda r:r.get("_search_source",""),group=lambda r:r.get("_search_group",""),limit=limit)
+ for r in all_hits:
+  r.pop("_search_fields",None);r.pop("_search_source",None);r.pop("_search_group",None)
+ return {"category":wanted or "ALL","total":total_hits,"by_source":{p:len(rows) for p,rows in result.items()},"records":all_hits,
          "knowledge_status":knowledge_status,"knowledge_notice":knowledge_notice,
          "knowledge_next_action":"NONE" if knowledge_status=="CURRENT" else "scripts/storyart.ps1 reference_knowledge build"}
 
@@ -305,6 +322,7 @@ def main():
  li=sp.add_parser("list"); li.add_argument("--json",action="store_true")
  ca=sp.add_parser("categories"); ca.add_argument("--pool",action="append",choices=cfg().keys())
  se=sp.add_parser("search"); se.add_argument("--pool",action="append",choices=cfg().keys()); se.add_argument("--category",choices=category_cfg()["categories"]); se.add_argument("--query",default=""); se.add_argument("--tag",default=""); se.add_argument("--subject",choices=["MALE","FEMALE"]); se.add_argument("--limit",type=int,default=20)
+ se.add_argument("--body-facing",choices=BODY_FACINGS,default="")
  va=sp.add_parser("validate"); va.add_argument("--pool",choices=cfg().keys())
  ss=sp.add_parser("select"); ss.add_argument("--pool",required=True,choices=cfg().keys()); ss.add_argument("--id",required=True); ss.add_argument("--role",required=True); ss.add_argument("--subject",default=""); ss.add_argument("--variant",default=""); ss.add_argument("--output",type=Path,required=True)
  bi=sp.add_parser("build-index"); bi.add_argument("--output",type=Path,required=True)
@@ -317,7 +335,7 @@ def main():
     loaded=records(p); report=validate_pool(p,loaded=loaded)
     out[p]={"source_count":len(loaded[1]),"status":report["status"]}
   elif a.cmd=="categories": out=category_summary(a.pool)
-  elif a.cmd=="search": out=search(a.pool or list(cfg()),a.query,a.tag,a.subject or "",a.limit,a.category or "")
+  elif a.cmd=="search": out=search(a.pool or list(cfg()),a.query,a.tag,a.subject or "",a.limit,a.category or "",a.body_facing)
   elif a.cmd=="validate":
    out=[validate_pool(a.pool,deep=True)] if a.pool else [validate_pool(p,deep=True) for p in cfg()]
    print(json.dumps(out,ensure_ascii=False,indent=2)); return 1 if any(x["status"]!="VALID" for x in out) else 0

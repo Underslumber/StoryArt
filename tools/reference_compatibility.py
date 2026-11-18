@@ -69,7 +69,8 @@ def strict_subject_decision(target: dict[str, Any], reference: dict[str, Any], *
     if bound_hash != UNKNOWN and bound_hash.lower() != _clean(reference.get("sha256")).lower():
         return "REVIEW_REQUIRED", "Reviewed subject label is not bound to current source bytes."
     if _clean(reference.get("subject_label")).upper() == "NEUTRAL":
-        if ((pose or role in {'AUX_CAMERA','CAMERA','CAMERA_ONLY','ART_CAMERA_SOFT'})
+        if (reference.get("subject_usage_scope") != "MOUTH_EXPRESSION_ONLY"
+                and (pose or role in {'AUX_CAMERA','CAMERA','CAMERA_ONLY','ART_CAMERA_SOFT'})
                 and reference.get('subject_label_status')=='CONFIRMED'
                 and bound_hash != UNKNOWN and _clean(reference.get('subject_label_evidence'))!=UNKNOWN
                 and target_label in {'MALE_ANATOMY','FEMALE_ANATOMY'}

@@ -28,12 +28,14 @@ Scene similarity is not request identity. A new chat starts a fresh request;
 never inherit previous attempts, failures, budgets or choices from another chat.
 Resolve reusable assets only through approved registries, not old request plans.
 
-An approved character profile supplies the STYLE NAME only. It does not choose
-style fidelity or BODY_REFERENCE_LIBRARY. Unless both were explicitly selected
-in the CURRENT chat, immediately show the standard `Стиль и референсы` chooser
-after resolving the style/character, before source selection or preparation.
-Keep the three existing 90%+library / 90% without / 70% without options. Do not
-infer these choices from a profile, silence, scene wording or another chat.
+Use the approved profile's exact STYLE NAME for a named character unless the
+author asks for a different style. Treat fidelity and BODY_REFERENCE_LIBRARY
+as separate scene parameters. Ask only for unresolved parameters. When both
+are missing, use the profile-bound `Точность и библиотека референсов` chooser.
+A new or unbound subject that needs a style uses a separate style choice.
+Reuse explicit decisions for this request, including an author's explicit
+instruction to reuse named settings. Continue directly when all choices are
+known.
 
 ## Scenario execution backend
 
@@ -273,6 +275,14 @@ the standard StoryArt scenario, physically attach every mandatory item source,
 and compare design and character scale/fit independently in final QA.
 Do not generate missing item views as hidden auxiliary images during an ordinary
 scene request. Existing approved wardrobe/accessory references remain eligible.
+For character clothing production, use the CLOTHING_PLAN startup described in
+`../../docs/ITEM_REFERENCES.md` before the general scene chooser. The finished
+card is the primary result when adding clothing to the wardrobe. Generate it
+directly in the author’s layout and language, and deliver clean design and fit
+views separately for later generation. Use the approved character assembly
+for ordinary fit. Add separate face, body or pose sources only when a specific
+fit detail requires them.
+
 For a requested item, use `item_reference_manager list` with the exact character
 and identity style to discover approved typed sets without browsing directories.
 Use the matching selected manifest via repeatable `prepare-generation
@@ -393,16 +403,16 @@ For an already style-bound approved character such as Шанс, show that exact
 style name in any reference/fidelity choice descriptions and bind it to every
 option; do not label it merely “project style.” For an unbound style, list
 actual discovered style names and collect the style choice before planning.
-For a new standard image-generation choice, use one native question titled
-`Стиль и референсы`. State the resolved character and exact profile-bound style;
+For a style-bound scene missing both fidelity and library decisions, use one native question titled
+`Точность и библиотека референсов`. State the resolved character and exact profile-bound style;
 explain that the percentage means fidelity to that style and that approved
 character-identity references remain attached in every option. Use exactly
 these three presets, replacing `{style}` and `{character}` with the resolved
 values:
 
-1. `90% стиля {style} + использовать BODY_REFERENCE_LIBRARY (рекомендуемый профиль StoryArt)`
-2. `90% стиля {style}, без BODY_REFERENCE_LIBRARY`
-3. `70% стиля {style}, без BODY_REFERENCE_LIBRARY — более свободная интерпретация`
+1. `90% и использовать BODY_REFERENCE_LIBRARY`
+2. `90%, без BODY_REFERENCE_LIBRARY`
+3. `70%, без BODY_REFERENCE_LIBRARY — более свободная интерпретация`
 
 Bind them respectively to `(90, SELECTED, BODY_LIBRARY_ONLY)`,
 `(90, DECLINED, APPROVED_CHARACTER_REFERENCES)`, and

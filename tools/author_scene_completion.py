@@ -96,7 +96,7 @@ def validate(guard_path: Path, state: dict, receipt_path: Path) -> dict:
         raise ValueError("Author scene receipt has a foreign request or schema.")
     stages = state.get("required_stages", [])
     if (state.get("task_kind") != "IMAGE_GENERATION" or state.get("request_purpose") != "SCENE"
-            or len(stages) != 1 or stages[0].get("id") != "SINGLE_PASS"
+            or len(stages) != 1 or stages[0].get("id") not in {"SINGLE_PASS", "SCENE"}
             or state.get("author_contract_acceptance") or state.get("direct_edit_completion_delivery")
             or state.get("recovery")):
         raise ValueError("Author storage is restricted to one unmixed SCENE request.")
@@ -115,7 +115,9 @@ def validate(guard_path: Path, state: dict, receipt_path: Path) -> dict:
     if latest.get("status") == "DELIVERED":
         if not state.get("author_scene_storage") or latest.get("result_status") != "APPROVED_SCENE":
             raise ValueError("Author storage cannot rewrite an already-delivered attempt.")
-    elif latest.get("result_status") or latest.get("delivered_at"):
+    elif (latest.get("delivered_at") or (latest.get("result_status")
+          and not (receipt.get("character_id") == "NONE" and latest.get("status") == "RESULT_AVAILABLE"
+                   and latest.get("result_status") in {"REJECTED", "TEST", "STAGING"}))):
         raise ValueError("Author storage cannot rewrite an existing result or delivery status.")
     snapshot = latest.get("execution_snapshot", {})
     plan_path = plain_file(Path(snapshot.get("reference_plan_snapshot_path", "")))
@@ -129,7 +131,8 @@ def validate(guard_path: Path, state: dict, receipt_path: Path) -> dict:
             or hashlib.sha256(call.get("prompt", {}).get("text", "").encode()).hexdigest() != snapshot.get("prompt_sha256")):
         raise ValueError("Author scene call, purpose or prompt binding changed.")
     character = plan.get("character_id", "")
-    if not character.startswith("CHAR_") or receipt.get("character_id") != character:
+    if (not (character.startswith("CHAR_") or character == "NONE")
+            or receipt.get("character_id") != character or call.get("stage_id", "SINGLE_PASS") != "SINGLE_PASS"):
         raise ValueError("Author scene character binding differs.")
     artifact = latest.get("provider_artifact", {})
     output = plain_file(Path(artifact.get("path", "")))
@@ -150,7 +153,21 @@ def validate(guard_path: Path, state: dict, receipt_path: Path) -> dict:
     if any(os.path.normcase(os.path.abspath(r.get("style_file", ""))) == saved_key
            and r.get("qa_output_sha256") != output_hash for r in registry):
         raise ValueError("Another registry row binds different bytes to the saved scene path.")
-    scene_root = (manager.character_folder(paths, character) / "02_SCENES").resolve()
+    if character == "NONE":
+        sources = [r for r in registry if r.get("generation_id") == row.get("parent_generation")
+                   and r.get("request_id") == state["request_id"] and r.get("character_id") == "NONE"
+                   and r.get("status") in {"REJECTED", "TEST", "STAGING"}
+                   and r.get("qa_output_sha256") == output_hash
+                   and r.get("qa_plan_sha256") == snapshot.get("reference_plan_snapshot_sha256")]
+        if len(sources) != 1:
+            raise ValueError("Anonymous scene requires its registered source with immutable plan provenance.")
+        source_qa = manager.generation_qa_evidence(sources[0])
+        if (not source_qa or source_qa.get("visual_review", {}).get("attempt_id") != latest["attempt_id"]
+                or source_qa.get("visual_review", {}).get("task_revision") != state["task_revision"]):
+            raise ValueError("Anonymous scene source QA belongs to another attempt or revision.")
+        scene_root = (paths.generations / "02_APPROVED_STANDALONE" / "02_SCENES").resolve()
+    else:
+        scene_root = (manager.character_folder(paths, character) / "02_SCENES").resolve()
     quote = checked_text(receipt.get("approval_quote"))
     notes = checked_text(row.get("notes"))
     if (not saved.is_relative_to(scene_root) or not same_path(saved, Path(receipt.get("approved_scene_path", "")))

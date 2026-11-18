@@ -13,9 +13,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from tools import reference_pool_manager as pools
+from tools.reference_query import BODY_FACINGS, resolve_body_facing
 
 DEFAULT = ROOT / 'work/reference-knowledge-20261113'
 DESCRIPTIONS = ROOT / 'config/reference_knowledge_descriptions.json'
+POSE_FACING_REVIEWS = ROOT / 'config/pose_facing_reviews.json'
 POLICY = {
  'WAVESPEED_POSES': ('WaveSpeed — основной каталог поз', 'Поза, опоры и ракурс: 491 поза в 3D и контуре с трёх направлений', 'Не переносить личность, пол, телосложение, одежду или стиль. Метаданные издателя не доказывают анатомию и согласованность ракурсов; неподтверждённые субъекты закрыты для просмотра и вложения.'),
  'POSE_ATLAS': ('Позы в нескольких ракурсах', 'Положение тела, опоры и проекция камеры', 'Не переносить личность, телосложение, одежду или стиль; сравнивать ракурсы только одной группы.'),
@@ -70,7 +72,7 @@ def aliases(text):
  return [ru for en,ru in TERMS.items() if en in tokens or en.lower() in {t.lower() for t in tokens}]
 
 def input_paths():
- out=[pools.REGISTRY,pools.CATEGORY_REGISTRY,Path(__file__)]
+ out=[pools.REGISTRY,pools.CATEGORY_REGISTRY,Path(__file__),POSE_FACING_REVIEWS]
  for c in pools.cfg().values():
   out.extend(ROOT/c[k] for k in ('manifest','candidate_manifest','source_manifest') if c.get(k))
   if c['adapter']=='pose_atlas': out.append(ROOT/c['root']/'POSE_GROUPS.json')
@@ -90,7 +92,7 @@ def normalize(pool,base,r):
  translated=aliases(' '.join([title,angle]+tags))
  if pool=='WAVESPEED_POSES':
   # Pose wording such as "sitting on heels" describes support, not shoes.
-  translated=aliases(' '.join([angle]+tags))
+  translated=aliases(' '.join(tags))
   translated += [ru for en,ru in (('sitting','сидя'),('standing','стоя'),('lying','лёжа')) if re.search(r'\b'+en+r'\b',title,re.I)]
  observation=raw.get('summary_ru') or raw.get('review',{}).get('observations') or ''
  if pool=='WAVESPEED_POSES': observation=raw.get('visual_review_evidence','')
@@ -113,7 +115,9 @@ def normalize(pool,base,r):
  confirmed=r.get('subject_label') in ('MALE','FEMALE','NO_SUBJECT') and r.get('subject_label_status') in ('CONFIRMED','NO_SUBJECT') and r.get('record_binding_status','CURRENT')=='CURRENT'
  if pool=='WAVESPEED_POSES' and r.get('subject_label') in {'NEUTRAL','MIXED'} and r.get('subject_label_status')=='CONFIRMED': confirmed=True
  missing=[]
- if not confirmed: missing.append('Пол/субъект не подтверждён для открытия и вложения; только метаданные.')
+ excluded=r.get('record_binding_status')=='POSE_REVIEW_EXCLUDED'
+ if excluded: missing.append('Оригинал исключён по результатам проверки позы; только диагностические метаданные.')
+ elif not confirmed: missing.append('Пол/субъект не подтверждён для открытия и вложения; только метаданные.')
  if not angle: missing.append('Ракурс отдельно не описан; проверить оригинал перед выбором.')
  if basis.startswith('Метаданные'): missing.append('Описание не заменяет визуальную проверку содержания.')
  if pool=='WAVESPEED_POSES':
@@ -126,12 +130,12 @@ def normalize(pool,base,r):
       'angle':angle,'group':r.get('group_id') or r.get('parent_id') or '', 'sha256':r.get('sha256',''),
       'use_for':POLICY[pool][1], 'roles':roles,'limitations':limitations,'missing_checks':missing,
       'source_review':r.get('review_state','NOT_CHECKED'),'description_evidence':{'fields':['title','tags','angle','raw.summary_ru','raw.review.observations'],'source_sha256':r.get('sha256','')},
-      'generation_eligible':False,'status':'DISCOVERY_ONLY','preview_allowed':False,
+      'generation_eligible':False,'status':'POSE_REVIEW_EXCLUDED' if excluded else 'DISCOVERY_ONLY','preview_allowed':False,
       'post_url':prov.get('post_url') or prov.get('source_pin_url') or '',
       'verification':['Сопоставить с буквальным ТЗ: роль, пол, анатомия, видимые области и ракурс.','Проверить полный выбранный файл и текущий SHA256.','Записать что подходит, что не подходит и почему; при несовместимости выбрать другой ID.','Выполнить штатный select/prepare-generation и exact-call validation.']}
  if pool=='WAVESPEED_POSES': rec['description_evidence']['fields'].append('raw.visual_review_evidence')
  if pool=='WAVESPEED_POSES' and r.get('participants'): rec['participants']=r['participants']
- if confirmed and r.get('relative_path'):
+ if confirmed and r.get('relative_path') and r.get('record_binding_status','CURRENT')=='CURRENT':
   p=pools.safe(base,r['relative_path'])
   if p.is_file() and pools.sha(p)==r.get('sha256'):
    rec.update(preview_allowed=True,path=str(p.relative_to(ROOT)).replace('\\','/'))
@@ -169,6 +173,7 @@ def collect():
   else: rec['missing_checks'].append('NEUTRAL/неподтверждённый субъект: не является разрешением вложения; автоматический просмотр в общей базе закрыт.')
   data.append(rec)
  reviewed=pools.read_json(DESCRIPTIONS)['records']
+ facing_reviews=pools.read_json(POSE_FACING_REVIEWS)
  descriptions={r['key']:r for r in reviewed}
  checked_sheets=set()
  for item in reviewed:
@@ -193,6 +198,11 @@ def collect():
     r['missing_checks'].append('Обзорный лист исторического описания не установлен; сохранённая запись осмотра не заменяет проверку оригинала.')
    r['missing_checks']=[x for x in r['missing_checks'] if x!='Описание не заменяет визуальную проверку содержания.']
    r['missing_checks'].append('Проверить точность анатомии и применимость выбранной позы на оригинале; обзорное описание этого не утверждает.')
+  facing=facing_reviews.get(r['key'],{})
+  if facing and facing.get('sha256')==r.get('sha256') and r.get('preview_allowed'):
+   r['body_facing']=facing['body_facing']
+   r['body_facing_evidence']=facing['evidence']
+   r['body_facing_review_view']=facing.get('review_view','FULL_ORIGINAL')
   r['search_text']=' '.join([r['key'],r['title'],r['description'],strings(r['tags']),strings(r['aliases_ru']),strings(r['category_names']),r.get('topic','')]).casefold()
  return data
 
@@ -254,19 +264,29 @@ def load(out):
  if data['inputs']!=snapshot(): raise ValueError('База устарела: выполнить build до поиска или сборки набора')
  return data
 
-def search(data,query='',pool='',subject='',limit=12):
- terms=query.casefold().split()
- return [r for r in data['records'] if (not pool or r['pool']==pool) and (not subject or r['subject']==subject or (r['pool']=='WAVESPEED_POSES' and (r['subject']=='NEUTRAL' or any(p.get('subject_label') in {subject,'NEUTRAL'} for p in r.get('participants',[]))))) and all(t in r['search_text'] for t in terms)][:limit]
+def search(data,query='',pool='',subject='',limit=12,body_facing=''):
+ query,body_facing=resolve_body_facing(query,body_facing)
+ terms=pools.normalize_query(query).split()
+ hits=[]
+ for r in data['records']:
+  if r.get('status')=='POSE_REVIEW_EXCLUDED' or (body_facing and r.get('body_facing')!=body_facing):continue
+  if (pool and r['pool']!=pool) or (subject and not (r['subject']==subject or (r['pool']=='WAVESPEED_POSES' and (r['subject']=='NEUTRAL' or any(p.get('subject_label') in {subject,'NEUTRAL'} for p in r.get('participants',[])))))):
+   continue
+  if not all(t in r['search_text'] for t in terms):continue
+  hits.append(r)
+ return pools.rank_shortlist(hits,' '.join(terms),text=lambda r:r['search_text'],source=lambda r:r['pool'],group=lambda r:r.get('group') or r.get('group_id') or re.sub(r'_(?:3d|line)_.*$','',r.get('key','')),limit=limit)
 
 def candidate_set(data,keys,brief):
  by={r['key']:r for r in data['records']};chosen=[]
  for key in dict.fromkeys(keys):
   if key not in by: raise ValueError('Unknown key: '+key)
   r=by[key]
+  if r.get('status')=='POSE_REVIEW_EXCLUDED': raise ValueError('Поза исключена по результатам проверки: '+key)
   if r.get('path'):
    source=pools.safe(ROOT,r['path'])
    if not source.is_file() or pools.sha(source)!=r['sha256']: raise ValueError('Выбранный оригинал изменён: '+key)
   chosen.append({k:r[k] for k in ('key','sha256','title','description','subject','roles','limitations','missing_checks')})
+  chosen[-1].update({k:r[k] for k in ('angle','body_facing','body_facing_evidence','body_facing_review_view') if r.get(k)})
   if r.get('selection'): chosen[-1]['selection']=r['selection']
   chosen[-1].update(reason='REQUIRED: указать соответствие ТЗ',visual_review='NOT_CHECKED',role_review='NOT_CHECKED',attachment_allowed=False)
  return {'status':'CANDIDATES_NOT_APPROVED','brief':brief,'inputs':data['inputs'],'items':chosen,'next':'Проверить выбранные оригиналы и штатно подготовить набор. Этот файл не является exact call.'}
@@ -275,6 +295,7 @@ def main():
  ap=argparse.ArgumentParser();ap.add_argument('--directory',type=Path,default=DEFAULT)
  sp=ap.add_subparsers(dest='command',required=True);sp.add_parser('build');sp.add_parser('overview')
  se=sp.add_parser('search');se.add_argument('--query',default='');se.add_argument('--pool',default='');se.add_argument('--subject',default='');se.add_argument('--limit',type=int,default=12)
+ se.add_argument('--body-facing',choices=BODY_FACINGS,default='')
  show=sp.add_parser('show');show.add_argument('--key',required=True)
  pack=sp.add_parser('set');pack.add_argument('--key',action='append',required=True);pack.add_argument('--brief',required=True);pack.add_argument('--output',type=Path,required=True)
  args=ap.parse_args()
@@ -283,7 +304,8 @@ def main():
   data=load(args.directory)
   if args.command=='overview': result=data['summary']
   elif args.command=='search':
-   result=[{k:r[k] for k in ('key','title','description','description_basis','subject','roles','selection','preview_allowed','missing_checks')}|({'overview':r['overview']} if r.get('overview') else {}) for r in search(data,args.query,args.pool,args.subject,args.limit)]
+   result=[{k:r[k] for k in ('key','title','description','description_basis','subject','roles','selection','preview_allowed','missing_checks','angle','body_facing','body_facing_evidence','body_facing_review_view','overview') if k in r}
+           for r in search(data,args.query,args.pool,args.subject,args.limit,args.body_facing)]
   elif args.command=='show': result=next(r for r in data['records'] if r['key']==args.key)
   else: result=candidate_set(data,args.key,args.brief);dump(args.output,result)
  print(json.dumps(result,ensure_ascii=False,indent=2))

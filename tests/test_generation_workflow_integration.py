@@ -281,10 +281,12 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             },
         }
         qa_path = request_dir / "item-qa.json"
+        qa["checks"]["WARDROBE_CARD"] = {"status": "PASS", "evidence": "Synthetic wardrobe card",
+                                        "sha256": digest(sheet)}
         qa_path.write_text(json.dumps(qa), encoding="utf-8")
         approved_text = self._cli(
             "item_reference_manager.py", "approve", "--workspace", self.workspace,
-            "--item-plan", plan_path, "--design-image", design, "--scale-fit-image", scale,
+            "--item-plan", plan_path, "--design-image", design, "--scale-fit-image", scale, "--card-image", sheet,
             "--qa-json", qa_path, "--approval-quote", "Approve Forge sword v1 for integration.", "--user-approved",
         ).stdout
         manifest = Path(json.loads(approved_text)["manifest_path"])
@@ -498,12 +500,18 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
                 "source_sheet_path": str(sheet), "source_sheet_sha256": digest(sheet),
             },
         }
+        card_args = ()
+        if kind == "CLOTHING":
+            qa["checks"]["WARDROBE_CARD"] = {"status": "PASS", "evidence": "Synthetic wardrobe card",
+                                            "sha256": digest(sheet)}
+            card_args = ("--card-image", sheet)
         qa_path = self._guard_path(request_id).parent / "item-qa.json"
         qa_path.write_text(json.dumps(qa), encoding="utf-8")
         result = self._cli(
             "item_reference_manager.py", "approve", "--workspace", self.workspace,
             "--item-plan", plan_path, "--design-image", design, "--scale-fit-image", scale,
             "--qa-json", qa_path, "--approval-quote", f"Approve Forge {kind.lower()} v1 for integration.", "--user-approved",
+            *card_args,
         )
         return Path(json.loads(result.stdout)["manifest_path"])
 
@@ -764,13 +772,14 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             if body_reference:
                 args.extend(("--body-reference", body_reference))
             selected_body = body_reference or assembly
-            for role, slot, path in (
+            reviews = [
                 ("STYLE", "STYLE", self.style_reference),
                 ("FACE", "PRIMARY_FACE", selected_face or face),
-                ("FACE", "CHARACTER_ASSEMBLY", assembly),
                 ("BODY", "BODY", selected_body),
-                ("BODY", "CHARACTER_ASSEMBLY", assembly),
-            ):
+            ]
+            if selected_view == "ASSEMBLY" or mode == "ASSEMBLY_PLUS_VIEW":
+                reviews.extend((("FACE", "CHARACTER_ASSEMBLY", assembly), ("BODY", "CHARACTER_ASSEMBLY", assembly)))
+            for role, slot, path in reviews:
                 args.extend(("--reviewed-source", review_declaration(role, slot, path)))
             original_profile = profile.read_text(encoding="utf-8")
             if selected_face is None:
@@ -806,6 +815,13 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         auto_plan = prepare("AUTO", "assembly-plus-face-auto-regression", body_reference=body, selected_view="FRONT")
         self.assertEqual(auto_plan["character_reference_selection"]["mode"], "IDENTITY_STRICT")
         self.assertEqual(Path(auto_plan["selected_references"]["body"]["path"]).resolve(), body.resolve())
+        for view, source in (("SIDE", side), ("BACK", back)):
+            with self.subTest(view=view):
+                view_plan = prepare("AUTO", f"nearest-body-{view.lower()}", body_reference=source, selected_view=view)
+                slots = view_plan["generation_workflow"]["slots"]
+                self.assertEqual({Path(slot["path"]).resolve() for slot in slots},
+                                 {self.style_reference.resolve(), face.resolve(), source.resolve()})
+                self.assertEqual(view_plan["character_reference_selection"]["selected_body_view"], view)
 
     def test_new_character_face_sources_can_be_explicit_identity_intent(self):
         request_id = "new-face-identity-intent"

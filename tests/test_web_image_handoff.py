@@ -94,7 +94,7 @@ class WebImageHandoffTests(unittest.TestCase):
         self.assertEqual(packet["final_specification"]["text"], self.spec)
         self.assertEqual(packet["prompt"]["text"], web.load(self.journal)["prompt"])
         self.assertEqual(first["agent_type"], "web_image")
-        self.assertEqual(first["handoff"]["execution_profile"], {"model": "gpt-6.1-sol", "reasoning_effort": "low"})
+        self.assertEqual(first["handoff"]["execution_profile"], {"model": "gpt-6.2-sol", "reasoning_effort": "low"})
         self.assertEqual(first["handoff"]["allowed_write_paths"], [orchestrator.relative_project_path(self.request)])
         second = self.create_packet()
         self.assertEqual(second["handoff"]["handoff_id"], first["handoff"]["handoff_id"])

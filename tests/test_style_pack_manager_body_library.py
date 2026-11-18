@@ -442,14 +442,14 @@ class BodyLibraryReviewTests(unittest.TestCase):
             image = pending / "base.png"
             image.write_bytes(b"base")
             args = Namespace(workspace=workspace, style_name="TEST", user_approved=True, request_id="request", image=str(image), name="Name", fidelity=90, risk_level="D1", face_reference=[], body_reference=[], wardrobe_reference=[], accessory_reference=[], notes="")
-            with self.assertRaisesRegex(StylePackError, "unregistered"):
+            with self.assertRaisesRegex(StylePackError, "missing source record"):
                 command_approve_character(args)
             plan = workspace / "plan.json"
             plan.write_text("{}", encoding="utf-8")
             row = {field: "" for field in GENERATION_FIELDS}
             row.update({"status": "REJECTED", "style_file": str(image), "reference_plan": str(plan), "qa_evidence": write_qa_evidence(image, plan), **qa_manifest_fields(image)})
             write_csv(paths.generation_manifest, GENERATION_FIELDS, [row])
-            with self.assertRaisesRegex(StylePackError, "REJECTED"):
+            with self.assertRaisesRegex(StylePackError, "newer rejection"):
                 command_approve_character(args)
 
     def test_style_readiness_proposes_only_after_five_unique_qa_passed_outputs(self) -> None:

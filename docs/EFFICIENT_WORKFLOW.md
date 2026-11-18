@@ -15,7 +15,7 @@ It cannot itself change the model of an already running session.
 | Deterministic lookups, CLI execution, cache reuse, registration | Root uses project tools directly | Reuse unchanged request-scoped results; retry only after a concrete error or changed input. |
 | Source discovery, identity curation and ordinary implementation | Sol 6.1 Low | Registry role; narrow packet without transcript. |
 | Complex call planning and independent visual QA | Sol 6.1 Medium | CALL_PLANNER / VISUAL_QA; root retains acceptance. |
-| Mandatory independent review after machine checks | Sol 6.1 Medium | `sol_review` with recorded SOL_GATE; substantial code changes. |
+| Independent engineering review after targeted checks | Sol 6.2 Medium | Use `sol_review` for a concrete critical risk or an explicit review request. |
 | Exceptional diagnosis after evidenced complex fault or repair failure | Sol 6.1 High | `sol_escalation` with recorded SOL_GATE; bounded diagnosis only. |
 
 `config/model_routes.json` is the role authority; `MODEL_PROFILES.md` explains
@@ -47,7 +47,13 @@ change strategy or escalate diagnosis. See `REQUEST_FIDELITY.md` for completion.
 
 Project TOML defaults apply to new sessions and are not a per-task scheduler.
 Use the registry's `CODE_IMPLEMENTER` for bounded implementation, `CODE_REVIEW`
-for fresh substantial-code review, and the same root contract for integration.
+for risk-based independent engineering review, and the same root contract for integration.
+
+For an internal repair, exercise the blocked manager operation and the
+specific rejection that protects its boundary (for example a foreign request
+ID). If another change affects only which canonical view is accepted, rerun
+that case. Reuse the evidence for the unchanged clothing and request-boundary
+cases. Run a broader group only when a shared contract actually changes.
 An existing chat keeps its actual model; never claim a config edit switched it.
 
 ## Image-production route
@@ -60,9 +66,20 @@ completion. The normal built-in path and other model roles are unchanged.
 
 ### Minimal execution path
 
+For a built-in scene, count the required distinct physical originals as soon
+as the roles are known. The manager accepts up to five per call. If the
+minimum already exceeds five, resolve a permitted layout before preparing
+the exact call or assessing its risk. Preserve mandatory separate originals,
+role evidence and the applicable authorization for combining panels.
+
+Bind visual findings to the actual output hash and the specific requirement.
+When a filename such as FINAL is ambiguous, resolve its hash first. Reuse the
+finding for the same bytes, sources and criterion; a changed result, new
+author observation or an uncovered criterion warrants a targeted comparison.
+
 ### Current-chat choices and active folder
 
-The approved profile fixes the STYLE NAME only, never fidelity or BODY_REFERENCE_LIBRARY. In a new chat, show the standard Стиль и референсы chooser before source selection/preparation unless both choices were explicitly made in this chat. Do not inherit choices from another chat.
+Use the exact approved character STYLE NAME from the profile unless the author explicitly requests a different style. The profile does not choose fidelity or BODY_REFERENCE_LIBRARY. Ask only for unresolved fidelity or library decisions before source selection. When both are unresolved, use the profile-bound Точность и библиотека референсов chooser. Do not inherit choices from another chat.
 
 For image assets, access only approved project folders and ONE active request folder bound to this chat. Never enumerate, search, open or inspect other pending/unapproved folders or historical TEST, DRAFT and REJECTED outputs. Similar scene wording is not continuation authority. A new chat uses a fresh request; previous attempts, failures and budgets never transfer. Resolve reusable assets only from approved registries.
 
@@ -122,6 +139,33 @@ adding a second BODY, record the concrete uncovered camera, silhouette or
 proportion requirement and what the additional view supplies. Similar images
 with no unique contribution are omitted; perceptual similarity alone never
 authorizes dropping a required role, clothing source or identity source.
+
+When body and pose references are authorized, search the eligible body and
+pose catalogs together, including POSE_ATLAS and WaveSpeed. Pick the source
+by the visible facing of the figure. Catalog angle metadata often describes
+the renderer's camera, while the subject can turn within the same frame.
+For a rear shot the original must visibly present the back. A side view with
+a partially visible back fails that requirement. Apply subject and source
+eligibility filters before opening the shortlisted originals.
+In assembly-only body modes, review the closest approved assembly
+first. Open a different body view only when the assembly leaves a visible
+requirement uncovered. Active profile body variants are not auto-filled in
+`ASSEMBLY_ONLY` or `ASSEMBLY_PLUS_FACE`.
+
+For an ordinary single-character scene with pose references, use four roles:
+STYLE, the nearest approved BODY, the approved FACE, and one POSE original.
+A specialized scene may require more body evidence for a specific visible
+requirement. Use `ASSEMBLY_PLUS_FACE` when the assembly matches the camera,
+or `IDENTITY_STRICT` for one supported canonical view plus the portrait.
+For multiple subjects, bind any separate pose originals to
+disjoint participants. One group pose can cover several mapped participants.
+
+When a pose has been selected, shortlist by whole-body geometry first:
+support and feet, pelvis and torso, head, arms and hands. Choose an original
+that already covers the required gesture and support together.
+Before submitting, compare the prompt's pose instructions with that original.
+In the existing visual review, compare the same visible joints and support in
+the generated frame. A matching gesture alone is insufficient.
 
 The Pelun controlled test established feasibility for this near-front scene:
 removing FRONT while retaining STYLE, assembly and FACE produced a coherent
@@ -325,7 +369,7 @@ archive, identity, approval and semantic QA requirements remain mandatory.
   labels; use each diagnosis to choose the next grounded action. Do not
   automatically generate a stack of prompt variants.
 - Sol 6.1 High is exceptional read-only diagnosis only. Bounded implementation
-  uses Low; complex lifecycle decisions and fresh substantial-code review use
+  uses Low; complex lifecycle decisions and risk-based engineering review use
   Medium. A substantive repair failure or recorded complex fault qualifies for
   diagnosis regardless of which model performed the earlier attempt.
 - Worker packets include explicit model/effort, fork_turns="none", authoritative

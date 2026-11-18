@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Пустой шаблон карточки гардероба</title>
+  <desc id="desc">Сетка для описания деталей, отдельного вида одежды, посадки на персонаже, материалов и палитры.</desc>
+  <rect width="1600" height="900" fill="#f4f1eb"/>
+  <style>
+    .tile { fill:#ebe7e0; stroke:#c9c2b8; stroke-width:1.5; }
+    .inner { fill:#f1eee8; stroke:#d1cbc2; stroke-width:1; }
+    .rule { stroke:#c9c2b8; stroke-width:1; }
+    .title { fill:#49453f; font:600 24px 'Segoe UI',sans-serif; letter-spacing:2px; }
+    .section { fill:#555149; font:600 14px 'Segoe UI',sans-serif; letter-spacing:1.5px; }
+    .hint { fill:#857e73; font:12px 'Segoe UI',sans-serif; letter-spacing:.5px; }
+    .number { fill:#625c53; font:600 13px 'Segoe UI',sans-serif; }
+  </style>
+
+  <text class="title" x="800" y="53" text-anchor="middle">КАРТОЧКА ГАРДЕРОБА</text>
+  <line class="rule" x1="24" y1="79" x2="1576" y2="79"/>
+
+  <!-- 01: нумерованные строки деталей -->
+  <rect class="tile" x="24" y="108" width="376" height="765" rx="8"/>
+  <text class="section" x="40" y="137">ДЕТАЛИ ОБРАЗА</text>
+  <text class="hint" x="40" y="159">Поля-заполнители · указать элементы и особенности</text>
+  <line class="rule" x1="40" y1="174" x2="384" y2="174"/>
+  <g>
+    <rect class="inner" x="40" y="190" width="344" height="96" rx="5"/><text class="number" x="54" y="214">01</text><line class="rule" x1="82" y1="222" x2="368" y2="222"/><text class="hint" x="82" y="250">Заполнитель: деталь / описание</text>
+    <rect class="inner" x="40" y="300" width="344" height="96" rx="5"/><text class="number" x="54" y="324">02</text><line class="rule" x1="82" y1="332" x2="368" y2="332"/><text class="hint" x="82" y="360">Заполнитель: деталь / описание</text>
+    <rect class="inner" x="40" y="410" width="344" height="96" rx="5"/><text class="number" x="54" y="434">03</text><line class="rule" x1="82" y1="442" x2="368" y2="442"/><text class="hint" x="82" y="470">Заполнитель: деталь / описание</text>
+    <rect class="inner" x="40" y="520" width="344" height="96" rx="5"/><text class="number" x="54" y="544">04</text><line class="rule" x1="82" y1="552" x2="368" y2="552"/><text class="hint" x="82" y="580">Заполнитель: деталь / описание</text>
+    <rect class="inner" x="40" y="630" width="344" height="96" rx="5"/><text class="number" x="54" y="654">05</text><line class="rule" x1="82" y1="662" x2="368" y2="662"/><text class="hint" x="82" y="690">Заполнитель: деталь / описание</text>
+    <rect class="inner" x="40" y="740" width="344" height="96" rx="5"/><text class="number" x="54" y="764">06</text><line class="rule" x1="82" y1="772" x2="368" y2="772"/><text class="hint" x="82" y="800">Заполнитель: деталь / описание</text>
+  </g>
+
+  <!-- 02: изолированная одежда -->
+  <rect class="tile" x="419" y="108" width="373" height="765" rx="8"/>
+  <text class="section" x="435" y="137">ОДЕЖДА ОТДЕЛЬНО</text>
+  <text class="hint" x="435" y="159">Пустая область для изолированного вида комплекта</text>
+  <rect class="inner" x="435" y="176" width="341" height="680" rx="5"/>
+  <text class="hint" x="605.5" y="508" text-anchor="middle">ПОЛЕ-ЗАПОЛНИТЕЛЬ</text>
+  <text class="hint" x="605.5" y="528" text-anchor="middle">изолированный вид одежды</text>
+
+  <!-- 03: посадка на персонаже -->
+  <rect class="tile" x="798" y="108" width="382" height="765" rx="8"/>
+  <text class="section" x="814" y="137">ПОСАДКА НА ПЕРСОНАЖЕ</text>
+  <text class="hint" x="814" y="159">Пустая область для вида одежды на фигуре</text>
+  <rect class="inner" x="814" y="176" width="350" height="680" rx="5"/>
+  <text class="hint" x="989" y="508" text-anchor="middle">ПОЛЕ-ЗАПОЛНИТЕЛЬ</text>
+  <text class="hint" x="989" y="528" text-anchor="middle">вид на персонаже</text>
+
+  <!-- 04: материалы и палитра -->
+  <rect class="tile" x="1203" y="108" width="373" height="574" rx="8"/>
+  <text class="section" x="1219" y="137">МАТЕРИАЛЫ</text>
+  <text class="hint" x="1219" y="159">Поля-заполнители · фактура и состав</text>
+  <rect class="inner" x="1219" y="176" width="341" height="489" rx="5"/>
+  <text class="hint" x="1389.5" y="411" text-anchor="middle">ПОЛЕ-ЗАПОЛНИТЕЛЬ</text>
+  <text class="hint" x="1389.5" y="431" text-anchor="middle">материалы / фактуры</text>
+
+  <rect class="tile" x="1203" y="711" width="373" height="162" rx="8"/>
+  <text class="section" x="1219" y="738">ПАЛИТРА</text>
+  <text class="hint" x="1219" y="757">Поля-заполнители · цвета</text>
+  <g>
+    <rect class="inner" x="1219" y="768" width="76" height="87" rx="4"/><text class="hint" x="1257" y="810" text-anchor="middle">ЦВЕТ</text>
+    <rect class="inner" x="1305" y="768" width="76" height="87" rx="4"/><text class="hint" x="1343" y="810" text-anchor="middle">ЦВЕТ</text>
+    <rect class="inner" x="1391" y="768" width="76" height="87" rx="4"/><text class="hint" x="1429" y="810" text-anchor="middle">ЦВЕТ</text>
+    <rect class="inner" x="1477" y="768" width="83" height="87" rx="4"/><text class="hint" x="1518.5" y="810" text-anchor="middle">ЦВЕТ</text>
+  </g>
+</svg>

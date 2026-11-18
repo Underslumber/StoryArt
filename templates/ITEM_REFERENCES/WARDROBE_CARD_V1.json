@@ -1,0 +1,22 @@
+{
+  "id": "WARDROBE_CARD_V1",
+  "orientation": "LANDSCAPE",
+  "aspect_ratio": "16:9",
+  "header": [1.5, 2, 98.5, 10],
+  "columns": [
+    {"role": "DETAILS", "bounds": [1.5, 12, 25, 97]},
+    {"role": "ITEM_DESIGN", "bounds": [26.2, 12, 49.5, 97]},
+    {"role": "ITEM_SCALE_FIT", "bounds": [49.9, 12, 73.8, 97]},
+    {"role": "MATERIALS_AND_PALETTE", "bounds": [75.2, 12, 98.5, 97]}
+  ],
+  "palette": [75.2, 79, 98.5, 97],
+  "directions": [
+    "One landscape wardrobe catalogue sheet on pale warm ivory, with restrained dark serif lettering, thin neutral rules and warm-gray clean image panels. Keep the frame and typography neutral across outfits.",
+    "Center the two-line heading: wardrobe and character name, then the outfit name.",
+    "Left column: numbered construction detail rows. Each has a close-up, a short title and a readable explanation.",
+    "Central left panel: complete assembled outfit strictly front-facing without a wearer, mannequin, skin or body fragments. Openings reveal only background or lining.",
+    "Central right panel: front-facing full-length fit of the same outfit on the approved character. The approved front reference governs visible body proportions. Maintain clear margins around the figure, footwear, ears and tail.",
+    "Both central panels are rectangular, level, evenly framed and independently extractable as clean views. Keep text, numbers, callout lines, borders and swatches outside the crop interiors. Keep the complete garments and paired footwear visible.",
+    "Right column: material close-ups with short labels above a single horizontal row of round palette swatches and their labels. Keep the order and the four columns fixed; vary the depicted garments, labels and swatch colors."
+  ]
+}

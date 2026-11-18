@@ -315,3 +315,75 @@ def test_structured_generation_request_accepts_repeatable_item_reference_array()
     item_action = next(action for action in prepare._actions if action.dest == "item_reference")
     assert isinstance(item_action, argparse._AppendAction)
     assert item_action.default == []
+
+def test_clothing_card_uses_current_item_plan_without_menu(tmp_path, monkeypatch):
+    manager = items.manager
+    paths = manager.make_paths(tmp_path, "STYLE")
+    folder = paths.generations / "00_PENDING" / "coat"
+    folder.mkdir(parents=True)
+    monkeypatch.setattr(manager, "assert_active_request_path", lambda path: None)
+    item = dict(status="ITEM_PRODUCTION_PLAN", item_kind="CLOTHING", request_id="coat",
+                style_name="STYLE", character_id="CHAR_007")
+    plan_path = folder / "ITEM_PRODUCTION_PLAN.json"
+    plan_path.write_text(json.dumps(item), encoding="utf8")
+    args = argparse.Namespace(workspace=tmp_path, style_name="STYLE", request_id="coat",
+                              character_id="CHAR_007", generation_purpose="SCENE",
+                              startup_selection_mode="CLOTHING_PLAN", confirmed_chat_id="chat",
+                              confirmed_message_id="message", confirmed_parameters_user_quote="Make a coat card",
+                              fidelity=90, aux_body_decision="DECLINED")
+    startup = manager.parse_startup_interaction(args)
+    assert not startup["menu_presented_this_turn"]
+    assert startup["parameter_source"] == "CLOTHING_PLAN_DEFAULTS"
+    assert manager.validate_startup_profile_evidence(
+        startup, 90, generation_purpose="SCENE", character_id="CHAR_007"
+    ) == (90, "DECLINED")
+    # A plain two-view prompt must inherit the card requirement without a card file
+    # or explicit language argument before the call.
+    reference_plan = {"startup_parameter_selection": startup}
+    prompt = manager.render_confirmed_prompt(reference_plan, "Create a coat and its fit reference.")
+    assert "WARDROBE_CARD_DELIVERABLE:" in prompt
+    assert "numbered detail callouts" in prompt
+    assert "language of this author request" in prompt
+    assert "WARDROBE_CARD_V1 (16:9)" in prompt
+    assert prompt.index("DETAILS:") < prompt.index("ITEM_DESIGN:") < prompt.index("ITEM_SCALE_FIT:") < prompt.index("MATERIALS_AND_PALETTE:")
+    assert "no composition image is attached" in prompt
+    assert manager.render_confirmed_prompt(reference_plan, prompt) == prompt
+    item["card_language"] = "Russian"
+    plan_path.write_text(json.dumps(item), encoding="utf8")
+    current = {"startup_parameter_selection": manager.parse_startup_interaction(args)}
+    assert "Write all visible card text in Russian." in manager.render_confirmed_prompt(current, "Make a coat.")
+    item["item_kind"] = "WEAPON"
+    plan_path.write_text(json.dumps(item), encoding="utf8")
+    with pytest.raises(manager.StylePackError, match="Clothing defaults"):
+        manager.parse_startup_interaction(args)
+
+
+def test_clothing_approval_requires_and_lists_finished_card(lifecycle):
+    workspace, paths, request, _profile, _assembly, plan_path, qa_path, args = lifecycle
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    plan.update(item_kind="CLOTHING", item_id="ITEM_COAT", card_language="Russian")
+    plan_path.write_text(json.dumps(plan), encoding="utf-8")
+    qa = json.loads(qa_path.read_text(encoding="utf-8"))
+    qa["checks"].update({layer: {"status": "PASS", "evidence": "Reviewed garment fit"}
+                         for layer in items.QA_CLOTHING})
+    qa_path.write_text(json.dumps(qa), encoding="utf-8")
+    with pytest.raises(items.ItemReferenceError, match="WARDROBE_CARD"):
+        items.approve(args)
+    assert not (paths.generations / "TYPED_ITEM_REFERENCE_REGISTRY.jsonl").exists()
+
+    card = request / "card.png"
+    card.write_bytes(b"synthetic reviewed wardrobe card")
+    args.card_image = str(card)
+    args.tag = [" Фас ", "фас", "Деловой комплект"]
+    qa["checks"]["WARDROBE_CARD"] = {"status": "PASS", "evidence": "Reviewed Russian captions and front view",
+                                    "sha256": digest(card)}
+    qa_path.write_text(json.dumps(qa), encoding="utf-8")
+    approved = items.approve(args)
+    saved_card = Path(approved["wardrobe_card"]["path"])
+    assert saved_card.read_bytes() == card.read_bytes()
+    assert items.list_items(workspace, "STYLE", "CHAR_007")[0]["wardrobe_card"] == str(saved_card)
+    assert items.list_items(workspace, "STYLE", "CHAR_007")[0]["tags"] == ["деловой комплект", "фас"]
+    assert items.registered_asset(paths, saved_card) is None
+    saved_card.write_bytes(b"changed card")
+    with pytest.raises(items.ItemReferenceError, match="wardrobe card is missing, changed"):
+        items.validate_manifest(workspace, Path(approved["manifest_path"]))

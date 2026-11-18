@@ -388,6 +388,11 @@ def validate_library(library: Path) -> dict[str, Any]:
             "selection_available_views": available, "library_root": str(library)}
 
 
+def excluded_by_pose_review(row: dict[str, Any]) -> bool:
+    """An explicit review exclusion overrides catalog browse availability."""
+    return "no generator admission" in str(row.get("review_notes", "")).casefold()
+
+
 def reference_context(library_root: Path | str, target_anatomy: str = "ANY", query: str = "", group_id_filter: str = "", angle: str = "", source_id: str = "") -> dict[str, Any]:
     target = target_anatomy.upper()
     library = Path(library_root).resolve()
@@ -414,6 +419,8 @@ def reference_context(library_root: Path | str, target_anatomy: str = "ANY", que
             raise PoseReferenceError(f"Selected source_id is incompatible or unavailable: {source_id}")
         path = safe_relative(library, str(view.get("relative_path", "")))
         row = manifest.get(source_id, {})
+        if excluded_by_pose_review(row):
+            raise PoseReferenceError(f"Selected source_id is excluded by its pose review: {source_id}")
         selection_path = row.get("reference_path", "") if all_source_images else row.get("generator_path", "")
         if ((not all_source_images and not admitted(view, path)) or not path.is_file()
                 or digest(path) != view.get("sha256") or selection_path != view.get("relative_path")
@@ -451,6 +458,8 @@ def reference_context(library_root: Path | str, target_anatomy: str = "ANY", que
             if not path.is_file() or digest(path) != view.get("sha256"): continue
             if not all_source_images and not admitted(view, path): continue
             row = manifest.get(view["source_id"], {})
+            if excluded_by_pose_review(row):
+                continue
             selection_path = row.get("reference_path", "") if all_source_images else row.get("generator_path", "")
             if selection_path != view["relative_path"] or row.get("sha256") != view.get("sha256"): continue
             row = manifest.get(view["source_id"], {})

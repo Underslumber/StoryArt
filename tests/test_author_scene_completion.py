@@ -104,6 +104,33 @@ class AuthorSceneCompletionTests(unittest.TestCase):
         self.assertEqual(self.validate()["generation_id"], "GEN-1")
         self.assertEqual(self.state, before)
 
+    def test_registered_anonymous_scene_keeps_failed_source_and_needs_matching_parent(self):
+        self.plan["character_id"] = "NONE"
+        self.write_plan()
+        self.attempt["execution_snapshot"]["reference_plan_snapshot_sha256"] = storage.digest(self.snapshot_path)
+        self.attempt.update(status="RESULT_AVAILABLE", result_status="REJECTED")
+        self.state["active_attempt"] = None
+        self.state["required_stages"][0]["id"] = "SCENE"
+        self.receipt["character_id"] = "NONE"
+        saved = self.paths.generations / "02_APPROVED_STANDALONE/02_SCENES/scene.png"
+        saved.parent.mkdir(parents=True)
+        saved.write_bytes(self.output.read_bytes())
+        self.row.update(character_id="NONE", style_file=str(saved), parent_generation="SOURCE")
+        self.receipt["approved_scene_path"] = str(saved)
+        source = {"generation_id": "SOURCE", "request_id": "request-1", "character_id": "NONE",
+                  "status": "REJECTED", "qa_output_sha256": self.sha,
+                  "qa_plan_sha256": storage.digest(self.snapshot_path)}
+        self.write_rows([source, self.row])
+        self.write_receipt()
+        qa = {"visual_review": {"attempt_id": "attempt-1", "task_revision": 2}}
+        with patch.object(manager, "generation_qa_evidence", return_value=qa):
+            self.assertEqual(self.validate()["output_sha256"], self.sha)
+            self.assertEqual(self.attempt["qa_results"], {"BODY_PROPORTIONS": "FAIL"})
+            source["qa_plan_sha256"] = "changed"
+            self.write_rows([source, self.row])
+            with self.assertRaisesRegex(ValueError, "registered source"):
+                self.validate()
+
     def test_checkpoint_complete_and_idempotent_replay_preserve_qa_and_artifact(self):
         with patch.object(guard, "load_guard", side_effect=lambda p: json.loads(Path(p).read_text())), patch.object(guard, "_read_binding", return_value=None):
             self.guard_path.write_text(json.dumps(self.state))

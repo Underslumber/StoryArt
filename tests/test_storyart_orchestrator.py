@@ -44,11 +44,11 @@ class StoryArtOrchestratorTests(unittest.TestCase):
         config_text = config_path.read_text(encoding="utf-8")
         config = tomllib.loads(config_text)
 
-        self.assertEqual(config["model"], "gpt-6.1-sol")
+        self.assertEqual(config["model"], "gpt-6.2-sol")
         self.assertEqual(config["model_reasoning_effort"], "medium")
-        self.assertEqual(config["agents"]["default_subagent_model"], "gpt-6.1-sol")
+        self.assertEqual(config["agents"]["default_subagent_model"], "gpt-6.2-sol")
         self.assertEqual(config["agents"]["default_subagent_reasoning_effort"], "low")
-        allowed_models = {"gpt-6.1-sol"}
+        allowed_models = {"gpt-6.2-sol"}
         configured_models = {config["model"], config["agents"]["default_subagent_model"]}
         self.assertLessEqual(configured_models, allowed_models)
 
@@ -109,29 +109,30 @@ class StoryArtOrchestratorTests(unittest.TestCase):
         for relative in contracts:
             with self.subTest(path=relative):
                 text = (ROOT / relative).read_text(encoding="utf-8")
-                self.assertIn("STYLE NAME only", text)
-                self.assertIn("Стиль и референсы", text)
+                self.assertIn("STYLE NAME", text)
+                self.assertIn("Точность и библиотека референсов", text)
                 self.assertIn("ONE active request", text)
                 self.assertNotIn("Reuse an earlier image only when the user selects", text)
         adapter = (ROOT / "tools/storyart_orchestrator.py").read_text(encoding="utf-8")
-        self.assertIn("fidelity and BODY_REFERENCE_LIBRARY still", adapter)
+        self.assertIn("Confirm only missing fidelity or library settings", adapter)
         self.assertIn("Never inherit those choices from another chat or profile", adapter)
 
-    def test_routing_keeps_root_control_and_explicit_sol_efforts(self):
+    def test_routing_keeps_root_control_and_current_sol_role_efforts(self):
         routing_paths = (
-            ROOT / "docs" / "EFFICIENT_WORKFLOW.md",
+            ROOT / "docs" / "MODEL_PROFILES.md",
             ROOT / "skills" / "storyart-orchestrator" / "SKILL.md",
             ROOT / "skills" / "storyart-orchestrator" / "references" / "roles.md",
             ROOT / "skills" / "storyart-orchestrator" / "references" / "handoff-contract.md",
         )
         for path in routing_paths:
             with self.subTest(path=path):
-                self.assertIn("Sol 6.1 Medium", path.read_text(encoding="utf-8"))
+                self.assertIn("config/model_routes.json", path.read_text(encoding="utf-8"))
 
-        workflow = (ROOT / "docs" / "EFFICIENT_WORKFLOW.md").read_text(encoding="utf-8")
-        self.assertIn("Sol 6.1 Low", workflow)
-        self.assertIn("`sol_review` with recorded SOL_GATE", workflow)
-        self.assertIn("| `VISUAL_QA` / result checks | Registry role: Sol 6.1 Medium |", workflow)
+        profiles = (ROOT / "docs" / "MODEL_PROFILES.md").read_text(encoding="utf-8")
+        self.assertIn("Sol 6.2 Medium root", profiles)
+        self.assertIn("Sol 6.2 Low bounded ordinary workers", profiles)
+        self.assertIn("| Exceptional diagnosis after evidenced complex fault or repair failure | `gpt-6.2-sol`, High |", profiles)
+        self.assertIn("`sol_review` after machine checks and recorded SOL_GATE", profiles)
 
     def test_actual_dispatch_uses_distinct_production_role_efforts(self):
         self.initialize()
@@ -140,7 +141,7 @@ class StoryArtOrchestratorTests(unittest.TestCase):
             handoff = orchestrator.dispatch_handoff(
                 self.state_path, role, f"Bounded {role} evidence review", [str(self.guard_path)], [], [], "", "",
             )
-            self.assertEqual(handoff["execution_profile"], {"model": "gpt-6.1-sol", "reasoning_effort": effort})
+            self.assertEqual(handoff["execution_profile"], {"model": "gpt-6.2-sol", "reasoning_effort": effort})
 
     def test_production_switcher_accepts_web_role_and_preserves_other_settings(self):
         import shutil
@@ -153,7 +154,7 @@ class StoryArtOrchestratorTests(unittest.TestCase):
                                  "6.1", "-ConfigPath", str(path)], capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         changed = tomllib.loads(path.read_text(encoding="utf-8"))
-        self.assertEqual(changed["agents"]["default_subagent_model"], "gpt-6.1-sol")
+        self.assertEqual(changed["agents"]["default_subagent_model"], "gpt-6.2-sol")
         self.assertEqual(changed["agents"]["default_subagent_reasoning_effort"], "low")
         self.assertIn("# preserve-marker", path.read_text(encoding="utf-8"))
 
@@ -313,11 +314,11 @@ class StoryArtOrchestratorTests(unittest.TestCase):
             self.state_path, "ESCALATION_ORCHESTRATOR", "Return a recovery work order.",
             [str(self.guard_path)], [], [], "FRAME", "", "STYLE",
         )
-        self.assertEqual(handoff["execution_profile"]["model"], "gpt-6.1-sol")
+        self.assertEqual(handoff["execution_profile"]["model"], "gpt-6.2-sol")
         self.assertEqual(handoff["execution_profile"]["reasoning_effort"], "high")
         self.assertIn("do not use tools", handoff["agent_prompt"])
         self.assertIn("Sol executor", handoff["agent_prompt"])
-        self.assertIn("Sol 6.1 High requires an evidenced complex fault", handoff["agent_prompt"])
+        self.assertIn("High requires an evidenced complex fault", handoff["agent_prompt"])
         self.assertIn("substantive repair failure", handoff["agent_prompt"])
         self.assertNotIn("requires evidence of a substantive Luna failure", handoff["agent_prompt"])
         self.assertNotIn("Sol High only for complex", handoff["agent_prompt"])

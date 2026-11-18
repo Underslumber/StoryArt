@@ -634,9 +634,9 @@ replace visual QA or the delivery receipt.
 
 Reuse this style when the approved character profile binds the requested
 character to `{style_name}` or when the user selected `{style_name}` in this
-chat. Reuse only the style name: fidelity and BODY_REFERENCE_LIBRARY still
-require the standard `Стиль и референсы` chooser unless explicitly selected
-in the current chat. Never inherit those choices from another chat or profile.
+chat. Use the bound style by default. Change it only on the author's request.
+Confirm only missing fidelity or library settings. The `Точность и библиотека референсов`
+chooser applies when both settings are missing. Never inherit those choices from another chat or profile.
 Never describe it only as “project
 style”; use the exact name above. Reuse a recorded same-chat menu selection
 without presenting it again.

@@ -159,7 +159,10 @@ def test_new_plan_cannot_drop_style_contract_at_qa(plan):
 def test_manager_visual_review_requires_comparison_bound_to_output_and_snapshot(plan, tmp_path):
     out = tmp_path / "fixture.dat"
     out.write_bytes(b"synthetic output")
-    prompt = plan["execution_call"]["prompt"]["text"]
+    pose_slots = [{"active_roles": ["BR_TEST:AUX_POSE"]}]
+    prompt = manager.render_confirmed_prompt(plan, "Preserve the exact requested subject and scene.", slots=pose_slots)
+    prompt = render_style_authority(plan, prompt, plan["execution_call"]["slots"])
+    plan["execution_call"]["prompt"]["text"] = prompt
     ph = hashlib.sha256(prompt.encode()).hexdigest()
     snapshot = {"execution_call": plan["execution_call"], "prompt_sha256": ph,
                 "reference_plan_snapshot_sha256": "1" * 64}
@@ -179,6 +182,15 @@ def test_manager_visual_review_requires_comparison_bound_to_output_and_snapshot(
     with pytest.raises(StylePackError, match="style_review"):
         check()
     report.update(review_for(plan))
+    constraints = report["prompt_adherence"]["constraints"]
+    head_index = next(i for i, item in enumerate(constraints) if "source's head orientation" in item["constraint"])
+    head = constraints.pop(head_index)
+    with pytest.raises(StylePackError, match="every explicit constraint"):
+        check()
+    constraints.insert(head_index, {**head, "status": "FAIL"})
+    with pytest.raises(StylePackError, match="conflicts with a failed explicit constraint"):
+        check()
+    constraints[head_index] = head
     assert check()["style_review"]["status"] == "PASS"
     out.write_bytes(b"different output")
     with pytest.raises(StylePackError, match="output_sha256"):

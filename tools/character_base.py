@@ -21,9 +21,9 @@ from statistics import median
 TOOLS = Path(__file__).resolve().parent
 
 try:
-    from tools.task_execution_guard import continuation_guidance
+    from tools.task_execution_guard import GuardError, assert_active_request_path, checkpoint, continuation_guidance
 except ModuleNotFoundError:  # Direct execution as python tools\character_base.py
-    from task_execution_guard import continuation_guidance
+    from task_execution_guard import GuardError, assert_active_request_path, checkpoint, continuation_guidance
 
 STAGES = (
     "01_FACE_IDENTITY",
@@ -325,10 +325,16 @@ def stage_evidence_hash(state: dict, stage: str) -> str:
 
 
 def valid_gate(folder: Path, state: dict, stage: str) -> dict | None:
+    entry = guard_stages(state).get(stage, {})
+    binding = entry.get("accepted_attempt_binding", {})
+    restored = binding.get("face_restoration") if isinstance(binding, dict) else None
+    if stage == STAGES[0] and isinstance(restored, dict) and stage_evidence_hash(state, stage) == restored.get("evidence_sha256"):
+        return restored
     gates = read_json(folder / GATES_FILE, {})
     gate = gates.get(stage) if isinstance(gates, dict) else None
     current = stage_evidence_hash(state, stage)
-    if isinstance(gate, dict) and current and gate.get("evidence_sha256") == current:
+    if (isinstance(gate, dict) and current and gate.get("evidence_sha256") == current
+            and ("attempt_id" not in gate or isinstance(binding, dict) and gate["attempt_id"] == binding.get("attempt_id"))):
         return gate
     return None
 
@@ -341,6 +347,28 @@ def command_gate(args: argparse.Namespace) -> None:
     quote = args.user_quote.strip()
     if not quote:
         raise CharacterBaseError("--user-quote must hold the user's own approval words.")
+    guard_path = folder / "EXECUTION_GUARD.json"
+    assert_active_request_path(guard_path)
+    attempt_id = getattr(args, "restore_attempt_id", None)
+    evidence_sha256 = getattr(args, "evidence_sha256", None)
+    message_id = getattr(args, "author_message_id", None)
+    if any((attempt_id, evidence_sha256, message_id)):
+        if stage != STAGES[0] or not all((attempt_id, evidence_sha256, message_id)):
+            raise CharacterBaseError("FACE restoration requires --restore-attempt-id, --evidence-sha256 and --author-message-id together.")
+        brief = load_confirmed_brief(folder)
+        if brief is None:
+            raise CharacterBaseError("Confirm the character brief before restoring a FACE result.")
+        checkpoint(
+            guard_path, event="STAGE_COMPLETED", stage=stage, attempt_id=attempt_id,
+            summary="Author confirmed the exact FACE whose technical QA had passed before its erroneous rejection.",
+            face_restoration={
+                "attempt_id": attempt_id, "evidence_sha256": evidence_sha256.lower(),
+                "user_quote": quote, "message_id": message_id.strip(),
+                "brief_revision": int(brief["revision"]),
+            },
+        )
+        print(f"GATE_APPROVED={stage}")
+        return
     state = load_guard(folder)
     digest = stage_evidence_hash(state, stage)
     if not digest:
@@ -354,6 +382,9 @@ def command_gate(args: argparse.Namespace) -> None:
         "evidence_sha256": digest,
         "brief_revision": int(brief.get("revision", 0)) if brief else 0,
     }
+    binding = guard_stages(state).get(stage, {}).get("accepted_attempt_binding")
+    if stage == STAGES[0] and isinstance(binding, dict) and binding.get("attempt_id"):
+        gates[stage]["attempt_id"] = binding["attempt_id"]
     write_json(folder / GATES_FILE, gates)
     print(f"GATE_APPROVED={stage}")
 
@@ -797,6 +828,9 @@ def build_parser() -> argparse.ArgumentParser:
     gate.add_argument("--request-dir", required=True)
     gate.add_argument("--stage", required=True, choices=USER_GATES)
     gate.add_argument("--user-quote", required=True)
+    gate.add_argument("--restore-attempt-id", help="Exact erroneously rejected FACE attempt with passing technical QA.")
+    gate.add_argument("--evidence-sha256", help="SHA-256 of the exact FACE explicitly selected by the author.")
+    gate.add_argument("--author-message-id", help="The owning chat message recording the author's exact FACE decision.")
     gate.set_defaults(handler=command_gate)
 
     failure = commands.add_parser("log-failure", help="Add a finding that later stages must avoid.")
@@ -854,7 +888,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         args.handler(args)
         return 0
-    except (CharacterBaseError, OSError, ValueError) as error:
+    except (CharacterBaseError, GuardError, OSError, ValueError) as error:
         print(f"ERROR={error}", file=sys.stderr)
         return 2
 

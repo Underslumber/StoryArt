@@ -36,7 +36,7 @@ CANONICAL_ROLES = {
     "COVERAGE_SIDE", "COVERAGE_BACK", "STYLE_STAGE", "FACE_IDENTITY_STAGE", "PHYSIQUE_FRONT_STAGE",
     "PHYSIQUE_SIDE_STAGE", "PHYSIQUE_BACK_STAGE", "FACE_FRONT_TARGETED_PACK", "FACE_FRONT_SIDE_TARGETED_PACK",
     "BODY_POSE_STAGE", "CLOTHING_STAGE", "CHARACTER_COMPOSITE_STAGE", "CLOTHING_TOPOLOGY", "FACE",
-    "ITEM_DESIGN", "ITEM_SCALE_FIT",
+    "ITEM_DESIGN", "ITEM_SCALE_FIT", "BODY_VARIANT",
     "CHARACTER_FACE", "CHARACTER_BODY", "ANATOMY", "POSE_SOFT", "CAMERA_ONLY", "MULTIVIEW_BODY",
 }
 BR_ROLE_SUFFIXES = {
@@ -76,6 +76,8 @@ def _reference_bindings(references: list[dict[str, object]]) -> list[dict[str, o
             role in {"UNKNOWN", "UNSPECIFIED", "NONE"}
             or (role not in CANONICAL_ROLES and not re.fullmatch(
                 r"(?:BR_\d+|SODA_[A-Z0-9_-]+):(?:" + "|".join(sorted(BR_ROLE_SUFFIXES)) + r")", role
+            ) and not re.fullmatch(
+                r"WS_\d{4}_(?:3D|LINE)_(?:FRONT|SIDE|THREE_QUARTER):AUX_(?:POSE|CAMERA)", role
             ))
             for role in roles
         ):

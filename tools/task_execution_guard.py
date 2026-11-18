@@ -567,19 +567,24 @@ def _authorized_base_clothing_continuation(state: dict[str, object], plan: dict[
     if (not isinstance(workflow, dict) or workflow.get("mode") != "SINGLE_PASS"
             or str(plan.get("generation_purpose", "")).upper() != "SCENE"
             or str(plan.get("style_name", "")).upper() != "LORANDESORE"
+            or not str(plan.get("pack_path", "")).strip()
             or int(plan.get("fidelity", 0) or 0) != 90
-            or str(plan.get("character_id", "")).upper() != "CHAR_002"
+            or not re.fullmatch(r"CHAR_\d+", str(plan.get("character_id", "")).upper())
             or str(plan.get("auxiliary_body_reference_decision", "")).upper() != "SELECTED"):
         return False
     entries = required_stage_entries(state)
     ids = [str(row.get("id", "")) for row in entries if isinstance(row, dict)]
-    if ids != [*CHARACTER_BASE_STAGES, "SINGLE_PASS"]:
+    if len(ids) != len(CHARACTER_BASE_STAGES) + 1 or set(ids) != {*CHARACTER_BASE_STAGES, "SINGLE_PASS"}:
+        return False
+    if [stage_id for stage_id in ids if stage_id != "SINGLE_PASS"] != list(CHARACTER_BASE_STAGES):
         return False
     changes = [change for change in state.get("scope_changes", []) if isinstance(change, dict)]
     additions = [stage for change in changes for stage in change.get("added_required_stages", [])]
     if additions != ["SINGLE_PASS"]:
         return False
-    for entry in entries[:len(CHARACTER_BASE_STAGES)]:
+    by_id = {str(entry["id"]): entry for entry in entries}
+    for stage_id in CHARACTER_BASE_STAGES:
+        entry = by_id[stage_id]
         if entry.get("status") != "COMPLETED" or not entry.get("evidence") or not isinstance(entry.get("accepted_attempt_binding"), dict):
             return False
         try:
@@ -595,6 +600,11 @@ def _authorized_base_clothing_continuation(state: dict[str, object], plan: dict[
             from tools import style_pack_manager as manager
         except ImportError:
             import style_pack_manager as manager
+        identity_paths = manager.make_paths(Path(str(plan["pack_path"])).resolve().parent, str(plan["style_name"]))
+        published = manager.same_request_approved_character(
+            identity_paths, str(plan.get("request_id", "")), str(plan.get("character_id", "")).upper())
+        if not published:
+            return False
         binding = manager.validate_mandatory_clothes_authorization(
             authorization_path, request_id=str(plan.get("request_id", "")),
             character_id=str(plan.get("character_id", "")), plan=plan,
@@ -615,6 +625,9 @@ def reconcile_plan_required_stages(state: dict[str, object], plan: dict[str, obj
                 "The request purpose changed after readiness; only the recorded same-request clothing SINGLE_PASS may follow the accepted five-stage CHARACTER_BASE."
             )
     if purpose != "CHARACTER_BASE":
+        if purpose == "SCENE" and _authorized_base_clothing_continuation(state, plan):
+            by_id = {str(entry["id"]): entry for entry in required_stage_entries(state)}
+            state["required_stages"] = [by_id[stage_id] for stage_id in (*CHARACTER_BASE_STAGES, "SINGLE_PASS")]
         state["request_purpose"] = purpose
         return
     workflow = plan.get("generation_workflow")
@@ -1032,6 +1045,21 @@ def _planned_placeholder_role(workflow: dict[str, object], source_stage_id: str)
         "03_PHYSIQUE_SIDE": "PHYSIQUE_SIDE_STAGE",
         "04_PHYSIQUE_BACK": "PHYSIQUE_BACK_STAGE",
     }.get(source_stage_id, source_stage_id)
+
+
+def identity_anchor_sources(plan: dict[str, object], slots: list[dict[str, object]], prompt: str) -> list[dict[str, object]]:
+    """Resolve only reviewed, exact-source sheets before checking a named identity anchor."""
+    if not plan.get("source_reference_packing"):
+        return slots
+    try:
+        try:
+            from tools.source_reference_packs import expand_slots, validate_panel_risk
+        except ImportError:
+            from source_reference_packs import expand_slots, validate_panel_risk
+        validate_panel_risk(plan, prompt, slots)
+        return expand_slots(plan, slots)
+    except (OSError, ValueError, KeyError, RuntimeError) as error:
+        raise GuardError(f"Invalid source-sheet identity lineage: {error}") from error
 
 
 def _stage_has_identity_anchor(
@@ -1667,13 +1695,40 @@ def validate_reference_plan(
         if planned_slots is None:
             raise GuardError("REFERENCE_PLAN has no planned slots for the selected execution call.")
         if approved_assembly_path is not None:
-            if mode == "SINGLE_PASS":
+            identity_selection = plan.get("character_reference_selection", {})
+            strict_scene = (
+                mode == "SINGLE_PASS"
+                and str(plan.get("generation_purpose", "")).upper() == "SCENE"
+                and isinstance(identity_selection, dict)
+                and identity_selection.get("mode") == "IDENTITY_STRICT"
+            )
+            if strict_scene:
+                canonical = manager.load_effective(profile_path)["profile"].get("canonical_views", {})
+                body_view = str(identity_selection.get("selected_body_view", "")).upper()
+                if body_view not in {"FRONT", "SIDE", "BACK"}:
+                    raise GuardError("IDENTITY_STRICT requires a canonical body view.")
+                for slot_role, asset_role, view in (
+                    ("PRIMARY_FACE", "FACE", "face"),
+                    ("BODY", "BODY", f"physique_{body_view.lower()}"),
+                ):
+                    value = canonical.get(view)
+                    if not value:
+                        raise GuardError(f"IDENTITY_STRICT is missing approved canonical {view}.")
+                    source = (profile_path.parent / str(value)).resolve()
+                    matching = [slot for slot in execution_call["slots"] if slot_role in slot.get("active_roles", [])]
+                    if (not source.is_relative_to(profile_path.parent) or len(matching) != 1
+                            or Path(str(matching[0].get("path", ""))).resolve() != source
+                            or manager.sha256(source) != str(matching[0].get("sha256", "")).lower()):
+                        raise GuardError(f"IDENTITY_STRICT requires its exact canonical {view} attachment.")
+                    manager.require_approved_character_asset_role(character_paths, source, character_id, asset_role, slot_role)
+                anchor_bound = True
+            elif mode == "SINGLE_PASS":
                 anchor_bound = any(
                     isinstance(slot, dict)
                     and str(Path(str(slot.get("path", ""))).expanduser().resolve()) == str(approved_assembly_path)
                     and str(slot.get("sha256", "")).lower() == approved_assembly_hash
                     and "CHARACTER_ASSEMBLY" in {str(role).upper() for role in slot.get("active_roles", [])}
-                    for slot in execution_call.get("slots", [])
+                    for slot in identity_anchor_sources(plan, execution_call.get("slots", []), prompt_text)
                 )
             else:
                 anchor_bound = _stage_has_identity_anchor(
@@ -1739,8 +1794,19 @@ def validate_reference_plan(
                 is_authorized_clothes = bool(authorized_clothes_path and slot_path == authorized_clothes_path
                     and slot_roles == {"CLOTHES"}
                     and str(slot.get("sha256", "")).lower() == file_sha256(authorized_clothes_path))
-                if not (is_library or is_identity or is_new_identity or is_style or is_dimension_guide or slot_path in validated_lineage_paths or is_authorized_clothes):
-                    raise GuardError("BODY_LIBRARY_ONLY cannot attach optional non-library references outside validated stage lineage.")
+                if is_library or is_identity or is_new_identity or is_style or is_dimension_guide or slot_path in validated_lineage_paths or is_authorized_clothes:
+                    continue
+                try:
+                    from tools import style_pack_manager as manager
+                except ImportError:
+                    import style_pack_manager as manager
+                try:
+                    style_paths = manager.make_paths(workspace, str(plan.get("style_name", "")))
+                    if manager.is_reviewed_body_pose_pool_slot(style_paths, plan, slot):
+                        continue
+                except (manager.StylePackError, OSError, ValueError) as error:
+                    raise GuardError(f"Body or pose catalog slot is invalid: {error}") from error
+                raise GuardError("BODY_LIBRARY_ONLY requires approved body or pose sources and separately authorized scene assets.")
     bindings: list[dict[str, object]] = []
     for slot in slots:
         if not isinstance(slot, dict):
@@ -2300,6 +2366,17 @@ def validate_direct_edit_completion_receipt(
     }
 
 
+def validate_restored_face_binding(state: dict[str, object], decision: dict[str, object]) -> dict[str, object]:
+    if __package__:
+        from . import style_pack_manager as manager
+    else:
+        import style_pack_manager as manager
+    try:
+        return manager.verify_face_stage_restoration(state, decision)
+    except (OSError, ValueError, manager.StylePackError) as error:
+        raise GuardError(f"FACE restoration evidence is invalid: {error}") from error
+
+
 def validate_stage_attempt_binding(
     state: dict[str, object], stage: str, evidence_paths: Sequence[str],
     local_derivative_receipt: str | Path | None = None,
@@ -2375,6 +2452,15 @@ def validate_stage_attempt_binding(
         if (accepted_revision != int(attempt.get("task_revision", -1))
                 or completed_revision != accepted_revision):
             raise GuardError("Completed stage no longer binds the accepted attempt's original revision.")
+        restored = accepted_binding.get("face_restoration")
+        if restored is not None:
+            if (stage_key != "face_identity" or not isinstance(restored, dict)
+                    or not any(event.get("event") == "STAGE_COMPLETED" and event.get("stage") == "01_FACE_IDENTITY"
+                               and event.get("face_restoration") == restored for event in state.get("events", []))
+                    or validate_restored_face_binding(state, restored) != accepted_binding
+                    or evidence_paths != [accepted_binding.get("stage_evidence_path")]):
+                raise GuardError("Restored FACE no longer matches its accepted attempt proof.")
+            return accepted_binding
         snapshot = attempt.get("execution_snapshot")
         reference_binding = attempt.get("reference_binding")
         call = snapshot.get("execution_call") if isinstance(snapshot, dict) else None
@@ -3003,6 +3089,7 @@ def checkpoint(
     provider_operation_receipt: str = "",
     local_derivative_receipt: str | Path | None = None,
     direct_edit_completion_receipt: str | Path | None = None,
+    face_restoration: dict[str, object] | None = None,
     now: datetime | None = None,
 ) -> dict[str, object]:
     state = load_guard(path)
@@ -3012,6 +3099,9 @@ def checkpoint(
         raise GuardError("--local-derivative-receipt is supported only for verified visible-result and stage-completion checkpoints.")
     if direct_edit_completion_receipt and event not in {"STAGE_COMPLETED", "RESULT_DELIVERED"}:
         raise GuardError("--direct-edit-completion-receipt is supported only for its stage-completion and delivery checkpoints.")
+    if face_restoration is not None and (event != "STAGE_COMPLETED" or stage != "01_FACE_IDENTITY"
+                                        or evidence or local_derivative_receipt or direct_edit_completion_receipt):
+        raise GuardError("FACE restoration must supply its own exact FACE stage evidence.")
     if not is_project_image_generation(state) and not attempt_id and isinstance(state.get("active_attempt"), dict):
         attempt_id = str(state["active_attempt"].get("attempt_id", ""))
     if not summary.strip():
@@ -4032,14 +4122,30 @@ def checkpoint(
         entry = find_required_stage(state, stage)
         if entry.get("status") == "COMPLETED":
             raise GuardError(f"Required stage is already completed: {entry.get('id')}")
-        evidence_paths = validate_stage_evidence(state, evidence)
-        stage_attempt_binding = (
-            validate_stage_attempt_binding(
-                state, str(entry.get("id", "")), evidence_paths, local_derivative_receipt,
-                direct_edit_completion_receipt=direct_edit_completion_receipt,
+        if face_restoration is not None:
+            attempts = state.get("attempts", [])
+            latest = attempts[-1] if attempts else {}
+            if (state.get("task_kind") != "IMAGE_GENERATION" or state.get("recovery")
+                    or latest.get("attempt_id") != attempt_id or face_restoration.get("attempt_id") != attempt_id
+                    or latest.get("task_revision") != state.get("task_revision")):
+                raise GuardError("FACE restoration requires the latest rejected attempt in the current revision.")
+            decision = {
+                **face_restoration,
+                "plan_path": str(path.resolve().parent / "REFERENCE_PLAN.json"),
+                "chat_id": state.get("owner_chat_id"),
+                "task_revision": state.get("task_revision"),
+            }
+            stage_attempt_binding = validate_restored_face_binding(state, decision)
+            evidence_paths = [stage_attempt_binding["stage_evidence_path"]]
+        else:
+            evidence_paths = validate_stage_evidence(state, evidence)
+            stage_attempt_binding = (
+                validate_stage_attempt_binding(
+                    state, str(entry.get("id", "")), evidence_paths, local_derivative_receipt,
+                    direct_edit_completion_receipt=direct_edit_completion_receipt,
+                )
+                if is_project_image_generation(state) else None
             )
-            if is_project_image_generation(state) else None
-        )
         if is_physique_stage(str(entry.get("id"))):
             active_swimwear_attempt = state.get("active_swimwear_attempt")
             child_contract = state.get("character_base_contract", {})
@@ -4197,6 +4303,9 @@ def checkpoint(
     if event == "ATTEMPT_REJECTED":
         event_details["attempt_id"] = str(attempt_id)
         event_details["outcome"] = "QA_REJECTED"
+    if face_restoration is not None:
+        event_details["face_restoration"] = decision
+        event_details["evidence"] = evidence_paths
     if event in {"USER_CORRECTION", "STAGE_REOPENED"} and state.get("author_scene_storage"):
         try:
             if __package__:

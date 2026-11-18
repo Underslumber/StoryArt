@@ -80,6 +80,16 @@ class RiskContractTests(unittest.TestCase):
                     {"path": str(same_content), "active_roles": ["BR_0001:AUX_POSE"]},
                 ])
 
+    def test_active_body_variant_keeps_its_exact_role(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            folder = Path(temporary)
+            image = folder / "body.png"
+            image.write_bytes(b"approved active body variant")
+            report = self.make_report(folder, "Two adult women in dresses.", image, ["BODY_VARIANT"])
+            risk.validate_assessment(report, "Two adult women in dresses.", [{"path": str(image), "active_roles": ["BODY_VARIANT"]}])
+            with self.assertRaises(risk.RiskAssessmentError):
+                risk.validate_assessment(report, "Two adult women in dresses.", [{"path": str(image), "active_roles": ["BODY"]}])
+
     def test_arbitrary_combined_score_and_unbound_legacy_report_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             folder = Path(temporary)

@@ -50,7 +50,7 @@ class StoryArtLauncherTests(unittest.TestCase):
             "--json",
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('"title": "Стиль и референсы"', result.stdout)
+        self.assertIn('"title": "Точность и библиотека референсов"', result.stdout)
         self.assertIn('Шанс (CHAR_001)', result.stdout)
 
 if __name__ == "__main__":

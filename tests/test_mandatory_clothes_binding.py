@@ -16,7 +16,7 @@ def _write(path: Path, value: bytes) -> tuple[str, str]:
     return str(path.resolve()), hashlib.sha256(value).hexdigest()
 
 
-def _valid_authorization(tmp_path: Path) -> tuple[Path, dict[str, object]]:
+def _valid_authorization(tmp_path: Path, character_id: str = "CHAR_002") -> tuple[Path, dict[str, object]]:
     request = tmp_path / "00_PENDING" / "request-one"
     request.mkdir(parents=True)
     source_path, source_hash = _write(request / "robe.png", b"approved request clothing source")
@@ -26,7 +26,7 @@ def _valid_authorization(tmp_path: Path) -> tuple[Path, dict[str, object]]:
         approved_bytes = b"approved assembly" if stage == "05_CHARACTER_ASSEMBLY" else stage.encode()
         base_path, base_hash = _write(request / f"{stage}.png", approved_bytes)
         approved_files[stage] = {"path": base_path, "sha256": base_hash}
-    item = {"status": "ITEM_PRODUCTION_PLAN", "request_id": "request-one", "character_id": "CHAR_002",
+    item = {"status": "ITEM_PRODUCTION_PLAN", "request_id": "request-one", "character_id": character_id,
             "item_kind": "CLOTHING", "style_name": "LORANDESORE", "character_assembly": assembly_path,
             "character_assembly_sha256": assembly_hash}
     item_path, item_hash = _write(request / "item.json", json.dumps(item).encode())
@@ -41,7 +41,7 @@ def _valid_authorization(tmp_path: Path) -> tuple[Path, dict[str, object]]:
     permission_raw = json.dumps(permission, ensure_ascii=False).encode()
     _write(permission_path, permission_raw)
     authorization = {
-        "schema_version": 1, "request_id": "request-one", "character_id": "CHAR_002",
+        "schema_version": 1, "request_id": "request-one", "character_id": character_id,
         "generation_purpose": "SCENE", "stage_id": "SINGLE_PASS", "item_kind": "CLOTHING",
         "physical_role": "CLOTHES", "style_name": "LORANDESORE", "fidelity": 90,
         "aux_body_decision": "SELECTED", "reference_policy": "BODY_LIBRARY_ONLY",
@@ -60,8 +60,8 @@ def _valid_authorization(tmp_path: Path) -> tuple[Path, dict[str, object]]:
     }
     auth_path = request / "MANDATORY_CLOTHES_AUTHORIZATION.json"
     auth_path.write_text(json.dumps(authorization, ensure_ascii=False), encoding="utf-8")
-    plan = {"request_id": "request-one", "character_id": "CHAR_002", "generation_purpose": "SCENE",
-            "style_name": "LORANDESORE"}
+    plan = {"request_id": "request-one", "character_id": character_id, "generation_purpose": "SCENE",
+            "style_name": "LORANDESORE", "pack_path": str(tmp_path / "LORANDESORE_PROJECT_PACK")}
     return auth_path, plan
 
 
@@ -230,10 +230,12 @@ def test_completion_accepts_only_recorded_single_pass_tail_after_exact_base_pref
     assert guard.completion_block_reason(state).startswith("Task completion is forbidden while required stages remain pending")
 
 
-def test_guard_allows_scene_clothing_plan_after_five_accepted_base_stages(tmp_path, monkeypatch):
-    auth_path, plan = _valid_authorization(tmp_path)
+@pytest.mark.parametrize("character_id", ["CHAR_002", "CHAR_003"])
+@pytest.mark.parametrize("clothing_first", [False, True])
+def test_guard_allows_scene_clothing_plan_after_five_accepted_base_stages(tmp_path, monkeypatch, character_id, clothing_first):
+    auth_path, plan = _valid_authorization(tmp_path, character_id)
     binding = contracts.validate_mandatory_clothes_authorization(auth_path, request_id="request-one",
-        character_id="CHAR_002", plan=plan)
+        character_id=character_id, plan=plan)
     plan.update(generation_workflow={"mode": "SINGLE_PASS"}, fidelity=90,
         auxiliary_body_reference_decision="SELECTED", mandatory_clothes_authorization_path=str(auth_path.resolve()),
         mandatory_clothes_authorization=binding)
@@ -242,10 +244,14 @@ def test_guard_allows_scene_clothing_plan_after_five_accepted_base_stages(tmp_pa
             "accepted_attempt_binding": {"stage": stage}} for stage in guard.CHARACTER_BASE_STAGES]
             + [{"id": "SINGLE_PASS", "status": "PENDING", "evidence": []}],
         "scope_changes": [{"added_required_stages": ["SINGLE_PASS"]}], "attempts": []}
+    if clothing_first:
+        state["required_stages"].insert(0, state["required_stages"].pop())
+    expected_ids = [*guard.CHARACTER_BASE_STAGES, "SINGLE_PASS"]
     monkeypatch.setattr(guard, "validate_stage_attempt_binding", lambda state, stage, evidence, **kwargs: {"stage": stage})
+    monkeypatch.setattr(manager, "same_request_approved_character", lambda paths, req, char: {"character_id": char} if req == "request-one" and char == character_id else None)
     guard.reconcile_plan_required_stages(state, plan)
     assert state["request_purpose"] == "SCENE"
-    assert [row["id"] for row in state["required_stages"]] == [*guard.CHARACTER_BASE_STAGES, "SINGLE_PASS"]
+    assert [row["id"] for row in state["required_stages"]] == expected_ids
 
 
 @pytest.mark.parametrize("mutation", ["missing_authorization", "missing_scope_change", "wrong_extra_stage", "pending_base_stage"])
@@ -270,6 +276,7 @@ def test_guard_rejects_unrecorded_or_incomplete_base_continuation(tmp_path, monk
     else:
         state["required_stages"][2]["status"] = "PENDING"
     monkeypatch.setattr(guard, "validate_stage_attempt_binding", lambda state, stage, evidence, **kwargs: {"stage": stage})
+    monkeypatch.setattr(manager, "same_request_approved_character", lambda *args: {"character_id": "CHAR_002"})
     with pytest.raises(guard.GuardActionRequired):
         guard.reconcile_plan_required_stages(state, plan)
 

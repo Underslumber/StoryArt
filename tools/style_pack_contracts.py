@@ -408,6 +408,16 @@ def validate_mandatory_clothes_authorization(path: str | Path, *, request_id: st
         "continuation_authorization_quote": "Утвердить показанную базу и продолжить комплект одежды",
         "tool_repair_permission_quote": "Разрешить узкое исправление и продолжить комплект",
         "unseen_clothing_author_approval_granted": False}
+    version = record.get("schema_version")
+    if version == 2:
+        for key in ("source_reference_id", "subject_label", "authorization_quote",
+                    "continuation_authorization_quote", "tool_repair_permission_quote", "reference_policy"):
+            expected.pop(key)
+            if not isinstance(record.get(key), str) or not record[key].strip():
+                raise StylePackError("Mandatory CLOTHES requires explicit request-bound source and consent.")
+        expected["schema_version"] = 2
+        if record["reference_policy"] not in {"BODY_LIBRARY_ONLY", "APPROVED_PLUS_USER_REFERENCES"}:
+            raise StylePackError("Unsupported mandatory CLOTHES reference policy.")
     if any(record.get(key) != value for key, value in expected.items()):
         raise StylePackError("Mandatory CLOTHES authorization does not match the exact SCENE/SINGLE_PASS request contract.")
     source = Path(str(record.get("clothes_reference_path", ""))).expanduser().resolve()
@@ -421,6 +431,43 @@ def validate_mandatory_clothes_authorization(path: str | Path, *, request_id: st
         if (not file.is_file() or not re.fullmatch(r"[0-9a-f]{64}", digest)
                 or hashlib.sha256(file.read_bytes()).hexdigest() != digest):
             raise StylePackError(f"Mandatory CLOTHES {label} path or hash is missing or stale.")
+    if version == 2:
+        try:
+            from tools import style_pack_manager as manager
+        except ImportError:
+            import style_pack_manager as manager
+        pack = Path(str(plan.get("pack_path", ""))).resolve()
+        paths = manager.make_paths(pack.parent, str(plan.get("style_name", "")))
+        published = manager.same_request_approved_character(paths, request_id, character_id)
+        if not published or published["base_sha256"] != assembly_hash:
+            raise StylePackError("Mandatory CLOTHES requires this request's published character assembly.")
+        identity = manager._approved_profile_identity(paths, Path(str(record.get("character_profile_path", ""))), character_id)
+        source_info = manager.validate_plan_reference(paths, str(source), "CLOTHES", request_id=request_id)
+        rows = [r for r in manager.read_csv(paths.references)
+                if r.get("reference_id") == record["source_reference_id"]
+                and (paths.pack / r.get("stored_relative_path", "")).resolve() == source]
+        row = rows[0] if len(rows) == 1 else {}
+        if (source_info.get("sha256") != source_hash or len(rows) != 1
+                or row.get("status") != "APPROVED" or row.get("user_approved") != "YES"
+                or row.get("generator_safe") != "YES" or row.get("reference_scope") != "REQUEST"
+                or row.get("request_id") != request_id or row.get("primary_role") != "CLOTHES_CORE"
+                or row.get("subject_label_status") != "REVIEWED"
+                or row.get("subject_label_sha256") != source_hash or row.get("source_sha256") != source_hash
+                or row.get("subject_label") != record["subject_label"]
+                or record["subject_label"] + "_ANATOMY" != identity.get("target_anatomy")):
+            raise StylePackError("Mandatory CLOTHES source does not match approved current request metadata.")
+        proof = Path(str(record.get("request_authorization_path", ""))).resolve()
+        if (not proof.is_relative_to(request_root) or not proof.is_file()
+                or hashlib.sha256(proof.read_bytes()).hexdigest() != record.get("request_authorization_sha256")):
+            raise StylePackError("Mandatory CLOTHES original request proof is missing or stale.")
+        try:
+            original = json.loads(proof.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise StylePackError("Invalid mandatory CLOTHES request proof.") from error
+        if (not isinstance(original, dict) or original.get("request_id") != request_id
+                or original.get("character_id") != character_id or original.get("source_sha256") != source_hash
+                or original.get("quote") != record["authorization_quote"] or not original.get("source")):
+            raise StylePackError("Mandatory CLOTHES consent differs from original request proof.")
     if record.get("subject_label_sha256") != source_hash:
         raise StylePackError("Mandatory CLOTHES source subject label is not bound to the current source hash.")
     for file in (item_plan, Path(str(record.get("continuation_authorization_path", ""))).expanduser().resolve(),
@@ -481,8 +528,8 @@ def validate_mandatory_clothes_authorization(path: str | Path, *, request_id: st
             or str(plan.get("style_name", "")).upper() != "LORANDESORE"):
         raise StylePackError("Mandatory CLOTHES consent is bound to a different request, character, purpose, or style.")
     return {"path": str(authorization_path), "sha256": hashlib.sha256(raw).hexdigest(),
-            "source_path": str(source), "source_sha256": source_hash, "reference_id": "REF_00217",
-            "role": "CLOTHES", "subject_label": "MALE", "item_plan_path": str(item_plan),
+            "source_path": str(source), "source_sha256": source_hash, "reference_id": record["source_reference_id"],
+            "role": "CLOTHES", "subject_label": record["subject_label"], "item_plan_path": str(item_plan),
             "item_plan_sha256": item_hash, "assembly_path": str(assembly), "assembly_sha256": assembly_hash}
 
 

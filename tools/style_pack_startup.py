@@ -26,7 +26,16 @@ def delegated_startup(args: argparse.Namespace) -> dict:
         receipt = json.loads(Path(args.delegated_selection_json).read_text(encoding="utf-8-sig"))
     except (OSError, ValueError) as exc:
         raise StylePackError(f"Cannot read delegated selection receipt: {exc}") from exc
-    validate_delegation_receipt(receipt)
+    if receipt.get("clothing_plan"):
+        raise StylePackError("Use CLOTHING_PLAN for recorded clothing defaults.")
+    return resolved_agent_startup(args, receipt)
+
+
+def resolved_agent_startup(args: argparse.Namespace, receipt: dict) -> dict:
+    validate_delegation_receipt(
+        receipt, generation_purpose=getattr(args, "generation_purpose", ""),
+        character_id=args.character_id,
+    )
     choices = receipt["agent_choices"]
     expected = {"style": "GENERATOR_DEFAULT" if args.style_name == "GENERATOR_DEFAULT" else f"PROJECT_STYLE:{args.style_name}",
                 "character": args.character_id, "fidelity": args.fidelity,
@@ -37,10 +46,10 @@ def delegated_startup(args: argparse.Namespace) -> dict:
         raise StylePackError("Delegation must be bound to the current chat and message.")
     quote = receipt["user_quote"]
     provenance = {"chat_id": receipt["current_chat_id"], "message_id": receipt["message_id"], "quote": quote}
-    return {"menu_contract": "EXPLICIT_USER_DELEGATION", "selected": "AGENT_DELEGATED",
+    return {"menu_contract": "CLOTHING_PLAN" if receipt.get("clothing_plan") else "EXPLICIT_USER_DELEGATION", "selected": "AGENT_DELEGATED",
             "selection_state": "AGENT_DELEGATED", "selection_origin_state": "AGENT_DELEGATED",
             "options": [], "menu_presented_this_turn": False, "menu_surface_this_turn": "NONE_DELEGATED",
-            "parameter_source": "AGENT_CHOICE_UNDER_USER_DELEGATION", "user_choice_quote": quote,
+            "parameter_source": "CLOTHING_PLAN_DEFAULTS" if receipt.get("clothing_plan") else "AGENT_CHOICE_UNDER_USER_DELEGATION", "user_choice_quote": quote,
             "confirmed_provenance": provenance,
             "body_library_provenance": {**provenance, "decision": choices["aux_body_decision"], "selected_by": "AGENT"},
             "resolved_parameters": {k: choices[k] for k in ("fidelity", "aux_body_decision")},
@@ -50,7 +59,9 @@ def delegated_startup(args: argparse.Namespace) -> dict:
             "confirmed_style_name": args.style_name, "custom_parameters_user_quote": ""}
 
 
-def validate_delegation_receipt(receipt: dict) -> None:
+def validate_delegation_receipt(
+    receipt: dict, *, generation_purpose: str = "", character_id: str = ""
+) -> None:
     if not isinstance(receipt, dict) or not all(isinstance(receipt.get(k), str) and receipt[k].strip()
             for k in ("request_id", "current_chat_id", "message_id", "user_quote", "agent_reason")):
         raise StylePackError("Delegation needs request/chat/message, exact user quote and agent reason.")
@@ -62,29 +73,51 @@ def validate_delegation_receipt(receipt: dict) -> None:
         r"(?: в (?:соседнем|отдельном) чате)?[.!] полностью сам[.!]?"
         r"(?: проследи как будут использоваться новые данные[.!]?)?"
     )
-    if not re.fullmatch(full_delegation, quote):
-        raise StylePackError("Full explicit delegation required; partial/negative wording needs direct choices.")
     c = receipt.get("agent_choices", {})
     if not isinstance(c, dict) or set(c) != {"style", "reference_policy", "character", "fidelity", "aux_body_decision"}:
         raise StylePackError("Delegation must record all five concrete agent choices.")
+    item = receipt.get("clothing_plan")
+    if item is not None:
+        if not (isinstance(item, dict) and generation_purpose == "SCENE"
+                and item.get("status") == "ITEM_PRODUCTION_PLAN" and item.get("item_kind") == "CLOTHING"
+                and item.get("request_id") == receipt["request_id"]
+                and re.fullmatch(r"CHAR_\d+", character_id) and item.get("character_id") == character_id
+                and item.get("style_name") and c == {
+                    "style": "PROJECT_STYLE:" + item["style_name"], "character": character_id,
+                    "reference_policy": "APPROVED_CHARACTER_REFERENCES", "fidelity": 90,
+                    "aux_body_decision": "DECLINED"}):
+            raise StylePackError("Clothing defaults require the matching character, style and item plan.")
+    elif not re.fullmatch(full_delegation, quote):
+        raise StylePackError("Full explicit delegation required; partial/negative wording needs direct choices.")
     if c["fidelity"] not in {30, 50, 70, 90, 100} or c["aux_body_decision"] not in {"SELECTED", "DECLINED"}:
         raise StylePackError("Invalid delegated profile values.")
     if not isinstance(c["style"], str) or not re.fullmatch(r"GENERATOR_DEFAULT|PROJECT_STYLE:.+", c["style"]):
         raise StylePackError("Delegated style must name the exact provider/project style.")
-    if not isinstance(c["character"], str) or not re.fullmatch(r"NONE|CHAR_\d+", c["character"]):
+    if c["character"] == "NEW":
+        if generation_purpose != "CHARACTER_BASE" or character_id != "NEW":
+            raise StylePackError("Delegated NEW requires an explicit NEW CHARACTER_BASE context.")
+    elif not isinstance(c["character"], str) or not re.fullmatch(r"NONE|CHAR_\d+", c["character"]):
         raise StylePackError("Invalid delegated character.")
+    if generation_purpose == "CHARACTER_BASE" and c["character"] != "NEW":
+        raise StylePackError("Delegated CHARACTER_BASE requires NEW.")
+    if character_id and c["character"] != character_id:
+        raise StylePackError("Delegated character differs from its execution context.")
     if c["reference_policy"] not in {"NO_REFERENCES", "PROJECT_STYLE_ONLY", "BODY_LIBRARY_ONLY", "APPROVED_CHARACTER_REFERENCES", "APPROVED_PLUS_USER_REFERENCES", "USER_ATTACHED_REFERENCES"}:
         raise StylePackError("Invalid delegated reference policy.")
 
 
-def validate_delegated_startup(startup: dict) -> None:
+def validate_delegated_startup(
+    startup: dict, *, generation_purpose: str = "", character_id: str = ""
+) -> None:
     receipt = startup.get("delegation")
-    validate_delegation_receipt(receipt)
+    validate_delegation_receipt(
+        receipt, generation_purpose=generation_purpose, character_id=character_id,
+    )
     c = receipt["agent_choices"]
     p = startup.get("confirmed_provenance", {})
-    if (startup.get("selected") != "AGENT_DELEGATED" or startup.get("menu_contract") != "EXPLICIT_USER_DELEGATION"
+    if (startup.get("selected") != "AGENT_DELEGATED" or startup.get("menu_contract") != ("CLOTHING_PLAN" if receipt.get("clothing_plan") else "EXPLICIT_USER_DELEGATION")
             or startup.get("menu_presented_this_turn") is not False
-            or startup.get("parameter_source") != "AGENT_CHOICE_UNDER_USER_DELEGATION"
+            or startup.get("parameter_source") != ("CLOTHING_PLAN_DEFAULTS" if receipt.get("clothing_plan") else "AGENT_CHOICE_UNDER_USER_DELEGATION")
             or p != {"chat_id": receipt["current_chat_id"], "message_id": receipt["message_id"], "quote": receipt["user_quote"]}
             or startup.get("user_choice_quote") != receipt["user_quote"]
             or any(startup.get("resolved_parameters", {}).get(k) != c[k] for k in ("fidelity", "aux_body_decision"))
@@ -108,7 +141,7 @@ def body_library_decision_supported(quote: str, decision: str) -> bool:
         return False
     selected = decision.upper() == "SELECTED"
     if selected:
-        return bool(re.search(r"\b(?:select(?:ed)?|use|using|enable|connect|include|with)\b|подключ|включ|использ|да", quote, re.IGNORECASE)) and not bool(
+        return bool(re.search(r"\b(?:select(?:ed)?|use|using|enable|connect|include|with)\b|\bс\s+(?:этой\s+)?BODY_REFERENCE_LIBRARY\b|\bпоз[ау]\s+из\s+BODY_REFERENCE_LIBRARY\b|подключ|включ|использ|да", quote, re.IGNORECASE)) and not bool(
             re.search(r"\b(?:do\s+not|don't|not|without|decline(?:d)?)\b|не\s+(?:подключ|включ|использ)|без", quote, re.IGNORECASE)
         )
     if decision.upper() == "DECLINED":
@@ -134,11 +167,14 @@ def menu_selection_fields(description: str) -> dict[str, str]:
 
 
 def validate_menu_user_selections(
-    startup: dict[str, object], selections: dict[str, object], *, allow_legacy_explicit: bool = False
+    startup: dict[str, object], selections: dict[str, object], *, allow_legacy_explicit: bool = False,
+    generation_purpose: str = "", character_id: str = "",
 ) -> None:
     """Bind executable choices to the exact complete option displayed to the user."""
     if startup.get("selection_origin_state", startup.get("selection_state")) == "AGENT_DELEGATED":
-        validate_delegated_startup(startup)
+        validate_delegated_startup(
+            startup, generation_purpose=generation_purpose, character_id=character_id,
+        )
         expected = {k: {"choice": v, "user_quote": startup["user_choice_quote"]}
                     for k, v in startup["resolved_user_selections"].items()}
         if selections != expected:
@@ -146,7 +182,8 @@ def validate_menu_user_selections(
         return
     if startup.get("selection_source_menu"):
         validate_menu_user_selections(
-            startup["selection_source_menu"], selections, allow_legacy_explicit=allow_legacy_explicit
+            startup["selection_source_menu"], selections, allow_legacy_explicit=allow_legacy_explicit,
+            generation_purpose=generation_purpose, character_id=character_id,
         )
         if startup.get("resolved_user_selections") != startup["selection_source_menu"].get("resolved_user_selections"):
             raise StylePackError("Reused choices differ from their original menu evidence.")
@@ -264,7 +301,10 @@ def validate_menu_choice_quote(quote: str, choice: str, displayed_label: str = "
 
 
 
-def validate_startup_profile_evidence(startup: dict[str, object], fidelity: int | None = None) -> tuple[int, str]:
+def validate_startup_profile_evidence(
+    startup: dict[str, object], fidelity: int | None = None, *,
+    generation_purpose: str = "", character_id: str = "",
+) -> tuple[int, str]:
     """Validate the saved selection against the evidence type that produced it."""
     resolved = startup.get("resolved_parameters")
     if not isinstance(resolved, dict):
@@ -290,7 +330,9 @@ def validate_startup_profile_evidence(startup: dict[str, object], fidelity: int 
         raise StylePackError("The source plan does not contain same-chat evidence for its BODY_REFERENCE_LIBRARY decision.")
 
     if origin_state == "AGENT_DELEGATED":
-        validate_delegated_startup(startup)
+        validate_delegated_startup(
+            startup, generation_purpose=generation_purpose, character_id=character_id,
+        )
         if library.get("quote") != provenance["quote"] or library.get("selected_by") != "AGENT":
             raise StylePackError("Delegated library decision must retain its true agent provenance.")
         return resolved_fidelity, decision

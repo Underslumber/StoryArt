@@ -3,9 +3,11 @@
 import json
 import hashlib
 import shutil
+import tempfile
 import unittest
 import uuid
 import io
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stdout
 from argparse import Namespace
 from pathlib import Path
@@ -181,6 +183,16 @@ class ManagerProfileFlowTests(unittest.TestCase):
             manager.apply_confirmed_defaults(self.paths, args, "CHAR_999", resolved, set())
             self.assertEqual(args.clothes_reference, str(self.wardrobe.resolve()))
             self.assertEqual(args.accessory_reference, [str(self.accessory.resolve())])
+            with_back_variant = {
+                **resolved,
+                "active_assets": {**resolved["active_assets"], "body_variant": [{"path": "approved-back.png"}]},
+            }
+            for mode in ("ASSEMBLY_ONLY", "ASSEMBLY_PLUS_FACE", "IDENTITY_STRICT", "AUTO", "ASSEMBLY_PLUS_VIEW"):
+                with self.subTest(mode=mode):
+                    scene = Namespace(**{**vars(args), "character_reference_mode": mode})
+                    self.assertEqual("BODY_VARIANT" in manager.suppressed_profile_defaults(scene), mode != "ASSEMBLY_PLUS_VIEW")
+                    manager.apply_confirmed_defaults(self.paths, scene, "CHAR_999", with_back_variant, set())
+                    self.assertEqual(scene.body_variant_reference, ["approved-back.png"] if mode == "ASSEMBLY_PLUS_VIEW" else [])
             self.assertEqual(args.character_assembly, str(self.base))
             plan = {"character_id": "CHAR_999", "generation_purpose": "SCENE", "request_id": "fixture", "generation_workflow": {"mode": "SINGLE_PASS"},
                     "confirmed_character_profile": resolved}
@@ -221,6 +233,240 @@ class ManagerProfileFlowTests(unittest.TestCase):
 
 
 class FirstApprovalRetryTests(unittest.TestCase):
+    def test_character_approval_uses_author_gated_face_and_never_falls_back_to_later_staging_face(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            face_a = root / "face-a.png"
+            face_b = root / "face-b.png"
+            assembly = root / "assembly.png"
+            Image.new("RGB", (8, 8), (1, 2, 3)).save(face_a)
+            Image.new("RGB", (8, 8), (3, 2, 1)).save(face_b)
+            Image.new("RGB", (8, 8), (2, 3, 1)).save(assembly)
+            paths = type("Paths", (), {"generation_manifest": root / "GENERATION_MANIFEST.csv", "generations": root / "TEST_GENERATIONS"})()
+            rows = [
+                {"request_id": "request", "status": "STAGING", "style_file": str(face_b), "notes": "[STAGE_ID=01_FACE_IDENTITY]"},
+                {"request_id": "request", "status": "TEST", "style_file": str(assembly), "notes": "[STAGE_ID=05_CHARACTER_ASSEMBLY]"},
+            ]
+            accepted = {"01_FACE_IDENTITY": {"path": str(face_a), "qa_passed": True}}
+            for stage, color in (("02_PHYSIQUE_FRONT", (10, 0, 0)), ("03_PHYSIQUE_SIDE", (0, 10, 0)), ("04_PHYSIQUE_BACK", (0, 0, 10))):
+                path = root / f"{stage}.png"
+                Image.new("RGB", (8, 8), color).save(path)
+                accepted[stage] = {"path": str(path), "qa_passed": True}
+            by_file = {Path(row["style_file"]): row for row in rows}
+            with patch.object(manager, "validated_stage_outputs", return_value=accepted), \
+                 patch.object(manager, "select_character_approval_source_generation", return_value=(rows[1], {"record_status": "TEST", "qa_failed": [], "qa_contract": "fixture.json"})), \
+                 patch.object(manager, "read_csv", return_value=rows), \
+                 patch.object(manager, "newest_matching_generation", side_effect=lambda _paths, file: by_file.get(Path(file))), \
+                 patch.object(manager, "generation_has_passed_qa", return_value=True):
+                selected, source, _ = manager.resolve_character_approval_stage_files(paths, "request", root / "REFERENCE_PLAN.json", {})
+            self.assertEqual(selected["01_FACE_IDENTITY"], face_a.resolve())
+            self.assertEqual(selected["05_CHARACTER_ASSEMBLY"], assembly.resolve())
+            self.assertEqual(source, rows[1])
+
+            unresolved = {key: value for key, value in accepted.items() if key != "01_FACE_IDENTITY"}
+            with patch.object(manager, "validated_stage_outputs", return_value=unresolved), \
+                 patch.object(manager, "select_character_approval_source_generation", return_value=(rows[1], {"record_status": "TEST", "qa_failed": [], "qa_contract": "fixture.json"})), \
+                 patch.object(manager, "read_csv", return_value=rows), \
+                 patch.object(manager, "newest_matching_generation", side_effect=lambda _paths, file: by_file.get(Path(file))), \
+                 patch.object(manager, "generation_has_passed_qa", return_value=True):
+                selected, _, _ = manager.resolve_character_approval_stage_files(paths, "request", root / "REFERENCE_PLAN.json", {})
+            self.assertNotIn("01_FACE_IDENTITY", selected)
+
+    def test_replaced_face_invalidates_previously_accepted_assembly_binding(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            stages = {}
+            for index, stage in enumerate(("01_FACE_IDENTITY", "02_PHYSIQUE_FRONT", "03_PHYSIQUE_SIDE", "04_PHYSIQUE_BACK")):
+                path = root / f"{stage}.png"
+                Image.new("RGB", (8, 8), (index, 40, 80)).save(path)
+                stages[stage] = path
+            old_face_hash = manager.sha256(stages["01_FACE_IDENTITY"])
+            Image.new("RGB", (8, 8), (240, 1, 1)).save(stages["01_FACE_IDENTITY"])
+            assembly = root / "assembly.png"
+            Image.new("RGB", (8, 8), (80, 40, 0)).save(assembly)
+            snapshot_path = assembly.with_suffix(assembly.suffix + ".qa-plan.json")
+            def write_snapshot(face_hash):
+                snapshot_path.write_text(json.dumps({"request_id": "request", "character_id": "NEW",
+                    "execution_call": {"stage_id": "05_CHARACTER_ASSEMBLY", "stage_output_bindings": [
+                        {"stage_id": stage, "sha256": face_hash if stage == "01_FACE_IDENTITY" else manager.sha256(path)}
+                        for stage, path in stages.items()
+                    ]}}), encoding="utf-8")
+            write_snapshot(old_face_hash)
+            with self.assertRaisesRegex(manager.StylePackError, "01_FACE_IDENTITY"):
+                manager.validate_character_assembly_stage_snapshot(json.loads(snapshot_path.read_text()), "request", "NEW", stages)
+            write_snapshot(manager.sha256(stages["01_FACE_IDENTITY"]))
+            manager.validate_character_assembly_stage_snapshot(json.loads(snapshot_path.read_text()), "request", "NEW", stages)
+
+    def test_assembly_validation_uses_canonical_manager_qa_snapshot_not_alias_sidecar(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            stages = {}
+            bindings = []
+            for index, stage in enumerate(("01_FACE_IDENTITY", "02_PHYSIQUE_FRONT", "03_PHYSIQUE_SIDE", "04_PHYSIQUE_BACK")):
+                path = root / f"{stage}.png"
+                Image.new("RGB", (8, 8), (index, 40, 80)).save(path)
+                stages[stage] = path
+                bindings.append({"stage_id": stage, "sha256": manager.sha256(path)})
+            canonical = root / "assembly.png"
+            alias = root / "alias.png"
+            Image.new("RGB", (8, 8), (80, 40, 0)).save(canonical)
+            alias.write_bytes(canonical.read_bytes())
+            canonical_snapshot = canonical.with_suffix(canonical.suffix + ".qa-plan.json")
+            canonical_snapshot.write_text(json.dumps({"request_id": "request", "character_id": "NEW",
+                "execution_call": {"stage_id": "05_CHARACTER_ASSEMBLY", "stage_output_bindings": bindings}}), encoding="utf-8")
+            alias_snapshot = alias.with_suffix(alias.suffix + ".qa-plan.json")
+            bad_bindings = [dict(row) for row in bindings]
+            bad_bindings[0]["sha256"] = "f" * 64
+            alias_snapshot.write_text(json.dumps({"request_id": "request", "character_id": "NEW",
+                "execution_call": {"stage_id": "05_CHARACTER_ASSEMBLY", "stage_output_bindings": bad_bindings}}), encoding="utf-8")
+            contract = canonical.with_suffix(canonical.suffix + ".qa-contract.json")
+            contract.write_text(json.dumps({"stage_id": "05_CHARACTER_ASSEMBLY", "plan_snapshot": str(canonical_snapshot)}), encoding="utf-8")
+            row = {"style_file": str(canonical), "request_id": "request", "character_id": "NEW", "status": "TEST",
+                   "notes": "[STAGE_ID=05_CHARACTER_ASSEMBLY]"}
+            paths = type("Paths", (), {})()
+            evidence = {"record_status": "TEST", "qa_failed": [], "qa_contract": str(contract)}
+            manager.validate_character_assembly_stage_bindings(paths, "request", "NEW", canonical, stages, row, evidence)
+            with self.assertRaisesRegex(manager.StylePackError, "01_FACE_IDENTITY"):
+                canonical_snapshot.write_text(json.dumps({"request_id": "request", "character_id": "NEW",
+                    "execution_call": {"stage_id": "05_CHARACTER_ASSEMBLY", "stage_output_bindings": bad_bindings}}), encoding="utf-8")
+                manager.validate_character_assembly_stage_bindings(paths, "request", "NEW", canonical, stages, row, evidence)
+
+    def test_retry_source_selection_skips_derived_approval_but_respects_newer_rejection(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            image = root / "assembly.png"
+            Image.new("RGB", (8, 8), (80, 40, 0)).save(image)
+            snapshot = root / "plan.json"
+            snapshot.write_text(json.dumps({"request_id": "request", "character_id": "NEW"}), encoding="utf-8")
+            contract = root / "contract.json"
+            contract.write_text(json.dumps({"stage_id": "05_CHARACTER_ASSEMBLY", "plan_snapshot": str(snapshot),
+                                            "visual_review": {"attempt_id": "attempt-a"}}), encoding="utf-8")
+            source = {"request_id": "request", "status": "TEST", "qa_output_sha256": manager.sha256(image),
+                      "character_id": "NEW", "style_file": str(image),
+                      "notes": "[STAGE_ID=05_CHARACTER_ASSEMBLY] [ATTEMPT_ID=attempt-a]"}
+            derived = {**source, "status": "APPROVED_CHARACTER_BASE", "notes": "derived approval"}
+            evidence = {"record_status": "TEST", "qa_failed": [], "qa_contract": str(contract),
+                        "output_sha256": source["qa_output_sha256"]}
+            paths = type("Paths", (), {"generation_manifest": root / "GENERATION_MANIFEST.csv", "generations": root / "TEST_GENERATIONS"})()
+            with patch.object(manager, "read_csv", return_value=[source, derived]), \
+                 patch.object(manager, "generation_qa_evidence", return_value=evidence), \
+                 patch.object(manager, "load_execution_guard", return_value={}), \
+                 patch.object(manager, "validate_stage_attempt_binding", return_value={"attempt_id": "attempt-a"}):
+                self.assertIs(manager.select_character_approval_source_generation(
+                    paths, image, "request", expected_stage="05_CHARACTER_ASSEMBLY",
+                    expected_character_id="NEW", canonical_path=image), source)
+            mutable_alias = root / "mutable-source.png"
+            mutable_alias.write_bytes(b"changed after QA")
+            with patch.object(manager, "read_csv", return_value=[{**source, "source_image": str(mutable_alias)}]), \
+                 patch.object(manager, "generation_qa_evidence", return_value=evidence):
+                with self.assertRaisesRegex(manager.StylePackError, "hash-verified TEST"):
+                    manager.select_character_approval_source_generation(paths, mutable_alias, "request")
+            rejected = {**source, "status": "REJECTED", "notes": "[STAGE_ID=05_CHARACTER_ASSEMBLY] [ATTEMPT_ID=attempt-b]"}
+            with patch.object(manager, "read_csv", return_value=[source, derived, rejected]), \
+                 patch.object(manager, "generation_qa_evidence", return_value=evidence), \
+                 patch.object(manager, "load_execution_guard", return_value={}), \
+                 patch.object(manager, "validate_stage_attempt_binding", return_value={"attempt_id": "attempt-a"}):
+                with self.assertRaisesRegex(manager.StylePackError, "newer rejection"):
+                    manager.select_character_approval_source_generation(
+                        paths, image, "request", expected_stage="05_CHARACTER_ASSEMBLY",
+                        expected_character_id="NEW", canonical_path=image)
+
+    def test_early_copy_failure_does_not_consume_permanent_character_id(self):
+        workspace = ROOT / ".test_profile_approval" / uuid.uuid4().hex
+        workspace.mkdir(parents=True)
+        try:
+            paths = manager.make_paths(workspace, "TEST")
+            with redirect_stdout(io.StringIO()):
+                manager.command_init(Namespace(workspace=workspace, style_name="TEST", source=""))
+            pending = paths.generations / "00_PENDING" / "original-request"
+            pending.mkdir(parents=True)
+            images = [workspace / name for name in ("base.png", "face.png", "front.png", "side.png", "back.png")]
+            for index, image in enumerate(images):
+                Image.new("RGB", (16, 16), (40 + index, 60, 80)).save(image)
+            args = Namespace(workspace=workspace, style_name="TEST", user_approved=True, request_id="original-request",
+                             image=str(images[0]), face_reference=[str(images[1])], body_reference=[str(v) for v in images[2:]],
+                             wardrobe_reference=[], accessory_reference=[], name="Test", notes="", approval_quote="User approved Test",
+                             fidelity=90, risk_level="D1")
+            real_copy = manager.copy_approval_asset
+            calls = 0
+            def interrupt_copy(source, destination, staging_root):
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    raise SystemExit("simulated hard interruption after durable intent")
+                return real_copy(source, destination, staging_root)
+            with patch.object(manager, "select_character_approval_source_generation", return_value={"character_id": "NEW"}), \
+                 patch.object(manager, "require_generated_character_reference"), \
+                 patch.object(manager, "assert_active_request_path"), \
+                 patch.object(manager, "approval_provenance", return_value=("parent", "", "", {}, "approved")), \
+                 patch.object(manager, "generation_has_passed_qa", return_value=True), \
+                 patch.object(manager, "copy_approval_asset", side_effect=interrupt_copy):
+                with self.assertRaisesRegex(SystemExit, "durable intent"):
+                    manager.command_approve_character(args)
+            character_root = paths.generations / "01_APPROVED_CHARACTERS"
+            self.assertEqual(list(character_root.glob("CHAR_*")), [])
+            self.assertEqual(len(list((character_root / ".approval-intents").glob("*.json"))), 1)
+            with patch.object(manager, "select_character_approval_source_generation", return_value={"character_id": "NEW"}), \
+                 patch.object(manager, "require_generated_character_reference"), \
+                 patch.object(manager, "assert_active_request_path"), \
+                 patch.object(manager, "approval_provenance", return_value=("parent", "", "", {}, "approved")), \
+                 patch.object(manager, "generation_has_passed_qa", return_value=True):
+                with redirect_stdout(io.StringIO()):
+                    manager.command_approve_character(args)
+            rows = manager.read_csv(paths.character_registry)
+            self.assertEqual([row["character_id"] for row in rows], ["CHAR_001"])
+        finally:
+            if workspace.resolve().is_relative_to(ROOT.resolve()):
+                shutil.rmtree(workspace)
+
+    def test_promotion_before_registry_write_recovers_exact_reserved_character(self):
+        workspace = ROOT / ".test_profile_approval" / uuid.uuid4().hex
+        workspace.mkdir(parents=True)
+        try:
+            paths = manager.make_paths(workspace, "TEST")
+            with redirect_stdout(io.StringIO()):
+                manager.command_init(Namespace(workspace=workspace, style_name="TEST", source=""))
+            pending = paths.generations / "00_PENDING" / "original-request"
+            pending.mkdir(parents=True)
+            images = [workspace / name for name in ("base.png", "face.png", "front.png", "side.png", "back.png")]
+            for index, image in enumerate(images):
+                Image.new("RGB", (16, 16), (40 + index, 60, 80)).save(image)
+            args = Namespace(workspace=workspace, style_name="TEST", user_approved=True, request_id="original-request",
+                             image=str(images[0]), face_reference=[str(images[1])], body_reference=[str(v) for v in images[2:]],
+                             wardrobe_reference=[], accessory_reference=[], name="Test", notes="", approval_quote="User approved Test",
+                             fidelity=90, risk_level="D1")
+            real_write_csv = manager.write_csv
+            def interrupt_registry(path, fields, rows):
+                if Path(path) == paths.character_registry:
+                    raise SystemExit("simulated stop after promotion before registry")
+                return real_write_csv(path, fields, rows)
+            with patch.object(manager, "select_character_approval_source_generation", return_value={"character_id": "NEW"}), \
+                 patch.object(manager, "require_generated_character_reference"), \
+                 patch.object(manager, "assert_active_request_path"), \
+                 patch.object(manager, "approval_provenance", return_value=("parent", "", "", {}, "approved")), \
+                 patch.object(manager, "generation_has_passed_qa", return_value=True), \
+                 patch.object(manager, "write_csv", side_effect=interrupt_registry):
+                with self.assertRaisesRegex(SystemExit, "before registry"):
+                    manager.command_approve_character(args)
+            character_root = paths.generations / "01_APPROVED_CHARACTERS"
+            permanent = list(character_root.glob("CHAR_*"))
+            self.assertEqual(len(permanent), 1)
+            self.assertTrue((permanent[0] / "APPROVAL_OWNER.json").is_file())
+            self.assertEqual(manager.read_csv(paths.character_registry), [])
+            with patch.object(manager, "select_character_approval_source_generation", return_value={"character_id": "NEW"}), \
+                 patch.object(manager, "require_generated_character_reference"), \
+                 patch.object(manager, "assert_active_request_path"), \
+                 patch.object(manager, "approval_provenance", return_value=("parent", "", "", {}, "approved")), \
+                 patch.object(manager, "generation_has_passed_qa", return_value=True):
+                with redirect_stdout(io.StringIO()):
+                    manager.command_approve_character(args)
+            rows = manager.read_csv(paths.character_registry)
+            self.assertEqual([row["character_id"] for row in rows], ["CHAR_001"])
+            self.assertEqual(len([row for row in manager.read_csv(paths.generation_manifest) if row["status"] == "APPROVED_CHARACTER_BASE"]), 1)
+        finally:
+            if workspace.resolve().is_relative_to(ROOT.resolve()):
+                shutil.rmtree(workspace)
+
     def test_interrupted_first_publication_retries_same_character(self):
         workspace = ROOT / ".test_profile_approval" / uuid.uuid4().hex
         workspace.mkdir(parents=True)
@@ -245,8 +491,9 @@ class FirstApprovalRetryTests(unittest.TestCase):
                 if calls == 1:
                     raise OSError("simulated first publication failure")
                 return real_confirm(*call_args, **kwargs)
-            with patch.object(manager, "require_qa_passed_generation_for_approval", return_value={"character_id": "NEW"}), \
+            with patch.object(manager, "select_character_approval_source_generation", return_value={"character_id": "NEW"}), \
                  patch.object(manager, "require_generated_character_reference"), \
+                 patch.object(manager, "assert_active_request_path"), \
                  patch.object(manager, "approval_provenance", return_value=("parent", "", "", {}, "approved")), \
                  patch.object(manager, "generation_has_passed_qa", return_value=True), \
                  patch.object(manager, "confirm_profile_state", side_effect=interrupted):
@@ -257,7 +504,22 @@ class FirstApprovalRetryTests(unittest.TestCase):
                 profile = Path(rows[0]["profile_path"])
                 with self.assertRaisesRegex(state.ProfileStateError, "requires confirmed profile publication"):
                     state.load_effective(profile)
-                manager.command_approve_character(args)
+                changed_quote = Namespace(**{**vars(args), "approval_quote": "A different approval quote"})
+                with self.assertRaisesRegex(manager.StylePackError, "different approval inputs"):
+                    manager.command_approve_character(changed_quote)
+                wardrobe = workspace / "changed-wardrobe.png"
+                Image.new("RGB", (16, 16), (91, 92, 93)).save(wardrobe)
+                changed_wardrobe = Namespace(**{**vars(args), "wardrobe_reference": [str(wardrobe)]})
+                with self.assertRaisesRegex(manager.StylePackError, "different approval inputs"):
+                    manager.command_approve_character(changed_wardrobe)
+                face_copy = Path(rows[0]["face_references"].split(";")[0])
+                face_bytes = face_copy.read_bytes()
+                face_copy.write_bytes(b"tampered promoted FACE bytes")
+                with self.assertRaisesRegex(manager.StylePackError, "reserved source"):
+                    manager.command_approve_character(args)
+                face_copy.write_bytes(face_bytes)
+                with ThreadPoolExecutor(max_workers=2) as executor:
+                    list(executor.map(manager.command_approve_character, [args, args]))
             self.assertEqual([row["character_id"] for row in manager.read_csv(paths.character_registry)], ["CHAR_001"])
             self.assertEqual(len([row for row in manager.read_csv(paths.generation_manifest) if row["status"] == "APPROVED_CHARACTER_BASE"]), 1)
             self.assertEqual(state.load_effective(profile)["revision"], 1)

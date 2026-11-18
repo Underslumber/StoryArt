@@ -83,7 +83,9 @@ def build_item_prompt(plan: dict[str, Any]) -> str:
     exact_character = str(plan["character_id"])
     parts = [
         f"Create the requested {kind.lower()} reference sheet for {plan['item_name']} version {plan['version']}.",
-        "The sheet must contain two clearly separated, full-resolution panels with no overlap:",
+        ("Provide these two clean references separately from the approval card:"
+         if kind == "CLOTHING" else
+         "The sheet must contain two clearly separated, full-resolution panels with no overlap:"),
         "(1) ITEM_DESIGN: isolated item only on a plain neutral background, no person, hands, mannequin, shadow shaped like a person, or other subject; show the complete item and construction details.",
         f"(2) ITEM_SCALE_FIT: a general view with the exact approved character {exact_character} and the complete item together, at a readable scale.",
         "Keep item identity, silhouette, materials, dimensions, proportions, construction, and version exactly consistent between both panels.",
@@ -93,6 +95,14 @@ def build_item_prompt(plan: dict[str, Any]) -> str:
         f"Dimensions/ratios: {plan['dimensions']}",
         f"Material: {plan['material']}; construction: {plan['construction']}; attachment/contact constraints: {plan['attachment_constraints']}",
     ]
+    if kind == "CLOTHING":
+        parts.append("Keep every garment opening empty in the isolated view, including neckline and armholes. No skin or body fragments.")
+    if kind == "CLOTHING":
+        parts.append("The primary result is the finished wardrobe card in the author's layout. "
+                     "Show the assembled outfit in strict front view without a wearer or mannequin. "
+                     "Include numbered detail callouts, material close-ups and a palette. "
+                     "Keep the two clean reference views available separately. "
+                     f"Write all visible labels in {plan.get('card_language') or 'the language of the author’s request'}.")
     return "\n".join(parts)
 
 
@@ -134,6 +144,14 @@ def create_plan(args: argparse.Namespace) -> dict[str, Any]:
         "generation_prompt": "",
         "approval_required": True,
     }
+    card_language = str(getattr(args, "card_language", "") or "").strip()
+    if card_language:
+        if args.item_kind != "CLOTHING":
+            raise ItemReferenceError("A wardrobe card requires CLOTHING.")
+        plan["card_language"] = card_language
+    if args.item_kind == "CLOTHING":
+        plan["required_qa"].append("WARDROBE_CARD")
+        plan["card_layout"] = manager.wardrobe_card_layout()
     plan["generation_prompt"] = build_item_prompt(plan)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -146,6 +164,8 @@ def _validate_qa(plan: dict[str, Any], qa: dict[str, Any], design_hash: str, sca
     if kind not in KINDS:
         raise ItemReferenceError("Item kind is unknown; required QA cannot be derived safely.")
     required = set(QA_COMMON + (QA_CLOTHING if kind == "CLOTHING" else ()))
+    if kind == "CLOTHING":
+        required.add("WARDROBE_CARD")
     checks = qa.get("checks")
     if not isinstance(checks, dict):
         raise ItemReferenceError("QA JSON must contain a checks object with every required item layer.")
@@ -212,6 +232,20 @@ def approve(args: argparse.Namespace) -> dict[str, Any]:
     source_sheet = Path(str(qa_input.get("item_design_source", {}).get("source_sheet_path", ""))).resolve()
     manager.assert_active_request_path(source_sheet)
     qa = _validate_qa(plan, qa_input, design_hash, scale_hash, assembly_hash)
+    card = None
+    card_hash = ""
+    if plan["item_kind"] == "CLOTHING":
+        card_arg = getattr(args, "card_image", None)
+        if not card_arg:
+            raise ItemReferenceError("Clothing approval requires the finished wardrobe card (--card-image).")
+        card = Path(card_arg).resolve()
+        manager.assert_active_request_path(card)
+        if card in {design, scale} or not card.is_file() or card.suffix.lower() not in manager.SUPPORTED_IMAGE_EXTENSIONS:
+            raise ItemReferenceError("The finished wardrobe card must be a separate image from both clean views.")
+        card_hash = _sha256(card)
+        evidence = qa["checks"]["WARDROBE_CARD"]
+        if card_hash in {design_hash, scale_hash} or str(evidence.get("sha256", "")).lower() != card_hash:
+            raise ItemReferenceError("WARDROBE_CARD review must bind the finished card's exact SHA-256.")
     profile_identity = manager._approved_profile_identity(paths, profile, str(plan["character_id"]))
     expected_label = {
         "MALE_ANATOMY": "MALE",
@@ -231,11 +265,14 @@ def approve(args: argparse.Namespace) -> dict[str, Any]:
         raise ItemReferenceError(f"Refusing to overwrite an existing item version: {folder}")
     paths_to_store = [(design, folder / "ITEM_DESIGN" / ("source" + design.suffix.lower())),
                       (scale, folder / "ITEM_SCALE_FIT" / ("source" + scale.suffix.lower()))]
+    if card is not None:
+        card_destination = folder / ("WARDROBE_CARD" + card.suffix.lower())
+        paths_to_store.append((card, card_destination))
     for source, destination in paths_to_store:
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
     item = {
-        "schema_version": 1,
+        "schema_version": 2 if card is not None else 1,
         "status": "APPROVED_TYPED_ITEM",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "style_name": paths.style_name,
@@ -260,6 +297,14 @@ def approve(args: argparse.Namespace) -> dict[str, Any]:
         "qa": qa,
         "author_approval": {"status": "APPROVED", "quote": args.approval_quote.strip()},
     }
+    if card is not None:
+        item["wardrobe_card"] = {"path": str(card_destination), "sha256": card_hash,
+                                 "language": plan.get("card_language")}
+        if plan.get("card_layout"):
+            item["wardrobe_card"]["layout_id"] = plan["card_layout"]["id"]
+    tags = sorted({tag.strip().casefold() for tag in getattr(args, "tag", []) if tag.strip()})
+    if tags:
+        item["tags"] = tags
     manifest = folder / "APPROVED_ITEM_REFERENCE.json"
     manifest.write_text(json.dumps(item, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     registry = paths.generations / "TYPED_ITEM_REFERENCE_REGISTRY.jsonl"
@@ -320,6 +365,14 @@ def validate_manifest(workspace: Path, manifest_path: Path, *, style_name: str =
     checks = item.get("qa", {}).get("checks", {})
     if any(not isinstance(checks.get(name), dict) or checks[name].get("status") != "PASS" for name in required):
         raise ItemReferenceError("Typed item is missing PASS for required role-specific QA.")
+    if item["item_kind"] == "CLOTHING" and item.get("schema_version") == 2:
+        card = item.get("wardrobe_card") or {}
+        card_path = Path(str(card.get("path", ""))).resolve()
+        card_review = checks.get("WARDROBE_CARD") or {}
+        if (card_path.parent != expected_folder or card_path.stem != "WARDROBE_CARD"
+                or not card_path.is_file() or card.get("sha256") != _sha256(card_path)
+                or card_review.get("sha256") != card.get("sha256") or card_review.get("status") != "PASS"):
+            raise ItemReferenceError("Finished wardrobe card is missing, changed, or not bound to its review.")
     for key, label in (("item_design", "ITEM_DESIGN"), ("item_scale_fit", "ITEM_SCALE_FIT")):
         ref = item.get(key)
         if not isinstance(ref, dict):
@@ -392,7 +445,12 @@ def list_items(workspace: Path, style_name: str, character_id: str) -> list[dict
                                      style_name=style_name, character_id=character_id)
         except (ItemReferenceError, OSError, ValueError):
             continue
-        results.append({key: item[key] for key in ("item_id", "item_name", "item_kind", "version", "manifest_path")})
+        row = {key: item[key] for key in ("item_id", "item_name", "item_kind", "version", "manifest_path")}
+        if item.get("wardrobe_card"):
+            row["wardrobe_card"] = item["wardrobe_card"]["path"]
+        if item.get("tags"):
+            row["tags"] = item["tags"]
+        results.append(row)
     return results
 
 
@@ -405,6 +463,7 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--request-id", required=True)
     plan.add_argument("--output", required=True)
     plan.add_argument("--character-id", required=True)
+    plan.add_argument("--card-language", help="Language for labels; defaults to the language of the author’s request.")
     plan.add_argument("--item-id", required=True)
     plan.add_argument("--item-kind", choices=KINDS, required=True)
     for name in ("name", "version", "design-spec", "dimensions", "material", "construction", "attachment-constraints"):
@@ -416,6 +475,8 @@ def build_parser() -> argparse.ArgumentParser:
     approval.add_argument("--item-plan", required=True)
     approval.add_argument("--design-image", required=True)
     approval.add_argument("--scale-fit-image", required=True)
+    approval.add_argument("--card-image", help="The finished authored wardrobe card; required for clothing approval.")
+    approval.add_argument("--tag", action="append", default=[], help="Search label for the approved item version; repeat as needed.")
     approval.add_argument("--qa-json", required=True)
     approval.add_argument("--approval-quote", required=True)
     approval.add_argument("--user-approved", action="store_true")

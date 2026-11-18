@@ -9,6 +9,34 @@ def test_search_hides_paths_for_unresolved_subject(monkeypatch, tmp_path):
     got=rpm.search(["P"], limit=5)["records"][0]
     assert "relative_path" not in got
 
+def test_search_shortlist_ranks_title_and_interleaves_pools(monkeypatch,tmp_path):
+    monkeypatch.setattr(rpm,"cfg",lambda:{"A":{},"B":{}})
+    rows={"A":[{"id":"a1","title":"Sitting on chair","tags":[],"subject_label":"MALE","sha256":"1","group_id":"g1"},
+                {"id":"a2","title":"Sitting on floor","tags":[],"subject_label":"MALE","sha256":"2","group_id":"g2"}],
+          "B":[{"id":"b1","title":"Sitting by wall","tags":[],"subject_label":"MALE","sha256":"3","group_id":"g3"}]}
+    monkeypatch.setattr(rpm,"records",lambda pool:(tmp_path,rows[pool]))
+    result=rpm.search(["A","B"],query="sitting",limit=2)
+    assert [x["pool"] for x in result["records"]]==["A","B"]
+    assert result["total"]==3 and result["by_source"]=={"A":2,"B":1}
+
+def test_search_normalizes_russian_phrases_without_changing_records(monkeypatch,tmp_path):
+    monkeypatch.setattr(rpm,"cfg",lambda:{"WAVESPEED_POSES":{}})
+    rows=[{"id":"WS_0389_3d_front","title":"High five","tags":[],"subject_label":"NEUTRAL","sha256":"1","group_id":"WS_0389"},
+          {"id":"chair","title":"Сидя на стуле","tags":[],"subject_label":"FEMALE","sha256":"2"}]
+    original=json.loads(json.dumps(rows,ensure_ascii=False))
+    monkeypatch.setattr(rpm,"records",lambda pool:(tmp_path,rows))
+    for q,expected in (("дай пять","WS_0389_3d_front"),("дай 5","WS_0389_3d_front"),("сидит на стуле","chair")):
+        got=rpm.search(["WAVESPEED_POSES"],query=q,limit=10)
+        assert expected in [r["id"] for r in got["records"]]
+    assert rows==original
+    assert rpm.search(["WAVESPEED_POSES"],query="zzq-no-match-xyz")["records"]==[]
+
+def test_shortlist_retains_all_angle_ids_for_one_pose_group():
+    rows=[{"id":f"WS_0389_{style}_{angle}","pool":"WAVESPEED_POSES","group_id":"WS_0389"}
+          for style in ("3d","line") for angle in ("front","side","three_quarter")]
+    got=rpm.rank_shortlist(rows,"high five",text=lambda r:"high five",source=lambda r:r["pool"],group=lambda r:r["group_id"],limit=12)
+    assert {r["id"] for r in got}=={r["id"] for r in rows}
+
 
 @pytest.mark.parametrize('label,status,has_overview', [('MALE','CONFIRMED',True),('UNKNOWN','UNKNOWN',False)])
 def test_scenario_search_uses_descriptions_without_promoting_source(monkeypatch,tmp_path,label,status,has_overview):
