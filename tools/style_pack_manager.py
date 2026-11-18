@@ -1770,6 +1770,14 @@ def wardrobe_card_layout() -> dict[str, object]:
         raise StylePackError(f"Cannot read the project wardrobe card template: {exc}") from exc
 
 
+def clothing_details_layout() -> dict[str, object]:
+    path = Path(__file__).resolve().parents[1] / "templates/ITEM_REFERENCES/CLOTHING_DETAILS_V1.json"
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise StylePackError(f"Cannot read the clothing-details template: {exc}") from exc
+
+
 def parse_startup_interaction(args: argparse.Namespace) -> dict[str, object]:
     selection_mode = args.startup_selection_mode.upper()
     if selection_mode == "CLOTHING_PLAN":
@@ -1788,6 +1796,7 @@ def parse_startup_interaction(args: argparse.Namespace) -> dict[str, object]:
                 **{key: item.get(key) for key in
                    ("status", "item_kind", "request_id", "character_id", "style_name", "card_language")},
                 "card_layout": item.get("card_layout") or wardrobe_card_layout(),
+                "clothing_details_layout": item.get("clothing_details_layout") or clothing_details_layout(),
             },
             "agent_choices": {"style": "PROJECT_STYLE:" + args.style_name, "character": args.character_id,
                               "reference_policy": "APPROVED_CHARACTER_REFERENCES",

@@ -334,6 +334,7 @@ def test_clothing_card_uses_current_item_plan_without_menu(tmp_path, monkeypatch
     startup = manager.parse_startup_interaction(args)
     assert not startup["menu_presented_this_turn"]
     assert startup["parameter_source"] == "CLOTHING_PLAN_DEFAULTS"
+    assert startup["delegation"]["clothing_plan"]["clothing_details_layout"]["id"] == "CLOTHING_DETAILS_V1"
     assert manager.validate_startup_profile_evidence(
         startup, 90, generation_purpose="SCENE", character_id="CHAR_007"
     ) == (90, "DECLINED")

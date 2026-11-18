@@ -12,6 +12,7 @@ import hashlib
 import json
 import re
 import shutil
+from tempfile import TemporaryDirectory
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -111,6 +112,54 @@ def build_item_prompt(plan: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
+def build_clothing_details(args: argparse.Namespace) -> dict[str, Any]:
+    try:
+        from tools.clothing_details import render, uses_clothing_details
+        from tools.task_execution_guard import GuardError, load_guard, validate_stage_attempt_binding
+    except ImportError:
+        from clothing_details import render, uses_clothing_details
+        from task_execution_guard import GuardError, load_guard, validate_stage_attempt_binding
+
+    card = Path(args.card_image).resolve()
+    regions = Path(args.regions).resolve()
+    manager.assert_active_request_path(card)
+    manager.assert_active_request_path(regions)
+    if card.name != "WARDROBE_CARD.png" or regions.parent != card.parent:
+        raise ItemReferenceError("Card and region map must be in the same active request folder.")
+    state = load_guard(card.parent / "EXECUTION_GUARD.json")
+    if state.get("status") not in {"ACTIVE", "COMPLETE"}:
+        raise ItemReferenceError("Resume the wardrobe request before assembling its details.")
+    attempts = state.get("attempts", [])
+    attempt = attempts[-1] if attempts else {}
+    snapshot = attempt.get("execution_snapshot") or {}
+    plan = Path(str(snapshot.get("reference_plan_snapshot_path", ""))).resolve()
+    if (plan.parent != card.parent or not plan.is_file()
+            or _sha256(plan) != snapshot.get("reference_plan_snapshot_sha256")
+            or not uses_clothing_details(_read_json(plan))):
+        raise ItemReferenceError("The registered card must belong to a CLOTHING_DETAILS_V1 execution.")
+    try:
+        binding = validate_stage_attempt_binding(state, "SINGLE_PASS", attempt.get("result_evidence", []))
+    except GuardError as error:
+        raise ItemReferenceError(f"Register the original wardrobe card as TEST before assembling its details: {error}") from error
+    if binding["result_status"] != "TEST" or _sha256(card) != binding["artifact_sha256"]:
+        raise ItemReferenceError("The card must be the exact QA-passed TEST image from this execution.")
+    output = card.with_name("CLOTHING_DETAILS.png")
+    data = render(card, _read_json(regions))
+    if output.is_file() and output.read_bytes() == data:
+        return {"path": str(output), "sha256": _sha256(output)}
+    accepted = any(
+        row.get("id") == "CLOTHING_DETAILS" and row.get("status") == "COMPLETED"
+        for row in state.get("required_stages", [])
+    )
+    if state.get("status") == "COMPLETE" or accepted or (output.exists() and not args.replace):
+        raise ItemReferenceError("The existing clothing sheet may only be replaced before stage acceptance with --replace.")
+    with TemporaryDirectory(dir=output.parent) as temporary:
+        staged = Path(temporary) / output.name
+        staged.write_bytes(data)
+        staged.replace(output)
+    return {"path": str(output), "sha256": _sha256(output)}
+
+
 def create_plan(args: argparse.Namespace) -> dict[str, Any]:
     item_id = args.item_id.strip().upper()
     if not re.fullmatch(r"ITEM_[A-Z0-9][A-Z0-9_-]{0,63}", item_id):
@@ -157,9 +206,7 @@ def create_plan(args: argparse.Namespace) -> dict[str, Any]:
     if args.item_kind == "CLOTHING":
         plan["required_qa"].append("WARDROBE_CARD")
         plan["card_layout"] = manager.wardrobe_card_layout()
-        plan["clothing_details_layout"] = _read_json(
-            Path(__file__).resolve().parents[1] / "templates" / "ITEM_REFERENCES" / "CLOTHING_DETAILS_V1.json"
-        )
+        plan["clothing_details_layout"] = manager.clothing_details_layout()
     plan["generation_prompt"] = build_item_prompt(plan)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -489,6 +536,11 @@ def build_parser() -> argparse.ArgumentParser:
     for name in ("name", "version", "design-spec", "dimensions", "material", "construction", "attachment-constraints"):
         plan.add_argument("--" + name, required=True)
     plan.set_defaults(handler=create_plan)
+    details = sub.add_parser("build-clothing-details", help="Assemble the required generation sheet from the registered card.")
+    details.add_argument("--card-image", required=True)
+    details.add_argument("--regions", required=True)
+    details.add_argument("--replace", action="store_true")
+    details.set_defaults(handler=build_clothing_details)
     approval = sub.add_parser("approve", help="Approve a typed item from separate design and exact-character scale/fit evidence.")
     approval.add_argument("--workspace", type=Path, required=True)
     approval.add_argument("--style-name", required=False, help="Compatibility argument; the plan's exact style remains authoritative.")

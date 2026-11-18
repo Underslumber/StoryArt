@@ -615,7 +615,12 @@ def _authorized_base_clothing_continuation(state: dict[str, object], plan: dict[
 
 
 def reconcile_plan_required_stages(state: dict[str, object], plan: dict[str, object]) -> None:
-    """Bring a base guard in line with its validated executable plan."""
+    """Bring the guard stages in line with its validated executable plan."""
+    try:
+        from tools.clothing_details import DETAILS_LAYOUT_ID, WARDROBE_STAGES, uses_clothing_details
+    except ImportError:
+        from clothing_details import DETAILS_LAYOUT_ID, WARDROBE_STAGES, uses_clothing_details
+
     purpose = str(plan.get("generation_purpose", "")).strip().upper()
     previous_purpose = str(state.get("request_purpose", "")).strip().upper()
     if previous_purpose and previous_purpose != purpose:
@@ -625,7 +630,16 @@ def reconcile_plan_required_stages(state: dict[str, object], plan: dict[str, obj
                 "The request purpose changed after readiness; only the recorded same-request clothing SINGLE_PASS may follow the accepted five-stage CHARACTER_BASE."
             )
     if purpose != "CHARACTER_BASE":
-        if purpose == "SCENE" and _authorized_base_clothing_continuation(state, plan):
+        if uses_clothing_details(plan):
+            by_id = {row["id"]: row for row in required_stage_entries(state)}
+            state["required_stages"] = [
+                by_id.get(stage_id, {"id": stage_id, "status": "PENDING", "completed_at": None, "evidence": []})
+                for stage_id in WARDROBE_STAGES
+            ]
+            state["wardrobe_details_layout_id"] = DETAILS_LAYOUT_ID
+        elif state.get("wardrobe_details_layout_id"):
+            raise GuardError("An executed wardrobe request cannot drop its clothing-details deliverable.")
+        elif purpose == "SCENE" and _authorized_base_clothing_continuation(state, plan):
             by_id = {str(entry["id"]): entry for entry in required_stage_entries(state)}
             state["required_stages"] = [by_id[stage_id] for stage_id in (*CHARACTER_BASE_STAGES, "SINGLE_PASS")]
         state["request_purpose"] = purpose
@@ -2377,6 +2391,46 @@ def validate_restored_face_binding(state: dict[str, object], decision: dict[str,
         raise GuardError(f"FACE restoration evidence is invalid: {error}") from error
 
 
+def wardrobe_details_stage_binding(state: dict[str, object], stage: str, evidence: Sequence[str]) -> dict:
+    """Bind both wardrobe files to one immutable TEST card and reviewed assembly."""
+    try:
+        from tools.clothing_details import uses_clothing_details, verify
+    except ImportError:
+        from clothing_details import uses_clothing_details, verify
+
+    try:
+        if len(evidence) != 1 or Path(evidence[0]).name != f"{stage}.png":
+            raise GuardError("Wardrobe stage evidence must name its exact required PNG.")
+        root = Path(evidence[0]).resolve().parent
+        attempt = state["attempts"][-1]
+        snapshot = attempt["execution_snapshot"]
+        plan = Path(snapshot["reference_plan_snapshot_path"]).resolve()
+        if plan.parent != root:
+            raise GuardError("Wardrobe stage evidence and executed plan must share the request folder.")
+        binding = validate_stage_attempt_binding(state, "SINGLE_PASS", attempt["result_evidence"])
+        card, details = root / "WARDROBE_CARD.png", root / "CLOTHING_DETAILS.png"
+        output = root / f"{stage}.png"
+        plan_data = json.loads(plan.read_text(encoding="utf-8"))
+        if (binding["result_status"] != "TEST"
+                or file_sha256(plan) != snapshot["reference_plan_snapshot_sha256"]
+                or plan_data.get("request_id") != state.get("request_id")
+                or not uses_clothing_details(plan_data)
+                or file_sha256(card) != binding["artifact_sha256"]
+                or [Path(p).resolve() for p in evidence] != [output]):
+            raise GuardError("Wardrobe stage must bind its exact request file and original TEST card.")
+        checks = json.loads((root / "ITEM_VISUAL_QA.json").read_text(encoding="utf-8-sig"))["checks"]
+        check = checks[stage]
+        output_hash = file_sha256(output)
+        if check["status"] != "PASS" or not check["evidence"].strip() or check["sha256"] != output_hash:
+            raise GuardError(f"{stage} needs visual PASS bound to its exact PNG.")
+        if output == details:
+            verify(card, details)
+        return {**binding, "wardrobe_output": stage, "stage_evidence_path": str(output),
+                "stage_evidence_sha256": output_hash}
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, IndexError) as error:
+        raise GuardError(f"Cannot verify wardrobe stage {stage}: {error}") from error
+
+
 def validate_stage_attempt_binding(
     state: dict[str, object], stage: str, evidence_paths: Sequence[str],
     local_derivative_receipt: str | Path | None = None,
@@ -2384,6 +2438,8 @@ def validate_stage_attempt_binding(
     direct_edit_completion_receipt: str | Path | None = None,
 ) -> dict[str, object]:
     """Bind an image stage to its current executed, accepted provider result."""
+    if state.get("wardrobe_details_layout_id") and stage in {"WARDROBE_CARD", "CLOTHING_DETAILS"}:
+        return wardrobe_details_stage_binding(state, stage, evidence_paths)
     if direct_edit_completion_receipt:
         return validate_direct_edit_completion_receipt(
             state, stage, direct_edit_completion_receipt, evidence_paths)
@@ -2800,6 +2856,10 @@ def completion_block_reason(state: dict[str, object], guard_path: Path | None = 
         return "A waiting, stopped, or cancelled task cannot complete until the user resumes it."
     if state.get("active_attempt") or any(a.get("status") in {"ACTIVE", "UNKNOWN"} for a in state.get("attempts", [])):
         return "Task completion requires no active or UNKNOWN attempt; reconcile it first."
+    if state.get("wardrobe_details_layout_id") and [
+        row.get("id") for row in required_stage_entries(state)
+    ] != ["WARDROBE_CARD", "CLOTHING_DETAILS"]:
+        return "The wardrobe execution requires both the full card and the clothing-details stage."
     executed_base = any(
         isinstance(row, dict) and isinstance(row.get("execution_snapshot"), dict)
         and row["execution_snapshot"].get("request_purpose") == "CHARACTER_BASE"
@@ -2912,7 +2972,9 @@ def completion_block_reason(state: dict[str, object], guard_path: Path | None = 
             artifact_hash = str(binding.get("artifact_sha256", "")).lower()
             derived_artifact = binding.get("derived_artifact")
             stage_evidence_hash = (
-                str(derived_artifact.get("derived_artifact", {}).get("sha256", "")).lower()
+                str(binding.get("stage_evidence_sha256", "")).lower()
+                if binding.get("wardrobe_output")
+                else str(derived_artifact.get("derived_artifact", {}).get("sha256", "")).lower()
                 if isinstance(derived_artifact, dict)
                 and isinstance(derived_artifact.get("derived_artifact"), dict)
                 else artifact_hash
@@ -3019,7 +3081,10 @@ def continuation_guidance(state: dict[str, object], guard_path: Path | None = No
         latest_result = state["attempts"][-1]
         is_current_revision = int(latest_result.get("task_revision", -1)) == int(state.get("task_revision", 0))
         if latest_result.get("result_status") == "TEST" and is_current_revision:
-            action = "DELIVER_RESULT"
+            if state.get("wardrobe_details_layout_id") and pending_required_stages(state):
+                action = "ASSEMBLE_AND_REVIEW_WARDROBE_PACKAGE"
+            else:
+                action = "DELIVER_RESULT"
         elif latest_result.get("result_status") == "STAGING" and is_current_revision:
             action = "REGISTER_STAGE_RESULT"
         else:
@@ -3741,6 +3806,11 @@ def checkpoint(
         state.pop("watchdog_reason", None)
         state.pop("watchdog_triggered_at", None)
     elif event == "RESULT_DELIVERED":
+        if state.get("wardrobe_details_layout_id"):
+            entries = required_stage_entries(state)
+            files = {file for row in entries for file in row.get("evidence", [])}
+            if pending_required_stages(state) or len(files) != 2 or not files.issubset(delivery_evidence):
+                raise GuardError("Wardrobe delivery requires both the original card and the clothing-details sheet paths.")
         prior_direct_binding = state.get("direct_edit_completion_delivery")
         stage_row = next((row for row in required_stage_entries(state)
                           if row.get("id") == "SINGLE_PASS"), None)
