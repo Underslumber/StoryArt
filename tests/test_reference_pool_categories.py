@@ -1,37 +1,105 @@
 import json
-from pathlib import Path
 import pytest
 from tools import reference_pool_manager as rpm
 
-def test_category_summary_unifies_sources_without_false_costume_accessories():
+@pytest.fixture
+def catalog_metadata(monkeypatch, tmp_path):
+    """Exercise the real adapters with portable metadata for the four source formats."""
+    config = rpm.cfg()
+    pools = {name: config[name] for name in (
+        'POSE_ATLAS', 'PINTEREST_SKETCH', 'COSTUME_DB_01', 'DRAWING_GUIDES',
+    )}
+    monkeypatch.setattr(rpm, 'ROOT', tmp_path)
+    monkeypatch.setattr(rpm, 'cfg', lambda: pools)
+
+    def write_manifest(relative_path, data):
+        path = tmp_path / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
+
+    write_manifest(pools['POSE_ATLAS']['root'] + '/POSE_GROUPS.json', {
+        'groups': [{
+            'group_id': 'ATLAS_TEST', 'pose_name_ru': 'Шаг',
+            'views': [
+                {'source_id': 'ATLAS_FRONT', 'angle': 'FRONT'},
+                {'source_id': 'ATLAS_SIDE', 'angle': 'SIDE'},
+            ],
+        }],
+    })
+
+    pinterest = pools['PINTEREST_SKETCH']
+    candidates = [
+        {'candidate_id': 'PIN_POSE', 'proposed_role': 'HUMAN_POSE_SOFT', 'kind': 'SINGLE_POSE'},
+        {'candidate_id': 'PIN_GROUP', 'proposed_role': 'GROUP_COMPOSITION_SOFT', 'kind': 'GROUP_SCENE'},
+        {'candidate_id': 'PIN_HAND', 'proposed_role': 'HAND_GESTURE_ONLY', 'kind': 'SINGLE_POSE'},
+        {'candidate_id': 'PIN_ANIMAL', 'proposed_role': 'ANIMAL_OR_DETAIL_SOFT',
+         'kind': 'SINGLE_POSE', 'tags': ['ANIMAL']},
+    ]
+    source_rows = []
+    for candidate in candidates:
+        candidate_id = candidate['candidate_id']
+        path = f'ready/{candidate_id}.png'
+        candidate.update(path=path, sha256='a' * 64, source_image_url=f'https://example.test/{path}')
+        source_rows.append({
+            'id': candidate_id, 'proposed_role': candidate['proposed_role'], 'delivery_path': path,
+            'sha256': candidate['sha256'], 'review_binding_sha256': candidate['sha256'],
+            'review_fresh': True, 'collection_selected': True,
+        })
+    write_manifest(pinterest['candidate_manifest'], {'records': candidates})
+    write_manifest(pinterest['source_manifest'], {'records': source_rows})
+
+    costume_manifest = tmp_path / pools['COSTUME_DB_01']['manifest']
+    costume_manifest.parent.mkdir(parents=True, exist_ok=True)
+    costume_manifest.write_text(
+        'id,category,path,source_url\n'
+        'COAT,CLOTHING,coat.png,https://example.test/coat.png\n'
+        'TRIM,ACCESSORIES,trim.png,https://example.test/trim.png\n',
+        encoding='utf-8',
+    )
+
+    guides = pools['DRAWING_GUIDES']
+    write_manifest(guides['manifest'], {'items': [
+        {'asset_id': 'GUIDE_HAND', 'category': 'ANATOMY', 'tags': ['BODY_PART:HAND'],
+         'crop_id': 'CROP_HAND', 'local_path': 'hand-crop.png',
+         'source_local_path': 'hand-original.png', 'source_sha256': 'b' * 64},
+        {'asset_id': 'GUIDE_ANIMAL', 'category': 'OTHER', 'tags': ['CONTENT:CREATURE']},
+        {'asset_id': 'GUIDE_SIREN', 'category': 'OTHER',
+         'title_ru': 'Правильный фрагмент: Строение хвоста у русалки'},
+        {'asset_id': 'GUIDE_COSTUME', 'category': 'OTHER',
+         'tags': ['DETAIL:COSTUME', 'DETAIL:CHARACTER_DESIGN']},
+        {'asset_id': 'GUIDE_ACCESSORY', 'category': 'ACCESSORIES'},
+    ]})
+    write_manifest(guides['root'] + '/POSITIVE_EXAMPLES.json', {
+        'crops': [{'crop_id': 'CROP_HAND', 'box': [1, 2, 3, 4]}],
+    })
+
+
+def test_category_summary_unifies_sources_without_false_costume_accessories(catalog_metadata):
     summary={x['category']:x for x in rpm.category_summary()}
-    assert summary['CLOTHING']['by_source']['COSTUME_DB_01']==1407
-    assert summary['CLOTHING']['by_source']['DRAWING_GUIDES']>0
-    assert 'COSTUME_DB_01' not in summary['ACCESSORIES']['by_source']
+    assert summary['CLOTHING']['by_source'] == {'COSTUME_DB_01': 2, 'DRAWING_GUIDES': 1}
+    assert summary['ACCESSORIES']['by_source'] == {'DRAWING_GUIDES': 1}
     _, guides=rpm.records('DRAWING_GUIDES')
     assert all('ACCESSORIES' not in r['categories'] for r in guides if r.get('raw',{}).get('category')=='ANATOMY')
-    assert summary['POSE_ACTION']['by_source']['POSE_ATLAS']==1439
-    assert len(summary['POSE_ACTION']['by_source'])>=2
-    assert sum(summary['GROUP_COMPOSITION']['by_source'].values())>=142
-    assert 'PINTEREST_SKETCH' in summary['HANDS_FINGERS']['by_source']
-    assert 'DRAWING_GUIDES' in summary['HANDS_FINGERS']['by_source']
+    assert summary['POSE_ACTION']['by_source'] == {'POSE_ATLAS': 2, 'PINTEREST_SKETCH': 1}
+    assert summary['GROUP_COMPOSITION']['by_source'] == {'PINTEREST_SKETCH': 1}
+    assert summary['HANDS_FINGERS']['by_source'] == {'PINTEREST_SKETCH': 1, 'DRAWING_GUIDES': 1}
 
-def test_guides_reviewed_hand_tags_join_hand_category_and_derived_other_is_removed():
+def test_guides_reviewed_hand_tags_join_hand_category_and_derived_other_is_removed(catalog_metadata):
     _, rows=rpm.records('DRAWING_GUIDES')
     hand_rows=[r for r in rows if 'BODY_PART:HAND' in r.get('tags',[])]
-    assert len(hand_rows)==22
+    assert len(hand_rows) == 1
     assert all('HANDS_FINGERS' in r['categories'] for r in hand_rows)
     assert all('ANATOMY' in r['categories'] for r in hand_rows if r['raw'].get('category')=='ANATOMY')
     animal=[r for r in rows if r.get('raw',{}).get('category')=='OTHER' and 'CONTENT:CREATURE' in r.get('tags',[])]
     assert animal and all('ANIMALS' in r['categories'] and 'OTHER' not in r['categories'] for r in animal)
-    siren=next(r for r in rows if r.get('source_asset_id')=='OLX_2084217923149717998_01')
+    siren=next(r for r in rows if r.get('source_asset_id')=='GUIDE_SIREN')
     assert 'ANATOMY' in siren['categories']
     assert 'SOURCE_REVIEWED_TITLE_TOPIC_ONLY' in siren['category_basis']['ANATOMY']
-    costume=next(r for r in rows if r.get('source_asset_id')=='OLX_2086855166372774146_01')
+    costume=next(r for r in rows if r.get('source_asset_id')=='GUIDE_COSTUME')
     assert {'CLOTHING','DRAWING_TECHNIQUE'} <= set(costume['categories'])
     assert 'OTHER' not in costume['categories']
 
-def test_categories_keep_group_hand_and_animal_subjects_separate():
+def test_categories_keep_group_hand_and_animal_subjects_separate(catalog_metadata):
     _, rows=rpm.records('PINTEREST_SKETCH')
     group=next(r for r in rows if r['role']=='GROUP_COMPOSITION_SOFT')
     hand=next(r for r in rows if r['role']=='HAND_GESTURE_ONLY')
@@ -39,14 +107,16 @@ def test_categories_keep_group_hand_and_animal_subjects_separate():
     assert 'HANDS_FINGERS' not in group['categories']
     assert 'HANDS_FINGERS' in hand['categories']
     assert 'GROUP_COMPOSITION' not in hand['categories']
-    assert len(rpm.records('POSE_ATLAS')[1])==1439
+    animal = next(r for r in rows if r['role'] == 'ANIMAL_OR_DETAIL_SOFT')
+    assert animal['categories'] == ['ANIMALS']
+    assert {row['id'] for row in rpm.records('POSE_ATLAS')[1]} == {'ATLAS_FRONT', 'ATLAS_SIDE'}
 
-def test_curated_guide_uses_crop_id_and_retains_crop_metadata():
+def test_curated_guide_uses_crop_id_and_retains_crop_metadata(catalog_metadata):
     _, rows=rpm.records('DRAWING_GUIDES')
     row=next(r for r in rows if r.get('raw',{}).get('crop_id'))
-    assert row['id']==row['raw']['crop_id']
-    assert row['provenance']['crop_bounds']
-    assert row['provenance']['source_sha256']
+    assert row['id'] == row['raw']['crop_id'] == 'CROP_HAND'
+    assert row['provenance']['crop_bounds'] == [1, 2, 3, 4]
+    assert row['provenance']['source_sha256'] == 'b' * 64
 
 def test_guide_selection_delegates_exact_curated_crop_only(monkeypatch,tmp_path):
     source=tmp_path/'candidate.png'; source.write_bytes(b'crop')
@@ -98,11 +168,11 @@ def test_special_pinterest_roles_select_metadata_only_after_current_bindings(mon
     with pytest.raises(rpm.PoolError,match='binding is stale'):
         rpm.select('PINTEREST_SKETCH','C1',role)
 
-def test_build_index_is_category_first_and_contains_no_image_elements(tmp_path):
+def test_build_index_is_category_first_and_contains_no_image_elements(tmp_path, catalog_metadata):
     out=tmp_path/'catalog.html'
     result=rpm.build_index(out)
     doc=out.read_text(encoding='utf-8')
-    assert result['records']>3000
+    assert result['records'] == 13
     assert 'Категория' in doc and 'Источник' in doc
     assert 'Поза / лист' in doc and 'Ракурс' in doc
     assert '<img' not in doc.lower()
@@ -116,7 +186,7 @@ def test_build_index_is_category_first_and_contains_no_image_elements(tmp_path):
     costume=next(x for x in entries if x['pool']=='COSTUME_DB_01')
     assert 'relative_path' not in costume
     assert 'source_url' not in costume.get('provenance',{})
-    guide=next(x for x in entries if x['pool']=='DRAWING_GUIDES' and x['subject_label']=='UNKNOWN')
+    guide=next(x for x in entries if x['pool']=='DRAWING_GUIDES' and x['id']=='CROP_HAND')
     assert 'relative_path' not in guide
     assert all(not k.endswith('path') for k in guide.get('provenance',{}))
 
