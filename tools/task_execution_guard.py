@@ -2391,33 +2391,91 @@ def validate_restored_face_binding(state: dict[str, object], decision: dict[str,
         raise GuardError(f"FACE restoration evidence is invalid: {error}") from error
 
 
+def wardrobe_source_binding(state: dict[str, object], root: Path, *, recover: bool = False) -> dict:
+    """Validate the original card and its immutable executed CLOTHING_PLAN."""
+    try:
+        from tools.clothing_details import is_wardrobe_plan, uses_clothing_details
+    except ImportError:
+        from clothing_details import is_wardrobe_plan, uses_clothing_details
+
+    attempt = state["attempts"][-1]
+    snapshot = attempt["execution_snapshot"]
+    plan = Path(snapshot["reference_plan_snapshot_path"]).resolve()
+    if plan.parent != root or file_sha256(plan) != snapshot["reference_plan_snapshot_sha256"]:
+        raise GuardError("The original wardrobe execution snapshot is missing or changed.")
+    plan_data = json.loads(plan.read_text(encoding="utf-8"))
+    recovery = state.get("wardrobe_details_recovery")
+    if (not isinstance(plan_data, dict) or plan_data.get("request_id") != state.get("request_id")
+            or not is_wardrobe_plan(plan_data)
+            or (not (recover or recovery) and not uses_clothing_details(plan_data))):
+        raise GuardError("A wardrobe sheet requires the registered card from this CLOTHING_PLAN.")
+    source_state = state
+    if recover or recovery:
+        source_state = {**state, "task_revision": attempt["task_revision"]}
+    binding = validate_stage_attempt_binding(source_state, "SINGLE_PASS", attempt["result_evidence"])
+    if (binding["result_status"] != "TEST"
+            or file_sha256(root / "WARDROBE_CARD.png") != binding["artifact_sha256"]):
+        raise GuardError("Wardrobe details require the exact registered TEST card.")
+    if recovery and recovery != {
+        "attempt_id": binding["attempt_id"],
+        "card_sha256": binding["artifact_sha256"],
+        "task_revision": state.get("task_revision"),
+    }:
+        raise GuardError("The original wardrobe card or correction revision changed after recovery.")
+    return binding
+
+
+def wardrobe_details_recovery_candidate(state: dict[str, object]) -> bool:
+    latest = (state.get("attempts") or [{}])[-1]
+    correction = next((row for row in reversed(state.get("events", []))
+                       if row.get("event") == "USER_CORRECTION"), {})
+    return (state.get("task_kind") == "IMAGE_GENERATION" and state.get("status") == "ACTIVE"
+            and not state.get("active_attempt") and latest.get("status") == "DELIVERED"
+            and latest.get("result_status") == "TEST" and correction.get("stage") == "CLOTHING_DETAILS"
+            and correction.get("correction_impact") in {"PRESERVE", None}
+            and latest.get("task_revision") == int(state.get("task_revision", 0)) - 1)
+
+
+def recover_wardrobe_details(path: Path) -> dict:
+    """Resume a details-only author correction using the already delivered card."""
+    try:
+        from tools.clothing_details import DETAILS_LAYOUT_ID, WARDROBE_STAGES
+    except ImportError:
+        from clothing_details import DETAILS_LAYOUT_ID, WARDROBE_STAGES
+    state = load_guard(path)
+    if state.get("wardrobe_details_recovery"):
+        wardrobe_source_binding(state, path.resolve().parent)
+        return state
+    if not wardrobe_details_recovery_candidate(state):
+        raise GuardError("Recovery requires an explicit details-only PRESERVE correction to the delivered wardrobe card.")
+    binding = wardrobe_source_binding(state, path.resolve().parent, recover=True)
+    state["wardrobe_details_layout_id"] = DETAILS_LAYOUT_ID
+    state["wardrobe_details_recovery"] = {
+        "attempt_id": binding["attempt_id"], "card_sha256": binding["artifact_sha256"],
+        "task_revision": state["task_revision"],
+    }
+    state["required_stages"] = [
+        {"id": stage, "status": "PENDING", "completed_at": None, "evidence": []} for stage in WARDROBE_STAGES
+    ]
+    append_event(state, "WARDROBE_DETAILS_RECOVERY", "Reuse the delivered TEST card for the details-only correction.",
+                 utc_now(), **state["wardrobe_details_recovery"])
+    atomic_write_json(path, state)
+    return state
+
+
 def wardrobe_details_stage_binding(state: dict[str, object], stage: str, evidence: Sequence[str]) -> dict:
     """Bind both wardrobe files to one immutable TEST card and reviewed assembly."""
     try:
-        from tools.clothing_details import uses_clothing_details, verify
+        from tools.clothing_details import verify
     except ImportError:
-        from clothing_details import uses_clothing_details, verify
-
+        from clothing_details import verify
     try:
         if len(evidence) != 1 or Path(evidence[0]).name != f"{stage}.png":
             raise GuardError("Wardrobe stage evidence must name its exact required PNG.")
         root = Path(evidence[0]).resolve().parent
-        attempt = state["attempts"][-1]
-        snapshot = attempt["execution_snapshot"]
-        plan = Path(snapshot["reference_plan_snapshot_path"]).resolve()
-        if plan.parent != root:
-            raise GuardError("Wardrobe stage evidence and executed plan must share the request folder.")
-        binding = validate_stage_attempt_binding(state, "SINGLE_PASS", attempt["result_evidence"])
+        binding = wardrobe_source_binding(state, root)
         card, details = root / "WARDROBE_CARD.png", root / "CLOTHING_DETAILS.png"
         output = root / f"{stage}.png"
-        plan_data = json.loads(plan.read_text(encoding="utf-8"))
-        if (binding["result_status"] != "TEST"
-                or file_sha256(plan) != snapshot["reference_plan_snapshot_sha256"]
-                or plan_data.get("request_id") != state.get("request_id")
-                or not uses_clothing_details(plan_data)
-                or file_sha256(card) != binding["artifact_sha256"]
-                or [Path(p).resolve() for p in evidence] != [output]):
-            raise GuardError("Wardrobe stage must bind its exact request file and original TEST card.")
         checks = json.loads((root / "ITEM_VISUAL_QA.json").read_text(encoding="utf-8-sig"))["checks"]
         check = checks[stage]
         output_hash = file_sha256(output)
@@ -2425,6 +2483,9 @@ def wardrobe_details_stage_binding(state: dict[str, object], stage: str, evidenc
             raise GuardError(f"{stage} needs visual PASS bound to its exact PNG.")
         if output == details:
             verify(card, details)
+        if state.get("wardrobe_details_recovery"):
+            binding = {**binding, "source_task_revision": binding["task_revision"],
+                       "task_revision": state["task_revision"]}
         return {**binding, "wardrobe_output": stage, "stage_evidence_path": str(output),
                 "stage_evidence_sha256": output_hash}
     except (OSError, ValueError, KeyError, TypeError, AttributeError, IndexError) as error:
@@ -3025,6 +3086,14 @@ def completion_block_reason(state: dict[str, object], guard_path: Path | None = 
                 or not delivery.get("delivery_evidence") or not state.get("delivered_result_at")):
             return "Direct-edit clothing completion requires its exact separate RESULT_DELIVERED receipt."
         return None
+    wardrobe_recovery = state.get("wardrobe_details_recovery")
+    if wardrobe_recovery:
+        delivery = state.get("wardrobe_details_recovery_delivery", {})
+        if (not state.get("delivered_result_at")
+                or delivery.get("binding") != wardrobe_recovery
+                or set(delivery.get("files", [])) != {p for row in required_stage_entries(state) for p in row["evidence"]}):
+            return "Deliver both reviewed wardrobe images in the current correction."
+        return None
     if is_project_image_generation(state):
         latest = next(
             (row for row in state.get("attempts", []) if row.get("attempt_id") == state.get("latest_delivered_attempt_id")),
@@ -3073,6 +3142,10 @@ def continuation_guidance(state: dict[str, object], guard_path: Path | None = No
         action = "RECOVER_AND_CONTINUE"
     elif state.get("author_contract_acceptance"):
         action = "DELIVER_RESULT_OR_COMPLETE_ACCEPTED_STAGES"
+    elif state.get("wardrobe_details_recovery"):
+        action = "ASSEMBLE_AND_REVIEW_WARDROBE_PACKAGE" if pending_required_stages(state) else "DELIVER_RESULT"
+    elif wardrobe_details_recovery_candidate(state):
+        action = "RECOVER_WARDROBE_DETAILS"
     elif state.get("next_required_action") == "ESCALATION_ORCHESTRATOR_REQUIRED":
         action = "ESCALATE_AND_REPLAN"
     elif state.get("next_required_action") in {"REVIEW_AND_REGISTER_EXISTING_ARTIFACT", "REVIEW_AND_DELIVER_EXISTING_RESULT"}:
@@ -3843,6 +3916,17 @@ def checkpoint(
         accepted = verified_author_acceptance(state)
         if prior_direct_binding:
             pass
+        elif state.get("wardrobe_details_recovery"):
+            binding = wardrobe_source_binding(state, path.resolve().parent)
+            if attempt_id and attempt_id != binding["attempt_id"]:
+                raise GuardError("Wardrobe delivery must use the corrected card's original execution attempt.")
+            state["wardrobe_details_recovery_delivery"] = {
+                "binding": state["wardrobe_details_recovery"],
+                "files": sorted(files),
+            }
+            state["delivered_result_at"] = iso_time(moment)
+            state["phase"] = "RESULT_DELIVERED"
+            state["next_required_action"] = "COMPLETE_OR_BLOCKER"
         elif accepted:
             if attempt_id and attempt_id != accepted["attempt_id"]:
                 raise GuardError("Delivery attempt differs from accepted original artifact.")
@@ -4161,6 +4245,8 @@ def checkpoint(
         state["next_required_action"] = "NEXT_SAFE_EXECUTION_OR_COMPLETE"
         state["latest_delivered_result_status"] = None
         state["delivered_result_at"] = None
+        state.pop("wardrobe_details_recovery", None)
+        state.pop("wardrobe_details_recovery_delivery", None)
         state["task_revision"] = int(state.get("task_revision", 0)) + 1
         correction_stage = stage
         if not correction_stage:

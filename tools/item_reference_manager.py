@@ -114,11 +114,11 @@ def build_item_prompt(plan: dict[str, Any]) -> str:
 
 def build_clothing_details(args: argparse.Namespace) -> dict[str, Any]:
     try:
-        from tools.clothing_details import render, uses_clothing_details
-        from tools.task_execution_guard import GuardError, load_guard, validate_stage_attempt_binding
+        from tools.clothing_details import render
+        from tools.task_execution_guard import GuardError, load_guard, recover_wardrobe_details, wardrobe_source_binding
     except ImportError:
-        from clothing_details import render, uses_clothing_details
-        from task_execution_guard import GuardError, load_guard, validate_stage_attempt_binding
+        from clothing_details import render
+        from task_execution_guard import GuardError, load_guard, recover_wardrobe_details, wardrobe_source_binding
 
     card = Path(args.card_image).resolve()
     regions = Path(args.regions).resolve()
@@ -126,23 +126,14 @@ def build_clothing_details(args: argparse.Namespace) -> dict[str, Any]:
     manager.assert_active_request_path(regions)
     if card.name != "WARDROBE_CARD.png" or regions.parent != card.parent:
         raise ItemReferenceError("Card and region map must be in the same active request folder.")
-    state = load_guard(card.parent / "EXECUTION_GUARD.json")
+    guard_path = card.parent / "EXECUTION_GUARD.json"
+    try:
+        state = recover_wardrobe_details(guard_path) if getattr(args, "recover", False) else load_guard(guard_path)
+        wardrobe_source_binding(state, card.parent)
+    except (GuardError, KeyError, TypeError, IndexError) as error:
+        raise ItemReferenceError(f"Register the original wardrobe card as TEST before assembling its details: {error}") from error
     if state.get("status") not in {"ACTIVE", "COMPLETE"}:
         raise ItemReferenceError("Resume the wardrobe request before assembling its details.")
-    attempts = state.get("attempts", [])
-    attempt = attempts[-1] if attempts else {}
-    snapshot = attempt.get("execution_snapshot") or {}
-    plan = Path(str(snapshot.get("reference_plan_snapshot_path", ""))).resolve()
-    if (plan.parent != card.parent or not plan.is_file()
-            or _sha256(plan) != snapshot.get("reference_plan_snapshot_sha256")
-            or not uses_clothing_details(_read_json(plan))):
-        raise ItemReferenceError("The registered card must belong to a CLOTHING_DETAILS_V1 execution.")
-    try:
-        binding = validate_stage_attempt_binding(state, "SINGLE_PASS", attempt.get("result_evidence", []))
-    except GuardError as error:
-        raise ItemReferenceError(f"Register the original wardrobe card as TEST before assembling its details: {error}") from error
-    if binding["result_status"] != "TEST" or _sha256(card) != binding["artifact_sha256"]:
-        raise ItemReferenceError("The card must be the exact QA-passed TEST image from this execution.")
     output = card.with_name("CLOTHING_DETAILS.png")
     data = render(card, _read_json(regions))
     if output.is_file() and output.read_bytes() == data:
@@ -540,6 +531,8 @@ def build_parser() -> argparse.ArgumentParser:
     details.add_argument("--card-image", required=True)
     details.add_argument("--regions", required=True)
     details.add_argument("--replace", action="store_true")
+    details.add_argument("--recover", action="store_true",
+                         help="Reuse a delivered TEST card after a details-only user correction.")
     details.set_defaults(handler=build_clothing_details)
     approval = sub.add_parser("approve", help="Approve a typed item from separate design and exact-character scale/fit evidence.")
     approval.add_argument("--workspace", type=Path, required=True)

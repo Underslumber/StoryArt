@@ -7,7 +7,8 @@ import pytest
 from tools import clothing_details, item_reference_manager as items, task_execution_guard as guard
 
 
-def test_wardrobe_cannot_finish_after_only_the_generated_card(tmp_path, monkeypatch):
+@pytest.mark.parametrize("recover", [False, True])
+def test_wardrobe_cannot_finish_after_only_the_generated_card(tmp_path, monkeypatch, recover):
     monkeypatch.delenv("CODEX_THREAD_ID", raising=False)
     state_path = tmp_path / "EXECUTION_GUARD.json"
     state = guard.create_guard(state_path, request_id="wardrobe", goal="Create a wardrobe package.",
@@ -17,11 +18,14 @@ def test_wardrobe_cannot_finish_after_only_the_generated_card(tmp_path, monkeypa
         "request_id": "wardrobe", "generation_purpose": "SCENE",
         "startup_parameter_selection": {
             "menu_contract": "CLOTHING_PLAN",
-            "delegation": {"clothing_plan": {"clothing_details_layout": {"id": "CLOTHING_DETAILS_V1"}}},
+            "delegation": {"clothing_plan": {"item_kind": "CLOTHING", "request_id": "wardrobe",
+                                             "clothing_details_layout": {"id": "CLOTHING_DETAILS_V1"}}},
         },
     }
-    guard.reconcile_plan_required_stages(state, plan)
-    assert guard.pending_required_stages(state) == ["WARDROBE_CARD", "CLOTHING_DETAILS"]
+    if recover:
+        plan["startup_parameter_selection"]["delegation"]["clothing_plan"].pop("clothing_details_layout")
+    else:
+        guard.reconcile_plan_required_stages(state, plan)
     card = tmp_path / "WARDROBE_CARD.png"
     Image.new("RGB", (600, 400), "#786b69").save(card)
     card_hash = clothing_details.sha256(card)
@@ -29,13 +33,20 @@ def test_wardrobe_cannot_finish_after_only_the_generated_card(tmp_path, monkeypa
     snapshot.write_text(json.dumps(plan), encoding="utf-8")
     state["attempts"] = [{
         "attempt_id": "wardrobe-attempt", "stage": "SINGLE_PASS", "task_revision": 0,
-        "status": "RESULT_AVAILABLE", "result_status": "TEST",
+        "status": "DELIVERED" if recover else "RESULT_AVAILABLE", "result_status": "TEST",
         "result_evidence": [str(card)],
         "provider_artifact": {"path": str(card), "sha256": card_hash, "result_status": "TEST"},
         "execution_snapshot": {"reference_plan_snapshot_path": str(snapshot),
                                "reference_plan_snapshot_sha256": clothing_details.sha256(snapshot)},
     }]
+    if recover:
+        state["task_revision"] = 1
+        state["events"].append({"event": "USER_CORRECTION", "stage": "CLOTHING_DETAILS", "correction_impact": "PRESERVE"})
     guard.atomic_write_json(state_path, state)
+    if recover:
+        assert guard.continuation_guidance(state)["action"] == "RECOVER_WARDROBE_DETAILS"
+        state = guard.recover_wardrobe_details(state_path)
+    assert guard.pending_required_stages(state) == ["WARDROBE_CARD", "CLOTHING_DETAILS"]
     qa = {"checks": {"WARDROBE_CARD": {"status": "PASS", "sha256": card_hash, "evidence": "Original card."}}}
     visual_qa = tmp_path / "ITEM_VISUAL_QA.json"
     visual_qa.write_text(json.dumps(qa), encoding="utf-8")
@@ -53,7 +64,7 @@ def test_wardrobe_cannot_finish_after_only_the_generated_card(tmp_path, monkeypa
         "front": [150, 35, 295, 390], "materials_and_palette": [455, 35, 590, 390],
         "details": [{"box": [165, 130, 270, 180], "caption": "Три пуговицы"}],
     }), encoding="utf-8")
-    output = items.build_clothing_details(Namespace(card_image=card, regions=regions, replace=False))
+    output = items.build_clothing_details(Namespace(card_image=card, regions=regions, replace=False, recover=recover))
     sheet = tmp_path / "CLOTHING_DETAILS.png"
     assert output["path"] == str(sheet)
     assert card_hash == clothing_details.sha256(card)
@@ -69,6 +80,8 @@ def test_wardrobe_cannot_finish_after_only_the_generated_card(tmp_path, monkeypa
                          delivery_evidence=[str(card)], summary="Omit the ready clothing-details file.")
     guard.checkpoint(state_path, event="RESULT_DELIVERED", attempt_id="wardrobe-attempt",
                      delivery_evidence=[str(card), str(sheet)], summary="Deliver both images.")
-    assert guard.checkpoint(state_path, event="COMPLETE", summary="Finish the wardrobe package.")["status"] == "COMPLETE"
+    complete = guard.checkpoint(state_path, event="COMPLETE", summary="Finish the wardrobe package.")
+    assert complete["status"] == "COMPLETE"
+    assert complete["attempts"] == state["attempts"] if recover else len(complete["attempts"]) == 1
     sheet.write_bytes(card.read_bytes())
     assert "CLOTHING_DETAILS" in guard.completion_block_reason(guard.load_guard(state_path))

@@ -16,11 +16,19 @@ WARDROBE_STAGES = ("WARDROBE_CARD", "CLOTHING_DETAILS")
 PROVENANCE_KEY = "StoryArt clothing details"
 
 
+def is_wardrobe_plan(plan: dict) -> bool:
+    startup = plan.get("startup_parameter_selection") or {}
+    item = (startup.get("delegation") or {}).get("clothing_plan") or {}
+    return (startup.get("menu_contract") == "CLOTHING_PLAN"
+            and item.get("item_kind") == "CLOTHING"
+            and item.get("request_id") == plan.get("request_id"))
+
+
 def uses_clothing_details(plan: dict) -> bool:
     startup = plan.get("startup_parameter_selection") or {}
     item = (startup.get("delegation") or {}).get("clothing_plan") or {}
     layout = item.get("clothing_details_layout") or {}
-    return startup.get("menu_contract") == "CLOTHING_PLAN" and layout.get("id") == DETAILS_LAYOUT_ID
+    return is_wardrobe_plan(plan) and layout.get("id") == DETAILS_LAYOUT_ID
 
 
 def sha256(path: Path) -> str:
