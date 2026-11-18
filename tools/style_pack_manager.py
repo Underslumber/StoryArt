@@ -8673,6 +8673,9 @@ def render_confirmed_prompt(plan: dict[str, object], prompt_text: str, *, slots:
                 f"construction {item.get('construction', '')}; attachment/contact constraints {item.get('attachment_constraints', '')}. "
                 "Match ITEM_DESIGN details and ITEM_SCALE_FIT size with the exact canonical character; preserve version consistency."
             )
+            fit_locator = item.get("item_scale_fit", {}).get("view_locator")
+            if fit_locator:
+                lines.append(f"Read ITEM_SCALE_FIT only in this region of its source: {fit_locator}")
         item_block = "\n".join(lines)
         if item_block not in rendered:
             rendered = rendered.rstrip() + "\n\n" + item_block

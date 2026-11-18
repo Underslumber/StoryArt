@@ -278,8 +278,9 @@ scene request. Existing approved wardrobe/accessory references remain eligible.
 For character clothing production, use the CLOTHING_PLAN startup described in
 `../../docs/ITEM_REFERENCES.md` before the general scene chooser. The finished
 card is the primary result when adding clothing to the wardrobe. Generate it
-directly in the author’s layout and language, and deliver clean design and fit
-views separately for later generation. Use the approved character assembly
+directly in the author’s layout and language. Publish the unchanged card and
+the clothing-only generation sheet defined by CLOTHING_DETAILS_V1. Use the
+approved character assembly
 for ordinary fit. Add separate face, body or pose sources only when a specific
 fit detail requires them.
 

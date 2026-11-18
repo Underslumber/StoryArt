@@ -258,8 +258,8 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         )
         sheet = request_dir / "item-sheet.png"
         design = request_dir / "item-design.png"
-        scale = request_dir / "item-scale.png"
-        for image, color in ((sheet, (20, 20, 20)), (design, (180, 180, 180)), (scale, (100, 120, 140))):
+        scale = sheet
+        for image, color in ((sheet, (20, 20, 20)), (design, (180, 180, 180))):
             Image.new("RGB", (40, 40), color).save(image)
         digest = lambda image: hashlib.sha256(image.read_bytes()).hexdigest()
         qa = {
@@ -290,6 +290,10 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
             "--qa-json", qa_path, "--approval-quote", "Approve Forge sword v1 for integration.", "--user-approved",
         ).stdout
         manifest = Path(json.loads(approved_text)["manifest_path"])
+        self.assertEqual({path.name for path in manifest.parent.rglob("*.png")},
+                         {"WARDROBE_CARD.png", "CLOTHING_DETAILS.png"})
+        self.assertEqual(digest(manifest.parent / "WARDROBE_CARD.png"), digest(sheet))
+        self.assertEqual(digest(manifest.parent / "CLOTHING_DETAILS.png"), digest(design))
 
         _guard, reference_plan = self._prepare_scene(
             request_id, start_guard=False, character_id="CHAR_007", item_reference=(manifest,),
@@ -478,8 +482,11 @@ class GenerationWorkflowIntegrationTests(unittest.TestCase):
         )
         sheet = self._guard_path(request_id).parent / f"{kind}-sheet.png"
         design = self._guard_path(request_id).parent / f"{kind}-design.png"
-        scale = self._guard_path(request_id).parent / f"{kind}-scale.png"
-        for image, color in ((sheet, (20, 20, 20)), (design, (180, 180, 180)), (scale, (100, 120, 140))):
+        scale = sheet if kind == "CLOTHING" else sheet.with_name(f"{kind}-scale.png")
+        images = [(sheet, (20, 20, 20)), (design, (180, 180, 180))]
+        if scale != sheet:
+            images.append((scale, (100, 120, 140)))
+        for image, color in images:
             Image.new("RGB", (40, 40), color).save(image)
         digest = lambda image: hashlib.sha256(image.read_bytes()).hexdigest()
         qa_names = ("ITEM_DESIGN", "ITEM_VERSION", "ITEM_DIMENSIONS", "ITEM_MATERIAL_CONSTRUCTION", "ITEM_CHARACTER_SCALE")
