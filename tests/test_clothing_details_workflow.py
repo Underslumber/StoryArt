@@ -1,5 +1,6 @@
 from argparse import Namespace
 import json
+from pathlib import Path
 
 from PIL import Image
 import pytest
@@ -19,6 +20,7 @@ def test_wardrobe_cannot_finish_after_only_the_generated_card(tmp_path, monkeypa
         "startup_parameter_selection": {
             "menu_contract": "CLOTHING_PLAN",
             "delegation": {"clothing_plan": {"item_kind": "CLOTHING", "request_id": "wardrobe",
+                                             "style_name": "STYLE", "character_id": "CHAR_007",
                                              "clothing_details_layout": {"id": "CLOTHING_DETAILS_V1"}}},
         },
     }
@@ -48,6 +50,8 @@ def test_wardrobe_cannot_finish_after_only_the_generated_card(tmp_path, monkeypa
         state = guard.recover_wardrobe_details(state_path)
     assert guard.pending_required_stages(state) == ["WARDROBE_CARD", "CLOTHING_DETAILS"]
     qa = {"checks": {"WARDROBE_CARD": {"status": "PASS", "sha256": card_hash, "evidence": "Original card."}}}
+    qa["checks"].update({key: {"status": "PASS", "evidence": f"Reviewed {key}."}
+                         for key in items.QA_COMMON + items.QA_CLOTHING})
     visual_qa = tmp_path / "ITEM_VISUAL_QA.json"
     visual_qa.write_text(json.dumps(qa), encoding="utf-8")
     state = guard.checkpoint(state_path, event="STAGE_COMPLETED", stage="WARDROBE_CARD",
@@ -83,5 +87,40 @@ def test_wardrobe_cannot_finish_after_only_the_generated_card(tmp_path, monkeypa
     complete = guard.checkpoint(state_path, event="COMPLETE", summary="Finish the wardrobe package.")
     assert complete["status"] == "COMPLETE"
     assert complete["attempts"] == state["attempts"] if recover else len(complete["attempts"]) == 1
+
+    paths = items.manager.make_paths(tmp_path, "STYLE")
+    profile = paths.generations / "01_APPROVED_CHARACTERS" / "CHAR_007" / "PROFILE.yaml"
+    profile.parent.mkdir(parents=True)
+    profile.write_bytes(b"approved profile")
+    assembly = profile.with_name("assembly.png")
+    assembly.write_bytes(b"approved assembly")
+    monkeypatch.setattr(items, "_registered_character", lambda *_: (paths, profile, assembly))
+    monkeypatch.setattr(items.manager, "_approved_profile_identity", lambda *_: {"target_anatomy": "FEMALE_ANATOMY"})
+    item_plan = {
+        "status": "ITEM_PRODUCTION_PLAN", "item_kind": "CLOTHING", "request_id": plan["request_id"],
+        "character_id": "CHAR_007", "style_name": "STYLE", "character_profile": str(profile),
+        "character_assembly": str(assembly), "character_assembly_sha256": clothing_details.sha256(assembly),
+        "item_id": "ITEM_COAT", "item_name": "Coat", "version": "V1", "design_spec": "coat",
+        "dimensions": "long sleeves", "material": "canvas", "construction": "lined",
+        "attachment_constraints": "wear as outer layer",
+    }
+    item_plan_path = tmp_path / "ITEM_PRODUCTION_PLAN.json"
+    item_plan_path.write_text(json.dumps(item_plan), encoding="utf-8")
+    approval = Namespace(workspace=tmp_path, item_plan=item_plan_path, user_approved=False,
+                         approval_quote="Approve the displayed coat.", approval_message_id="reply-1", tag=["coat"])
+    with pytest.raises(items.ItemReferenceError, match="exact author approval"):
+        items.approve_delivered_clothing(approval)
+    assert items.list_items(tmp_path, "STYLE", "CHAR_007") == []
+    approval.user_approved = True
+    approved = items.approve_delivered_clothing(approval)
+    assert approved["author_approval"]["message_id"] == "reply-1"
+    stored = Path(approved["manifest_path"]).parent
+    assert {path.name for path in stored.glob("*.png")} == {"WARDROBE_CARD.png", "CLOTHING_DETAILS.png"}
+    assert (stored / "WARDROBE_CARD.png").read_bytes() == card.read_bytes()
+    assert (stored / "CLOTHING_DETAILS.png").read_bytes() == sheet.read_bytes()
+    assert items.approve_delivered_clothing(approval)["manifest_path"] == approved["manifest_path"]
+    assert len(items.list_items(tmp_path, "STYLE", "CHAR_007")) == 1
     sheet.write_bytes(card.read_bytes())
     assert "CLOTHING_DETAILS" in guard.completion_block_reason(guard.load_guard(state_path))
+    with pytest.raises(items.ItemReferenceError, match="Finish delivering"):
+        items.approve_delivered_clothing(approval)

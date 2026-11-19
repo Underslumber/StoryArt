@@ -249,7 +249,8 @@ def _validate_qa(plan: dict[str, Any], qa: dict[str, Any], design_hash: str, sca
     return {"checks": checks, "item_design_source": design, "item_scale_fit_source": scale}
 
 
-def approve(args: argparse.Namespace) -> dict[str, Any]:
+def approve(args: argparse.Namespace, *, delivered_qa: dict | None = None,
+            delivered_approval: dict | None = None) -> dict[str, Any]:
     plan_path = Path(args.item_plan).resolve()
     manager.assert_active_request_path(plan_path)
     plan = _read_json(plan_path)
@@ -274,13 +275,15 @@ def approve(args: argparse.Namespace) -> dict[str, Any]:
         raise ItemReferenceError("Isolated design and character scale/fit sources must have distinct bytes.")
     qa_path = Path(args.qa_json).resolve()
     manager.assert_active_request_path(qa_path)
-    qa_input = _read_json(qa_path)
+    qa_input = delivered_qa if delivered_qa is not None else _read_json(qa_path)
     source_sheet = Path(str(qa_input.get("item_design_source", {}).get("source_sheet_path", ""))).resolve()
     manager.assert_active_request_path(source_sheet)
     qa = _validate_qa(plan, qa_input, design_hash, scale_hash, assembly_hash)
     card = None
     card_hash = ""
     details_layout = plan.get("clothing_details_layout")
+    if delivered_approval and not details_layout:
+        details_layout = manager.clothing_details_layout()
     two_image_package = plan["item_kind"] == "CLOTHING" and bool(details_layout)
     if plan["item_kind"] == "CLOTHING":
         card_arg = getattr(args, "card_image", None)
@@ -350,7 +353,8 @@ def approve(args: argparse.Namespace) -> dict[str, Any]:
         "item_scale_fit": {"path": str(paths_to_store[1][1].resolve()), "sha256": scale_hash,
                            "character_id": plan["character_id"], "character_assembly_sha256": assembly_hash},
         "qa": qa,
-        "author_approval": {"status": "APPROVED", "quote": args.approval_quote.strip()},
+        "author_approval": {"status": "APPROVED", "quote": args.approval_quote.strip(),
+                            **(delivered_approval or {})},
     }
     if card is not None:
         item["wardrobe_card"] = {"path": str(card_destination), "sha256": card_hash,
@@ -374,6 +378,105 @@ def approve(args: argparse.Namespace) -> dict[str, Any]:
         stream.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
     item["manifest_path"] = str(manifest.resolve())
     return item
+
+
+def approve_delivered_clothing(args: argparse.Namespace) -> dict[str, Any]:
+    """Publish the two reviewed PNGs in the owning chat after direct author approval."""
+    try:
+        from tools.task_execution_guard import GuardError, completion_block_reason, load_guard
+    except ImportError:
+        from task_execution_guard import GuardError, completion_block_reason, load_guard
+
+    if not args.user_approved or not args.approval_quote.strip() or not args.approval_message_id.strip():
+        raise ItemReferenceError("Wardrobe publication requires the exact author approval and its message ID.")
+    plan_path = Path(args.item_plan).resolve()
+    manager.assert_active_request_path(plan_path)
+    plan = _read_json(plan_path)
+    if plan.get("status") != "ITEM_PRODUCTION_PLAN" or plan.get("item_kind") != "CLOTHING":
+        raise ItemReferenceError("Wardrobe publication requires the current CLOTHING item plan.")
+    root = plan_path.parent
+    guard_path = root / "EXECUTION_GUARD.json"
+    try:
+        state = load_guard(guard_path)
+        reason = completion_block_reason(state, guard_path)
+    except GuardError as error:
+        raise ItemReferenceError(str(error)) from error
+    if (state.get("task_kind") != "IMAGE_GENERATION" or state.get("status") != "COMPLETE"
+            or state.get("request_id") != plan["request_id"] or reason):
+        raise ItemReferenceError("Finish delivering both wardrobe PNGs first." + (f" {reason}" if reason else ""))
+    attempt = state["attempts"][-1]
+    snapshot = attempt["execution_snapshot"]
+    snapshot_path = Path(snapshot["reference_plan_snapshot_path"]).resolve()
+    manager.assert_active_request_path(snapshot_path)
+    if snapshot_path.parent != root or _sha256(snapshot_path) != snapshot["reference_plan_snapshot_sha256"]:
+        raise ItemReferenceError("The executed wardrobe plan is missing or changed.")
+    executed = _read_json(snapshot_path)
+    startup = executed.get("startup_parameter_selection", {})
+    clothing = startup.get("delegation", {}).get("clothing_plan", {})
+    if (startup.get("menu_contract") != "CLOTHING_PLAN"
+            or any(clothing.get(key) != plan.get(key) for key in ("character_id", "style_name", "request_id"))):
+        raise ItemReferenceError("The executed wardrobe card belongs to a different outfit request or character.")
+    plan_hash = _sha256(plan_path)
+    if clothing.get("plan_sha256") and clothing["plan_sha256"] != plan_hash:
+        raise ItemReferenceError("The outfit production plan changed after execution.")
+
+    card, details = root / "WARDROBE_CARD.png", root / "CLOTHING_DETAILS.png"
+    stages = {row["id"]: row for row in state.get("required_stages", [])}
+    qa_path = root / "ITEM_VISUAL_QA.json"
+    manager.assert_active_request_path(qa_path)
+    qa = _read_json(qa_path)
+    checks = qa.get("checks", {})
+    for role, image in (("WARDROBE_CARD", card), ("CLOTHING_DETAILS", details)):
+        manager.assert_active_request_path(image)
+        check = checks.get(role, {})
+        digest = _sha256(image)
+        entry = stages.get(role, {})
+        if (entry.get("evidence") != [str(image)] or entry.get("status") != "COMPLETED"
+                or entry.get("evidence_sha256", {}).get(str(image)) != digest
+                or check.get("sha256") != digest or check.get("status") != "PASS"
+                or not str(check.get("evidence", "")).strip()):
+            raise ItemReferenceError(f"{role} does not match the reviewed and delivered PNG.")
+
+    paths, profile, _ = _registered_character(args.workspace, plan["style_name"], plan["character_id"])
+    folder = (profile.parent / "03_CHARACTER_REFERENCES" / "08_TYPED_ITEMS"
+              / manager.safe_component(plan["item_id"]) / manager.safe_component(plan["version"]))
+    manifest_path = folder / "APPROVED_ITEM_REFERENCE.json"
+    card_hash, details_hash = _sha256(card), _sha256(details)
+    if manifest_path.is_file():
+        existing = validate_manifest(args.workspace, manifest_path, style_name=plan["style_name"],
+                                     character_id=plan["character_id"])
+        if (existing["wardrobe_card"]["sha256"] != card_hash or existing["item_design"]["sha256"] != details_hash
+                or existing["item_scale_fit"]["sha256"] != card_hash):
+            raise ItemReferenceError("This wardrobe version already contains different approved artwork.")
+        return existing
+
+    scale_review = checks.get("ITEM_CHARACTER_SCALE", {})
+    identity = manager._approved_profile_identity(paths, profile, plan["character_id"])
+    anatomy = identity.get("target_anatomy")
+    label = {"MALE_ANATOMY": "MALE", "FEMALE_ANATOMY": "FEMALE"}.get(anatomy)
+    if not label or scale_review.get("status") != "PASS" or not str(scale_review.get("evidence", "")).strip():
+        raise ItemReferenceError("The fit panel needs its reviewed character and anatomy.")
+    common = {"source_sheet_path": str(card), "source_sheet_sha256": card_hash}
+    qa["item_design_source"] = {
+        **qa.get("item_design_source", {}), **common, "sha256": details_hash, "subject_label": "NO_SUBJECT",
+        "subject_label_sha256": details_hash, "subject_label_evidence": checks["CLOTHING_DETAILS"]["evidence"],
+    }
+    qa["item_scale_fit_source"] = {
+        **qa.get("item_scale_fit_source", {}), **common, "sha256": card_hash,
+        "character_id": plan["character_id"], "character_assembly_sha256": plan["character_assembly_sha256"],
+        "subject_label": label, "subject_label_sha256": card_hash, "subject_label_evidence": scale_review["evidence"],
+        "anatomy_compatibility": anatomy, "anatomy_evidence_source": str(profile),
+    }
+    approved = approve(argparse.Namespace(
+        workspace=args.workspace, item_plan=plan_path, design_image=details,
+        card_image=card, scale_fit_image=card, qa_json=qa_path, tag=args.tag,
+        user_approved=True, approval_quote=args.approval_quote,
+    ), delivered_qa=qa, delivered_approval={
+        "message_id": args.approval_message_id.strip(), "chat_id": state.get("owner_chat_id"),
+        "request_id": plan["request_id"], "attempt_id": attempt["attempt_id"], "plan_sha256": plan_hash,
+    })
+    return validate_manifest(args.workspace, Path(approved["manifest_path"]), style_name=plan["style_name"],
+                             character_id=plan["character_id"])
 
 
 def validate_manifest(workspace: Path, manifest_path: Path, *, style_name: str = "", character_id: str = "") -> dict[str, Any]:
@@ -546,6 +649,14 @@ def build_parser() -> argparse.ArgumentParser:
     approval.add_argument("--approval-quote", required=True)
     approval.add_argument("--user-approved", action="store_true")
     approval.set_defaults(handler=approve)
+    delivered = sub.add_parser("approve-delivered-clothing", help="Publish a delivered two-PNG outfit after the author's approval.")
+    delivered.add_argument("--workspace", type=Path, required=True)
+    delivered.add_argument("--item-plan", required=True)
+    delivered.add_argument("--approval-message-id", required=True)
+    delivered.add_argument("--approval-quote", required=True)
+    delivered.add_argument("--user-approved", action="store_true")
+    delivered.add_argument("--tag", action="append", default=[])
+    delivered.set_defaults(handler=approve_delivered_clothing)
     validate = sub.add_parser("validate", help="Revalidate approval, registry, identity binding, role-specific QA, and hashes.")
     validate.add_argument("--workspace", type=Path, required=True)
     validate.add_argument("--manifest", required=True)

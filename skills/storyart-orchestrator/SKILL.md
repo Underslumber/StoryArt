@@ -284,6 +284,13 @@ approved character assembly
 for ordinary fit. Add separate face, body or pose sources only when a specific
 fit detail requires them.
 
+An explicit author approval of a delivered outfit continues the same request.
+Run `item_reference_manager approve-delivered-clothing` in that owning chat
+with the approval message ID and exact quote, then verify the approved item
+in `list` before reporting that it is in the wardrobe. The typed wardrobe
+registry is the authority for approved selectable outfits. The active profile
+wardrobe specifies the default outfit.
+
 For a requested item, use `item_reference_manager list` with the exact character
 and identity style to discover approved typed sets without browsing directories.
 Use the matching selected manifest via repeatable `prepare-generation

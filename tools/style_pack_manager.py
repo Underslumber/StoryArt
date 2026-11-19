@@ -1797,6 +1797,7 @@ def parse_startup_interaction(args: argparse.Namespace) -> dict[str, object]:
                    ("status", "item_kind", "request_id", "character_id", "style_name", "card_language")},
                 "card_layout": item.get("card_layout") or wardrobe_card_layout(),
                 "clothing_details_layout": item.get("clothing_details_layout") or clothing_details_layout(),
+                "plan_sha256": sha256(item_path),
             },
             "agent_choices": {"style": "PROJECT_STYLE:" + args.style_name, "character": args.character_id,
                               "reference_policy": "APPROVED_CHARACTER_REFERENCES",
